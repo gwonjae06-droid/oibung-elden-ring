@@ -50,6 +50,8 @@ const P=buildPlayer(WEAPON_KEYS);
 const {rig,body,pivot,weaponRigs}=P;scene.add(rig);
 const B=buildBoss();
 const {root:bossRoot,model:bossModel,HEAD,boneMat,swordGroup,fallbackBlade}=B;scene.add(bossRoot);
+let stance=null;
+import('./boss-stance.mjs').then(({createBossStance})=>{stance=createBossStance(B);}).catch(e=>console.error('boss stance failed',e));
 let effects=null;
 import('./effects.mjs').then(({createEffects})=>{effects=createEffects(scene,swordGroup,reduceMotion);}).catch(e=>console.error('effects failed',e));
 
@@ -379,7 +381,7 @@ function handleEvents(){
     }else if(ev.type==='dodge'){
       floatText('회피',p.x,2.6,p.z,'');
     }else if(ev.type==='phase'){
-      notice('이권재의 기세가 달라졌습니다');
+      notice('이권재가 두 발로 일어섭니다');
     }else if(ev.type==='stagger'){
       notice('경직! 지금이 기회입니다');
     }
@@ -487,11 +489,12 @@ function updateCamera(dt){
   }
   if(lock&&d>.5&&game.status==='playing')view.yaw+=angleDelta(view.yaw,Math.atan2(dx,dz))*Math.min(1,dt*7);
   const fx=Math.sin(view.yaw),fz=Math.cos(view.yaw),hd=view.dist*Math.cos(view.pitch);
+  const elevation=b.phase===2?1.3:0;
   let ox=0,oy=0;
   if(shake>0){shake=Math.max(0,shake-dt);ox=(Math.random()-.5)*shake*.6;oy=(Math.random()-.5)*shake*.6;}
-  camera.position.set(p.x-fx*hd+ox,Math.max(.9,1.5+Math.sin(view.pitch)*view.dist)+oy,p.z-fz*hd);
+  camera.position.set(p.x-fx*hd+ox,Math.max(.9,1.5+Math.sin(view.pitch)*view.dist)+oy+elevation,p.z-fz*hd);
   const k=lock?clamp(d*.12,0,.45):0;
-  camera.lookAt(p.x+dx*k,1.6,p.z+dz*k);
+  camera.lookAt(p.x+dx*k,1.6+elevation,p.z+dz*k);
 }
 
 function updateHud(){
@@ -502,17 +505,18 @@ function updateHud(){
   setText('lock-label',lock?'록온 켜짐 · Q':'록온 꺼짐 · Q');
   setBar('boss-fill',b.hp/b.maxHp,b.hp,b.maxHp);
   setText('boss-value',fmt(b.hp)+' / '+fmt(b.maxHp));
-  setText('phase-label',b.phase===2?'두 번째 단계 · 대검 연속 공격':'첫 번째 시련');
+  setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');
   let line='틈을 읽고, 대검을 피해 파고드세요.';
-  if(b.state==='windup'||b.state==='active')line=PATTERNS[b.pattern].name;
+  if(b.punishable)line='빈틈 — 지금 반격하세요';
+  else if(b.state==='windup'||b.state==='active')line=PATTERNS[b.pattern].name;
   else if(b.state==='stagger')line='경직! 지금이 기회입니다.';
-  else if(b.state==='transition')line='이권재가 분노합니다.';
+  else if(b.state==='transition')line='이권재가 두 발로 일어섭니다.';
   else if(b.state==='dead')line='긴턱이 멈추었습니다.';
   setText('boss-action',line);
   const ret=$('reticle');
   const show=mode==='playing'&&lock&&b.state!=='dead';
   if(show){
-    const s=toScreen(b.x,2.8,b.z);
+    const s=toScreen(b.x,b.phase===2?5:2.8,b.z);
     if(s){ret.hidden=false;ret.style.left=(s.x-6)+'px';ret.style.top=(s.y-6)+'px';}else ret.hidden=true;
   }else ret.hidden=true;
 }
@@ -533,6 +537,7 @@ function frame(now){
   }
   handleEvents();
   syncPlayer(dt);syncBoss(dt);syncProjectiles(dt);updateBursts(dt);
+  stance?.update(game.boss);
   effects?.update(mode==='paused'?0:dt,game);
   updateCamera(dt);updateHud();
   renderer.render(scene,camera);

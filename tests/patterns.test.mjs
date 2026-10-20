@@ -1,56 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,step,startPattern,swordPose,PATTERNS,ORDER,TEMPO,angleDelta} from '../src/combat.mjs';
-const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
-const place=(g,x,z)=>{g.player.x=x;g.player.z=z;};
-test('new patterns are registered with names and positive timings',()=>{
-  for(const k of ['leap','whirl']){const c=PATTERNS[k];assert.ok(c.name);assert.ok(c.wind>0&&c.active>0&&c.recover>0&&c.damage>0);}
-});
-test('phase 1 can leap but never whirls; phase 2 can whirl',()=>{
-  let g=createGame();g.boss.wait=0;g.boss.sequence=ORDER[1].indexOf('leap');place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'leap');
-  g=createGame();g.boss.wait=0;g.boss.phase=2;g.boss.sequence=ORDER[2].indexOf('whirl');place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'whirl');
-  g=createGame();for(let i=0;i<ORDER[1].length*2;i++){g.boss.wait=0;g.boss.state='idle';g.boss.sequence=i;place(g,0,2);step(g,1/120);assert.notEqual(g.boss.pattern,'whirl');}
-});
-test('leap telegraph is harmless and the landing hits once for 42',()=>{
-  const g=createGame();place(g,0,6);startPattern(g,'leap');tick(g,1.0);assert.equal(g.player.hp,120);
-  tick(g,1.0);assert.equal(g.player.hp,78);
-  g.player.invuln=0;tick(g,1.2);assert.equal(g.player.hp,78);
-});
-test('leap closes distance toward where the player stood',()=>{
-  const g=createGame();place(g,0,8);const before=Math.hypot(g.player.x-g.boss.x,g.player.z-g.boss.z);
-  startPattern(g,'leap');tick(g,1.3+.45);
-  const after=Math.hypot(g.player.x-g.boss.x,g.player.z-g.boss.z);
-  assert.ok(after<before-4,'before '+before+' after '+after);
-});
-test('leap can be dodged by moving out of the landing zone',()=>{
-  const g=createGame();place(g,0,6);startPattern(g,'leap');tick(g,PATTERNS.leap.wind/TEMPO+.1);place(g,16,6);tick(g,1.0);assert.equal(g.player.hp,120);
-});
-test('whirl sweeps a full circle and hits a player in the ring exactly once',()=>{
-  const g=createGame();g.boss.phase=2;place(g,0,2);const start=g.boss.yaw;
-  startPattern(g,'whirl');const y0=g.boss.yaw;tick(g,3.5);
-  assert.equal(g.player.hp,90);assert.ok(Math.abs(angleDelta(y0,g.boss.yaw))<0.2,'yaw drift '+angleDelta(y0,g.boss.yaw));
-  assert.ok(start!==undefined);
-});
-test('whirl does nothing to a player outside its reach',()=>{
-  const g=createGame();g.boss.phase=2;place(g,0,-4+11);startPattern(g,'whirl');tick(g,PATTERNS.whirl.wind/(1.15*TEMPO)+PATTERNS.whirl.active+.1);assert.equal(g.player.hp,120);
-});
-test('phase 2 chains thrust into slam and leap into sweep, once',()=>{
-  let g=createGame();g.boss.phase=2;place(g,20,-4);startPattern(g,'thrust');
-  let seen=[];for(let i=0;i<120*6&&seen.length<3;i++){step(g,1/120);if(!seen.length||seen[seen.length-1]!==g.boss.pattern)seen.push(g.boss.pattern);}
-  assert.deepEqual(seen.slice(0,2),['thrust','slam']);
-  g=createGame();g.boss.phase=2;place(g,20,-4);startPattern(g,'leap');
-  seen=[];for(let i=0;i<120*6&&seen.length<3;i++){step(g,1/120);if(!seen.length||seen[seen.length-1]!==g.boss.pattern)seen.push(g.boss.pattern);}
-  assert.deepEqual(seen.slice(0,2),['leap','sweep']);
-});
-test('phase 1 never chains patterns',()=>{
-  const g=createGame();place(g,20,-4);startPattern(g,'thrust');const seen=[];
-  for(let i=0;i<120*5;i++){step(g,1/120);if(g.boss.state==='idle'&&!seen.includes('idle'))seen.push('idle');if(g.boss.pattern!=='thrust')seen.push(g.boss.pattern);}
-  assert.ok(!seen.includes('slam'));
-});
-test('sword poses stay finite for every pattern and state',()=>{
-  const g=createGame();
-  for(const name of Object.keys(PATTERNS))for(const state of ['windup','active','recovery'])for(const t of [0,.3,5]){
-    g.boss.pattern=name;g.boss.state=state;g.boss.t=t;
-    const p=swordPose(g.boss);for(const v of Object.values(p))assert.ok(Number.isFinite(v),name+state+t);
+import {createGame,beginSequence,chooseOpening,startPattern,step,PATTERNS,bodyPose,act} from '../src/combat.mjs';
+const tick=(g,t)=>{for(let s=0;s<t;s+=1/240)step(g,1/240);};
+function safe(g){g.player.x=20;g.player.z=20;g.player.invuln=100;}
+test('phase one is agile but all four openings end with guaranteed punish windows',()=>{
+  for(const k of ['rush','sweep','thrust','leap']){
+    const g=createGame();safe(g);beginSequence(g,k);
+    for(let i=0;i<2400&&!g.boss.punishable;i++)step(g,1/240);
+    assert.ok(g.boss.punishable,k);assert.ok(g.boss.recovery>=.95,k+' has no punish window');
+    const id=g.boss.attackId;tick(g,.85);assert.equal(g.boss.state,'recovery');assert.equal(g.boss.attackId,id);
   }
+});
+test('phase one double slash and phase two sword combos have fixed endings',()=>{
+  for(const [phase,opening,expected] of [[1,'sweep',['sweep','reverse']],[2,'cross',['cross','reverse','slam']],[2,'jab',['jab','jab','thrust']],[2,'retreat',['retreat','rise']],[2,'wave',['wave','rush']]]){
+    const g=createGame();safe(g);g.boss.phase=phase;beginSequence(g,opening);
+    const got=[];let id=-1;
+    for(let i=0;i<3000;i++){if(g.boss.attackId!==id){id=g.boss.attackId;got.push(g.boss.pattern);}if(g.boss.punishable)break;step(g,1/240);}
+    assert.deepEqual(got,expected);assert.ok(g.boss.punishable);assert.ok(g.boss.recovery>=.95);
+  }
+});
+test('tracking stops before the strike and cannot turn during punish time',()=>{
+  const g=createGame();startPattern(g,'thrust');tick(g,PATTERNS.thrust.wind*.65);
+  const yaw=g.boss.yaw;g.player.x=18;tick(g,.2);assert.equal(g.boss.yaw,yaw);
+  while(!g.boss.punishable)step(g,1/240);
+  const locked=g.boss.yaw;tick(g,.5);assert.equal(g.boss.yaw,locked);
+});
+test('distance changes openings and the same opening does not repeat',()=>{
+  const g=createGame();for(const phase of [1,2]){
+    g.boss.phase=phase;g.player.z=18;
+    for(let i=0;i<12;i++){const k=chooseOpening(g);assert.notEqual(k,g.boss.lastOpening);assert.ok((phase===1?['thrust','leap']:['wave','jab']).includes(k));g.boss.lastOpening=k;}
+  }
+});
+test('phase transition clears the combo and rises smoothly without healing',()=>{
+  const g=createGame('hammer');g.player.z=0;g.player.yaw=Math.PI;g.boss.wait=50;g.boss.hp=901;
+  act(g,'heavy');tick(g,1);assert.equal(g.boss.phase,2);assert.equal(g.boss.state,'transition');assert.equal(g.boss.hp,709);assert.deepEqual(g.boss.queue,[]);
+  const s=bodyPose(g.boss).standing;assert.ok(s>0&&s<1);tick(g,2);assert.equal(bodyPose(g.boss).standing,1);
 });
