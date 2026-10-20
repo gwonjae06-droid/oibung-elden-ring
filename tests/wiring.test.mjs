@@ -19,16 +19,20 @@ test('every element id used by arena.mjs exists in spider-combat.html',()=>{
 });
 test('arena.mjs only imports three and its own local modules',()=>{
   const specs=[...arena.matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
-  assert.deepEqual(specs,['./audio.mjs','./boss-face.mjs','./combat.mjs','./face.mjs','three']);
-  for(const f of ['combat','audio','boss-face','face'])assert.ok(existsSync(join(root,'src/'+f+'.mjs')),f+'.mjs is missing');
+  assert.deepEqual(specs,['./audio.mjs','./boss-face.mjs','./combat.mjs','./face.mjs','./models.mjs','three']);
+  for(const f of ['combat','audio','boss-face','face','models','model-data'])assert.ok(existsSync(join(root,'src/'+f+'.mjs')),f+'.mjs is missing');
 });
 test('names imported from local modules are exported by those modules',()=>{
   const found=[...arena.matchAll(/import \{([^}]+)\} from '\.\/([\w-]+\.mjs)'/g)];
-  assert.ok(found.length>=4,'expected 4 local named imports, found '+found.length);
+  assert.ok(found.length>=5,'expected 5 local named imports, found '+found.length);
   for(const m of found){
     const src=read('src/'+m[2]);
     for(const n of m[1].split(',').map(s=>s.trim()))assert.match(src,new RegExp('export (?:const|function) '+n+'\\b'),m[2]+' does not export '+n);
   }
+});
+test('models.mjs only imports three, the combat module and the model data',()=>{
+  const specs=[...read('src/models.mjs').matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
+  assert.deepEqual(specs,['./combat.mjs','./model-data.mjs','three']);
 });
 test('the boss face photo is embedded as data, not fetched from the network',()=>{
   assert.match(arena,/data:image\/jpeg;base64,/);
@@ -66,8 +70,8 @@ test('the sword grows out of the bottom edge of the face mask',async()=>{
   const {BOSS_FACE:F}=await import('../src/boss-face.mjs');
   const num=re=>{const m=arena.match(re);assert.ok(m,'missing '+re);return Number(m[1]);};
   const W=num(/FACE_WORLD_W=([\d.]+)/),R=num(/FACE_R=([\d.]+)/),T0=num(/FACE_THETA0=([\d.]+)/);
-  const H=arena.match(/const HEAD=\{x:(-?[\d.]+),y:(-?[\d.]+),z:(-?[\d.]+),r:([\d.]+)\}/);
-  assert.ok(H,'missing HEAD');
+  const H=read('src/models.mjs').match(/const HEAD=\{x:(-?[\d.]+),y:(-?[\d.]+),z:(-?[\d.]+),r:([\d.]+)\}/);
+  assert.ok(H,'missing HEAD in models.mjs');
   const theta=T0+F.chin*(W/F.w)/R;
   const y=Number(H[2])+R*Math.cos(theta),z=Number(H[3])+R*Math.sin(theta);
   assert.ok(Math.abs(y-SWORD.y)<.05&&Math.abs(z-SWORD.z)<.05,'face edge ('+y.toFixed(3)+','+z.toFixed(3)+') vs sword root ('+SWORD.y+','+SWORD.z+')');
@@ -82,8 +86,12 @@ test('the blade is the same material at the same scale as the face (no visible s
   assert.ok(Math.abs(size.h/size.w-SWORD.length/W)<.01,'blade texture aspect '+size.h/size.w+' vs plane '+SWORD.length/W);
   assert.ok(k>10,'the chin should be stretched a lot, got x'+k.toFixed(1));
 });
-test('the arena draws exactly one sword and no leftover jaw code',()=>{
+test('the arena has no leftover jaw code and still drives the single sword',()=>{
   assert.doesNotMatch(arena,/jawGroups|jawPose|jawSegments|eyeMat/);
-  assert.match(arena,/swordPose/);
-  assert.equal((arena.match(/const swordGroup=/g)||[]).length,1);
+  assert.match(arena,/swordPose\(/);
+  assert.match(arena,/swordGroup\.rotation\.x=pose\.pitch/);
+});
+test('the arena builds both characters through the model module',()=>{
+  assert.match(arena,/buildPlayer\(/);assert.match(arena,/buildBoss\(/);
+  assert.match(arena,/poseLegs\(/);assert.match(arena,/posePlayer\(/);assert.match(arena,/swayCape\(/);
 });

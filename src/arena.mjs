@@ -3,6 +3,7 @@ import {createGame,act,step,rolling,swordPose,SWORD,WEAPONS,PATTERNS} from './co
 import {createAudio} from './audio.mjs';
 import {BOSS_FACE} from './boss-face.mjs';
 import {faceSize,bladeSize,drawFace,drawBlade} from './face.mjs';
+import {buildPlayer,buildBoss,poseLegs,posePlayer,swayCape} from './models.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -44,77 +45,10 @@ for(let i=0;i<14;i++){
   m.position.set(Math.sin(a)*26,h/2,Math.cos(a)*26);m.rotation.y=a+.3;m.castShadow=true;m.receiveShadow=true;scene.add(m);
 }
 
-function limb(a,b,r,mat){
-  const d=new THREE.Vector3().subVectors(b,a),len=d.length();
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r*.7,r,len,8),mat);
-  m.position.copy(a).addScaledVector(d,.5);
-  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
-  m.castShadow=true;return m;
-}
-
-const rig=new THREE.Group();scene.add(rig);
-const body=new THREE.Group();body.position.y=1;rig.add(body);
-const bodyMat=new THREE.MeshStandardMaterial({color:0x5b86a8,roughness:.7,transparent:true});
-const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.4,.9,6,12),bodyMat);torso.castShadow=true;body.add(torso);
-const head=new THREE.Mesh(new THREE.SphereGeometry(.28,16,12),new THREE.MeshStandardMaterial({color:0xe0c7a5,roughness:.8}));
-head.position.y=.95;head.castShadow=true;body.add(head);
-const cape=new THREE.Mesh(new THREE.BoxGeometry(.7,1.1,.08),new THREE.MeshStandardMaterial({color:0x2f3b4a,roughness:.9}));
-cape.position.set(0,.1,-.38);body.add(cape);
-const pivot=new THREE.Group();pivot.position.set(.5,.25,.15);body.add(pivot);
-const metal=new THREE.MeshStandardMaterial({color:0xcfd4d8,metalness:.7,roughness:.35});
-const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:.8});
-const weaponRigs={};
-{
-  const sword=new THREE.Group();
-  const blade=new THREE.Mesh(new THREE.BoxGeometry(.08,.14,1.5),metal);blade.position.z=.95;
-  const guard=new THREE.Mesh(new THREE.BoxGeometry(.5,.08,.1),wood);guard.position.z=.2;
-  const hilt=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.35),wood);
-  sword.add(blade,guard,hilt);weaponRigs.sword=sword;
-  const hammer=new THREE.Group();
-  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.5,8).rotateX(Math.PI/2),wood);shaft.position.z=.7;
-  const mass=new THREE.Mesh(new THREE.BoxGeometry(.55,.5,.5),metal);mass.position.z=1.55;
-  hammer.add(shaft,mass);weaponRigs.hammer=hammer;
-  const bow=new THREE.Group();
-  const arc=new THREE.Mesh(new THREE.TorusGeometry(.6,.035,6,20,Math.PI),wood);arc.rotation.z=Math.PI/2;arc.position.z=.5;
-  const str=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,1.2,4),metal);str.position.z=.5;
-  bow.add(arc,str);weaponRigs.bow=bow;
-  const cards=new THREE.Group();
-  for(let i=0;i<3;i++){
-    const c=new THREE.Mesh(new THREE.BoxGeometry(.3,.02,.45),new THREE.MeshStandardMaterial({color:i===1?0xb94a48:0xf2ecdc,roughness:.5}));
-    c.position.set((i-1)*.22,0,.55);c.rotation.y=(i-1)*.35;cards.add(c);
-  }
-  weaponRigs.cards=cards;
-  for(const k of WEAPON_KEYS){weaponRigs[k].visible=false;pivot.add(weaponRigs[k]);}
-}
-
-const bossRoot=new THREE.Group();scene.add(bossRoot);
-const bossModel=new THREE.Group();bossRoot.add(bossModel);
-const carapace=new THREE.MeshStandardMaterial({color:0x2e2723,roughness:.8});
-const abdomen=new THREE.Mesh(new THREE.SphereGeometry(2.1,32,20),carapace);
-abdomen.scale.set(1,.85,1.25);abdomen.position.set(0,2.1,-1.5);abdomen.castShadow=true;bossModel.add(abdomen);
-const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,24,16),carapace);
-thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;bossModel.add(thorax);
-const HEAD={x:0,y:2.75,z:1.75,r:1.12};
-const bossHead=new THREE.Mesh(new THREE.SphereGeometry(HEAD.r,28,20),carapace);
-bossHead.position.set(HEAD.x,HEAD.y,HEAD.z);bossHead.castShadow=true;bossModel.add(bossHead);
-const legs=[];
-{
-  const fan=[.75,.28,-.28,-.75],zs=[1.3,.45,-.5,-1.5];
-  for(const side of [-1,1]){
-    for(let k=0;k<4;k++){
-      const g=new THREE.Group();g.position.set(side*1.1,2.0,zs[k]);
-      const knee=new THREE.Vector3(side*1.9,1.2,0),foot=new THREE.Vector3(side*3.5,-2.0,0);
-      g.add(limb(new THREE.Vector3(0,0,0),knee,.14,carapace),limb(knee,foot,.1,carapace));
-      g.userData.base=side*fan[k];g.userData.index=legs.length;
-      g.rotation.y=g.userData.base;bossModel.add(g);legs.push(g);
-    }
-  }
-}
-
-const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
-const swordGroup=new THREE.Group();swordGroup.rotation.order='YXZ';bossModel.add(swordGroup);
-const fallbackBlade=new THREE.Mesh(new THREE.ConeGeometry(.5,SWORD.length,4).rotateX(Math.PI/2).translate(0,0,SWORD.length/2),boneMat);
-fallbackBlade.scale.y=.45;fallbackBlade.castShadow=true;swordGroup.add(fallbackBlade);
+const P=buildPlayer(WEAPON_KEYS);
+const {rig,body,pivot,weaponRigs}=P;scene.add(rig);
+const B=buildBoss();
+const {root:bossRoot,model:bossModel,HEAD,boneMat,swordGroup,fallbackBlade}=B;scene.add(bossRoot);
 
 const FACE_WORLD_W=1.9,FACE_R=1.15,FACE_THETA0=.2;
 const PX=FACE_WORLD_W/BOSS_FACE.w;
@@ -233,7 +167,7 @@ let queued=null;
 let endAt=0;
 let shake=0;
 const view={yaw:Math.PI,pitch:.4,dist:9.5};
-const vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0};
+const vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0,px:0,pz:13,pphase:0};
 const keys=new Set();
 const stick={x:0,y:0};
 
@@ -268,7 +202,7 @@ function startBattle(weapon){
   setWeaponVisual();clearFx();
   queued=null;lock=true;shake=0;
   view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;
-  vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;
+  vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;vis.px=game.player.x;vis.pz=game.player.z;
   mode='playing';setUi();audio.ambience(true);
   canvas.focus({preventScroll:true});
   notice('이권재가 모습을 드러냅니다');
@@ -276,6 +210,7 @@ function startBattle(weapon){
 function backToMenu(){
   mode='menu';queued=null;clearFx();audio.ambience(false);
   game=createGame(selectedWeapon);setWeaponVisual();setUi();
+  vis.px=game.player.x;vis.pz=game.player.z;
   $('start').focus();
 }
 function pauseGame(){if(mode==='playing'){mode='paused';keys.clear();stick.x=stick.y=0;audio.ambience(false);setUi();$('resume').focus();}}
@@ -455,16 +390,22 @@ function weaponAngle(a){
 }
 function syncPlayer(dt){
   const p=game.player,a=p.action;
+  const sp=Math.min(12,Math.hypot(p.x-vis.px,p.z-vis.pz)/Math.max(dt,.001));
+  vis.px=p.x;vis.pz=p.z;vis.pphase+=dt*(4+sp*1.2);
   rig.position.set(p.x,0,p.z);
   const ty=a&&a.yaw!==undefined?a.yaw:p.yaw;
   vis.pyaw+=angleDelta(vis.pyaw,ty)*Math.min(1,dt*20);
   rig.rotation.y=vis.pyaw;
-  pivot.rotation.set(0,0,0);body.rotation.set(0,0,0);body.position.y=1;
+  pivot.rotation.set(0,0,0);body.rotation.set(0,0,0);
+  const w=posePlayer(P,vis.pphase,a?0:sp);
+  swayCape(P,vis.time,sp);
+  body.position.y=1+w.bob;body.rotation.x=w.lean;
   let emissive=0,opacity=1;
   if(game.status==='lost'){
     body.rotation.x=-1.4;body.position.y=.45;
   }else if(a&&a.kind==='attack'){
     const k=game.weapon==='hammer'?1.25:game.weapon==='sword'?1:.25;
+    P.arms.R.rotation.x=0;
     pivot.rotation.x=weaponAngle(a)*k;
     if(!a.heavy&&game.weapon==='sword')pivot.rotation.z=-.3;
     body.rotation.x=.12*Math.sin(clamp(a.t/a.total,0,1)*Math.PI);
@@ -474,9 +415,9 @@ function syncPlayer(dt){
   }else if(a&&a.kind==='hurt'){
     body.rotation.x=-.3;emissive=0x661a1a;
   }else if(a&&a.kind==='heal'){
-    emissive=0x1a5a2a;pivot.rotation.x=-.8;
+    emissive=0x1a5a2a;P.arms.R.rotation.x=0;pivot.rotation.x=-.8;
   }
-  bodyMat.emissive.setHex(emissive);bodyMat.opacity=opacity;
+  for(const m of P.mats){m.emissive.setHex(emissive);m.opacity=opacity;}
 }
 
 function syncBoss(dt){
@@ -485,12 +426,7 @@ function syncBoss(dt){
   const speed=Math.hypot(b.x-vis.bx,b.z-vis.bz)/Math.max(dt,.001);
   vis.bx=b.x;vis.bz=b.z;
   vis.legPhase+=dt*(2+Math.min(speed,14)*1.1);
-  const amp=.06+Math.min(speed,14)*.025;
-  legs.forEach(g=>{
-    const i=g.userData.index;
-    g.rotation.y=g.userData.base+Math.sin(vis.legPhase+i*1.7)*amp;
-    g.rotation.z=Math.max(0,Math.sin(vis.legPhase+i*1.7))*amp*.8*(i<4?-1:1);
-  });
+  poseLegs(B.legs,vis.legPhase,speed);
   const pose=swordPose(b);
   swordGroup.position.set(pose.x,pose.y,pose.z);swordGroup.rotation.x=pose.pitch;swordGroup.rotation.y=pose.yaw;
   let glow=0;
@@ -499,11 +435,12 @@ function syncBoss(dt){
   boneMat.emissive.setHex(0xaa2222);boneMat.emissiveIntensity=glow;
   bladeMat.emissive.setHex(0xaa2222);bladeMat.emissiveIntensity=glow*.8;
   faceMat.emissive.setHex(0x992222);faceMat.emissiveIntensity=(b.phase===2?.18:0)+glow*.12;
+  B.glowMat.emissiveIntensity=b.phase===2?1.7:.9;
   bossModel.rotation.set(0,0,0);bossModel.position.y=Math.sin(vis.time*1.6)*.05;
   if(b.state==='stagger'){bossModel.rotation.x=-.12;bossModel.rotation.z=Math.sin(vis.time*30)*.03;}
   else if(b.state==='transition'){const s=1+Math.sin(vis.time*14)*.03;bossModel.scale.setScalar(s);}
   if(b.state!=='transition')bossModel.scale.setScalar(1);
-  if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;bladeMat.emissiveIntensity=0;faceMat.emissiveIntensity=0;}
+  if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;bladeMat.emissiveIntensity=0;faceMat.emissiveIntensity=0;B.glowMat.emissiveIntensity=0;}
 }
 
 function syncProjectiles(dt){
