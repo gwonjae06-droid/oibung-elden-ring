@@ -1,4 +1,5 @@
 export const TAU = Math.PI * 2;
+export const TEMPO = 1.4;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const angleDelta = (a, b) => Math.atan2(Math.sin(b-a), Math.cos(b-a));
 export const WEAPONS = {
@@ -14,7 +15,16 @@ export const PATTERNS = {
   slam:{name:'턱 내려찍기',wind:1.25,active:.36,recover:1.55,damage:39},
   cross:{name:'대검 교차베기',wind:1.05,active:.50,recover:1.45,damage:36},
   leap:{name:'도약 내려찍기',wind:1.30,active:.42,recover:1.60,damage:42},
-  whirl:{name:'회전 베기',wind:.95,active:.80,recover:1.75,damage:30}
+  whirl:{name:'회전 베기',wind:.95,active:.80,recover:1.75,damage:30},
+  rise:{name:'대검 올려베기',wind:.75,active:.34,recover:.90,damage:30},
+  jab:{name:'삼연 찌르기',wind:.42,active:.20,recover:.22,damage:16},
+  rush:{name:'질풍 베기',wind:.55,active:.38,recover:.70,damage:32},
+  retreat:{name:'후퇴 자세',wind:.40,active:.30,recover:.20,damage:0},
+  wave:{name:'검기 발사',wind:.70,active:.25,recover:.60,damage:24}
+};
+export const ORDER = {
+  1:['sweep','jab','slam','reverse','rise','thrust','wave','leap','rush'],
+  2:['cross','jab','sweep','reverse','rush','leap','retreat','slam','whirl','wave','rise','thrust']
 };
 const dist = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 function toward(a,b){return Math.atan2(b.x-a.x,b.z-a.z);}
@@ -26,9 +36,9 @@ export function segmentDistance(p,a,b){
 }
 export function createGame(weapon='sword'){
   if(!WEAPONS[weapon])throw new Error('Unknown weapon');
-  return {status:'playing',time:0,weapon,events:[],projectiles:[],nextId:0,
+  return {status:'playing',time:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,
     player:{x:0,z:13,yaw:Math.PI,hp:120,maxHp:120,stamina:100,regen:0,action:null,invuln:0,potions:3},
-    boss:{x:0,z:-4,yaw:0,hp:1800,maxHp:1800,phase:1,state:'idle',t:0,wait:1.1,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false},
+    boss:{x:0,z:-4,yaw:0,hp:1800,maxHp:1800,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1},
     stats:{hits:0,dodges:0,damage:0}};
 }
 const emit=(g,type,data={})=>g.events.push({type,...data});
@@ -61,8 +71,9 @@ export const SWORD = {x:0, y:2.3, z:2.8, length:6.84, width:.9};
 export function swordPose(b){
   const pat=b.pattern,cfg=PATTERNS[pat];
   const u=b.state==='active'?clamp(b.t/cfg.active,0,1):b.state==='recovery'?1:0;
-  const wind=b.state==='windup'?clamp(b.t/cfg.wind,0,1):1;
-  const relax=b.state==='recovery'?clamp(b.t/cfg.recover,0,1):0;
+  const sp=b.speed||1;
+  const wind=b.state==='windup'?clamp(b.t*sp/cfg.wind,0,1):1;
+  const relax=b.state==='recovery'?clamp(b.t*sp/cfg.recover,0,1):0;
   let yaw=0,pitch=.25,z=SWORD.z;
   if(['windup','active','recovery'].includes(b.state)){
     const win=b.state==='windup';
@@ -73,6 +84,11 @@ export function swordPose(b){
     else if(pat==='slam')pitch=win?-1.12*wind:-1.12+1.50*u;
     else if(pat==='leap')pitch=win?-1.0*wind:-1.0+1.45*u;
     else if(pat==='whirl')yaw=win?1.32*wind:1.32;
+    else if(pat==='rise'){yaw=.3;pitch=win?.25+.7*wind:.95-1.8*u;}
+    else if(pat==='jab'){pitch=.2;z=win?SWORD.z-1.4*wind:SWORD.z-1.4+2.0*u;}
+    else if(pat==='rush')yaw=win?.9*wind:.9-1.8*u;
+    else if(pat==='retreat')pitch=win?.25-.9*wind:-.65;
+    else if(pat==='wave')pitch=win?.25-.85*wind:-.6+.9*u;
     yaw=yaw*(1-relax);pitch=pitch*(1-relax)+.25*relax;z=z*(1-relax)+SWORD.z*relax;
   }
   return {x:SWORD.x,y:SWORD.y,z,yaw,pitch,length:SWORD.length};
@@ -136,9 +152,15 @@ export function step(g,dt,input={}){
     if(q.life>0&&segmentDistance(b,old,q)<2.1){q.life=0;bossDamage(g,q.damage,q.poise);}
   }
   g.projectiles=g.projectiles.filter(q=>q.life>0);
+  for(const s of g.bossShots){
+    s.x+=Math.sin(s.yaw)*s.speed*dt;s.z+=Math.cos(s.yaw)*s.speed*dt;s.life-=dt;
+    if(Math.hypot(s.x,s.z)>26)s.life=0;
+    if(s.life>0&&dist(p,s)<1.1&&(p.invuln<=0||rolling(p))){s.life=0;hurtPlayer(g,s.damage);}
+  }
+  g.bossShots=g.bossShots.filter(s=>s.life>0);
   if(g.status!=='playing')return;
   b.poise=Math.max(0,b.poise-dt*5);b.t+=dt;
-  const cfg=PATTERNS[b.pattern],speed=b.phase===2?1.15:1;
+  const cfg=PATTERNS[b.pattern],speed=(b.phase===2?1.15:1)*TEMPO;b.speed=speed;
   if(b.state==='transition'||b.state==='stagger'){
     if(b.t>=(b.state==='stagger'?2.1:1.65)){b.state='idle';b.t=0;b.wait=.4;}
     return;
@@ -146,17 +168,24 @@ export function step(g,dt,input={}){
   if(b.state==='idle'){
     b.yaw+=clamp(angleDelta(b.yaw,toward(b,p)),-dt*2.1,dt*2.1);
     const d=dist(p,b);
-    if(d>6.1){const v=(b.phase===2?3.5:2.6)*dt;b.x+=Math.sin(b.yaw)*v;b.z+=Math.cos(b.yaw)*v;confine(b);}
+    if(d>6.1){const v=(b.phase===2?5.2:4.2)*dt;b.x+=Math.sin(b.yaw)*v;b.z+=Math.cos(b.yaw)*v;confine(b);}
     b.wait-=dt;
     if(b.wait<=0){
-      const order=b.phase===2?['cross','thrust','sweep','reverse','leap','slam','whirl']:['sweep','thrust','slam','reverse','leap'];
-      const name=d>10?'thrust':order[b.sequence++%order.length];startPattern(g,name);
+      const order=ORDER[b.phase===2?2:1];
+      const name=d>10?(b.sequence++%2?'wave':'rush'):order[b.sequence++%order.length];
+      if(name==='jab')b.chain=2;
+      startPattern(g,name);
     }
   }else if(b.state==='windup'){
     if(b.t<cfg.wind*.62/speed)b.yaw+=clamp(angleDelta(b.yaw,toward(b,p)),-dt*.9,dt*.9);
     if(b.t>=cfg.wind/speed){
       b.state='active';b.t=0;emit(g,'boss-swing');
       if(b.pattern==='leap')b.leapSpeed=clamp((dist(p,b)-3.4)/(cfg.active*.7),4,26);
+      if(b.pattern==='wave'){
+        const reach=SWORD.z+1;
+        g.bossShots.push({id:g.nextId++,x:b.x+Math.sin(b.yaw)*reach,z:b.z+Math.cos(b.yaw)*reach,yaw:b.yaw,speed:15,life:1.6,damage:cfg.damage});
+        emit(g,'boss-shot');
+      }
     }
   }else if(b.state==='active'){
     if(b.pattern==='thrust'){
@@ -165,8 +194,13 @@ export function step(g,dt,input={}){
       b.x+=Math.sin(b.yaw)*b.leapSpeed*dt;b.z+=Math.cos(b.yaw)*b.leapSpeed*dt;confine(b);
     }else if(b.pattern==='whirl'){
       b.yaw+=TAU/cfg.active*dt;
+    }else if(b.pattern==='rush'||b.pattern==='jab'||b.pattern==='rise'){
+      const v=b.pattern==='rush'?20:b.pattern==='jab'?9:4;
+      b.x+=Math.sin(b.yaw)*v*dt;b.z+=Math.cos(b.yaw)*v*dt;confine(b);
+    }else if(b.pattern==='retreat'){
+      b.x-=Math.sin(b.yaw)*11*dt;b.z-=Math.cos(b.yaw)*11*dt;confine(b);
     }
-    if(!b.hit){
+    if(!b.hit&&b.pattern!=='wave'&&b.pattern!=='retreat'){
       const sw=swordSegment(b);
       const hit=Math.min(sw.a.y,sw.b.y)<2.2&&Math.max(sw.a.y,sw.b.y)>.1&&segmentDistance(p,sw.a,sw.b)<SWORD.width;
       const slam=b.pattern==='slam'&&b.t>cfg.active*.84&&dist(p,sw.b)<2.4;
@@ -175,10 +209,13 @@ export function step(g,dt,input={}){
     }
     if(b.t>=cfg.active){b.state='recovery';b.t=0;}
   }else if(b.state==='recovery'&&b.t>=cfg.recover/speed){
-    if(b.phase===2&&b.pattern==='sweep'&&!b.combo){b.combo=true;startPattern(g,'reverse');}
+    if(b.pattern==='jab'&&b.chain>0){b.chain--;startPattern(g,'jab');}
+    else if(b.pattern==='retreat'&&!b.combo){b.combo=true;startPattern(g,'rise');}
+    else if(b.phase===2&&b.pattern==='sweep'&&!b.combo){b.combo=true;startPattern(g,'reverse');}
     else if(b.phase===2&&b.pattern==='thrust'&&!b.combo){b.combo=true;startPattern(g,'slam');}
     else if(b.phase===2&&b.pattern==='leap'&&!b.combo){b.combo=true;startPattern(g,'sweep');}
-    else{b.combo=false;b.state='idle';b.t=0;b.wait=b.phase===2?.32:.65;}
+    else if(b.phase===2&&b.pattern==='rush'&&!b.combo){b.combo=true;startPattern(g,'reverse');}
+    else{b.combo=false;b.chain=0;b.state='idle';b.t=0;b.wait=b.phase===2?.18:.35;}
   }
   const d=dist(p,b),min=2.3;
   if(d<min){const angle=d<.001?p.yaw:toward(b,p);p.x=b.x+Math.sin(angle)*min;p.z=b.z+Math.cos(angle)*min;confine(p);}

@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,step,startPattern,swordPose,PATTERNS,angleDelta} from '../src/combat.mjs';
+import {createGame,step,startPattern,swordPose,PATTERNS,ORDER,TEMPO,angleDelta} from '../src/combat.mjs';
 const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
 const place=(g,x,z)=>{g.player.x=x;g.player.z=z;};
 test('new patterns are registered with names and positive timings',()=>{
   for(const k of ['leap','whirl']){const c=PATTERNS[k];assert.ok(c.name);assert.ok(c.wind>0&&c.active>0&&c.recover>0&&c.damage>0);}
 });
 test('phase 1 can leap but never whirls; phase 2 can whirl',()=>{
-  let g=createGame();g.boss.wait=0;g.boss.sequence=4;place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'leap');
-  g=createGame();g.boss.wait=0;g.boss.phase=2;g.boss.sequence=6;place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'whirl');
-  g=createGame();for(let i=0;i<14;i++){g.boss.wait=0;g.boss.state='idle';g.boss.sequence=i;place(g,0,2);step(g,1/120);assert.notEqual(g.boss.pattern,'whirl');}
+  let g=createGame();g.boss.wait=0;g.boss.sequence=ORDER[1].indexOf('leap');place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'leap');
+  g=createGame();g.boss.wait=0;g.boss.phase=2;g.boss.sequence=ORDER[2].indexOf('whirl');place(g,0,2);step(g,1/120);assert.equal(g.boss.pattern,'whirl');
+  g=createGame();for(let i=0;i<ORDER[1].length*2;i++){g.boss.wait=0;g.boss.state='idle';g.boss.sequence=i;place(g,0,2);step(g,1/120);assert.notEqual(g.boss.pattern,'whirl');}
 });
 test('leap telegraph is harmless and the landing hits once for 42',()=>{
   const g=createGame();place(g,0,6);startPattern(g,'leap');tick(g,1.0);assert.equal(g.player.hp,120);
@@ -23,7 +23,7 @@ test('leap closes distance toward where the player stood',()=>{
   assert.ok(after<before-4,'before '+before+' after '+after);
 });
 test('leap can be dodged by moving out of the landing zone',()=>{
-  const g=createGame();place(g,0,6);startPattern(g,'leap');tick(g,1.25);place(g,16,6);tick(g,1.2);assert.equal(g.player.hp,120);
+  const g=createGame();place(g,0,6);startPattern(g,'leap');tick(g,PATTERNS.leap.wind/TEMPO+.1);place(g,16,6);tick(g,1.0);assert.equal(g.player.hp,120);
 });
 test('whirl sweeps a full circle and hits a player in the ring exactly once',()=>{
   const g=createGame();g.boss.phase=2;place(g,0,2);const start=g.boss.yaw;
@@ -32,7 +32,7 @@ test('whirl sweeps a full circle and hits a player in the ring exactly once',()=
   assert.ok(start!==undefined);
 });
 test('whirl does nothing to a player outside its reach',()=>{
-  const g=createGame();g.boss.phase=2;place(g,0,-4+11);startPattern(g,'whirl');tick(g,3.2);assert.equal(g.player.hp,120);
+  const g=createGame();g.boss.phase=2;place(g,0,-4+11);startPattern(g,'whirl');tick(g,PATTERNS.whirl.wind/(1.15*TEMPO)+PATTERNS.whirl.active+.1);assert.equal(g.player.hp,120);
 });
 test('phase 2 chains thrust into slam and leap into sweep, once',()=>{
   let g=createGame();g.boss.phase=2;place(g,20,-4);startPattern(g,'thrust');
