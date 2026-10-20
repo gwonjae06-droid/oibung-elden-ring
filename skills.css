@@ -1,0 +1,16 @@
+.skill-hud{margin:.55rem 0 .3rem;padding:.45rem .55rem;border:1px solid rgba(255,255,255,.14);border-radius:8px;background:rgba(10,14,12,.5)}
+.skill-line{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-size:.78rem}
+.skill-line strong{font-size:.9rem}
+.skill-hud .meter{height:7px;margin:.35rem 0}
+.skill-hud .meter.skill i{background:#8fd8ff;transition:background .2s}
+.skill-hud[data-weapon="hammer"] .meter.skill i{background:#ff7a2e}
+.skill-hud[data-weapon="bow"] .meter.skill i{background:#9dff80}
+.skill-hud[data-weapon="cards"] .meter.skill i{background:#ffdc40}
+.skill-hud[data-ready="true"] .meter.skill{box-shadow:0 0 8px rgba(255,255,255,.45)}
+.skill-hud p{margin:0;font-size:.74rem;opacity:.85}
+.card-row{display:none;gap:4px}
+.skill-hud[data-weapon="cards"] .card-row{display:inline-flex}
+.card-row i{width:14px;height:20px;border-radius:3px;opacity:.28;border:1px solid rgba(255,255,255,.5);transition:opacity .08s,transform .08s}
+.card-blue{background:#4d9fff}.card-red{background:#ff3a2e}.card-yellow{background:#ffdc40}
+.skill-hud[data-card="blue"] .card-blue,.skill-hud[data-card="red"] .card-red,.skill-hud[data-card="yellow"] .card-yellow{opacity:1;transform:translateY(-3px) scale(1.15);box-shadow:0 0 8px currentColor}
+@media (prefers-reduced-motion:reduce){.card-row i,.skill-hud .meter.skill i{transition:none}}

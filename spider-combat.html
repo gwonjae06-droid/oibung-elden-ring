@@ -6,12 +6,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./skills.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
 </head>
 <body>
 <a class="skip" href="#menu">메뉴로 이동</a>
 <main id="arena" aria-label="오슬우와 긴턱 거미 이권재의 3D 전투">
-<canvas id="world" tabindex="0" aria-label="전투 화면. WASD 이동, J 공격, K 강공격, Space 회피, E 회복, Q 록온, Esc 일시정지."></canvas>
+<canvas id="world" tabindex="0" aria-label="전투 화면. WASD 이동, J 또는 좌클릭 공격, L 또는 우클릭 스킬, Space 회피, E 회복, Q 록온, Esc 일시정지."></canvas>
 <div id="vignette" aria-hidden="true"></div><div id="hit-flash" aria-hidden="true"></div>
 <header class="brand">
 <svg role="img" aria-label="오이붕 문장" viewBox="0 0 36 36" width="32" height="32" fill="none"><path d="M18 3 31 11v14l-13 8L5 25V11Z" stroke="currentColor"/><path d="M12 10 18 27l6-17M9 18h18M18 5v7" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -22,25 +23,30 @@
 <div class="player-line"><strong>오슬우</strong><span id="weapon-label">검</span></div>
 <div class="stat"><span>생명</span><div class="meter hp" role="progressbar" aria-label="생명" aria-valuemin="0" aria-valuemax="120" aria-valuenow="120"><i id="hp-fill"></i></div><b id="hp-value">120</b></div>
 <div class="stat"><span>기력</span><div class="meter stamina" role="progressbar" aria-label="기력" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i id="stamina-fill"></i></div><b id="stamina-value">100</b></div>
+<div id="skill-hud" class="skill-hud" data-card="" data-ready="true" data-weapon="sword">
+<div class="skill-line"><span>스킬 · 우클릭</span><strong id="skill-name">질풍검</strong><span class="card-row" aria-hidden="true"><i class="card-blue"></i><i class="card-red"></i><i class="card-yellow"></i></span></div>
+<div class="meter skill" role="progressbar" aria-label="스킬 상태" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i id="skill-fill"></i></div>
+<p id="skill-text">준비 완료</p>
+</div>
 <div class="flask-line">회복약 <b id="flasks">3</b><span>E · 사용</span><span id="lock-label">록온 켜짐 · Q</span></div>
 </section>
 <div id="reticle" hidden aria-hidden="true"></div>
 <p id="notice" role="status" aria-live="polite"></p>
 <section id="boss-hud" class="boss-hud" aria-label="이권재 상태" hidden><div class="boss-line"><div><span id="phase-label">첫 번째 시련</span><h2>긴턱의 이권재</h2></div><span id="boss-value">1,800 / 1,800</span></div><div class="meter boss" role="progressbar" aria-label="보스 생명" aria-valuemin="0" aria-valuemax="1800" aria-valuenow="1800"><i id="boss-fill"></i></div><p id="boss-action">틈을 읽고, 턱을 피해 파고드세요.</p></section>
-<footer id="controls" hidden><span><kbd>WASD</kbd> 이동</span><span><kbd>J / 좌클릭</kbd> 공격</span><span><kbd>K</kbd> 강공격</span><span><kbd>Space</kbd> 회피</span><span><kbd>Q</kbd> 록온</span><span>우클릭 드래그 · 시점</span></footer>
-<section id="touch" aria-label="터치 조작" hidden><div id="stick" aria-label="이동 조이스틱"><i id="thumb"></i></div><div class="touch-actions"><button data-act="heal">회복</button><button data-act="lock">록온</button><button data-act="heavy">강공격</button><button data-act="roll">회피</button><button data-act="light" class="attack">공격</button></div></section>
+<footer id="controls" hidden><span><kbd>WASD</kbd> 이동</span><span><kbd>J / 좌클릭</kbd> 공격</span><span><kbd>L / 우클릭</kbd> 스킬</span><span><kbd>Space</kbd> 회피</span><span><kbd>Q</kbd> 록온</span><span>휠 클릭 드래그 · 시점</span></footer>
+<section id="touch" aria-label="터치 조작" hidden><div id="stick" aria-label="이동 조이스틱"><i id="thumb"></i></div><div class="touch-actions"><button data-act="heal">회복</button><button data-act="lock">록온</button><button data-act="skill">스킬</button><button data-act="roll">회피</button><button data-act="light" class="attack">공격</button></div></section>
 <section id="menu" class="overlay" aria-labelledby="menu-title"><div class="menu-panel">
 <p class="eyebrow">오슬우의 첫 번째 시련</p><h1 id="menu-title">긴턱의 이권재</h1><p class="intro">여덟 다리, 두 자루의 턱.<br>칼날이 지나간 자리에 당신의 기회가 남습니다.</p>
 <fieldset id="weapon-select"><legend>시작 무기</legend><div class="weapon-grid">
-<button class="weapon selected" data-weapon="sword" aria-pressed="true"><span>01</span><strong>검</strong><small>빠른 베기 · 균형</small></button>
-<button class="weapon" data-weapon="hammer" aria-pressed="false"><span>02</span><strong>망치</strong><small>묵직한 한 방 · 경직</small></button>
-<button class="weapon" data-weapon="bow" aria-pressed="false"><span>03</span><strong>활</strong><small>직선 사격 · 거리 유지</small></button>
-<button class="weapon" data-weapon="cards" aria-pressed="false"><span>04</span><strong>카드</strong><small>부채꼴 투척 · 다단 적중</small></button></div></fieldset>
+<button class="weapon selected" data-weapon="sword" aria-pressed="true"><span>01</span><strong>검</strong><small>스킬 · 5초간 공격 속도 대폭 증가</small></button>
+<button class="weapon" data-weapon="hammer" aria-pressed="false"><span>02</span><strong>망치</strong><small>스킬 · 4회 적중 후 흡혈 강타</small></button>
+<button class="weapon" data-weapon="bow" aria-pressed="false"><span>03</span><strong>활</strong><small>스킬 · 관통 화살 최대 3회 충전</small></button>
+<button class="weapon" data-weapon="cards" aria-pressed="false"><span>04</span><strong>카드</strong><small>스킬 · 파랑·빨강·노랑 타이밍 선택</small></button></div></fieldset>
 <button id="start" class="primary" disabled>전장 준비 중…</button><p id="load-status" class="subtle">3D 전장을 불러옵니다. 첫 실행에는 인터넷 연결이 필요합니다.</p>
-<details><summary>조작과 전투 요령</summary><p>WASD 이동 · J 또는 좌클릭 공격 · K 강공격 · Space 회피 · E 회복약 · Q 록온 · Esc 일시정지. 우클릭 드래그로 시점을 회전합니다. 터치 기기는 화면 조작부를 사용합니다.</p><p>회피는 시작 직후가 아닌 중간 구간에만 무적입니다. 공격·회복 도중에는 취소할 수 없습니다. 이권재의 턱이 멈춘 뒤 반격하세요. 생명이 절반이 되면 연속 공격을 시작합니다.</p></details>
+<details><summary>조작과 전투 요령</summary><p>WASD 이동 · J 또는 좌클릭 공격 · L 또는 우클릭 스킬 · Space 회피 · E 회복약 · Q 록온 · Esc 일시정지. 마우스 휠 클릭 드래그로 시점을 회전합니다. 터치 기기는 화면 조작부를 사용합니다.</p><p>카드 스킬은 파랑, 빨강, 노랑이 차례로 돌아가며, 원하는 색이 보이는 순간 우클릭하면 확정됩니다. 파랑은 3초간 이동 속도 +50%, 빨강은 다음 공격 피해 +50%, 노랑은 다음 적중 시 1초 기절입니다.</p><p>회피는 시작 직후가 아닌 중간 구간에만 무적입니다. 공격·회복 도중에는 취소할 수 없습니다. 이권재의 턱이 멈춘 뒤 반격하세요. 생명이 절반이 되면 연속 공격을 시작합니다.</p></details>
 <p class="prototype">오리지널 3D 전투 프로토타입 · 정식 엘든 링과 무관한 창작 게임</p>
 </div></section>
-<section id="pause-screen" class="overlay" aria-labelledby="pause-title" hidden><div class="small-panel"><p class="eyebrow">잠시 숨을 고르세요</p><h2 id="pause-title">일시정지</h2><button id="resume" class="primary">전투 계속</button><button id="quit">무기 선택으로</button></div></section>
+<section id="pause-screen" class="overlay" aria-labelledby="pause-title" hidden><div class="small-panel"><p class="eyebrow">잠시 숫을 고르세요</p><h2 id="pause-title">일시정지</h2><button id="resume" class="primary">전투 계속</button><button id="quit">무기 선택으로</button></div></section>
 <section id="result" class="overlay" aria-labelledby="result-title" hidden><div class="small-panel"><p id="result-kicker" class="eyebrow"></p><h2 id="result-title"></h2><p id="result-text"></p><p id="result-stats" class="subtle"></p><button id="retry" class="primary">같은 무기로 재도전</button><button id="change">무기 변경</button></div></section>
 <div id="damage-layer" aria-hidden="true"></div>
 </main>
