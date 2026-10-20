@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {CLOWN_FACE,faceAlphaMask} from '../src/clown-face.mjs';
+import {HEAD_RADII,uvFor,morphHead,headPose,POSES,NEUTRAL} from '../src/clown-morph.mjs';
+test('photo is an intact embedded JPEG',()=>{const b=Buffer.from(CLOWN_FACE.jpeg,'base64');assert.equal(b.length,CLOWN_FACE.bytes);assert.equal(createHash('sha256').update(b).digest('hex'),CLOWN_FACE.sha256);assert.deepEqual([...b.subarray(0,3)],[255,216,255]);assert.deepEqual([...b.subarray(-2)],[255,217]);});
+test('only border-connected black background is removed',()=>{const w=12,h=12,p=new Uint8ClampedArray(w*h*4);for(let y=3;y<9;y++)for(let x=3;x<9;x++)for(let c=0;c<3;c++)p[(y*w+x)*4+c]=200;p[(5*w+5)*4]=p[(5*w+5)*4+1]=p[(5*w+5)*4+2]=0;const a=faceAlphaMask(p,w,h);assert.equal(a[0],0);assert.equal(a[5*w+5],255);assert.equal(a[6*w+6],255);});
+test('UVs use the requested face crop',()=>{const c=CLOWN_FACE.crop,a=uvFor(-HEAD_RADII.x,HEAD_RADII.y,c),b=uvFor(HEAD_RADII.x,-HEAD_RADII.y,c);assert.ok(Math.abs(a[0]-c.x0)<1e-9);assert.ok(Math.abs(b[0]-c.x1)<1e-9);assert.ok(a[1]>b[1]);});
+const base=new Float32Array([0,1,0,0,-1,0,0,0,.88,.84,0,0,-.84,0,0,0,0,-.88]);
+test('neutral is unchanged and every pose has finite geometry',()=>{const out=new Float32Array(base.length);morphHead(base,out,NEUTRAL);assert.deepEqual([...out],[...base]);for(const n of POSES)for(const t of [0,.25,.5,.75,1]){morphHead(base,out,headPose(n,t),.7);assert.ok([...out].every(Number.isFinite),n);}});
+test('head inflates to several times its original volume',()=>{const out=morphHead(base,new Float32Array(base.length),headPose('inflate',1));assert.ok(out[1]>2.8);assert.ok(Math.abs(headPose('hold').inflate-headPose('throw',0).inflate)<1e-9);});
+test('jaw lowers the mouth and bulge only pushes the front',()=>{const out=morphHead(base,new Float32Array(base.length),{jaw:1});assert.equal(out[1],base[1]);assert.ok(out[4]<base[4]-.2);morphHead(base,out,{bulge:1});assert.ok(out[8]>base[8]+.2);assert.equal(out[17],base[17]);});
