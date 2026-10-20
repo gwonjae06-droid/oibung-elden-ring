@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createGame,act,step,rolling,jawPose,WEAPONS,PATTERNS} from './combat.mjs';
+import {createGame,act,step,rolling,swordPose,SWORD,WEAPONS,PATTERNS} from './combat.mjs';
 import {createAudio} from './audio.mjs';
 import {BOSS_FACE} from './boss-face.mjs';
 import {faceSize,bladeSize,drawFace,drawBlade} from './face.mjs';
@@ -94,10 +94,9 @@ const abdomen=new THREE.Mesh(new THREE.SphereGeometry(2.1,32,20),carapace);
 abdomen.scale.set(1,.85,1.25);abdomen.position.set(0,2.1,-1.5);abdomen.castShadow=true;bossModel.add(abdomen);
 const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,24,16),carapace);
 thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;bossModel.add(thorax);
-const eyeMat=new THREE.MeshStandardMaterial({color:0x300808,emissive:0x992222,emissiveIntensity:.6});
-for(const [x,y,z,s] of [[-.35,2.5,2.1,.16],[.35,2.5,2.1,.16],[-.75,2.3,1.95,.12],[.75,2.3,1.95,.12]]){
-  const e=new THREE.Mesh(new THREE.SphereGeometry(s,10,8),eyeMat);e.position.set(x,y,z);bossModel.add(e);
-}
+const HEAD={x:0,y:2.75,z:1.75,r:1.12};
+const bossHead=new THREE.Mesh(new THREE.SphereGeometry(HEAD.r,28,20),carapace);
+bossHead.position.set(HEAD.x,HEAD.y,HEAD.z);bossHead.castShadow=true;bossModel.add(bossHead);
 const legs=[];
 {
   const fan=[.75,.28,-.28,-.75],zs=[1.3,.45,-.5,-1.5];
@@ -111,19 +110,20 @@ const legs=[];
     }
   }
 }
-const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
-const jawGroups=[0,1].map(()=>{
-  const g=new THREE.Group();g.rotation.order='YXZ';
-  const geo=new THREE.ConeGeometry(.24,5.2,4).rotateX(Math.PI/2).translate(0,0,2.6);
-  const blade=new THREE.Mesh(geo,boneMat);blade.scale.y=.55;blade.castShadow=true;g.add(blade);
-  g.userData.cone=blade;
-  bossModel.add(g);return g;
-});
 
-const FACE_CHIN_STRETCH=2.2,BLADE_CHIN_STRETCH=16,BLADE_LEN=5.2;
-const faceMat=new THREE.MeshStandardMaterial({alphaTest:.5,roughness:.7,side:THREE.DoubleSide,emissive:0x000000});
+const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
+const swordGroup=new THREE.Group();swordGroup.rotation.order='YXZ';bossModel.add(swordGroup);
+const fallbackBlade=new THREE.Mesh(new THREE.ConeGeometry(.5,SWORD.length,4).rotateX(Math.PI/2).translate(0,0,SWORD.length/2),boneMat);
+fallbackBlade.scale.y=.45;fallbackBlade.castShadow=true;swordGroup.add(fallbackBlade);
+
+const FACE_WORLD_W=1.9,FACE_R=1.15,FACE_THETA0=.2;
+const PX=FACE_WORLD_W/BOSS_FACE.w;
+const BLADE_STRETCH=SWORD.length/((BOSS_FACE.h-BOSS_FACE.chin)*PX);
+const faceMat=new THREE.MeshStandardMaterial({alphaTest:.5,roughness:.7,emissive:0x000000});
 const bladeMat=new THREE.MeshStandardMaterial({alphaTest:.5,roughness:.55,side:THREE.DoubleSide,emissive:0x000000});
-const faceMesh=new THREE.Mesh(new THREE.PlaneGeometry(1,1),faceMat);faceMesh.visible=false;bossModel.add(faceMesh);
+const facePhi=FACE_WORLD_W/FACE_R,faceTheta=BOSS_FACE.chin*PX/FACE_R;
+const faceMesh=new THREE.Mesh(new THREE.SphereGeometry(FACE_R,40,28,Math.PI/2-facePhi/2,facePhi,FACE_THETA0,faceTheta),faceMat);
+faceMesh.position.set(HEAD.x,HEAD.y,HEAD.z);faceMesh.visible=false;bossModel.add(faceMesh);
 function canvasTexture(draw,size){
   const c=document.createElement('canvas');c.width=size.w;c.height=size.h;
   draw(c.getContext('2d'));
@@ -134,17 +134,12 @@ function loadBossSkin(){
   const img=new Image();
   img.onload=()=>{
     try{
-      const fs=faceSize(BOSS_FACE,FACE_CHIN_STRETCH),bs=bladeSize(BOSS_FACE,BLADE_CHIN_STRETCH);
-      faceMat.map=canvasTexture(ctx=>drawFace(ctx,img,BOSS_FACE,FACE_CHIN_STRETCH),fs);
-      bladeMat.map=canvasTexture(ctx=>drawBlade(ctx,img,BOSS_FACE,BLADE_CHIN_STRETCH),bs);
+      faceMat.map=canvasTexture(ctx=>drawFace(ctx,img,BOSS_FACE),faceSize(BOSS_FACE));
+      bladeMat.map=canvasTexture(ctx=>drawBlade(ctx,img,BOSS_FACE,BLADE_STRETCH),bladeSize(BOSS_FACE,BLADE_STRETCH));
       faceMat.needsUpdate=true;bladeMat.needsUpdate=true;
-      const fw=2,fh=fw*fs.h/fs.w;
-      faceMesh.scale.set(fw,fh,1);faceMesh.position.set(0,1.25+fh/2,2.5);faceMesh.visible=true;
-      const bw=BLADE_LEN*bs.w/bs.h*.8,geo=new THREE.PlaneGeometry(bw,BLADE_LEN).rotateX(Math.PI/2).translate(0,0,BLADE_LEN/2);
-      for(const g of jawGroups){
-        const a=new THREE.Mesh(geo,bladeMat),b=new THREE.Mesh(geo,bladeMat);b.rotation.z=Math.PI/2;
-        g.add(a,b);g.userData.cone.visible=false;
-      }
+      const geo=new THREE.PlaneGeometry(FACE_WORLD_W,SWORD.length).rotateX(Math.PI/2).translate(0,0,SWORD.length/2);
+      const a=new THREE.Mesh(geo,bladeMat),b=new THREE.Mesh(geo,bladeMat);b.rotation.z=Math.PI/2;
+      swordGroup.add(a,b);fallbackBlade.visible=false;faceMesh.visible=true;
     }catch(e){console.error('boss skin failed',e);}
   };
   img.onerror=()=>console.error('boss face image failed to load');
@@ -413,7 +408,7 @@ function handleEvents(){
   for(const ev of g.events){
     playEvent(ev,g);
     if(ev.type==='boss-hit'){
-      floatText(String(ev.amount),b.x,3.8,b.z,'');
+      floatText(String(ev.amount),b.x,4.2,b.z,'');
       burst(b.x+(p.x-b.x)*.4,2.2,b.z+(p.z-b.z)*.4,0xf0d9a0,8);
     }else if(ev.type==='player-hit'){
       floatText('-'+ev.amount,p.x,2.6,p.z,'player');
@@ -476,22 +471,19 @@ function syncBoss(dt){
     g.rotation.y=g.userData.base+Math.sin(vis.legPhase+i*1.7)*amp;
     g.rotation.z=Math.max(0,Math.sin(vis.legPhase+i*1.7))*amp*.8*(i<4?-1:1);
   });
-  for(let i=0;i<2;i++){
-    const pose=jawPose(b,i),jg=jawGroups[i];
-    jg.position.set(pose.x,pose.y,pose.z);jg.rotation.x=pose.pitch;jg.rotation.y=pose.yaw;
-  }
+  const pose=swordPose(b);
+  swordGroup.position.set(pose.x,pose.y,pose.z);swordGroup.rotation.x=pose.pitch;swordGroup.rotation.y=pose.yaw;
   let glow=0;
   if(b.state==='windup')glow=.15+.45*clamp(b.t/PATTERNS[b.pattern].wind,0,1);
   else if(b.state==='active')glow=1;
   boneMat.emissive.setHex(0xaa2222);boneMat.emissiveIntensity=glow;
   bladeMat.emissive.setHex(0xaa2222);bladeMat.emissiveIntensity=glow*.8;
   faceMat.emissive.setHex(0x992222);faceMat.emissiveIntensity=(b.phase===2?.18:0)+glow*.12;
-  eyeMat.emissiveIntensity=b.phase===2?1.6:.6;
   bossModel.rotation.set(0,0,0);bossModel.position.y=Math.sin(vis.time*1.6)*.05;
   if(b.state==='stagger'){bossModel.rotation.x=-.12;bossModel.rotation.z=Math.sin(vis.time*30)*.03;}
   else if(b.state==='transition'){const s=1+Math.sin(vis.time*14)*.03;bossModel.scale.setScalar(s);}
   if(b.state!=='transition')bossModel.scale.setScalar(1);
-  if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;bladeMat.emissiveIntensity=0;faceMat.emissiveIntensity=0;eyeMat.emissiveIntensity=0;}
+  if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;bladeMat.emissiveIntensity=0;faceMat.emissiveIntensity=0;}
 }
 
 function syncProjectiles(dt){
@@ -537,8 +529,8 @@ function updateHud(){
   setText('lock-label',lock?'록온 켜짐 · Q':'록온 꺼짐 · Q');
   setBar('boss-fill',b.hp/b.maxHp,b.hp,b.maxHp);
   setText('boss-value',fmt(b.hp)+' / '+fmt(b.maxHp));
-  setText('phase-label',b.phase===2?'두 번째 단계 · 쌍턱 연속 공격':'첫 번째 시련');
-  let line='틈을 읽고, 턱을 피해 파고드세요.';
+  setText('phase-label',b.phase===2?'두 번째 단계 · 대검 연속 공격':'첫 번째 시련');
+  let line='틈을 읽고, 대검을 피해 파고드세요.';
   if(b.state==='windup'||b.state==='active')line=PATTERNS[b.pattern].name;
   else if(b.state==='stagger')line='경직! 지금이 기회입니다.';
   else if(b.state==='transition')line='이권재가 분노합니다.';
@@ -547,7 +539,7 @@ function updateHud(){
   const ret=$('reticle');
   const show=mode==='playing'&&lock&&b.state!=='dead';
   if(show){
-    const s=toScreen(b.x,2.4,b.z);
+    const s=toScreen(b.x,2.8,b.z);
     if(s){ret.hidden=false;ret.style.left=(s.x-6)+'px';ret.style.top=(s.y-6)+'px';}else ret.hidden=true;
   }else ret.hidden=true;
 }

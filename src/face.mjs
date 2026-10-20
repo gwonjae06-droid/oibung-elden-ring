@@ -7,20 +7,21 @@ export function spanAt(face, sy) {
   return [rows[i][0] * (1 - t) + rows[j][0] * t, rows[i][1] * (1 - t) + rows[j][1] * t];
 }
 
-export function faceSize(face, k) {
-  return {w: face.w, h: Math.round(face.chin + (face.h - face.chin) * k)};
+export function faceSize(face) {
+  return {w: face.w, h: face.chin};
 }
 
 export function bladeSize(face, k) {
   return {w: face.w, h: Math.round((face.h - face.chin) * k)};
 }
 
-export function facePolygon(face, k, stepPx = 2) {
-  const {h} = faceSize(face, k), left = [], right = [];
-  for (let y = 0; y <= h; y += stepPx) {
-    const sy = y <= face.chin ? y : face.chin + (y - face.chin) / k;
-    const [l, r] = spanAt(face, Math.min(face.h - 0.5, sy));
-    left.push([l, y]); right.push([r, y]);
+export function facePolygon(face, stepPx = 2) {
+  const h = face.chin, left = [], right = [];
+  for (let y = 0; ; y += stepPx) {
+    const yy = Math.min(y, h);
+    const [l, r] = spanAt(face, Math.min(face.h - 0.5, yy));
+    left.push([l, yy]); right.push([r, yy]);
+    if (yy === h) break;
   }
   return left.concat(right.reverse());
 }
@@ -40,14 +41,13 @@ function trace(ctx, pts) {
   ctx.closePath();
 }
 
-export function drawFace(ctx, img, face, k) {
-  const s = img.width / face.w, size = faceSize(face, k);
+export function drawFace(ctx, img, face) {
+  const s = img.width / face.w;
   ctx.imageSmoothingQuality = 'high';
   ctx.save();
-  trace(ctx, facePolygon(face, k));
+  trace(ctx, facePolygon(face));
   ctx.clip();
   ctx.drawImage(img, 0, 0, img.width, face.chin * s, 0, 0, face.w, face.chin);
-  ctx.drawImage(img, 0, face.chin * s, img.width, (face.h - face.chin) * s, 0, face.chin, face.w, size.h - face.chin);
   ctx.restore();
 }
 

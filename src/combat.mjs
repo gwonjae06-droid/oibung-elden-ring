@@ -10,9 +10,9 @@ export const WEAPONS = {
 export const PATTERNS = {
   sweep:{name:'긴턱 횡베기',wind:1.0,active:.43,recover:1.10,damage:26},
   reverse:{name:'되돌려 베기',wind:.72,active:.42,recover:1.05,damage:24},
-  thrust:{name:'장검 돌진',wind:1.15,active:.60,recover:1.35,damage:34},
+  thrust:{name:'대검 돌진',wind:1.15,active:.60,recover:1.35,damage:34},
   slam:{name:'턱 내려찍기',wind:1.25,active:.36,recover:1.55,damage:39},
-  cross:{name:'쌍턱 교차베기',wind:1.05,active:.50,recover:1.45,damage:36},
+  cross:{name:'대검 교차베기',wind:1.05,active:.50,recover:1.45,damage:36},
   leap:{name:'도약 내려찍기',wind:1.30,active:.42,recover:1.60,damage:42},
   whirl:{name:'회전 베기',wind:.95,active:.80,recover:1.75,damage:30}
 };
@@ -57,39 +57,31 @@ export function startPattern(g,name){
   b.state='windup';b.pattern=name;b.t=0;b.hit=false;b.attackId++;
   b.yaw=toward(b,g.player);emit(g,'telegraph',{name:PATTERNS[name].name});
 }
-export function jawPose(b,index){
-  const side=index===0?-1:1,pat=b.pattern,cfg=PATTERNS[pat];
+export const SWORD = {x:0, y:2.3, z:2.8, length:6.84, width:.9};
+export function swordPose(b){
+  const pat=b.pattern,cfg=PATTERNS[pat];
   const u=b.state==='active'?clamp(b.t/cfg.active,0,1):b.state==='recovery'?1:0;
   const wind=b.state==='windup'?clamp(b.t/cfg.wind,0,1):1;
   const relax=b.state==='recovery'?clamp(b.t/cfg.recover,0,1):0;
-  let yaw=side*.22,pitch=.06;
+  let yaw=0,pitch=.25,z=SWORD.z;
   if(['windup','active','recovery'].includes(b.state)){
-    if(pat==='sweep'||pat==='reverse'){
-      const activeSide=pat==='sweep'?-1:1;
-      if(side===activeSide)yaw=(pat==='sweep'?1:-1)*(b.state==='windup'?1.13*wind:1.13-2.35*u);
-      else yaw=side*.55;
-    }else if(pat==='cross')yaw=side*(b.state==='windup'?.22+.90*wind:1.12-1.5*u);
-    else if(pat==='thrust')yaw=side*(.22-.17*wind);
-    else if(pat==='slam'){
-      pitch=b.state==='windup'?-1.12*wind:-1.12+1.50*u;
-      yaw=side*.14;
-    }else if(pat==='leap'){
-      pitch=b.state==='windup'?-1.0*wind:-1.0+1.45*u;
-      yaw=side*(.14+(b.state==='windup'?.2*wind:.2));
-    }else if(pat==='whirl'){
-      yaw=side*(b.state==='windup'?.22+1.03*wind:1.25);
-    }
-    yaw=yaw*(1-relax)+side*.22*relax;pitch=pitch*(1-relax)+.06*relax;
+    const win=b.state==='windup';
+    if(pat==='sweep')yaw=win?1.13*wind:1.13-2.35*u;
+    else if(pat==='reverse')yaw=win?-1.13*wind:-1.13+2.35*u;
+    else if(pat==='cross'){yaw=win?.9*wind:.9-2.0*u;pitch=win?.25-1.0*wind:-.75+1.0*u;}
+    else if(pat==='thrust'){pitch=win?.25-.1*wind:.15;z=win?SWORD.z-1.6*wind:SWORD.z-1.6+2.4*u;}
+    else if(pat==='slam')pitch=win?-1.12*wind:-1.12+1.50*u;
+    else if(pat==='leap')pitch=win?-1.0*wind:-1.0+1.45*u;
+    else if(pat==='whirl')yaw=win?1.32*wind:1.32;
+    yaw=yaw*(1-relax);pitch=pitch*(1-relax)+.25*relax;z=z*(1-relax)+SWORD.z*relax;
   }
-  return {x:side*.68,y:1.6,z:1.9,yaw,pitch,length:5.2};
+  return {x:SWORD.x,y:SWORD.y,z,yaw,pitch,length:SWORD.length};
 }
-export function jawSegments(b){
-  return [0,1].map(i=>{
-    const p=jawPose(b,i),c=Math.cos(b.yaw),s=Math.sin(b.yaw);
-    const root={x:b.x+p.x*c+p.z*s,y:p.y,z:b.z-p.x*s+p.z*c};
-    const yaw=b.yaw+p.yaw,len=p.length*Math.cos(p.pitch);
-    return {a:root,b:{x:root.x+Math.sin(yaw)*len,y:root.y-Math.sin(p.pitch)*p.length,z:root.z+Math.cos(yaw)*len},index:i};
-  });
+export function swordSegment(b){
+  const p=swordPose(b),c=Math.cos(b.yaw),s=Math.sin(b.yaw);
+  const a={x:b.x+p.x*c+p.z*s,y:p.y,z:b.z-p.x*s+p.z*c};
+  const yaw=b.yaw+p.yaw,len=p.length*Math.cos(p.pitch);
+  return {a,b:{x:a.x+Math.sin(yaw)*len,y:a.y-Math.sin(p.pitch)*p.length,z:a.z+Math.cos(yaw)*len}};
 }
 function bossDamage(g,amount,poise){
   const b=g.boss;if(b.hp<=0)return;
@@ -175,9 +167,9 @@ export function step(g,dt,input={}){
       b.yaw+=TAU/cfg.active*dt;
     }
     if(!b.hit){
-      const segments=jawSegments(b).filter(j=>!(b.pattern==='sweep'&&j.index===1)&&!(b.pattern==='reverse'&&j.index===0));
-      const hit=segments.some(j=>Math.min(j.a.y,j.b.y)<2&&Math.max(j.a.y,j.b.y)>.1&&segmentDistance(p,j.a,j.b)<.74);
-      const slam=b.pattern==='slam'&&b.t>cfg.active*.84&&dist(p,{x:b.x+Math.sin(b.yaw)*5.6,z:b.z+Math.cos(b.yaw)*5.6})<2.5;
+      const sw=swordSegment(b);
+      const hit=Math.min(sw.a.y,sw.b.y)<2.2&&Math.max(sw.a.y,sw.b.y)>.1&&segmentDistance(p,sw.a,sw.b)<SWORD.width;
+      const slam=b.pattern==='slam'&&b.t>cfg.active*.84&&dist(p,sw.b)<2.4;
       const landing=b.pattern==='leap'&&b.t>cfg.active*.7&&dist(p,b)<4.6;
       if(hit||slam||landing){b.hit=true;hurtPlayer(g,cfg.damage);}
     }
