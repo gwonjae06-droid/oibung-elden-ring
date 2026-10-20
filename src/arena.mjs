@@ -149,8 +149,8 @@ function notice(text){
 }
 
 const audio=createAudio();
-const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl',rise:'tele-slash',jab:'tele-thrust',rush:'tele-thrust',retreat:'tele-whirl',wave:'tele-slam'};
-const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl',rise:'boss-slash',jab:'boss-thrust',rush:'boss-thrust',retreat:'boss-whirl',wave:'boss-whirl'};
+const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl',rise:'tele-slash',jab:'tele-thrust',rush:'tele-thrust',retreat:'tele-whirl',wave:'tele-slam',stomp:'tele-slam',backsweep:'tele-slash',shove:'tele-thrust'};
+const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl',rise:'boss-slash',jab:'boss-thrust',rush:'boss-thrust',retreat:'boss-whirl',wave:'boss-whirl',stomp:'boss-slam',backsweep:'boss-slash',shove:'boss-thrust'};
 const CARD_NOTICE={blue:'파랑 카드 · 이동 속도 +50%',red:'빨강 카드 · 다음 공격 +50%',yellow:'노랑 카드 · 다음 적중 시 기절'};
 const patternKey=name=>Object.keys(PATTERNS).find(k=>PATTERNS[k].name===name);
 function playSkillSound(name){
