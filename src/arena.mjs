@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createGame,act,step,rolling,jawPose,WEAPONS,PATTERNS} from './combat.mjs';
+import {createAudio} from './audio.mjs';
 
 const $=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -166,26 +167,27 @@ function notice(text){
   clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.remove('visible'),1700);
 }
 
-let audio=null,soundOn=false;
-function beep(freq,dur,type,gain,slide){
-  if(!soundOn||!audio)return;
-  const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();
-  o.type=type||'sine';o.frequency.setValueAtTime(freq,t);
-  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),t+dur);
-  g.gain.setValueAtTime(gain||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-  o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+dur);
+const audio=createAudio();
+const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl'};
+const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl'};
+const patternKey=name=>Object.keys(PATTERNS).find(k=>PATTERNS[k].name===name);
+function playEvent(ev,g){
+  switch(ev.type){
+    case 'swing':if(g.weapon==='sword'||g.weapon==='hammer')audio.play('swing-'+g.weapon);break;
+    case 'shot':audio.play('swing-'+g.weapon);break;
+    case 'roll':audio.play('roll');break;
+    case 'dodge':audio.play('dodge');break;
+    case 'healed':audio.play('healed');break;
+    case 'boss-hit':audio.play('hit-boss',{amount:ev.amount});break;
+    case 'player-hit':audio.play('hit-player');break;
+    case 'telegraph':{const k=patternKey(ev.name);if(k)audio.play(TELEGRAPH_SOUND[k]);break;}
+    case 'boss-swing':audio.play(SWING_SOUND[g.boss.pattern]||'boss-slash');break;
+    case 'phase':audio.play('phase');break;
+    case 'stagger':audio.play('stagger');break;
+    case 'victory':audio.play('victory');break;
+    case 'death':audio.play('death');break;
+  }
 }
-const SOUNDS={
-  'swing':()=>beep(260,.12,'sawtooth',.03,-140),
-  'shot':()=>beep(520,.1,'triangle',.04,-260),
-  'boss-swing':()=>beep(120,.3,'sawtooth',.05,-60),
-  'roll':()=>beep(180,.14,'sine',.03,-80),
-  'boss-hit':()=>beep(150,.12,'square',.04,-70),
-  'player-hit':()=>beep(90,.25,'sawtooth',.07,-40),
-  'healed':()=>beep(440,.3,'sine',.04,260),
-  'stagger':()=>beep(200,.3,'triangle',.05,120),
-  'phase':()=>beep(70,.6,'sawtooth',.06,40)
-};
 
 let selectedWeapon='sword';
 let game=createGame(selectedWeapon);
@@ -231,21 +233,21 @@ function startBattle(weapon){
   queued=null;lock=true;shake=0;
   view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;
   vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;
-  mode='playing';setUi();
+  mode='playing';setUi();audio.ambience(true);
   canvas.focus({preventScroll:true});
   notice('이권재가 모습을 드러냅니다');
 }
 function backToMenu(){
-  mode='menu';queued=null;clearFx();
+  mode='menu';queued=null;clearFx();audio.ambience(false);
   game=createGame(selectedWeapon);setWeaponVisual();setUi();
   $('start').focus();
 }
-function pauseGame(){if(mode==='playing'){mode='paused';keys.clear();stick.x=stick.y=0;setUi();$('resume').focus();}}
-function resumeGame(){if(mode==='paused'){mode='playing';setUi();canvas.focus({preventScroll:true});}}
+function pauseGame(){if(mode==='playing'){mode='paused';keys.clear();stick.x=stick.y=0;audio.ambience(false);setUi();$('resume').focus();}}
+function resumeGame(){if(mode==='paused'){mode='playing';audio.ambience(true);setUi();canvas.focus({preventScroll:true});}}
 
 function showResult(){
   const won=game.status==='won';
-  mode='result';
+  mode='result';audio.ambience(false);
   setText('result-kicker',won?'승리':'패배');
   setText('result-title',won?'이권재 격파':'쓰러졌습니다');
   setText('result-text',won?'긴턱이 땅에 내려앉았습니다. 오슬우의 첫 번째 시련이 끝났습니다.':'긴턱이 지나간 자리에 다시 기회가 남아 있습니다.');
@@ -364,20 +366,17 @@ $('theme').addEventListener('click',()=>{
   root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';
 });
 $('sound').addEventListener('click',()=>{
-  soundOn=!soundOn;
-  if(soundOn){
-    if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
-    if(audio.state==='suspended')audio.resume();
-  }
-  $('sound').setAttribute('aria-pressed',String(soundOn));
-  $('sound').textContent=soundOn?'소리 켜짐':'소리 꺼짐';
+  const on=audio.setEnabled(!audio.enabled);
+  $('sound').setAttribute('aria-pressed',String(on));
+  $('sound').textContent=on?'소리 켜짐':'소리 꺼짐';
+  if(on){audio.play('ui',{minGap:0});if(mode==='playing'||mode==='ending')audio.ambience(true);}
 });
 document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
 
 function handleEvents(){
   const g=game,p=g.player,b=g.boss;
   for(const ev of g.events){
-    const snd=SOUNDS[ev.type];if(snd)snd();
+    playEvent(ev,g);
     if(ev.type==='boss-hit'){
       floatText(String(ev.amount),b.x,3.8,b.z,'');
       burst(b.x+(p.x-b.x)*.4,2.2,b.z+(p.z-b.z)*.4,0xf0d9a0,8);
