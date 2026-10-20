@@ -44,6 +44,7 @@ for(let i=0;i<14;i++){
   const m=new THREE.Mesh(new THREE.BoxGeometry(1.5,h,1.5),stoneMat);
   m.position.set(Math.sin(a)*26,h/2,Math.cos(a)*26);m.rotation.y=a+.3;m.castShadow=true;m.receiveShadow=true;scene.add(m);
 }
+import('./environment.mjs').then(({buildEnvironment})=>buildEnvironment(scene,ground)).catch(e=>console.error('environment failed',e));
 
 const P=buildPlayer(WEAPON_KEYS);
 const {rig,body,pivot,weaponRigs}=P;scene.add(rig);
