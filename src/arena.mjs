@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createGame,act,step,rolling,swordPose,SWORD,WEAPONS,PATTERNS} from './combat.mjs';
+import {createGame,act,step,rolling,swordPose,skillView,SWORD,WEAPONS,PATTERNS} from './combat.mjs';
 import {createAudio} from './audio.mjs';
 import {BOSS_FACE} from './boss-face.mjs';
 import {faceSize,bladeSize,drawFace,drawBlade} from './face.mjs';
@@ -54,6 +54,10 @@ let stance=null;
 import('./boss-stance.mjs').then(({createBossStance})=>{stance=createBossStance(B);}).catch(e=>console.error('boss stance failed',e));
 let effects=null;
 import('./effects.mjs').then(({createEffects})=>{effects=createEffects(scene,swordGroup,reduceMotion);}).catch(e=>console.error('effects failed',e));
+let skillFx=null;
+import('./skill-fx.mjs').then(({createSkillFx})=>{skillFx=createSkillFx(scene,reduceMotion);}).catch(e=>console.error('skill effects failed',e));
+let skillAudio=null;
+import('./skill-audio.mjs').then(({createSkillAudio})=>{skillAudio=createSkillAudio();}).catch(e=>console.error('skill audio failed',e));
 
 const FACE_WORLD_W=1.9,FACE_R=1.15,FACE_THETA0=.2;
 const PX=FACE_WORLD_W/BOSS_FACE.w;
@@ -90,6 +94,7 @@ const projMeshes=new Map();
 const arrowGeo=new THREE.CylinderGeometry(.04,.04,1.3,6).rotateX(Math.PI/2);
 const cardGeo=new THREE.BoxGeometry(.5,.03,.7);
 const arrowMat=new THREE.MeshStandardMaterial({color:0xe9dcb0,emissive:0x443820});
+const pierceMat=new THREE.MeshStandardMaterial({color:0xe8ffd8,emissive:0x44ff66,emissiveIntensity:1.2});
 const cardMat=new THREE.MeshStandardMaterial({color:0xf2ecdc,emissive:0x332a22});
 const shotMeshes=new Map();
 const shotGeo=new THREE.TorusGeometry(1.4,.16,6,20,Math.PI).rotateX(Math.PI/2);
@@ -114,7 +119,7 @@ function updateBursts(dt){
   }
 }
 function clearFx(){
-  effects?.clear();
+  effects?.clear();skillFx?.clear();
   for(const b of bursts){scene.remove(b.m);b.m.material.dispose();}
   bursts.length=0;
   for(const m of projMeshes.values())scene.remove(m);
@@ -146,7 +151,13 @@ function notice(text){
 const audio=createAudio();
 const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl',rise:'tele-slash',jab:'tele-thrust',rush:'tele-thrust',retreat:'tele-whirl',wave:'tele-slam'};
 const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl',rise:'boss-slash',jab:'boss-thrust',rush:'boss-thrust',retreat:'boss-whirl',wave:'boss-whirl'};
+const CARD_NOTICE={blue:'파랑 카드 · 이동 속도 +50%',red:'빨강 카드 · 다음 공격 +50%',yellow:'노랑 카드 · 다음 적중 시 기절'};
 const patternKey=name=>Object.keys(PATTERNS).find(k=>PATTERNS[k].name===name);
+function playSkillSound(name){
+  if(!skillAudio)return;
+  if(skillAudio.enabled!==audio.enabled)skillAudio.setEnabled(audio.enabled);
+  skillAudio.play(name);
+}
 function playEvent(ev,g){
   switch(ev.type){
     case 'swing':if(g.weapon==='sword'||g.weapon==='hammer')audio.play('swing-'+g.weapon);break;
@@ -163,6 +174,11 @@ function playEvent(ev,g){
     case 'stagger':audio.play('stagger');break;
     case 'victory':audio.play('victory');break;
     case 'death':audio.play('death');break;
+    case 'skill-cast':playSkillSound('skill-'+ev.flavor);break;
+    case 'skill-stun':playSkillSound('skill-stun');break;
+    case 'skill-heal':playSkillSound('skill-heal');break;
+    case 'skill-ready':playSkillSound('skill-ready');break;
+    case 'skill-pierce':playSkillSound('skill-pierce');break;
   }
 }
 
@@ -174,7 +190,7 @@ let queued=null;
 let endAt=0;
 let shake=0;
 const view={yaw:Math.PI,pitch:.4,dist:9.5};
-const vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0,px:0,pz:13,pphase:0};
+const vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0,px:0,pz:13,pphase:0,cast:0};
 const keys=new Set();
 const stick={x:0,y:0};
 
@@ -207,7 +223,7 @@ function setUi(){
 function startBattle(weapon){
   game=createGame(weapon);selectedWeapon=weapon;
   setWeaponVisual();clearFx();
-  queued=null;lock=true;shake=0;
+  queued=null;lock=true;shake=0;vis.cast=0;
   view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;
   vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;vis.px=game.player.x;vis.pz=game.player.z;
   mode='playing';setUi();audio.ambience(true);
@@ -263,20 +279,28 @@ function tryQueued(input){
   if(performance.now()>queued.until){queued=null;return;}
   const p=game.player,type=queued.type;
   if(p.action)return;
-  if(type==='light'||type==='heavy')prepareAim(input);
+  if(type==='light')prepareAim(input);
   const moving=Boolean(input.x||input.z);
   if(act(game,type)){
     if(type==='roll'&&!moving)game.player.action.yaw=game.player.yaw+Math.PI;
     queued=null;
   }
 }
+function castSkill(){
+  const input=readInput();
+  prepareAim(input);
+  if(act(game,'skill')){vis.cast=.3;return;}
+  const v=skillView(game);
+  if(!v.ready)notice(game.weapon==='hammer'?'기본 공격을 4회 적중시켜야 합니다':game.weapon==='bow'?'화살 충전이 없습니다':'재사용 대기 중입니다');
+}
 function request(type){
   if(mode!=='playing')return;
   if(type==='lock'){lock=!lock;notice(lock?'록온 켜짐':'록온 꺼짐');return;}
+  if(type==='skill'){castSkill();return;}
   queued={type,until:performance.now()+300};
 }
 
-const KEY_ACTIONS={KeyJ:'light',KeyK:'heavy',Space:'roll',KeyE:'heal',KeyQ:'lock'};
+const KEY_ACTIONS={KeyJ:'light',KeyL:'skill',Space:'roll',KeyE:'heal',KeyQ:'lock'};
 addEventListener('keydown',e=>{
   if(e.repeat&&(e.code in KEY_ACTIONS))return;
   if(mode==='menu'){
@@ -296,10 +320,12 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame()
 
 let dragging=false;
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('auxclick',e=>e.preventDefault());
 canvas.addEventListener('pointerdown',e=>{
   if(e.pointerType!=='mouse')return;
   if(e.button===0)request('light');
-  if(e.button===2){dragging=true;canvas.setPointerCapture(e.pointerId);}
+  if(e.button===2)request('skill');
+  if(e.button===1){e.preventDefault();dragging=true;canvas.setPointerCapture(e.pointerId);}
 });
 canvas.addEventListener('pointermove',e=>{
   if(!dragging)return;
@@ -370,6 +396,7 @@ function handleEvents(){
   for(const ev of g.events){
     playEvent(ev,g);
     effects?.event(ev,g);
+    skillFx?.event(ev,g);
     if(ev.type==='boss-hit'){
       floatText(String(ev.amount),b.x,4.2,b.z,'');
       burst(b.x+(p.x-b.x)*.4,2.2,b.z+(p.z-b.z)*.4,0xf0d9a0,8);
@@ -384,6 +411,17 @@ function handleEvents(){
       notice('이권재가 두 발로 일어섭니다');
     }else if(ev.type==='stagger'){
       notice('경직! 지금이 기회입니다');
+    }else if(ev.type==='skill-cast'){
+      if(CARD_NOTICE[ev.flavor])notice(CARD_NOTICE[ev.flavor]);
+      else if(ev.flavor==='sword')notice('질풍검 · 공격 속도 대폭 증가');
+      else if(ev.flavor==='hammer')notice('흡혈 강타');
+      else if(ev.flavor==='bow')notice('관통 화살');
+    }else if(ev.type==='skill-stun'){
+      floatText('기절',b.x,5,b.z,'');notice('이권재 기절 · 1초');
+    }else if(ev.type==='skill-heal'){
+      floatText('+'+Math.round(ev.amount),p.x,2.9,p.z,'');
+    }else if(ev.type==='skill-ready'){
+      notice(ev.flavor==='hammer'?'흡혈 강타 준비 완료':'화살 1발 충전');
     }
   }
   g.events.length=0;
@@ -400,6 +438,7 @@ function syncPlayer(dt){
   const p=game.player,a=p.action;
   const sp=Math.min(12,Math.hypot(p.x-vis.px,p.z-vis.pz)/Math.max(dt,.001));
   vis.px=p.x;vis.pz=p.z;vis.pphase+=dt*(4+sp*1.2);
+  vis.cast=Math.max(0,vis.cast-dt);
   rig.position.set(p.x,0,p.z);
   const ty=a&&a.yaw!==undefined?a.yaw:p.yaw;
   vis.pyaw+=angleDelta(vis.pyaw,ty)*Math.min(1,dt*20);
@@ -411,11 +450,11 @@ function syncPlayer(dt){
   let emissive=0,opacity=1;
   if(game.status==='lost'){
     body.rotation.x=-1.4;body.position.y=.45;
-  }else if(a&&a.kind==='attack'){
+  }else if(a&&(a.kind==='attack'||a.kind==='skill')){
     const k=game.weapon==='hammer'?1.25:game.weapon==='sword'?1:.25;
     P.arms.R.rotation.x=0;
     pivot.rotation.x=weaponAngle(a)*k;
-    if(!a.heavy&&game.weapon==='sword')pivot.rotation.z=-.3;
+    if(a.kind==='attack'&&game.weapon==='sword')pivot.rotation.z=-.3;
     body.rotation.x=.12*Math.sin(clamp(a.t/a.total,0,1)*Math.PI);
   }else if(a&&a.kind==='roll'){
     body.rotation.x=(a.t/a.total)*Math.PI*2;body.position.y=.8;
@@ -424,6 +463,12 @@ function syncPlayer(dt){
     body.rotation.x=-.3;emissive=0x661a1a;
   }else if(a&&a.kind==='heal'){
     emissive=0x1a5a2a;P.arms.R.rotation.x=0;pivot.rotation.x=-.8;
+  }else if(vis.cast>0){
+    P.arms.R.rotation.x=0;pivot.rotation.x=-1.1*(vis.cast/.3);
+  }
+  if(!emissive&&game.status==='playing'){
+    const s=p.skill;
+    if(s.haste>0)emissive=0x1a4a66;else if(s.blue>0)emissive=0x14316a;else if(s.nextRed)emissive=0x5a1410;else if(s.nextYellow)emissive=0x5a4a10;
   }
   for(const m of P.mats){m.emissive.setHex(emissive);m.opacity=opacity;}
 }
@@ -446,6 +491,7 @@ function syncBoss(dt){
   B.glowMat.emissiveIntensity=b.phase===2?1.7:.9;
   bossModel.rotation.set(0,0,0);bossModel.position.y=Math.sin(vis.time*1.6)*.05;
   if(b.state==='stagger'){bossModel.rotation.x=-.12;bossModel.rotation.z=Math.sin(vis.time*30)*.03;}
+  else if(b.stun>0){bossModel.rotation.z=Math.sin(vis.time*40)*.05;boneMat.emissive.setHex(0xffcc22);boneMat.emissiveIntensity=.6;}
   else if(b.state==='transition'){const s=1+Math.sin(vis.time*14)*.03;bossModel.scale.setScalar(s);}
   if(b.state!=='transition')bossModel.scale.setScalar(1);
   if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;bladeMat.emissiveIntensity=0;faceMat.emissiveIntensity=0;B.glowMat.emissiveIntensity=0;}
@@ -457,7 +503,8 @@ function syncProjectiles(dt){
     seen.add(q.id);
     let m=projMeshes.get(q.id);
     if(!m){
-      m=new THREE.Mesh(q.kind==='bow'?arrowGeo:cardGeo,q.kind==='bow'?arrowMat:cardMat);
+      m=new THREE.Mesh(q.kind==='bow'?arrowGeo:cardGeo,q.kind==='bow'?(q.skill?pierceMat:arrowMat):cardMat);
+      if(q.skill)m.scale.set(3.4,3.4,2);
       scene.add(m);projMeshes.set(q.id,m);
     }
     m.position.set(q.x,q.y,q.z);
@@ -503,11 +550,17 @@ function updateHud(){
   setBar('stamina-fill',p.stamina/100,p.stamina,100);setText('stamina-value',String(Math.floor(p.stamina)));
   setText('flasks',String(p.potions));
   setText('lock-label',lock?'록온 켜짐 · Q':'록온 꺼짐 · Q');
+  const sv=skillView(game),hud=$('skill-hud');
+  setText('skill-name',sv.name);setText('skill-text',sv.text);setBar('skill-fill',sv.ratio,sv.ratio*100,100);
+  if(hud.dataset.card!==sv.card)hud.dataset.card=sv.card;
+  if(hud.dataset.ready!==String(sv.ready))hud.dataset.ready=String(sv.ready);
+  if(hud.dataset.weapon!==game.weapon)hud.dataset.weapon=game.weapon;
   setBar('boss-fill',b.hp/b.maxHp,b.hp,b.maxHp);
   setText('boss-value',fmt(b.hp)+' / '+fmt(b.maxHp));
   setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');
   let line='틈을 읽고, 대검을 피해 파고드세요.';
-  if(b.punishable)line='빈틈 — 지금 반격하세요';
+  if(b.stun>0)line='기절! 지금이 기회입니다';
+  else if(b.punishable)line='빈틈 — 지금 반격하세요';
   else if(b.state==='windup'||b.state==='active')line=PATTERNS[b.pattern].name;
   else if(b.state==='stagger')line='경직! 지금이 기회입니다.';
   else if(b.state==='transition')line='이권재가 두 발로 일어섭니다.';
@@ -539,6 +592,7 @@ function frame(now){
   syncPlayer(dt);syncBoss(dt);syncProjectiles(dt);updateBursts(dt);
   stance?.update(game.boss);
   effects?.update(mode==='paused'?0:dt,game);
+  skillFx?.update(mode==='paused'?0:dt,game);
   updateCamera(dt);updateHud();
   renderer.render(scene,camera);
 }
