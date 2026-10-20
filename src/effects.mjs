@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import {SWORD,PATTERNS,swordSegment} from './combat.mjs';
 import {createParticlePool,FX_LIMIT,impactDue,trailAllowed} from './effects-data.mjs';
+import {createFeel} from './feel.mjs';
 
 export function createEffects(scene,sword,reduced=false){
   const pool=createParticlePool(reduced?80:FX_LIMIT),root=new THREE.Group();root.name='combat-effects';scene.add(root);
+  const feel=createFeel(scene,reduced);
   const geo=new THREE.BufferGeometry(),positions=new Float32Array(FX_LIMIT*3),colors=new Float32Array(FX_LIMIT*3);
   geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setDrawRange(0,0);
   const canvas=document.createElement('canvas');canvas.width=canvas.height=32;
@@ -28,9 +30,10 @@ export function createEffects(scene,sword,reduced=false){
     const r=rings.find(q=>q.life<=0)||rings[0];r.life=r.max=.65;r.radius=radius;
     r.m.position.set(x,.035,z);r.m.material.color.setHex(color);r.m.visible=true;r.m.scale.setScalar(.12);
   }
-  function clear(){pool.clear();history.length=0;impactId=-1;geo.setDrawRange(0,0);trailGeo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}}
+  function clear(){pool.clear();feel.clear();history.length=0;impactId=-1;geo.setDrawRange(0,0);trailGeo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}}
   function event(ev,g){
     if(lastGame!==g){clear();lastGame=g;}
+    feel.event(ev,g);
     const p=g.player,b=g.boss;
     if(ev.type==='boss-hit'){
       pool.emit(b.x+(p.x-b.x)*.4,1.8,b.z+(p.z-b.z)*.4,reduced?10:28,gold);
@@ -44,6 +47,7 @@ export function createEffects(scene,sword,reduced=false){
   }
   function update(dt,g){
     if(lastGame!==g){clear();lastGame=g;}
+    feel.update(dt,g);
     const h=Math.max(0,Math.min(dt,.05)),boss=g.boss;
     pool.step(h);
     if(impactDue(boss,PATTERNS[boss.pattern].active)&&boss.attackId!==impactId){
