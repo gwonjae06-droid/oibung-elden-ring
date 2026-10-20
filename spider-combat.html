@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./skills.css">
+<link rel="stylesheet" href="./boss-transition.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -52,5 +53,6 @@
 </main>
 <script type="module">
 import('./src/arena.mjs').catch(error=>{console.error(error);document.getElementById('load-status').textContent='3D 전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';document.getElementById('start').textContent='불러오기 실패';});
+import('./src/boss-transition.mjs').then(m=>m.installBossTransition()).catch(error=>console.error('Boss transition unavailable',error));
 </script>
 </body></html>
