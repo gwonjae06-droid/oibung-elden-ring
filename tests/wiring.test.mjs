@@ -61,3 +61,29 @@ test('every boss pattern has a telegraph and a swing sound',async()=>{
     assert.match(arena,new RegExp('SWING_SOUND=\\{[^}]*\\b'+k+':'),k+' has no swing sound');
   }
 });
+test('the sword grows out of the bottom edge of the face mask',async()=>{
+  const {SWORD}=await import('../src/combat.mjs');
+  const {BOSS_FACE:F}=await import('../src/boss-face.mjs');
+  const num=re=>{const m=arena.match(re);assert.ok(m,'missing '+re);return Number(m[1]);};
+  const W=num(/FACE_WORLD_W=([\d.]+)/),R=num(/FACE_R=([\d.]+)/),T0=num(/FACE_THETA0=([\d.]+)/);
+  const H=arena.match(/const HEAD=\{x:(-?[\d.]+),y:(-?[\d.]+),z:(-?[\d.]+),r:([\d.]+)\}/);
+  assert.ok(H,'missing HEAD');
+  const theta=T0+F.chin*(W/F.w)/R;
+  const y=Number(H[2])+R*Math.cos(theta),z=Number(H[3])+R*Math.sin(theta);
+  assert.ok(Math.abs(y-SWORD.y)<.05&&Math.abs(z-SWORD.z)<.05,'face edge ('+y.toFixed(3)+','+z.toFixed(3)+') vs sword root ('+SWORD.y+','+SWORD.z+')');
+  assert.ok(R>Number(H[4]),'the face mask must sit just outside the head');
+});
+test('the blade is the same material at the same scale as the face (no visible seam)',async()=>{
+  const {SWORD}=await import('../src/combat.mjs');
+  const {BOSS_FACE:F}=await import('../src/boss-face.mjs');
+  const {bladeSize}=await import('../src/face.mjs');
+  const W=Number(arena.match(/FACE_WORLD_W=([\d.]+)/)[1]),px=W/F.w;
+  const k=SWORD.length/((F.h-F.chin)*px),size=bladeSize(F,k);
+  assert.ok(Math.abs(size.h/size.w-SWORD.length/W)<.01,'blade texture aspect '+size.h/size.w+' vs plane '+SWORD.length/W);
+  assert.ok(k>10,'the chin should be stretched a lot, got x'+k.toFixed(1));
+});
+test('the arena draws exactly one sword and no leftover jaw code',()=>{
+  assert.doesNotMatch(arena,/jawGroups|jawPose|jawSegments|eyeMat/);
+  assert.match(arena,/swordPose/);
+  assert.equal((arena.match(/const swordGroup=/g)||[]).length,1);
+});

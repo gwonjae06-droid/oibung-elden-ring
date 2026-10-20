@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,act,step,rolling,startPattern,jawSegments,segmentDistance,WEAPONS} from '../src/combat.mjs';
+import {createGame,act,step,rolling,startPattern,swordSegment,segmentDistance,WEAPONS} from '../src/combat.mjs';
 const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
 test('four weapons and invalid weapon guard',()=>{assert.equal(Object.keys(WEAPONS).length,4);assert.throws(()=>createGame('bad'));});
 test('attack consumes stamina once and cannot cancel itself',()=>{const g=createGame();assert.ok(act(g,'light'));assert.equal(g.player.stamina,82);assert.equal(act(g,'roll'),false);assert.equal(g.player.stamina,82);});
@@ -13,7 +13,7 @@ test('full health cannot waste flask',()=>{const g=createGame();assert.equal(act
 test('bow and cards launch physical projectiles',()=>{for(const weapon of ['bow','cards']){const g=createGame(weapon);g.player.yaw=Math.PI;act(g,'light');tick(g,.4);assert.equal(g.projectiles.length,weapon==='cards'?3:1);tick(g,1);assert.ok(g.boss.hp<1800);}});
 test('phase two triggers at half hp, without restoring health',()=>{const g=createGame('hammer');g.boss.wait=50;g.boss.hp=901;g.player.z=0;g.player.yaw=Math.PI;act(g,'heavy');tick(g,1);assert.equal(g.boss.phase,2);assert.equal(g.boss.state,'transition');assert.equal(g.boss.hp,709);});
 test('telegraph has no damage and windup orientation stops tracking',()=>{const g=createGame();startPattern(g,'slam');const yaw=g.boss.yaw;g.boss.t=1.0;g.player.x=8;tick(g,.1);assert.equal(g.player.hp,120);assert.equal(g.boss.yaw,yaw);});
-test('boss hit is at most once per attack',()=>{const g=createGame();startPattern(g,'thrust');g.boss.state='active';const j=jawSegments(g.boss)[0];g.player.x=j.b.x;g.player.z=j.b.z;step(g,1/120);assert.equal(g.player.hp,86);for(let i=0;i<8;i++){g.player.invuln=0;step(g,1/120);}assert.equal(g.player.hp,86);});
+test('boss hit is at most once per attack',()=>{const g=createGame();startPattern(g,'thrust');g.boss.state='active';const j=swordSegment(g.boss);g.player.x=j.b.x;g.player.z=j.b.z;step(g,1/120);assert.equal(g.player.hp,86);for(let i=0;i<8;i++){g.player.invuln=0;step(g,1/120);}assert.equal(g.player.hp,86);});
 test('defeated boss ends combat; retry creates clean state',()=>{const g=createGame();g.boss.wait=50;g.boss.hp=1;g.player.z=0;g.player.yaw=Math.PI;act(g,'light');tick(g,.6);assert.equal(g.status,'won');const hp=g.player.hp;tick(g,5);assert.equal(g.player.hp,hp);assert.equal(act(g,'light'),false);const n=createGame();assert.equal(n.boss.hp,1800);assert.equal(n.player.potions,3);});
 test('stamina recovery and arena bounds',()=>{const g=createGame();g.player.stamina=0;g.boss.wait=999;tick(g,1);assert.ok(g.player.stamina>20);tick(g,10,{x:1,z:1});assert.ok(Math.hypot(g.player.x,g.player.z)<=23.001);});
 test('segment projection includes endpoints',()=>{assert.equal(segmentDistance({x:2,z:2},{x:0,z:0},{x:0,z:4}),2);assert.equal(segmentDistance({x:0,z:6},{x:0,z:0},{x:0,z:4}),2);});

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,step,startPattern,jawPose,PATTERNS,angleDelta} from '../src/combat.mjs';
+import {createGame,step,startPattern,swordPose,PATTERNS,angleDelta} from '../src/combat.mjs';
 const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
 const place=(g,x,z)=>{g.player.x=x;g.player.z=z;};
 test('new patterns are registered with names and positive timings',()=>{
@@ -47,10 +47,10 @@ test('phase 1 never chains patterns',()=>{
   for(let i=0;i<120*5;i++){step(g,1/120);if(g.boss.state==='idle'&&!seen.includes('idle'))seen.push('idle');if(g.boss.pattern!=='thrust')seen.push(g.boss.pattern);}
   assert.ok(!seen.includes('slam'));
 });
-test('jaw poses stay finite for every pattern and state',()=>{
+test('sword poses stay finite for every pattern and state',()=>{
   const g=createGame();
-  for(const name of Object.keys(PATTERNS))for(const state of ['windup','active','recovery']){
-    g.boss.pattern=name;g.boss.state=state;g.boss.t=.3;
-    for(const i of [0,1]){const p=jawPose(g.boss,i);for(const v of Object.values(p))assert.ok(Number.isFinite(v),name+state);}
+  for(const name of Object.keys(PATTERNS))for(const state of ['windup','active','recovery'])for(const t of [0,.3,5]){
+    g.boss.pattern=name;g.boss.state=state;g.boss.t=t;
+    const p=swordPose(g.boss);for(const v of Object.values(p))assert.ok(Number.isFinite(v),name+state+t);
   }
 });
