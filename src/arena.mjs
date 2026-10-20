@@ -1,0 +1,550 @@
+import * as THREE from 'three';
+import {createGame,act,step,rolling,jawPose,WEAPONS,PATTERNS} from './combat.mjs';
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
+const fmt=n=>Math.round(n).toLocaleString('ko-KR');
+const WEAPON_KEYS=['sword','hammer','bow','cards'];
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window);
+const canvas=$('world');
+
+const cache={};
+const setText=(id,v)=>{if(cache['t'+id]!==v){cache['t'+id]=v;$(id).textContent=v;}};
+const setBar=(id,ratio,now,max)=>{
+  const r=clamp(ratio,0,1),k='b'+id;
+  if(cache[k]!==r){cache[k]=r;const el=$(id);el.style.transform='scaleX('+r+')';el.parentElement.setAttribute('aria-valuenow',String(Math.round(now)));el.parentElement.setAttribute('aria-valuemax',String(max));}
+};
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x121814);
+scene.fog=new THREE.Fog(0x121814,30,75);
+const camera=new THREE.PerspectiveCamera(58,1,.1,120);
+scene.add(new THREE.HemisphereLight(0xbac6b4,0x1b221b,1.05));
+const sun=new THREE.DirectionalLight(0xffe0ac,2.1);
+sun.position.set(14,24,10);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:70});
+sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0005;scene.add(sun);
+
+const ground=new THREE.Mesh(new THREE.CircleGeometry(26,64),new THREE.MeshStandardMaterial({color:0x3a403a,roughness:.95}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const ring=new THREE.Mesh(new THREE.RingGeometry(22.7,23.3,64),new THREE.MeshStandardMaterial({color:0x8a7448,roughness:.6,metalness:.2,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2;ring.position.y=.02;scene.add(ring);
+const stoneMat=new THREE.MeshStandardMaterial({color:0x5a5f56,roughness:.9});
+for(let i=0;i<14;i++){
+  const a=i/14*Math.PI*2,h=3.5+((i*37)%5)*1.1;
+  const m=new THREE.Mesh(new THREE.BoxGeometry(1.5,h,1.5),stoneMat);
+  m.position.set(Math.sin(a)*26,h/2,Math.cos(a)*26);m.rotation.y=a+.3;m.castShadow=true;m.receiveShadow=true;scene.add(m);
+}
+
+function limb(a,b,r,mat){
+  const d=new THREE.Vector3().subVectors(b,a),len=d.length();
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r*.7,r,len,8),mat);
+  m.position.copy(a).addScaledVector(d,.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  m.castShadow=true;return m;
+}
+
+const rig=new THREE.Group();scene.add(rig);
+const body=new THREE.Group();body.position.y=1;rig.add(body);
+const bodyMat=new THREE.MeshStandardMaterial({color:0x5b86a8,roughness:.7,transparent:true});
+const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.4,.9,6,12),bodyMat);torso.castShadow=true;body.add(torso);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.28,16,12),new THREE.MeshStandardMaterial({color:0xe0c7a5,roughness:.8}));
+head.position.y=.95;head.castShadow=true;body.add(head);
+const cape=new THREE.Mesh(new THREE.BoxGeometry(.7,1.1,.08),new THREE.MeshStandardMaterial({color:0x2f3b4a,roughness:.9}));
+cape.position.set(0,.1,-.38);body.add(cape);
+const pivot=new THREE.Group();pivot.position.set(.5,.25,.15);body.add(pivot);
+const metal=new THREE.MeshStandardMaterial({color:0xcfd4d8,metalness:.7,roughness:.35});
+const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:.8});
+const weaponRigs={};
+{
+  const sword=new THREE.Group();
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(.08,.14,1.5),metal);blade.position.z=.95;
+  const guard=new THREE.Mesh(new THREE.BoxGeometry(.5,.08,.1),wood);guard.position.z=.2;
+  const hilt=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.35),wood);
+  sword.add(blade,guard,hilt);weaponRigs.sword=sword;
+  const hammer=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.5,8).rotateX(Math.PI/2),wood);shaft.position.z=.7;
+  const mass=new THREE.Mesh(new THREE.BoxGeometry(.55,.5,.5),metal);mass.position.z=1.55;
+  hammer.add(shaft,mass);weaponRigs.hammer=hammer;
+  const bow=new THREE.Group();
+  const arc=new THREE.Mesh(new THREE.TorusGeometry(.6,.035,6,20,Math.PI),wood);arc.rotation.z=Math.PI/2;arc.position.z=.5;
+  const str=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,1.2,4),metal);str.position.z=.5;
+  bow.add(arc,str);weaponRigs.bow=bow;
+  const cards=new THREE.Group();
+  for(let i=0;i<3;i++){
+    const c=new THREE.Mesh(new THREE.BoxGeometry(.3,.02,.45),new THREE.MeshStandardMaterial({color:i===1?0xb94a48:0xf2ecdc,roughness:.5}));
+    c.position.set((i-1)*.22,0,.55);c.rotation.y=(i-1)*.35;cards.add(c);
+  }
+  weaponRigs.cards=cards;
+  for(const k of WEAPON_KEYS){weaponRigs[k].visible=false;pivot.add(weaponRigs[k]);}
+}
+
+const bossRoot=new THREE.Group();scene.add(bossRoot);
+const bossModel=new THREE.Group();bossRoot.add(bossModel);
+const carapace=new THREE.MeshStandardMaterial({color:0x2e2723,roughness:.8});
+const abdomen=new THREE.Mesh(new THREE.SphereGeometry(2.1,32,20),carapace);
+abdomen.scale.set(1,.85,1.25);abdomen.position.set(0,2.1,-1.5);abdomen.castShadow=true;bossModel.add(abdomen);
+const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,24,16),carapace);
+thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;bossModel.add(thorax);
+const eyeMat=new THREE.MeshStandardMaterial({color:0x300808,emissive:0x992222,emissiveIntensity:.6});
+for(const [x,y,z,s] of [[-.35,2.5,2.1,.16],[.35,2.5,2.1,.16],[-.75,2.3,1.95,.12],[.75,2.3,1.95,.12]]){
+  const e=new THREE.Mesh(new THREE.SphereGeometry(s,10,8),eyeMat);e.position.set(x,y,z);bossModel.add(e);
+}
+const legs=[];
+{
+  const fan=[.75,.28,-.28,-.75],zs=[1.3,.45,-.5,-1.5];
+  for(const side of [-1,1]){
+    for(let k=0;k<4;k++){
+      const g=new THREE.Group();g.position.set(side*1.1,2.0,zs[k]);
+      const knee=new THREE.Vector3(side*1.9,1.2,0),foot=new THREE.Vector3(side*3.5,-2.0,0);
+      g.add(limb(new THREE.Vector3(0,0,0),knee,.14,carapace),limb(knee,foot,.1,carapace));
+      g.userData.base=side*fan[k];g.userData.index=legs.length;
+      g.rotation.y=g.userData.base;bossModel.add(g);legs.push(g);
+    }
+  }
+}
+const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
+const jawGroups=[0,1].map(()=>{
+  const g=new THREE.Group();g.rotation.order='YXZ';
+  const geo=new THREE.ConeGeometry(.24,5.2,4).rotateX(Math.PI/2).translate(0,0,2.6);
+  const blade=new THREE.Mesh(geo,boneMat);blade.scale.y=.55;blade.castShadow=true;g.add(blade);
+  bossModel.add(g);return g;
+});
+
+const projMeshes=new Map();
+const arrowGeo=new THREE.CylinderGeometry(.04,.04,1.3,6).rotateX(Math.PI/2);
+const cardGeo=new THREE.BoxGeometry(.5,.03,.7);
+const arrowMat=new THREE.MeshStandardMaterial({color:0xe9dcb0,emissive:0x443820});
+const cardMat=new THREE.MeshStandardMaterial({color:0xf2ecdc,emissive:0x332a22});
+
+const bursts=[];
+const burstGeo=new THREE.SphereGeometry(.09,6,4);
+function burst(x,y,z,color,n){
+  for(let i=0;i<n;i++){
+    const m=new THREE.Mesh(burstGeo,new THREE.MeshBasicMaterial({color,transparent:true}));
+    m.position.set(x,y,z);scene.add(m);
+    const a=Math.random()*Math.PI*2,s=2+Math.random()*3;
+    bursts.push({m,vx:Math.cos(a)*s,vy:2+Math.random()*3,vz:Math.sin(a)*s,life:.45});
+  }
+}
+function updateBursts(dt){
+  for(let i=bursts.length-1;i>=0;i--){
+    const b=bursts[i];b.life-=dt;
+    if(b.life<=0){scene.remove(b.m);b.m.material.dispose();bursts.splice(i,1);continue;}
+    b.vy-=14*dt;b.m.position.x+=b.vx*dt;b.m.position.y+=b.vy*dt;b.m.position.z+=b.vz*dt;b.m.material.opacity=b.life/.45;
+  }
+}
+function clearFx(){
+  for(const b of bursts){scene.remove(b.m);b.m.material.dispose();}
+  bursts.length=0;
+  for(const m of projMeshes.values())scene.remove(m);
+  projMeshes.clear();
+  $('damage-layer').replaceChildren();
+}
+
+const tmpV=new THREE.Vector3();
+function toScreen(x,y,z){
+  tmpV.set(x,y,z).project(camera);
+  if(tmpV.z>1||tmpV.z<-1)return null;
+  return {x:(tmpV.x*.5+.5)*canvas.clientWidth,y:(-tmpV.y*.5+.5)*canvas.clientHeight};
+}
+function floatText(text,x,y,z,cls){
+  const s=toScreen(x,y,z);if(!s)return;
+  const el=document.createElement('span');
+  el.className='damage-number '+(cls||'');el.textContent=text;
+  el.style.left=s.x+'px';el.style.top=s.y+'px';
+  $('damage-layer').appendChild(el);setTimeout(()=>el.remove(),850);
+}
+let noticeTimer=0;
+function notice(text){
+  const el=$('notice');el.textContent=text;el.classList.add('visible');
+  clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.remove('visible'),1700);
+}
+
+let audio=null,soundOn=false;
+function beep(freq,dur,type,gain,slide){
+  if(!soundOn||!audio)return;
+  const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(freq,t);
+  if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,freq+slide),t+dur);
+  g.gain.setValueAtTime(gain||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+dur);
+}
+const SOUNDS={
+  'swing':()=>beep(260,.12,'sawtooth',.03,-140),
+  'shot':()=>beep(520,.1,'triangle',.04,-260),
+  'boss-swing':()=>beep(120,.3,'sawtooth',.05,-60),
+  'roll':()=>beep(180,.14,'sine',.03,-80),
+  'boss-hit':()=>beep(150,.12,'square',.04,-70),
+  'player-hit':()=>beep(90,.25,'sawtooth',.07,-40),
+  'healed':()=>beep(440,.3,'sine',.04,260),
+  'stagger':()=>beep(200,.3,'triangle',.05,120),
+  'phase':()=>beep(70,.6,'sawtooth',.06,40)
+};
+
+let selectedWeapon='sword';
+let game=createGame(selectedWeapon);
+let mode='menu';
+let lock=true;
+let queued=null;
+let endAt=0;
+let shake=0;
+const view={yaw:Math.PI,pitch:.4,dist:9.5};
+const vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0};
+const keys=new Set();
+const stick={x:0,y:0};
+
+function setWeaponVisual(){
+  for(const k of WEAPON_KEYS)weaponRigs[k].visible=k===game.weapon;
+  setText('weapon-label',WEAPONS[game.weapon].name);
+}
+function selectWeapon(key){
+  if(!WEAPONS[key])return;
+  selectedWeapon=key;
+  document.querySelectorAll('.weapon').forEach(btn=>{
+    const on=btn.dataset.weapon===key;
+    btn.classList.toggle('selected',on);btn.setAttribute('aria-pressed',String(on));
+  });
+  if(mode==='menu'){game=createGame(key);setWeaponVisual();}
+}
+
+function setUi(){
+  const inFight=mode==='playing'||mode==='paused'||mode==='ending'||mode==='result';
+  $('menu').hidden=mode!=='menu';
+  $('pause-screen').hidden=mode!=='paused';
+  $('result').hidden=mode!=='result';
+  $('player-hud').hidden=!inFight;
+  $('boss-hud').hidden=!inFight;
+  $('controls').hidden=!inFight;
+  $('touch').hidden=!(coarse&&(mode==='playing'||mode==='ending'));
+  $('pause').disabled=!(mode==='playing'||mode==='paused');
+}
+
+function startBattle(weapon){
+  game=createGame(weapon);selectedWeapon=weapon;
+  setWeaponVisual();clearFx();
+  queued=null;lock=true;shake=0;
+  view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;
+  vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;
+  mode='playing';setUi();
+  canvas.focus({preventScroll:true});
+  notice('이권재가 모습을 드러냅니다');
+}
+function backToMenu(){
+  mode='menu';queued=null;clearFx();
+  game=createGame(selectedWeapon);setWeaponVisual();setUi();
+  $('start').focus();
+}
+function pauseGame(){if(mode==='playing'){mode='paused';keys.clear();stick.x=stick.y=0;setUi();$('resume').focus();}}
+function resumeGame(){if(mode==='paused'){mode='playing';setUi();canvas.focus({preventScroll:true});}}
+
+function showResult(){
+  const won=game.status==='won';
+  mode='result';
+  setText('result-kicker',won?'승리':'패배');
+  setText('result-title',won?'이권재 격파':'쓰러졌습니다');
+  setText('result-text',won?'긴턱이 땅에 내려앉았습니다. 오슬우의 첫 번째 시련이 끝났습니다.':'긴턱이 지나간 자리에 다시 기회가 남아 있습니다.');
+  const s=game.stats;
+  setText('result-stats','적중 '+s.hits+'회 · 회피 '+s.dodges+'회 · 누적 피해 '+fmt(s.damage)+' · '+game.time.toFixed(1)+'초');
+  setUi();$('retry').focus();
+}
+
+function camBasis(){
+  const sx=Math.sin(view.yaw),cz=Math.cos(view.yaw);
+  return {fx:sx,fz:cz,rx:-cz,rz:sx};
+}
+function readInput(){
+  let sx=0,sy=0;
+  if(keys.has('KeyW')||keys.has('ArrowUp'))sy+=1;
+  if(keys.has('KeyS')||keys.has('ArrowDown'))sy-=1;
+  if(keys.has('KeyD')||keys.has('ArrowRight'))sx+=1;
+  if(keys.has('KeyA')||keys.has('ArrowLeft'))sx-=1;
+  sx+=stick.x;sy+=stick.y;
+  const m=Math.hypot(sx,sy);
+  if(m>1){sx/=m;sy/=m;}
+  const b=camBasis();
+  return {x:b.fx*sy+b.rx*sx,z:b.fz*sy+b.rz*sx,lock};
+}
+
+function prepareAim(input){
+  const p=game.player,b=game.boss;
+  if(p.action)return;
+  const d=Math.hypot(b.x-p.x,b.z-p.z),toB=Math.atan2(b.x-p.x,b.z-p.z);
+  if(lock||d<7)p.yaw=toB;
+  else if(!(input.x||input.z))p.yaw=view.yaw;
+}
+function tryQueued(input){
+  if(!queued)return;
+  if(performance.now()>queued.until){queued=null;return;}
+  const p=game.player,type=queued.type;
+  if(p.action)return;
+  if(type==='light'||type==='heavy')prepareAim(input);
+  const moving=Boolean(input.x||input.z);
+  if(act(game,type)){
+    if(type==='roll'&&!moving)game.player.action.yaw=game.player.yaw+Math.PI;
+    queued=null;
+  }
+}
+function request(type){
+  if(mode!=='playing')return;
+  if(type==='lock'){lock=!lock;notice(lock?'록온 켜짐':'록온 꺼짐');return;}
+  queued={type,until:performance.now()+300};
+}
+
+const KEY_ACTIONS={KeyJ:'light',KeyK:'heavy',Space:'roll',KeyE:'heal',KeyQ:'lock'};
+addEventListener('keydown',e=>{
+  if(e.repeat&&(e.code in KEY_ACTIONS))return;
+  if(mode==='menu'){
+    const idx=Number(e.key)-1;
+    if(idx>=0&&idx<4&&WEAPON_KEYS[idx])selectWeapon(WEAPON_KEYS[idx]);
+    return;
+  }
+  if(e.code==='Escape'){if(mode==='playing')pauseGame();else if(mode==='paused')resumeGame();return;}
+  if(mode!=='playing')return;
+  if(e.code==='Space'||e.code.startsWith('Arrow'))e.preventDefault();
+  if(e.code in KEY_ACTIONS)request(KEY_ACTIONS[e.code]);
+  else keys.add(e.code);
+});
+addEventListener('keyup',e=>keys.delete(e.code));
+addEventListener('blur',()=>{keys.clear();pauseGame();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
+
+let dragging=false;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='mouse')return;
+  if(e.button===0)request('light');
+  if(e.button===2){dragging=true;canvas.setPointerCapture(e.pointerId);}
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  if(!lock)view.yaw-=e.movementX*.005;
+  view.pitch=clamp(view.pitch+e.movementY*.004,.12,.85);
+});
+const endDrag=e=>{dragging=false;if(canvas.hasPointerCapture&&canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);};
+canvas.addEventListener('pointerup',endDrag);
+canvas.addEventListener('pointercancel',endDrag);
+canvas.addEventListener('wheel',e=>{view.dist=clamp(view.dist+Math.sign(e.deltaY)*.7,6,13);},{passive:true});
+
+{
+  const el=$('stick'),thumb=$('thumb'),R=40;
+  let id=null,cx=0,cy=0;
+  const move=e=>{
+    let dx=e.clientX-cx,dy=e.clientY-cy;const m=Math.hypot(dx,dy);
+    if(m>R){dx=dx/m*R;dy=dy/m*R;}
+    stick.x=dx/R;stick.y=-dy/R;
+    thumb.style.transform='translate('+dx+'px,'+dy+'px)';
+  };
+  el.addEventListener('pointerdown',e=>{
+    id=e.pointerId;el.setPointerCapture(id);
+    const r=el.getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;move(e);
+  });
+  el.addEventListener('pointermove',e=>{if(e.pointerId===id)move(e);});
+  const up=e=>{if(e.pointerId!==id)return;id=null;stick.x=stick.y=0;thumb.style.transform='';};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+}
+document.querySelectorAll('[data-act]').forEach(btn=>{
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();request(btn.dataset.act);});
+});
+
+document.querySelectorAll('.weapon').forEach(btn=>btn.addEventListener('click',()=>selectWeapon(btn.dataset.weapon)));
+$('start').addEventListener('click',()=>startBattle(selectedWeapon));
+$('pause').addEventListener('click',()=>{if(mode==='playing')pauseGame();else resumeGame();});
+$('resume').addEventListener('click',resumeGame);
+$('quit').addEventListener('click',backToMenu);
+$('retry').addEventListener('click',()=>startBattle(game.weapon));
+$('change').addEventListener('click',backToMenu);
+$('theme').addEventListener('click',()=>{
+  const root=document.documentElement;
+  root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';
+});
+$('sound').addEventListener('click',()=>{
+  soundOn=!soundOn;
+  if(soundOn){
+    if(!audio)audio=new (window.AudioContext||window.webkitAudioContext)();
+    if(audio.state==='suspended')audio.resume();
+  }
+  $('sound').setAttribute('aria-pressed',String(soundOn));
+  $('sound').textContent=soundOn?'소리 켜짐':'소리 꺼짐';
+});
+document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+
+function handleEvents(){
+  const g=game,p=g.player,b=g.boss;
+  for(const ev of g.events){
+    const snd=SOUNDS[ev.type];if(snd)snd();
+    if(ev.type==='boss-hit'){
+      floatText(String(ev.amount),b.x,3.8,b.z,'');
+      burst(b.x+(p.x-b.x)*.4,2.2,b.z+(p.z-b.z)*.4,0xf0d9a0,8);
+    }else if(ev.type==='player-hit'){
+      floatText('-'+ev.amount,p.x,2.6,p.z,'player');
+      burst(p.x,1.3,p.z,0xc04a40,10);
+      if(!reduceMotion)shake=.35;
+      const f=$('hit-flash');f.classList.add('visible');setTimeout(()=>f.classList.remove('visible'),140);
+    }else if(ev.type==='dodge'){
+      floatText('회피',p.x,2.6,p.z,'');
+    }else if(ev.type==='phase'){
+      notice('이권재의 기세가 달라졌습니다');
+    }else if(ev.type==='stagger'){
+      notice('경직! 지금이 기회입니다');
+    }
+  }
+  g.events.length=0;
+}
+
+function weaponAngle(a){
+  const rest=a.total-a.wind-a.active;
+  if(a.t<a.wind)return -1.5*(a.t/a.wind);
+  const k=clamp((a.t-a.wind)/a.active,0,1);
+  if(k<1)return -1.5+2.9*k;
+  return 1.4*(1-clamp((a.t-a.wind-a.active)/Math.max(rest,.01),0,1));
+}
+function syncPlayer(dt){
+  const p=game.player,a=p.action;
+  rig.position.set(p.x,0,p.z);
+  const ty=a&&a.yaw!==undefined?a.yaw:p.yaw;
+  vis.pyaw+=angleDelta(vis.pyaw,ty)*Math.min(1,dt*20);
+  rig.rotation.y=vis.pyaw;
+  pivot.rotation.set(0,0,0);body.rotation.set(0,0,0);body.position.y=1;
+  let emissive=0,opacity=1;
+  if(game.status==='lost'){
+    body.rotation.x=-1.4;body.position.y=.45;
+  }else if(a&&a.kind==='attack'){
+    const k=game.weapon==='hammer'?1.25:game.weapon==='sword'?1:.25;
+    pivot.rotation.x=weaponAngle(a)*k;
+    if(!a.heavy&&game.weapon==='sword')pivot.rotation.z=-.3;
+    body.rotation.x=.12*Math.sin(clamp(a.t/a.total,0,1)*Math.PI);
+  }else if(a&&a.kind==='roll'){
+    body.rotation.x=(a.t/a.total)*Math.PI*2;body.position.y=.8;
+    if(rolling(p))opacity=.55;
+  }else if(a&&a.kind==='hurt'){
+    body.rotation.x=-.3;emissive=0x661a1a;
+  }else if(a&&a.kind==='heal'){
+    emissive=0x1a5a2a;pivot.rotation.x=-.8;
+  }
+  bodyMat.emissive.setHex(emissive);bodyMat.opacity=opacity;
+}
+
+function syncBoss(dt){
+  const b=game.boss;
+  bossRoot.position.set(b.x,0,b.z);bossRoot.rotation.y=b.yaw;
+  const speed=Math.hypot(b.x-vis.bx,b.z-vis.bz)/Math.max(dt,.001);
+  vis.bx=b.x;vis.bz=b.z;
+  vis.legPhase+=dt*(2+Math.min(speed,14)*1.1);
+  const amp=.06+Math.min(speed,14)*.025;
+  legs.forEach(g=>{
+    const i=g.userData.index;
+    g.rotation.y=g.userData.base+Math.sin(vis.legPhase+i*1.7)*amp;
+    g.rotation.z=Math.max(0,Math.sin(vis.legPhase+i*1.7))*amp*.8*(i<4?-1:1);
+  });
+  for(let i=0;i<2;i++){
+    const pose=jawPose(b,i),jg=jawGroups[i];
+    jg.position.set(pose.x,pose.y,pose.z);jg.rotation.x=pose.pitch;jg.rotation.y=pose.yaw;
+  }
+  let glow=0;
+  if(b.state==='windup')glow=.15+.45*clamp(b.t/PATTERNS[b.pattern].wind,0,1);
+  else if(b.state==='active')glow=1;
+  boneMat.emissive.setHex(0xaa2222);boneMat.emissiveIntensity=glow;
+  eyeMat.emissiveIntensity=b.phase===2?1.6:.6;
+  bossModel.rotation.set(0,0,0);bossModel.position.y=Math.sin(vis.time*1.6)*.05;
+  if(b.state==='stagger'){bossModel.rotation.x=-.12;bossModel.rotation.z=Math.sin(vis.time*30)*.03;}
+  else if(b.state==='transition'){const s=1+Math.sin(vis.time*14)*.03;bossModel.scale.setScalar(s);}
+  if(b.state!=='transition')bossModel.scale.setScalar(1);
+  if(b.state==='dead'){bossModel.rotation.z=.9;bossModel.position.y=-.6;boneMat.emissiveIntensity=0;eyeMat.emissiveIntensity=0;}
+}
+
+function syncProjectiles(dt){
+  const seen=new Set();
+  for(const q of game.projectiles){
+    seen.add(q.id);
+    let m=projMeshes.get(q.id);
+    if(!m){
+      m=new THREE.Mesh(q.kind==='bow'?arrowGeo:cardGeo,q.kind==='bow'?arrowMat:cardMat);
+      scene.add(m);projMeshes.set(q.id,m);
+    }
+    m.position.set(q.x,q.y,q.z);
+    m.rotation.y=q.yaw;
+    if(q.kind==='cards')m.rotation.z+=dt*18;
+  }
+  for(const [id,m] of projMeshes){
+    if(!seen.has(id)){scene.remove(m);projMeshes.delete(id);}
+  }
+}
+
+function updateCamera(dt){
+  const p=game.player,b=game.boss;
+  const dx=b.x-p.x,dz=b.z-p.z,d=Math.hypot(dx,dz);
+  if(mode==='menu'){
+    const t=vis.time*.12;
+    camera.position.set(Math.sin(t)*20,8.5,Math.cos(t)*20-2);
+    camera.lookAt(0,2.2,-2);return;
+  }
+  if(lock&&d>.5&&game.status==='playing')view.yaw+=angleDelta(view.yaw,Math.atan2(dx,dz))*Math.min(1,dt*7);
+  const fx=Math.sin(view.yaw),fz=Math.cos(view.yaw),hd=view.dist*Math.cos(view.pitch);
+  let ox=0,oy=0;
+  if(shake>0){shake=Math.max(0,shake-dt);ox=(Math.random()-.5)*shake*.6;oy=(Math.random()-.5)*shake*.6;}
+  camera.position.set(p.x-fx*hd+ox,Math.max(.9,1.5+Math.sin(view.pitch)*view.dist)+oy,p.z-fz*hd);
+  const k=lock?clamp(d*.12,0,.45):0;
+  camera.lookAt(p.x+dx*k,1.6,p.z+dz*k);
+}
+
+function updateHud(){
+  const p=game.player,b=game.boss;
+  setBar('hp-fill',p.hp/p.maxHp,p.hp,p.maxHp);setText('hp-value',String(Math.ceil(p.hp)));
+  setBar('stamina-fill',p.stamina/100,p.stamina,100);setText('stamina-value',String(Math.floor(p.stamina)));
+  setText('flasks',String(p.potions));
+  setText('lock-label',lock?'록온 켜짐 · Q':'록온 꺼짐 · Q');
+  setBar('boss-fill',b.hp/b.maxHp,b.hp,b.maxHp);
+  setText('boss-value',fmt(b.hp)+' / '+fmt(b.maxHp));
+  setText('phase-label',b.phase===2?'두 번째 단계 · 쌍턱 연속 공격':'첫 번째 시련');
+  let line='틈을 읽고, 턱을 피해 파고드세요.';
+  if(b.state==='windup'||b.state==='active')line=PATTERNS[b.pattern].name;
+  else if(b.state==='stagger')line='경직! 지금이 기회입니다.';
+  else if(b.state==='transition')line='이권재가 분노합니다.';
+  else if(b.state==='dead')line='긴턱이 멈추었습니다.';
+  setText('boss-action',line);
+  const ret=$('reticle');
+  const show=mode==='playing'&&lock&&b.state!=='dead';
+  if(show){
+    const s=toScreen(b.x,2.4,b.z);
+    if(s){ret.hidden=false;ret.style.left=(s.x-6)+'px';ret.style.top=(s.y-6)+'px';}else ret.hidden=true;
+  }else ret.hidden=true;
+}
+
+let last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  vis.time+=dt;
+  if(mode==='playing'){
+    const input=readInput();
+    tryQueued(input);
+    let left=dt;
+    while(left>1e-6){const h=Math.min(left,1/60);step(game,h,input);left-=h;}
+    if(game.status!=='playing'){mode='ending';endAt=now+1200;setUi();}
+  }else if(mode==='ending'&&now>=endAt){
+    showResult();
+  }
+  handleEvents();
+  syncPlayer(dt);syncBoss(dt);syncProjectiles(dt);updateBursts(dt);
+  updateCamera(dt);updateHud();
+  renderer.render(scene,camera);
+}
+
+function resize(){
+  const w=canvas.clientWidth||innerWidth,h=canvas.clientHeight||innerHeight;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize);
+resize();
+setWeaponVisual();
+setUi();
+$('start').disabled=false;
+$('start').textContent='전투 시작';
+$('load-status').textContent='준비 완료. 시작 무기를 고른 뒤 전투를 시작하세요.';
+requestAnimationFrame(frame);
