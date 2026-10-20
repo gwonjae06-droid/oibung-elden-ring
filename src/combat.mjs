@@ -5,6 +5,7 @@ export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
 export const BOSS_SCALE=1.4;
 export const CINEMATIC=5.2;
+export const BODY_REACH=4.3;
 export const WEAPONS = {
   sword:{name:'검',damage:72,cost:18,wind:.17,active:.14,end:.32,range:3.5,poise:24},
   hammer:{name:'망치',damage:114,cost:27,wind:.43,active:.18,end:.52,range:3.7,poise:62},
@@ -31,6 +32,7 @@ export const SWORD={x:0,y:2.3,z:2.8,length:8.55,width:.78};
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),toward=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 const ease=t=>{t=clamp(t,0,1);return t*t*(3-2*t);},mix=(a,b,t)=>a+(b-a)*t;
 const emit=(g,type,data={})=>g.events.push({type,...data});
+const freeze=(g,t)=>{g.hitstop=Math.max(g.hitstop||0,t);};
 function confine(p){const r=Math.hypot(p.x,p.z);if(r>23){p.x*=23/r;p.z*=23/r;}}
 export function segmentDistance(p,a,b){const x=b.x-a.x,z=b.z-a.z,d=x*x+z*z,t=d?clamp(((p.x-a.x)*x+(p.z-a.z)*z)/d,0,1):0;return Math.hypot(p.x-a.x-x*t,p.z-a.z-z*t);}
 export function cinematicPose(b){
@@ -46,7 +48,7 @@ export function patternConfig(b){
 }
 export function createGame(weapon='sword'){
   if(!WEAPONS[weapon])throw new Error('Unknown weapon');
-  return {status:'playing',time:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,
+  return {status:'playing',time:0,hitstop:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,
     player:{x:0,z:13,yaw:Math.PI,hp:120,maxHp:120,stamina:100,regen:0,action:null,invuln:0,potions:3,skill:createSkillState()},
     boss:{x:0,z:-4,yaw:0,hp:1800,maxHp:1800,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1,queue:[],lastOpening:null,recovery:0,punishable:false,leapSpeed:0,aim:0,pressure:0,stun:0},
     stats:{hits:0,dodges:0,damage:0}};
@@ -109,7 +111,7 @@ export function swordSegment(b){const p=swordPose(b),c=Math.cos(b.yaw),s=Math.si
 export function handPoint(b,side){const p=swordPose(b),x=side*.35,z=-.35,cy=Math.cos(p.yaw),sy=Math.sin(p.yaw),cp=Math.cos(p.pitch),sp=Math.sin(p.pitch);return {x:p.x+x*cy+z*cp*sy,y:p.y-z*sp,z:p.z-x*sy+z*cp*cy};}
 export function bladeHits(p,{a,b},width=SWORD.width){const dy=b.y-a.y;let lo=0,hi=1;if(Math.abs(dy)<1e-8){if(a.y<.1||a.y>2.2)return false;}else{const t0=(.1-a.y)/dy,t1=(2.2-a.y)/dy;lo=Math.max(0,Math.min(t0,t1));hi=Math.min(1,Math.max(t0,t1));if(lo>hi)return false;}const at=t=>({x:mix(a.x,b.x,t),z:mix(a.z,b.z,t)});return segmentDistance(p,at(lo),at(hi))<width;}
 function bossDamage(g,amount,poise){
-  const b=g.boss;if(b.hp<=0||b.state==='transition')return 0;const damage=Math.min(b.hp,amount*(b.state==='stagger'?1.25:1));b.hp-=damage;g.stats.damage+=damage;g.stats.hits++;b.poise+=poise;emit(g,'boss-hit',{amount:Math.round(damage)});
+  const b=g.boss;if(b.hp<=0||b.state==='transition')return 0;const damage=Math.min(b.hp,amount*(b.state==='stagger'?1.25:1)),big=damage>=150;b.hp-=damage;g.stats.damage+=damage;g.stats.hits++;b.poise+=poise;emit(g,'boss-hit',{amount:Math.round(damage),big});freeze(g,big?.09:.035);
   if(b.hp<=0){b.hp=0;b.state='dead';b.queue=[];g.status='won';g.projectiles=[];g.bossShots=[];emit(g,'victory');return damage;}
   if(b.phase===1&&b.hp<=b.maxHp*.5){b.phase=2;b.state='transition';b.t=0;b.queue=[];b.poise=0;b.stun=0;b.punishable=false;g.projectiles=[];g.bossShots=[];g.player.action=null;emit(g,'phase');}
   else if(b.poise>=(b.phase===2?280:180)&&!['transition','stagger'].includes(b.state)){b.poise=0;b.state='stagger';b.t=0;b.queue=[];b.punishable=false;emit(g,'stagger');}
@@ -121,11 +123,13 @@ function landHit(g,amount,poise,a){
   if(a.stun&&!a.stunUsed&&b.hp>0&&b.state!=='transition'){a.stunUsed=true;b.stun=SKILLS.cards.stun;emit(g,'skill-stun',{flavor:'yellow'});}
   if(a.skill&&g.weapon==='hammer'){const gain=Math.min(g.player.maxHp-g.player.hp,actual*SKILLS.hammer.heal);g.player.hp+=gain;emit(g,'skill-heal',{flavor:'hammer',amount:gain});}
 }
-function hurtPlayer(g,damage){const p=g.player;if(g.status!=='playing'||p.invuln>0||g.boss.state==='transition')return;if(rolling(p)){g.stats.dodges++;emit(g,'dodge');return;}p.hp=Math.max(0,p.hp-damage);p.invuln=.32;p.action={kind:'hurt',t:0,total:.22};emit(g,'player-hit',{amount:damage});if(!p.hp){g.status='lost';g.bossShots=[];emit(g,'death');}}
+function hurtPlayer(g,damage){const p=g.player;if(g.status!=='playing'||p.invuln>0||g.boss.state==='transition')return;if(rolling(p)){g.stats.dodges++;emit(g,'dodge');return;}p.hp=Math.max(0,p.hp-damage);p.invuln=.32;p.action={kind:'hurt',t:0,total:.22};emit(g,'player-hit',{amount:damage});freeze(g,.07);if(!p.hp){g.status='lost';g.bossShots=[];emit(g,'death');}}
 function shoot(g,a){const w=WEAPONS[g.weapon],n=g.weapon==='cards'?3:1,skill=Boolean(a.skill);for(let i=0;i<n;i++)g.projectiles.push({id:g.nextId++,x:g.player.x,z:g.player.z,y:1.2,yaw:a.yaw+(i-(n-1)/2)*.075,speed:skill?36:g.weapon==='bow'?26:20,life:skill?2:1.7,damage:w.damage*a.mult,poise:w.poise*(skill?2:1),kind:g.weapon,source:a,piercing:skill,bossHit:false,skill});emit(g,'shot');}
 function moveBoss(b,v,dt,side=0){const y=b.aim??b.yaw;b.x+=(Math.sin(y)*v+Math.cos(y)*side)*dt;b.z+=(Math.cos(y)*v-Math.sin(y)*side)*dt;confine(b);}
 export function step(g,dt,input={}){
-  if(g.status!=='playing')return;dt=clamp(dt,0,1/30);g.time+=dt;const p=g.player,b=g.boss,w=WEAPONS[g.weapon];
+  if(g.status!=='playing')return;dt=clamp(dt,0,1/30);
+  if(g.hitstop>0){g.hitstop=Math.max(0,g.hitstop-dt);return;}
+  g.time+=dt;const p=g.player,b=g.boss,w=WEAPONS[g.weapon];
   if(b.state==='transition'){b.t+=dt;if(b.t>=CINEMATIC){b.state='idle';b.t=0;b.wait=.55;emit(g,'armed');}return;}
   const charges=p.skill.charges;tickSkills(p.skill,g.weapon,dt);if(g.weapon==='bow'&&p.skill.charges>charges)emit(g,'skill-ready',{flavor:'bow'});
   p.invuln=Math.max(0,p.invuln-dt);p.regen=Math.max(0,p.regen-dt);if(!p.regen&&!p.action)p.stamina=Math.min(100,p.stamina+30*dt);
@@ -160,7 +164,7 @@ export function step(g,dt,input={}){
     }
   }else if(b.state==='active'){
     if(b.pattern==='rush')moveBoss(b,b.phase===2?31:23,dt);else if(b.pattern==='thrust')moveBoss(b,19,dt);else if(b.pattern==='jab')moveBoss(b,10,dt);else if(b.pattern==='retreat')moveBoss(b,-9,dt);else if(b.pattern==='leap'&&b.t<cfg.active*.7)moveBoss(b,b.leapSpeed,dt);else if(b.pattern==='whirl')b.yaw+=TAU/cfg.active*dt;
-    if(!b.hit&&!['wave','retreat'].includes(b.pattern)){const seg=swordSegment(b),land=b.pattern==='leap'&&b.t>=cfg.active*.7&&dist(p,b)<5.2,slam=b.pattern==='slam'&&b.t>=cfg.active*.84&&dist(p,seg.b)<3.2,physical=b.pattern!=='leap'||b.t>=cfg.active*.7;if(land||slam||(physical&&bladeHits(p,seg))){b.hit=true;hurtPlayer(g,cfg.damage);}}
+    if(!b.hit&&!['wave','retreat'].includes(b.pattern)){const seg=swordSegment(b),land=b.pattern==='leap'&&b.t>=cfg.active*.7&&dist(p,b)<5.2,slam=b.pattern==='slam'&&b.t>=cfg.active*.84&&dist(p,seg.b)<3.2,physical=b.pattern!=='leap'||b.t>=cfg.active*.7,body=b.pattern!=='leap'&&dist(p,b)<BODY_REACH;if(land||slam||body||(physical&&bladeHits(p,seg))){b.hit=true;hurtPlayer(g,cfg.damage);}}
     if(b.t>=cfg.active){b.state='recovery';b.t=0;b.punishable=b.queue.length===0;b.recovery=b.punishable?cfg.recover:(b.phase===2?.055:.12);emit(g,b.punishable?'opening':'combo-gap');}
   }else if(b.state==='recovery'&&b.t>=b.recovery){if(b.queue.length)startPattern(g,b.queue.shift());else{b.state='idle';b.t=0;b.wait=b.phase===2?.1:.16;b.punishable=false;}}
   const d=dist(p,b);if(d<3){const a=d<.001?p.yaw:toward(b,p);p.x=b.x+Math.sin(a)*3;p.z=b.z+Math.cos(a)*3;confine(p);}
