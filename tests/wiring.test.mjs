@@ -17,11 +17,22 @@ test('every element id used by arena.mjs exists in spider-combat.html',()=>{
   const missing=[...ids].filter(id=>!html.includes('id="'+id+'"'));
   assert.deepEqual(missing,[]);
 });
-test('arena.mjs only imports three, the combat module and the audio module',()=>{
+test('arena.mjs only imports three and its own local modules',()=>{
   const specs=[...arena.matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
-  assert.deepEqual(specs,['./audio.mjs','./combat.mjs','three']);
-  assert.ok(existsSync(join(root,'src/combat.mjs')));
-  assert.ok(existsSync(join(root,'src/audio.mjs')));
+  assert.deepEqual(specs,['./audio.mjs','./boss-face.mjs','./combat.mjs','./face.mjs','three']);
+  for(const f of ['combat','audio','boss-face','face'])assert.ok(existsSync(join(root,'src/'+f+'.mjs')),f+'.mjs is missing');
+});
+test('names imported from local modules are exported by those modules',()=>{
+  const found=[...arena.matchAll(/import \{([^}]+)\} from '\.\/([\w-]+\.mjs)'/g)];
+  assert.ok(found.length>=4,'expected 4 local named imports, found '+found.length);
+  for(const m of found){
+    const src=read('src/'+m[2]);
+    for(const n of m[1].split(',').map(s=>s.trim()))assert.match(src,new RegExp('export (?:const|function) '+n+'\\b'),m[2]+' does not export '+n);
+  }
+});
+test('the boss face photo is embedded as data, not fetched from the network',()=>{
+  assert.match(arena,/data:image\/jpeg;base64,/);
+  assert.doesNotMatch(arena,/https?:\/\/[^'"]*\.(?:jpe?g|png|webp)/i);
 });
 test('imported combat names are exported by combat.mjs',()=>{
   const names=arena.match(/import \{([^}]+)\} from '\.\/combat\.mjs'/)[1].split(',').map(s=>s.trim());
