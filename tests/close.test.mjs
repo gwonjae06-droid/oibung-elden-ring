@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,step,startPattern,beginSequence,chooseOpening,CLOSE,PATTERNS,HUG_TIME} from '../src/combat.mjs';
+import {createGame,step,startPattern,beginSequence,chooseOpening,CLOSE,PATTERNS,HUG_TIME,HUG_RANGE} from '../src/combat.mjs';
 const tick=(g,t,input={})=>{for(let s=0;s<t;s+=1/120)step(g,1/120,input);};
 const place=(g,px,pz)=>{g.boss.x=0;g.boss.z=0;g.boss.yaw=0;g.boss.aim=0;g.player.x=px;g.player.z=pz;};
 test('close-range pools offer several options in each phase and include the new patterns',()=>{
@@ -9,7 +9,7 @@ test('close-range pools offer several options in each phase and include the new 
   for(const phase of [1,2]){const g=createGame();g.boss.phase=phase;g.boss.x=0;g.boss.z=0;g.player.x=0;g.player.z=3.2;const seen=new Set();for(let i=0;i<60;i++){const k=chooseOpening(g);seen.add(k);g.boss.lastOpening=k;}assert.ok(seen.size>=4,phase+':'+[...seen]);}
 });
 test('stomp hits anyone within its ground radius and misses those outside',()=>{
-  for(const [d,hit] of [[3.2,true],[6.5,true]]){const g=createGame();place(g,d,0);startPattern(g,'stomp');g.boss.state='active';g.boss.t=0;g.boss.hit=false;tick(g,.3);assert.equal(g.player.hp<120,hit,String(d));}
+  for(const [d,hit] of [[3.2,true],[6,true]]){const g=createGame();place(g,d,0);startPattern(g,'stomp');g.boss.state='active';g.boss.t=0;g.boss.hit=false;tick(g,.3);assert.equal(g.player.hp<120,hit,String(d));}
   const far=createGame();place(far,0,-16);startPattern(far,'stomp');far.boss.state='active';far.boss.t=0;far.boss.hit=false;tick(far,.3);assert.equal(far.player.hp,120);
 });
 test('backsweep turns the boss around and hits behind it, but not in front',()=>{
@@ -18,14 +18,17 @@ test('backsweep turns the boss around and hits behind it, but not in front',()=>
   const f=createGame();place(f,0,-16);startPattern(f,'backsweep');f.boss.yaw=Math.PI;f.boss.aim=Math.PI;f.boss.state='active';f.boss.t=0;f.boss.hit=false;tick(f,.3);assert.equal(f.player.hp,120);
 });
 test('shove knocks the player back, but not through a roll',()=>{
-  const g=createGame();place(g,0,4);startPattern(g,'shove');g.boss.state='active';g.boss.t=0;g.boss.hit=false;step(g,1/120);assert.ok(g.player.z>8.5);assert.ok(g.player.hp<120);
+  const g=createGame();place(g,0,4);startPattern(g,'shove');g.boss.state='active';g.boss.t=0;g.boss.hit=false;step(g,1/120);assert.ok(g.player.z>7);assert.ok(g.player.hp<120);
   const r=createGame();place(r,0,4);r.player.action={kind:'roll',t:.2,total:.52,yaw:0};startPattern(r,'shove');r.boss.state='active';r.boss.t=0;step(r,1/120);assert.equal(r.player.hp,120);
 });
-test('a player who clings to the boss is forced off with a shove',()=>{
-  for(const phase of [1,2]){const g=createGame();g.boss.phase=phase;g.boss.wait=99;place(g,0,3.2);const seen=[];let id=g.boss.attackId;
-    for(let i=0;i<120*3;i++){step(g,1/120);if(g.boss.attackId!==id){id=g.boss.attackId;seen.push(g.boss.pattern);}}
+test('a player who clings to the boss for a long time is forced off with a shove',()=>{
+  for(const phase of [1,2]){const g=createGame();g.boss.phase=phase;g.boss.wait=99;place(g,0,3.1);const seen=[];let id=g.boss.attackId;
+    for(let i=0;i<120*4;i++){step(g,1/120);if(g.boss.attackId!==id){id=g.boss.attackId;seen.push(g.boss.pattern);}}
     assert.equal(seen[0],'shove',String(phase));assert.ok(g.player.hp<120);}
-  assert.ok(HUG_TIME<=1);
+  assert.ok(HUG_TIME>=2&&HUG_RANGE<3.5);
+});
+test('a melee fighter standing at weapon range is left alone until the boss actually attacks',()=>{
+  const g=createGame();g.boss.wait=99;place(g,0,5);tick(g,2.5);assert.equal(g.boss.state,'idle');assert.equal(g.player.hp,120);
 });
 test('standing still or orbiting the boss at melee range can never be safe',()=>{
   for(const phase of [1,2])for(const offset of [[0,3],[3,0],[0,-3],[-3,0],[2.2,2.2]]){

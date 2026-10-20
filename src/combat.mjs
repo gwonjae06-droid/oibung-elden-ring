@@ -5,9 +5,9 @@ export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
 export const BOSS_SCALE=1.4;
 export const CINEMATIC=5.2;
-export const BODY_REACH=4.3;
-export const HUG_RANGE=3.8;
-export const HUG_TIME=.7;
+export const BODY_REACH=3.6;
+export const HUG_RANGE=3.3;
+export const HUG_TIME=2.2;
 export const WEAPONS = {
   sword:{name:'검',damage:72,cost:18,wind:.17,active:.14,end:.32,range:3.5,poise:24},
   hammer:{name:'망치',damage:114,cost:27,wind:.43,active:.18,end:.52,range:3.7,poise:62},
@@ -29,7 +29,7 @@ export const PATTERNS = {
   wave:{name:'월광 파',wind:.65,active:.2,recover:1.0,damage:27},
   stomp:{name:'지축 강타',wind:.7,active:.26,recover:1.0,damage:26},
   backsweep:{name:'배후 후려치기',wind:.5,active:.24,recover:1.0,damage:28},
-  shove:{name:'압살 밀치기',wind:.38,active:.2,recover:.95,damage:20}
+  shove:{name:'압살 밀치기',wind:.5,active:.2,recover:.95,damage:20}
 };
 export const ORDER={1:['rush','sweep','thrust','leap','stomp'],2:['draw','flurry','execution','crescent','tempest','counter','trample']};
 export const CLOSE={1:['sweep','rush','stomp','shove','backsweep'],2:['counter','flurry','tempest','trample','breaker','maelstrom']};
@@ -137,9 +137,9 @@ function hurtPlayer(g,damage){const p=g.player;if(g.status!=='playing'||p.invuln
 function shoot(g,a){const w=WEAPONS[g.weapon],n=g.weapon==='cards'?3:1,skill=Boolean(a.skill);for(let i=0;i<n;i++)g.projectiles.push({id:g.nextId++,x:g.player.x,z:g.player.z,y:1.2,yaw:a.yaw+(i-(n-1)/2)*.075,speed:skill?36:g.weapon==='bow'?26:20,life:skill?2:1.7,damage:w.damage*a.mult,poise:w.poise*(skill?2:1),kind:g.weapon,source:a,piercing:skill,bossHit:false,skill});emit(g,'shot');}
 function moveBoss(b,v,dt,side=0){const y=b.aim??b.yaw;b.x+=(Math.sin(y)*v+Math.cos(y)*side)*dt;b.z+=(Math.cos(y)*v-Math.sin(y)*side)*dt;confine(b);}
 function areaHit(b,p,cfg){
-  if(b.pattern==='stomp')return b.t>=cfg.active*.4&&dist(p,b)<7;
-  if(b.pattern==='backsweep')return dist(p,b)<9&&Math.abs(angleDelta(b.yaw,toward(b,p)))>1.2;
-  if(b.pattern==='shove')return dist(p,b)<5.4;
+  if(b.pattern==='stomp')return b.t>=cfg.active*.4&&dist(p,b)<6.5;
+  if(b.pattern==='backsweep')return dist(p,b)<8&&Math.abs(angleDelta(b.yaw,toward(b,p)))>1.2;
+  if(b.pattern==='shove')return dist(p,b)<4.8;
   return false;
 }
 export function step(g,dt,input={}){
@@ -185,7 +185,7 @@ export function step(g,dt,input={}){
     if(b.pattern==='rush')moveBoss(b,b.phase===2?31:23,dt);else if(b.pattern==='thrust')moveBoss(b,19,dt);else if(b.pattern==='jab')moveBoss(b,10,dt);else if(b.pattern==='retreat')moveBoss(b,-9,dt);else if(b.pattern==='leap'&&b.t<cfg.active*.7)moveBoss(b,b.leapSpeed,dt);else if(b.pattern==='whirl')b.yaw+=TAU/cfg.active*dt;
     if(!b.hit&&!['wave','retreat'].includes(b.pattern)){const seg=swordSegment(b),land=b.pattern==='leap'&&b.t>=cfg.active*.7&&dist(p,b)<5.2,slam=b.pattern==='slam'&&b.t>=cfg.active*.84&&dist(p,seg.b)<3.2,physical=b.pattern!=='leap'||b.t>=cfg.active*.7,body=b.pattern!=='leap'&&dist(p,b)<BODY_REACH,area=areaHit(b,p,cfg);
       if(land||slam||body||area||(physical&&bladeHits(p,seg))){b.hit=true;
-        if(b.pattern==='shove'&&!rolling(p)&&p.invuln<=0){const a=toward(b,p);p.x+=Math.sin(a)*5;p.z+=Math.cos(a)*5;confine(p);}
+        if(b.pattern==='shove'&&!rolling(p)&&p.invuln<=0){const a=toward(b,p);p.x+=Math.sin(a)*3.5;p.z+=Math.cos(a)*3.5;confine(p);}
         hurtPlayer(g,cfg.damage);}}
     if(b.t>=cfg.active){b.state='recovery';b.t=0;b.punishable=b.queue.length===0;b.recovery=b.punishable?cfg.recover:(b.phase===2?.055:.12);emit(g,b.punishable?'opening':'combo-gap');}
   }else if(b.state==='recovery'&&b.t>=b.recovery){if(b.queue.length)startPattern(g,b.queue.shift());else{b.state='idle';b.t=0;b.wait=b.phase===2?.1:.16;b.punishable=false;}}
