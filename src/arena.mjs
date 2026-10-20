@@ -152,6 +152,9 @@ const arrowGeo=new THREE.CylinderGeometry(.04,.04,1.3,6).rotateX(Math.PI/2);
 const cardGeo=new THREE.BoxGeometry(.5,.03,.7);
 const arrowMat=new THREE.MeshStandardMaterial({color:0xe9dcb0,emissive:0x443820});
 const cardMat=new THREE.MeshStandardMaterial({color:0xf2ecdc,emissive:0x332a22});
+const shotMeshes=new Map();
+const shotGeo=new THREE.TorusGeometry(1.4,.16,6,20,Math.PI).rotateX(Math.PI/2);
+const shotMat=new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opacity:.9});
 
 const bursts=[];
 const burstGeo=new THREE.SphereGeometry(.09,6,4);
@@ -175,6 +178,8 @@ function clearFx(){
   bursts.length=0;
   for(const m of projMeshes.values())scene.remove(m);
   projMeshes.clear();
+  for(const m of shotMeshes.values())scene.remove(m);
+  shotMeshes.clear();
   $('damage-layer').replaceChildren();
 }
 
@@ -198,8 +203,8 @@ function notice(text){
 }
 
 const audio=createAudio();
-const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl'};
-const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl'};
+const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl',rise:'tele-slash',jab:'tele-thrust',rush:'tele-thrust',retreat:'tele-whirl',wave:'tele-slam'};
+const SWING_SOUND={sweep:'boss-slash',reverse:'boss-slash',cross:'boss-slash',thrust:'boss-thrust',slam:'boss-slam',leap:'boss-slam',whirl:'boss-whirl',rise:'boss-slash',jab:'boss-thrust',rush:'boss-thrust',retreat:'boss-whirl',wave:'boss-whirl'};
 const patternKey=name=>Object.keys(PATTERNS).find(k=>PATTERNS[k].name===name);
 function playEvent(ev,g){
   switch(ev.type){
@@ -212,6 +217,7 @@ function playEvent(ev,g){
     case 'player-hit':audio.play('hit-player');break;
     case 'telegraph':{const k=patternKey(ev.name);if(k)audio.play(TELEGRAPH_SOUND[k]);break;}
     case 'boss-swing':audio.play(SWING_SOUND[g.boss.pattern]||'boss-slash');break;
+    case 'boss-shot':audio.play('boss-thrust');break;
     case 'phase':audio.play('phase');break;
     case 'stagger':audio.play('stagger');break;
     case 'victory':audio.play('victory');break;
@@ -395,12 +401,26 @@ $('theme').addEventListener('click',()=>{
   const root=document.documentElement;
   root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';
 });
+let muted=false;
+try{muted=localStorage.getItem('oibung-muted')==='1';}catch(e){/* storage unavailable */}
+function renderSound(){
+  const on=audio.enabled;
+  $('sound').setAttribute('aria-pressed',String(on||!muted));
+  $('sound').textContent=on?'소리 켜짐':muted?'소리 꺼짐':'소리 자동';
+}
+function setMuted(v){muted=v;try{localStorage.setItem('oibung-muted',v?'1':'0');}catch(e){/* ignore */}}
+function unlockAudio(e){
+  if(muted||audio.enabled)return;
+  if(e&&e.target&&e.target.closest&&e.target.closest('#sound'))return;
+  if(audio.setEnabled(true)){renderSound();if(mode==='playing'||mode==='ending')audio.ambience(true);}
+}
+['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,unlockAudio,{passive:true}));
 $('sound').addEventListener('click',()=>{
-  const on=audio.setEnabled(!audio.enabled);
-  $('sound').setAttribute('aria-pressed',String(on));
-  $('sound').textContent=on?'소리 켜짐':'소리 꺼짐';
-  if(on){audio.play('ui',{minGap:0});if(mode==='playing'||mode==='ending')audio.ambience(true);}
+  if(audio.enabled){audio.setEnabled(false);setMuted(true);}
+  else{setMuted(false);if(audio.setEnabled(true)){audio.play('ui',{minGap:0});if(mode==='playing'||mode==='ending')audio.ambience(true);}}
+  renderSound();
 });
+renderSound();
 document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
 
 function handleEvents(){
@@ -474,7 +494,7 @@ function syncBoss(dt){
   const pose=swordPose(b);
   swordGroup.position.set(pose.x,pose.y,pose.z);swordGroup.rotation.x=pose.pitch;swordGroup.rotation.y=pose.yaw;
   let glow=0;
-  if(b.state==='windup')glow=.15+.45*clamp(b.t/PATTERNS[b.pattern].wind,0,1);
+  if(b.state==='windup')glow=.15+.45*clamp(b.t*(b.speed||1)/PATTERNS[b.pattern].wind,0,1);
   else if(b.state==='active')glow=1;
   boneMat.emissive.setHex(0xaa2222);boneMat.emissiveIntensity=glow;
   bladeMat.emissive.setHex(0xaa2222);bladeMat.emissiveIntensity=glow*.8;
@@ -501,6 +521,16 @@ function syncProjectiles(dt){
   }
   for(const [id,m] of projMeshes){
     if(!seen.has(id)){scene.remove(m);projMeshes.delete(id);}
+  }
+  const seenShots=new Set();
+  for(const s of game.bossShots){
+    seenShots.add(s.id);
+    let m=shotMeshes.get(s.id);
+    if(!m){m=new THREE.Mesh(shotGeo,shotMat);scene.add(m);shotMeshes.set(s.id,m);}
+    m.position.set(s.x,1.5,s.z);m.rotation.y=s.yaw;
+  }
+  for(const [id,m] of shotMeshes){
+    if(!seenShots.has(id)){scene.remove(m);shotMeshes.delete(id);}
   }
 }
 
