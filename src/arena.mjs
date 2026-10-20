@@ -50,6 +50,8 @@ const P=buildPlayer(WEAPON_KEYS);
 const {rig,body,pivot,weaponRigs}=P;scene.add(rig);
 const B=buildBoss();
 const {root:bossRoot,model:bossModel,HEAD,boneMat,swordGroup,fallbackBlade}=B;scene.add(bossRoot);
+let effects=null;
+import('./effects.mjs').then(({createEffects})=>{effects=createEffects(scene,swordGroup,reduceMotion);}).catch(e=>console.error('effects failed',e));
 
 const FACE_WORLD_W=1.9,FACE_R=1.15,FACE_THETA0=.2;
 const PX=FACE_WORLD_W/BOSS_FACE.w;
@@ -94,6 +96,7 @@ const shotMat=new THREE.MeshBasicMaterial({color:0xffd9a0,transparent:true,opaci
 const bursts=[];
 const burstGeo=new THREE.SphereGeometry(.09,6,4);
 function burst(x,y,z,color,n){
+  if(effects)return;
   for(let i=0;i<n;i++){
     const m=new THREE.Mesh(burstGeo,new THREE.MeshBasicMaterial({color,transparent:true}));
     m.position.set(x,y,z);scene.add(m);
@@ -109,6 +112,7 @@ function updateBursts(dt){
   }
 }
 function clearFx(){
+  effects?.clear();
   for(const b of bursts){scene.remove(b.m);b.m.material.dispose();}
   bursts.length=0;
   for(const m of projMeshes.values())scene.remove(m);
@@ -363,6 +367,7 @@ function handleEvents(){
   const g=game,p=g.player,b=g.boss;
   for(const ev of g.events){
     playEvent(ev,g);
+    effects?.event(ev,g);
     if(ev.type==='boss-hit'){
       floatText(String(ev.amount),b.x,4.2,b.z,'');
       burst(b.x+(p.x-b.x)*.4,2.2,b.z+(p.z-b.z)*.4,0xf0d9a0,8);
@@ -528,6 +533,7 @@ function frame(now){
   }
   handleEvents();
   syncPlayer(dt);syncBoss(dt);syncProjectiles(dt);updateBursts(dt);
+  effects?.update(mode==='paused'?0:dt,game);
   updateCamera(dt);updateHud();
   renderer.render(scene,camera);
 }
