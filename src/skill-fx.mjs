@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createClownImpactFx} from './clown-impact-fx.mjs';
 import {buildCircus} from './circus-environment.mjs';
 import {createMobileCombatUi} from './mobile-combat-ui.mjs';
 import {createBossSfx} from './boss-sfx.mjs';
@@ -8,7 +9,7 @@ import {SKILL_COLORS,SKILL_HEX} from './skills.mjs';
 
 export function createSkillFx(scene,reduced=false){
   const bossSfx=createBossSfx(),phaseDialogue=createPhaseDialogue(),mobileUi=createMobileCombatUi();
-  const mobile=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches);let circus=null;
+  const mobile=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches);let circus=null,clownFx=null;
   const limit=reduced?70:Math.min(FX_LIMIT,260),pool=createParticlePool(limit),root=new THREE.Group();root.name='skill-effects';scene.add(root);
   const geo=new THREE.BufferGeometry(),positions=new Float32Array(limit*3),colors=new Float32Array(limit*3);
   geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setDrawRange(0,0);
@@ -22,10 +23,11 @@ export function createSkillFx(scene,reduced=false){
   let acc=0,lastGame=null;
   const n=k=>reduced?Math.ceil(k/3):k;
   function ring(x,z,radius,hex,max=.7){const r=rings.find(q=>q.life<=0)||rings[0];r.life=r.max=max;r.radius=radius;r.m.position.set(x,.05,z);r.m.material.color.setHex(hex);r.m.visible=true;r.m.scale.setScalar(.1);}
-  function clear(){mobileUi.clear();phaseDialogue.clear();bossSfx.clear();pool.clear();geo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}acc=0;}
+  function clear(){clownFx?.clear();mobileUi.clear();phaseDialogue.clear();bossSfx.clear();pool.clear();geo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}acc=0;}
   function event(ev,g){
     if(lastGame!==g){clear();lastGame=g;}
     bossSfx.event(ev,g);
+    if(g.clown){clownFx||=createClownImpactFx(scene,{mobile,reduced});clownFx.event(ev,g);}
     const p=g.player,b=g.boss,f=ev.flavor,col=SKILL_COLORS[f]||SKILL_COLORS.white;
     if(ev.type==='skill-cast'){
       const fx=p.x+Math.sin(p.yaw)*3.2,fz=p.z+Math.cos(p.yaw)*3.2;
@@ -44,7 +46,7 @@ export function createSkillFx(scene,reduced=false){
     phaseDialogue.update(g);
     mobileUi.update(g);
     if(g.clown){circus||=buildCircus(scene,{mobile,reduced});circus.update(g.clown.time,g.boss.phase);}else circus?.hide();
-    const h=Math.max(0,Math.min(dt,.05));pool.step(h);acc+=h;
+    const h=Math.max(0,Math.min(dt,.05));clownFx?.update(h);pool.step(h);acc+=h;
     const every=reduced?.2:.07;
     if(h>0&&acc>=every){
       acc=0;const p=g.player,s=p.skill,jx=()=>(Math.random()-.5)*1.2;

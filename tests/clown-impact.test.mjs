@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {BLAST_THEMES,blastTheme,blastParticles,writeWave} from '../src/clown-impact-data.mjs';
+test('four explosion palettes include distinct red and blue',()=>{assert.equal(BLAST_THEMES.length,4);assert.equal(blastTheme(0).name,'red');assert.equal(blastTheme(1).name,'blue');assert.notDeepEqual(blastTheme(0).colors,blastTheme(1).colors);assert.equal(blastTheme(4),blastTheme(0));});
+test('explosion types have different movement profiles',()=>{assert.notDeepEqual(blastParticles(0,20),blastParticles(1,20));assert.ok(blastParticles(2,20).every(p=>p.curl>0));assert.ok(blastParticles(0,20).every(p=>p.gravity>0));});
+test('particle allocation is capped and has finite lifetime',()=>{for(const seed of [0,1,2,3,-1,NaN,Infinity]){const ps=blastParticles(seed,1000);assert.equal(ps.length,80);for(const p of ps){for(const v of Object.values(p))assert.ok(Number.isFinite(v));assert.ok(p.life>0&&p.life<=1.1);}}});
+test('directional wave starts in its advertised forward cone',()=>{const out=new Float32Array(32*18);writeWave(out,10,.3,0,0,0);for(let i=0;i<out.length;i+=3){assert.ok(out[i+2]>0);assert.ok(Math.abs(Math.atan2(out[i],out[i+2]))<=.301);assert.ok(Math.hypot(out[i],out[i+2])<=10.001);}});
+test('wave rotation follows boss yaw and does not allocate a replacement buffer',()=>{const out=new Float32Array(32*18);assert.equal(writeWave(out,8,.2,Math.PI/2,3,4),out);for(let i=0;i<out.length;i+=3)assert.ok(out[i]>3);});
+test('full and jagged rings contain finite coordinates at fixed heights',()=>{for(const theme of BLAST_THEMES){const out=new Float32Array(32*18);writeWave(out,5,Math.PI,1,2,3,.2,theme.jagged);for(let i=0;i<out.length;i+=3){assert.ok(Number.isFinite(out[i])&&Number.isFinite(out[i+2]));assert.ok(Math.abs(out[i+1]-.2)<1e-6);assert.ok(Math.hypot(out[i]-2,out[i+2]-3)<=5.81);}}});
