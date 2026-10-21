@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {circusLayout,circusMotion} from './circus-data.mjs';
+import {buildCircusStage} from './circus-stage.mjs';
 export function buildCircus(scene,{mobile=false,reduced=false}={}){
- const root=new THREE.Group();root.name='clown-circus';scene.add(root);const cfg=circusLayout(mobile),palette=[0xb92353,0xe6b945,0x226e91,0x61348b,0xded0ab],dummy=new THREE.Object3D(),color=new THREE.Color();
+ const root=new THREE.Group();root.name='clown-circus';scene.add(root);const stage=buildCircusStage(root,{mobile,reduced});const cfg=circusLayout(mobile),palette=[0xb92353,0xe6b945,0x226e91,0x61348b,0xded0ab],dummy=new THREE.Object3D(),color=new THREE.Color();
  const mat=(c,extra={})=>new THREE.MeshStandardMaterial({color:c,roughness:.8,...extra});
  const mesh=(geo,m,x,y,z)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);root.add(o);return o;};
  const stand=mat(0x462537),gold=mat(0xcc9d4a),dark=mat(0x24162d);
@@ -21,5 +22,5 @@ export function buildCircus(scene,{mobile=false,reduced=false}={}){
  for(let i=0;i<cfg.balloons;i++){const a=i/cfg.balloons*Math.PI*2,r=26+(i%3)*.4,x=Math.sin(a)*r,z=Math.cos(a)*r,y=6+(i%4)*.55;const o=new THREE.Mesh(balloonGeo,flagMats[i%5]);o.position.set(x,y,z);o.scale.y=1.3;balloonRoot.add(o);const cord=new THREE.Mesh(cordGeo,gold);cord.position.set(x,y-1.6,z);balloonRoot.add(cord);}
  const spots=[],beams=[],down=new THREE.Vector3(0,-1,0),direction=new THREE.Vector3();
  for(let i=0;i<cfg.spotlights;i++){const sign=i?1:-1,l=new THREE.SpotLight(i?0x65a9ff:0xffb76a,mobile?35:50,50,.24,.75,1.2);l.position.set(sign*18,16,5);l.castShadow=false;l.target.position.set(sign*23,.1,0);root.add(l,l.target);spots.push({l,sign});if(!mobile&&!reduced){const geo=new THREE.ConeGeometry(2.5,1,12,1,true).translate(0,-.5,0),beam=mesh(geo,new THREE.MeshBasicMaterial({color:l.color,transparent:true,opacity:.025,depthWrite:false,side:THREE.DoubleSide}),0,0,0);beams.push({beam,l});}}
- return {root,update(time,phase){const p=circusMotion(time,phase,reduced);root.visible=true;balloonRoot.position.y=p.bob;for(let i=0;i<flags.length;i++)flags[i].rotation.z=Math.PI+p.flutter*Math.sin(i*1.7);for(const {l,sign}of spots)l.target.position.set(sign*23*Math.cos(p.sweep),.1,23*Math.sin(p.sweep));for(const {beam,l}of beams){beam.position.copy(l.position);direction.copy(l.target.position).sub(l.position);beam.scale.set(1,direction.length(),1);beam.quaternion.setFromUnitVectors(down,direction.normalize());}},hide(){root.visible=false;}};
+ return {root,update(time,phase){stage.update(time,phase);const p=circusMotion(time,phase,reduced);root.visible=true;balloonRoot.position.y=p.bob;for(let i=0;i<flags.length;i++)flags[i].rotation.z=Math.PI+p.flutter*Math.sin(i*1.7);for(const {l,sign}of spots)l.target.position.set(sign*23*Math.cos(p.sweep),.1,23*Math.sin(p.sweep));for(const {beam,l}of beams){beam.position.copy(l.position);direction.copy(l.target.position).sub(l.position);beam.scale.set(1,direction.length(),1);beam.quaternion.setFromUnitVectors(down,direction.normalize());}},hide(){root.visible=false;stage.hide();}};
 }
