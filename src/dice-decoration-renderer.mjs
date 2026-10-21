@@ -1,11 +1,10 @@
 import {diceDecorations} from './dice-decoration-data.mjs';
 import {DICE_PHOTO_FACE} from './dice-photo-data.mjs';
 export function buildDiceDecorations(THREE,root,edge,style){
- const dark=new THREE.MeshStandardMaterial({color:0x050507,roughness:.95,metalness:.1}),ember=new THREE.MeshStandardMaterial({color:style.ember,emissive:style.emissive,emissiveIntensity:1.5,roughness:.4}),disc=new THREE.CircleGeometry(1,24),cone=new THREE.ConeGeometry(1,1,10);
+ const dark=new THREE.MeshStandardMaterial({color:0x050507,roughness:.95,metalness:.1}),disc=new THREE.CircleGeometry(1,24);
  for(const plan of diceDecorations(edge)){const face=new THREE.Group(),normal=new THREE.Vector3(...plan.normal);face.name='dice-decoration-face-'+plan.face;face.position.copy(normal).multiplyScalar(edge/2);face.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);root.add(face);
- if(plan.face!==DICE_PHOTO_FACE)for(const [x,y]of plan.points){const pip=new THREE.Mesh(disc,dark);pip.name='recessed-dice-pip';pip.position.set(x,y,.008);pip.scale.set(plan.radius*.7,plan.radius*.7,1);pip.receiveShadow=true;face.add(pip);}
- for(const [x,y]of plan.spikes){const spike=new THREE.Mesh(cone,ember);spike.name='dice-face-spike';spike.position.set(x,y,plan.spikeHeight/2);spike.rotation.x=Math.PI/2;spike.scale.set(plan.spikeRadius,plan.spikeHeight,plan.spikeRadius);spike.castShadow=true;face.add(spike);}}
- return {update(time=0){ember.emissiveIntensity=1.4+.3*Math.sin((Number.isFinite(time)?time:0)*6);}};
+ if(plan.face!==DICE_PHOTO_FACE)for(const [x,y]of plan.points){const pip=new THREE.Mesh(disc,dark);pip.name='recessed-dice-pip';pip.position.set(x,y,.008);pip.scale.set(plan.radius*.7,plan.radius*.7,1);pip.receiveShadow=true;face.add(pip);}}
+ return {update(){}};
 }
 export function diceFireAnchors(edge){const h=edge*.52,a=[];for(const x of [-h,h])for(const y of [-h,h])for(const z of [-h,h])a.push([x,y,z]);for(let axis=0;axis<3;axis++)for(const s of [-h,h])for(const t of [-h,h]){const p=[0,0,0],keys=[0,1,2].filter(k=>k!==axis);p[keys[0]]=s;p[keys[1]]=t;a.push(p);}return a;}
 export function buildDiceFire(THREE,root,edge){
