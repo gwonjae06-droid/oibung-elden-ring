@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {DICE_HELL_STYLE as H,diceCrackPaths,diceTelegraphView as view} from '../src/dice-visual-data.mjs';
+import {DICE_PHOTO_FACE,fitDicePhoto} from '../src/dice-photo-data.mjs';
+const game=(state='charge-warning',kind='line')=>({status:'playing',time:1,dice:{state,telegraph:{kind,from:{x:0,z:0},to:{x:24,z:0},width:8.84,radius:14}}});
+test('cracks cover five iron surfaces but never the portrait',()=>{const paths=diceCrackPaths(8,DICE_PHOTO_FACE);assert.equal(paths.length,15);assert.equal(new Set(paths.map(p=>p.face)).size,5);for(const p of paths){assert.notEqual(p.face,DICE_PHOTO_FACE);const axis=Math.floor(p.face/2),sign=p.face%2?-1:1;for(const v of p.points){assert.equal(v[axis],sign*4.025);assert.ok(v.every(Number.isFinite));}}});
+test('crack coordinates remain deterministic and reject invalid dimensions',()=>{assert.deepEqual(diceCrackPaths(8,4),diceCrackPaths(8,4));for(const e of [0,-1,NaN])assert.throws(()=>diceCrackPaths(e,4));});
+test('line telegraph includes start and end cube extents',()=>{const v=view(game());assert.equal(v.width,8.84);assert.equal(v.length,32.84);assert.equal(v.x,12);assert.equal(v.z,0);assert.equal(v.yaw,Math.PI/2);});
+test('all cardinal headings preserve endpoints after the renderer yaw',()=>{for(const [x,z]of [[24,0],[-24,0],[0,24],[0,-24]]){const g=game();g.dice.telegraph.to={x,z};const v=view(g),n=24;assert.ok(Math.abs(Math.sin(v.yaw)*n-x)<1e-8);assert.ok(Math.abs(Math.cos(v.yaw)*n-z)<1e-8);}});
+test('circle telegraph matches shockwave radius including player radius',()=>{for(const state of ['jump-warning','jump']){const g=game(state,'circle'),v=view(g);assert.equal(v.radius,14.42);assert.equal(v.x,24);assert.equal(v.z,0);}});
+test('charge lane persists while moving but all warnings hide at recovery',()=>{assert.equal(view(game('charge')).kind,'line');for(const state of ['recovery','dead','warning'])assert.equal(view(game(state)),null);});
+test('paused won lost and missing or invalid telegraphs fail closed',()=>{for(const status of ['paused','won','lost']){const g=game();g.status=status;assert.equal(view(g),null);}assert.equal(view({status:'playing',dice:{}}),null);const g=game();g.dice.telegraph.to.x=NaN;assert.equal(view(g),null);});
+test('warning pulse is bounded without changing danger geometry',()=>{for(let i=0;i<100;i++){const g=game();g.time=i*.05;const v=view(g);assert.ok(v.opacity>=.26&&v.opacity<=.5);assert.equal(v.length,32.84);}});
+test('photo fitting still preserves aspect ratio and centers portrait',()=>{assert.deepEqual(fitDicePhoto(100,200),{x:128,y:0,width:256,height:512});assert.equal(DICE_PHOTO_FACE,4);assert.ok(H.metalness>.5);});
+test('actor connects the tested geometry and preserves photo/disposal wiring',()=>{const source=readFileSync(new URL('../src/dice-actor.mjs',import.meta.url),'utf8');for(const token of ['diceCrackPaths(e,DICE_PHOTO_FACE)','diceTelegraphView(g,R.edge,R.playerRadius)','lane.rotation.y=v.yaw','lane.scale.set(v.width,1,v.length)','circle.scale.set(v.radius,1,v.radius)','i===DICE_PHOTO_FACE?photoMaterial:iron','texture?.dispose()'])assert.ok(source.includes(token),token);});
