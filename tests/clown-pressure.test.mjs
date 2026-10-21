@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {ROLL,PRESSURE,waveCrosses,segmentGap,rollPosition} from '../src/clown-pressure.mjs';
+import {bombPose,PHASE_TWO_SCALE} from '../src/clown-visual-data.mjs';
+import {writeWave} from '../src/clown-impact-data.mjs';
+const w={x:0,z:0,yaw:0,half:.3,width:1.2,range:20};
+test('wave hits a swept front, not the entire cone',()=>{assert.ok(waveCrosses(w,4,6,{x:0,z:5},{x:0,z:5}));assert.ok(!waveCrosses(w,0,1,{x:0,z:10},{x:0,z:10}));assert.ok(!waveCrosses(w,8,9,{x:0,z:5},{x:0,z:5}));assert.ok(!waveCrosses(w,4,6,{x:5,z:0},{x:5,z:0}));});
+test('roll travel is twice as fast with a shared visual fuse',()=>{assert.equal(ROLL.travel,.6);const q={kind:'roll',from:{x:0,z:0},x:0,z:14,t:.6,travel:ROLL.travel,warn:ROLL.travel+ROLL.fuse};assert.equal(rollPosition(q).z,14);q.px=0;q.pz=14;assert.equal(bombPose(q).inflate,3.1);q.t=q.warn;assert.ok(Math.abs(bombPose(q).inflate-3.7)<1e-9);});
+test('segment collision catches fast crossings',()=>{assert.equal(segmentGap({x:0,z:5},{x:0,z:0},{x:0,z:10}),0);});
+test('difficulty rises without changing mount volume',()=>{assert.equal(PRESSURE.hp,2400);assert.ok(PRESSURE.wait[0]<.7&&PRESSURE.wait[1]<.5);assert.ok(Math.abs(PHASE_TWO_SCALE**3-2)<1e-12);});
+test('rendered physical band uses the same width as damage',()=>{const a=new Float32Array(32*18);writeWave(a,5,.3,0,0,0,.18,0,w.width);for(let i=0;i<a.length;i+=3)assert.ok(Math.abs(Math.hypot(a[i],a[i+2])-5)<=w.width/2+1e-5);});
