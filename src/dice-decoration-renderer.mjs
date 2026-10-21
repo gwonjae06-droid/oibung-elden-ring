@@ -1,10 +1,10 @@
 import {diceDecorations} from './dice-decoration-data.mjs';
 import {DICE_PHOTO_FACE} from './dice-photo-data.mjs';
 export function buildDiceDecorations(THREE,root,edge,style){
- const dark=new THREE.MeshStandardMaterial({color:0x050507,roughness:.95,metalness:.1}),disc=new THREE.CircleGeometry(1,24);
+ const portrait=new THREE.MeshStandardMaterial({color:0xffdfb3,roughness:.75,metalness:0}),disc=new THREE.CircleGeometry(1,24);
  for(const plan of diceDecorations(edge)){const face=new THREE.Group(),normal=new THREE.Vector3(...plan.normal);face.name='dice-decoration-face-'+plan.face;face.position.copy(normal).multiplyScalar(edge/2);face.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);root.add(face);
- if(plan.face!==DICE_PHOTO_FACE)for(const [x,y]of plan.points){const pip=new THREE.Mesh(disc,dark);pip.name='recessed-dice-pip';pip.position.set(x,y,.008);pip.scale.set(plan.radius*.7,plan.radius*.7,1);pip.receiveShadow=true;face.add(pip);}}
- return {update(){}};
+ if(plan.face!==DICE_PHOTO_FACE)for(const [x,y]of plan.points){const pip=new THREE.Mesh(disc,portrait);pip.name='recessed-dice-pip';pip.position.set(x,y,.008);pip.scale.set(plan.radius*.7,plan.radius*.7,1);pip.receiveShadow=true;face.add(pip);}}
+ return {setPortrait(texture){portrait.map=texture;portrait.color.setHex(0xffffff);portrait.needsUpdate=true;},update(){}};
 }
 export function diceFireAnchors(edge){const h=edge*.52,a=[];for(const x of [-h,h])for(const y of [-h,h])for(const z of [-h,h])a.push([x,y,z]);for(let axis=0;axis<3;axis++)for(const s of [-h,h])for(const t of [-h,h]){const p=[0,0,0],keys=[0,1,2].filter(k=>k!==axis);p[keys[0]]=s;p[keys[1]]=t;a.push(p);}return a;}
 export function buildDiceFire(THREE,root,edge){
