@@ -3,12 +3,14 @@ import {createClownHead} from './clown-head.mjs';
 import {headPose} from './clown-morph.mjs';
 import {headFrame} from './clown-visual-data.mjs';
 import {cartoonPose} from './clown-cartoon.mjs';
+import {createClownCollapse} from './clown-collapse.mjs';
 export function disposeScene(scene){const gs=new Set(),ms=new Set(),ts=new Set();scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of(o.material?Array.isArray(o.material)?o.material:[o.material]:[])){ms.add(m);if(m.map)ts.add(m.map);if(m.emissiveMap)ts.add(m.emissiveMap);}});for(const x of gs)x.dispose();for(const x of ms)x.dispose();for(const x of ts)x.dispose();}
 export function createClownActor(){
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
  const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
  const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
  const reduced=Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+ const collapse=createClownCollapse();
  const mesh=(geo,mat,x,y,z,parent=body)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;};
  const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');for(let i=0;i<16;i++){ctx.fillStyle=i%2?'#dfcfad':'#a61c33';ctx.fillRect(i*16,0,16,128);}ctx.fillStyle='#d4a83b';ctx.fillRect(0,56,256,16);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
  const ball=mesh(new THREE.SphereGeometry(2.6,40,28),new THREE.MeshStandardMaterial({map:tex,roughness:.6,transparent:true}),0,2.6,0,root);
@@ -26,15 +28,16 @@ export function createClownActor(){
  const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),h=new THREE.Vector3(),target=new THREE.Vector3();let first=true;
  function link(m,A,B){a.set(...A);b.set(...B);m.position.copy(a).add(b).multiplyScalar(.5);const d=b.sub(a);m.scale.set(1,Math.max(.01,d.length()),1);m.quaternion.setFromUnitVectors(up,d.normalize());}
  function update(g,dt=1/60){
+  const death=collapse.update(g,dt,Boolean(globalThis.document?.hidden));
   const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0),alpha=first?1:1-Math.exp(-24*Math.max(0,dt));if(F.inflate!==null)p.inflate=F.inflate;
   const A=cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing');
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
-  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+A.lift;body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=g.status==='won'?.6:v.tilt*.13;body.rotation.x=(M&&v.neck>0?v.neck*.3:0)+A.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
-  ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=M?M.ballZ:0;ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025;
+  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+A.lift-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
+  ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=(M?M.ballZ:0)+(death?.ballShift||0);ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025+(death?.ballShift||0)/2.6;
   mount.group.visible=Boolean(M?.visible);
-  if(M?.visible){mount.group.position.set(0,M.y,M.z);mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
+  if(M?.visible){mount.group.position.set(0,M.y-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
   head.group.visible=F.bodyHead;
   h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
   if(F.bodyHead&&v.neckTarget&&v.neck>0){target.set(v.neckTarget.x,1.2,v.neckTarget.z);body.worldToLocal(target);h.lerp(target,v.neck);}
