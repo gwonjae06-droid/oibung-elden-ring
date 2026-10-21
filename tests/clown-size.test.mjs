@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {CLOWN_SIZE,CLOWN_BODY_RADIUS,CLOWN_CAMERA,separateLargeClown,createLargeClownStepper} from '../src/clown-size.mjs';
+const game=()=>({status:'playing',time:0,boss:{x:0,z:0,state:'clown'},player:{x:0,z:10,yaw:0},clown:{name:null,pt:0,f:{},bombs:[],zones:[],noSeparate:false}});
+test('body and camera use enlarged dimensions',()=>{assert.equal(CLOWN_SIZE,1.25);assert.equal(CLOWN_BODY_RADIUS,4.125);assert.ok(CLOWN_CAMERA.distance>14);assert.ok(CLOWN_CAMERA.target>3.7);});
+test('body separation matches visible scale',()=>{const b={x:0,z:0},p={x:1,z:0,yaw:0};separateLargeClown(b,p);assert.ok(Math.abs(Math.hypot(p.x,p.z)-CLOWN_BODY_RADIUS)<1e-8);});
+test('arena-edge separation stays within arena without crossing boss',()=>{const b={x:0,z:19.5},p={x:0,z:22,yaw:0};separateLargeClown(b,p);assert.ok(Math.hypot(p.x,p.z)<=23);assert.ok(Math.abs(Math.hypot(p.x-b.x,p.z-b.z)-CLOWN_BODY_RADIUS)<1e-8);assert.ok(p.z>19);});
+test('enlarged dash warns and hits in the added outer band only once',()=>{const g=game();g.player={x:3.8,z:1,yaw:0};g.clown.name='dash';g.clown.noSeparate=true;g.clown.pt=.95;g.clown.f.lane={hit:false};g.clown.zones=[{shape:'lane',visual:true,w:6.6}];let hits=0;const step=createLargeClownStepper(g=>{g.time+=.016;g.boss.z+=1;g.clown.pt+=.016;},()=>hits++);step(g,.016);step(g,.016);assert.equal(hits,1);assert.equal(g.clown.zones[0].w,CLOWN_BODY_RADIUS*2);});
+test('already handled base dash is not damaged again',()=>{const g=game();g.clown.name='dash';g.clown.pt=1;g.clown.f.lane={hit:true};let hits=0;createLargeClownStepper(g=>g.time+=.016,()=>hits++)(g,.016);assert.equal(hits,0);});
+test('bomb origin scales once without changing radius',()=>{const g=game(),q={from:{y:9.9},r:3.2};g.clown.bombs.push(q);const step=createLargeClownStepper(g=>g.time+=.016);step(g,.016);step(g,.016);assert.equal(q.from.y,9.9*CLOWN_SIZE);assert.equal(q.r,3.2);});
+test('freeze and inactive games do not separate bodies',()=>{const g=game();g.player.z=1;const step=createLargeClownStepper(()=>{});step(g,.016);assert.equal(g.player.z,1);g.status='won';step(g,.016);assert.equal(g.player.z,1);});
