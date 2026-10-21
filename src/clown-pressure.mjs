@@ -1,5 +1,5 @@
 export const ROLL=Object.freeze({wind:.8,travel:.6,fuse:.45,radius:2.1,damage:31});
-export const PRESSURE=Object.freeze({hp:2400,wait:[.35,.2],chase:[4.8,6],damage:[1.08,1.15]});
+export const PRESSURE=Object.freeze({hp:2760,wait:Object.freeze([.22,.12]),chase:Object.freeze([5.5,6.9]),damage:Object.freeze([1.16,1.25])});
 export function segmentGap(p,a,b){const x=b.x-a.x,z=b.z-a.z,d=x*x+z*z,k=d?Math.max(0,Math.min(1,((p.x-a.x)*x+(p.z-a.z)*z)/d)):0;return Math.hypot(p.x-a.x-k*x,p.z-a.z-k*z);}
 export function waveCrosses(w,oldR,newR,a,b,playerR=.45){
  const da=Math.hypot(a.x-w.x,a.z-w.z),db=Math.hypot(b.x-w.x,b.z-w.z),sa=da-oldR,sb=db-newR,pad=w.width/2+playerR;
