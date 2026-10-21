@@ -1,0 +1,4 @@
+const sat=v=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):0;
+const smooth=v=>{const t=sat(v);return t*t*(3-2*t);};
+export function chainRevealPose(pull){const p=sat(pull),gather=smooth((p-.08)/.42),drop=smooth((p-.7)/.3);return {gather,drop,scale:1-.65*gather,screenOpacity:1-smooth((p-.3)/.24),headOpacity:smooth((p-.25)/.18)*(1-smooth((p-.92)/.08)),y:.5+.12*gather+drop*1.1};}
+export function chainLinkPose(index,link,count,links,width,height,reach,tension,pull,reduced=false){const r=chainRevealPose(pull),spread=(index+.5)/count*width,x=spread+(width*.5-spread)*r.gather*.85,top=height*(.08+(index*13%17)/30),start=height+65,end=start+(top-start)*sat(reach)+height*(r.y-.5),t=link/Math.max(1,links-1),sway=reduced?0:Math.sin(t*Math.PI)*(index%2?1:-1)*38*(1-sat(tension)),depth=index%3;return {x:x+sway,y:end+(start-end)*t,z:depth*4,rx:depth===2?13:10,ry:20,turn:link%2?1.1:.15};}
