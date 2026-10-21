@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createCircusOcclusion} from './circus-occlusion.mjs';
 export function buildCircusStage(root,{mobile=false,reduced=false}={}){
  const group=new THREE.Group();group.name='circus-velvet-stage';group.userData.decorativeOnly=true;root.add(group);
  const canvas=document.createElement('canvas');canvas.width=canvas.height=mobile?256:512;const c=canvas.getContext('2d'),s=canvas.width;
@@ -18,8 +19,9 @@ export function buildCircusStage(root,{mobile=false,reduced=false}={}){
  const glowMat=new THREE.MeshBasicMaterial({color:0xc69a58}),emblems=new THREE.InstancedMesh(new THREE.SphereGeometry(.12,6,4),glowMat,24);
  for(let i=0;i<24;i++){const a=i*Math.PI/12;dummy.position.set(Math.sin(a)*25.5,1.1,Math.cos(a)*25.5);dummy.rotation.set(0,0,0);dummy.scale.setScalar(1);dummy.updateMatrix();emblems.setMatrixAt(i,dummy.matrix);}group.add(emblems);
  const scene=root.parent,background=scene?.background?.isColor?scene.background.clone():null,fogColor=scene?.fog?.color.clone(),warm=new THREE.Color(0x130e1b),cold=new THREE.Color(0x281322),velvetTarget=new THREE.Color(),glowTarget=new THREE.Color();let lastTime=null;
+ const occlusion=createCircusOcclusion(scene,root,THREE);
  return {update(time,phase){const t=Number.isFinite(time)?time:0,dt=lastTime===null?1/60:Math.max(0,Math.min(.05,t-lastTime));lastTime=t;const k=1-Math.exp(-dt*2),second=phase===2;
  if(scene?.background?.isColor)scene.background.lerp(second?cold:warm,k);if(scene?.fog?.color)scene.fog.color.lerp(second?cold:warm,k);
  velvet.color.lerp(velvetTarget.setHex(second?0x562038:0x461b35),k);glowMat.color.lerp(glowTarget.setHex(second?0xd88c9c:0xc69a58),k);dust.rotation.y=reduced?0:t*.008;
- },hide(){lastTime=null;if(background&&scene?.background?.isColor)scene.background.copy(background);if(fogColor&&scene?.fog?.color)scene.fog.color.copy(fogColor);}};
+ },hide(){occlusion.restore();lastTime=null;if(background&&scene?.background?.isColor)scene.background.copy(background);if(fogColor&&scene?.fog?.color)scene.fog.color.copy(fogColor);},dispose(){occlusion.dispose();}};
 }
