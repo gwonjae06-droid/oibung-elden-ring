@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {diceRollPose,diceTouches,diceCrushes,DICE_RULES as R} from '../src/dice-data.mjs';
+import {resolveDiceContact} from '../src/dice-contact.mjs';
+import {createDiceGame,stepDice} from '../src/dice-combat.mjs';
+const pose=u=>diceRollPose({x:0,z:0},{x:8,z:0},u);
+test('stationary side contact pushes without lethal pressure',()=>{const p={x:0,z:4.2},q=resolveDiceContact(p,pose(0),false);assert.equal(q.crushed,false);assert.ok(q.z>p.z);assert.equal(diceTouches(q,pose(0)),false);});
+test('stationary overlap is resolved without killing the player',()=>{const g=createDiceGame();g.player.x=g.dice.pose.x;g.player.z=g.dice.pose.z;stepDice(g,.01);assert.equal(g.status,'playing');assert.equal(g.player.hp,120);assert.equal(diceTouches(g.player,g.dice.pose),false);});
+test('a high leading face is not yet a crushing face',()=>{const p={x:8,z:0};assert.equal(diceCrushes(p,pose(.5)),false);assert.equal(diceCrushes(p,pose(.9)),true);});
+test('grazing the side of a rolling cube is nonlethal',()=>{const p=pose(.9),q=resolveDiceContact({x:p.x,z:3.9},p,true);assert.equal(q.crushed,false);assert.ok(q.z>3.9);});
+test('only active descending contact kills under all four roll directions',()=>{for(const to of [{x:8,z:0},{x:-8,z:0},{x:0,z:8},{x:0,z:-8}]){const p=diceRollPose({x:0,z:0},to,.95);assert.equal(resolveDiceContact(to,p,true).crushed,true);assert.equal(resolveDiceContact(to,p,false).crushed,false);}});
+test('frozen contact does not kill or advance the roll',()=>{const g=createDiceGame();g.dice.state='rolling';g.dice.t=R.rollTime*.95;g.dice.pose=diceRollPose(g.dice.from,g.dice.to,.95);g.player.x=g.dice.to.x;g.player.z=g.dice.to.z;const t=g.dice.t;stepDice(g,.01,{freezeBoss:true});assert.equal(g.status,'playing');assert.equal(g.player.hp,120);assert.equal(g.dice.t,t);});
+test('an incoming roll still crushes its deeply covered target once',()=>{const g=createDiceGame();g.player.x=g.dice.to.x;g.player.z=g.dice.to.z;g.player.invuln=999;for(let i=0;i<250&&g.status==='playing';i++)stepDice(g,1/120);assert.equal(g.status,'lost');assert.equal(g.player.hp,0);assert.equal(g.events.filter(e=>e.type==='player-crushed').length,1);});
