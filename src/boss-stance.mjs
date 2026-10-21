@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {bodyPose,bodyPoint,cinematicPose,handPoint,BOSS_SCALE,CINEMATIC} from './combat.mjs';
+import {bodyPose,bodyPoint,cinematicPose,handPoint,BOSS_SCALE} from './combat.mjs';
+import {createCollapseClock} from './boss-collapse.mjs';
 
 export function createBossStance(B){
   const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
@@ -38,11 +39,13 @@ export function createBossStance(B){
   const cinema=document.createElement('div');cinema.setAttribute('aria-live','polite');
   Object.assign(cinema.style,{position:'absolute',inset:'0',pointerEvents:'none',zIndex:'15',display:'none',borderTop:'7vh solid #000',borderBottom:'7vh solid #000'});
   const caption=document.createElement('p');Object.assign(caption.style,{position:'absolute',bottom:'8%',width:'100%',maxWidth:'none',textAlign:'center',fontSize:'24px',color:'#e9d3a0',textShadow:'0 2px 5px #000'});cinema.appendChild(caption);document.getElementById('arena').appendChild(cinema);
-  let detached=false;
+  let detached=false,lastFrame=null;const collapse=createCollapseClock();
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
   return {update(b){
+    const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;
+    const death=collapse.step(b,dt,document.hidden);
     const q=bodyPose(b),c=cinematicPose(b);pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift)*S;
-    B.model.position.y=0;B.model.scale.setScalar(1);if(b.state!=='dead')B.model.rotation.set(0,0,0);
+    B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,death?death.roll:0);
     const shouldDetach=c.detach>0;
     if(shouldDetach&&!detached){pivot.remove(headRig);B.swordGroup.add(headRig);detached=true;}
     else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);pivot.add(headRig);detached=false;}
