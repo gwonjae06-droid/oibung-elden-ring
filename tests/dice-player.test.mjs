@@ -4,7 +4,7 @@ import {createDiceGame,stepDice} from '../src/dice-combat.mjs';
 import {DICE_RULES as R,DICE_BOARD,diceRollPose,diceTouches} from '../src/dice-data.mjs';
 import {diceSegmentHit} from '../src/dice-hit.mjs';
 const tick=(g,t)=>{for(let s=0;s<t;s+=1/120)stepDicePlayer(g,1/120);};
-function target(w,weak=true){const g=createDicePlayerGame(w);g.player.x=g.dice.pose.x+(weak?0:6);g.player.z=g.dice.pose.z+(weak?6:0);g.dice.stun=999;return g;}
+function target(w,weak=true){const g=createDicePlayerGame(w);g.player.x=g.dice.pose.x+(weak?6:0);g.player.z=g.dice.pose.z+(weak?0:6);g.dice.stun=999;return g;}
 for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' damages the photo face only',()=>{const g=target(weapon),before=g.player.stamina;assert.equal(actDice(g,'light'),true);assert.ok(g.player.stamina<before);tick(g,.8);assert.ok(g.boss.hp<g.boss.maxHp);assert.ok(g.stats.hits>0);});
 for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' is blocked by an armored face',()=>{const g=target(weapon,false);assert.equal(actDice(g,'light'),true);tick(g,.8);assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.stats.hits,0);assert.equal(g.stats.damage,0);assert.equal(g.player.skill.hammerHits,0);assert.ok(g.events.some(e=>e.type==='dice-blocked'));});
 test('sword haste and bow charge are inherited from shared skill rules',()=>{const sword=target('sword');assert.equal(actDice(sword,'skill'),true);assert.ok(sword.player.skill.haste>0);const bow=target('bow');assert.equal(actDice(bow,'skill'),true);assert.equal(bow.player.skill.charges,2);tick(bow,.7);assert.ok(bow.boss.hp<bow.boss.maxHp);});

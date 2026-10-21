@@ -1,17 +1,13 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {buildDiceDecorations} from '../src/dice-decoration-renderer.mjs';
-// Structural doubles exercise object construction, not WebGL rendering.
-class Vector3{constructor(x=0,y=0,z=0){this.set(x,y,z);}set(x,y,z){Object.assign(this,{x,y,z});return this;}copy(v){return this.set(v.x,v.y,v.z);}multiplyScalar(n){return this.set(this.x*n,this.y*n,this.z*n);}}
-class Group{constructor(){this.children=[];this.position=new Vector3();this.scale=new Vector3(1,1,1);this.rotation={};this.quaternion={setFromUnitVectors:(a,b)=>{this.normal=b;}};}add(o){this.children.push(o);}}
-class Mesh extends Group{constructor(geometry,material){super();Object.assign(this,{geometry,material});}}
-class Material{constructor(p){Object.assign(this,p);this.color={setHex:v=>{this.hex=v;}};}}
-class Geometry{constructor(){this.attributes={position:{count:3,getX:i=>i-1,getY:()=>0},uv:{setXY(){}}};}}
-const T={Vector3,Group,Mesh,MeshStandardMaterial:Material,SphereGeometry:Geometry,ConeGeometry:Geometry};
-const make=()=>{const root=new Group(),api=buildDiceDecorations(T,root,8,{ember:1,emissive:2});return {root,api,pips:root.children.flatMap(f=>f.children.filter(o=>o.name==='sungwon-face-pip')),spikes:root.children.flatMap(f=>f.children.filter(o=>o.name==='dice-face-spike'))};};
-test('renderer constructs 21 portrait pips and 21 numbered spikes',()=>{const {root,pips,spikes}=make();assert.equal(root.children.length,6);assert.equal(pips.length,21);assert.equal(spikes.length,21);assert.deepEqual(root.children.map(f=>f.children.length),[2,12,4,10,6,8]);});
-test('all pips share one photo texture and retain their visible meshes',()=>{const {api,pips}=make(),texture={id:'portrait'};api.setTexture(texture);for(const p of pips){assert.equal(p.material.map,texture);assert.equal(p.material.hex,0xffffff);assert.ok(p.scale.z>.6);assert.equal(p.castShadow,true);}});
-test('spikes have an outward axis and shared emissive material',()=>{const {root,spikes}=make();assert.deepEqual(root.children.map(f=>[f.normal.x,f.normal.y,f.normal.z]),[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]);for(const s of spikes){assert.equal(s.rotation.x,Math.PI/2);assert.equal(s.scale.y,1.28);assert.equal(s.material,spikes[0].material);}});
-test('entrance without a clock does not create NaN animation',()=>{const {api,spikes}=make();for(const time of [undefined,NaN,0,2]){api.update(time);assert.ok(Number.isFinite(spikes[0].material.emissiveIntensity));}});
-test('actor loads texture into decorations and preserves board geometry',()=>{const s=readFileSync(new URL('../src/dice-actor.mjs',import.meta.url),'utf8');for(const token of ['buildDiceDecorations(THREE,root,e,H)','decorations.setTexture(texture)','decorations.update(time)','new THREE.CircleGeometry(1,64)','texture?.dispose()','i===DICE_PHOTO_FACE?photoMaterial:iron'])assert.ok(s.includes(token),token);assert.ok(!s.includes('photoPips'));assert.ok(!s.includes('new THREE.Circle('));});
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {buildDiceDecorations,buildDiceFire,diceFireAnchors} from '../src/dice-decoration-renderer.mjs';
+// Object-structure tests with doubles, not a WebGL screenshot test.
+class V{set(x,y,z){Object.assign(this,{x,y,z});return this;}constructor(x=0,y=0,z=0){this.set(x,y,z);}copy(v){return this.set(v.x,v.y,v.z);}multiplyScalar(n){return this.set(this.x*n,this.y*n,this.z*n);}}
+class G{constructor(){this.children=[];this.position=new V();this.scale=new V(1,1,1);this.rotation={};this.quaternion={setFromUnitVectors(){}};}add(o){this.children.push(o);}}
+class M extends G{constructor(geometry,material){super();Object.assign(this,{geometry,material});}}
+class Mat{constructor(p){Object.assign(this,p);}}
+class Geo{constructor(...args){this.args=args;}}
+const T={Vector3:V,Group:G,Mesh:M,MeshStandardMaterial:Mat,CircleGeometry:Geo,ConeGeometry:Geo};
+test('flat points total 20 and the former single-pip face has no pip',()=>{const root=new G();buildDiceDecorations(T,root,8,{ember:1,emissive:2});assert.deepEqual(root.children.map(f=>f.children.filter(m=>m.name==='recessed-dice-pip').length),[0,6,2,5,3,4]);for(const f of root.children)for(const p of f.children.filter(m=>m.name==='recessed-dice-pip')){assert.equal(p.position.z,.008);assert.ok(!p.material.map);assert.ok(p.geometry instanceof Geo);}});
+test('fire anchors stay on edges away from the photo center',()=>{const a=diceFireAnchors(8);assert.equal(a.length,20);for(const p of a)assert.ok(p.filter(v=>Math.abs(v)>=4).length>=2);});
+test('animated fire uses a shared texture with explicit disposal',()=>{const old=globalThis.document;let disposed=0;globalThis.document={createElement:()=>({getContext:()=>({createRadialGradient:()=>({addColorStop(){}}),fillRect(){}})})};try{const root=new G(),api=buildDiceFire({...T,CanvasTexture:class{dispose(){disposed++;}},SpriteMaterial:Mat,Sprite:class extends G{constructor(m){super();this.material=m;}},PointLight:class extends G{}},root,8);api.update();api.update(1);const f=root.children.filter(o=>o.name==='hellfire-flame');assert.equal(f.length,20);assert.ok(f.every(s=>Number.isFinite(s.position.y)));assert.equal(f[0].material.map,f[1].material.map);api.dispose();api.dispose();assert.equal(disposed,1);}finally{globalThis.document=old;}});
+test('actor wires fire and moves border to positive X',()=>{const s=readFileSync(new URL('../src/dice-actor.mjs',import.meta.url),'utf8');assert.ok(s.includes('fire.update(time)'));assert.ok(s.includes('fire.dispose()'));assert.ok(s.includes('new THREE.Vector3(e/2+.04,y*'));assert.ok(!s.includes('decorations.setTexture'));assert.ok(s.includes('new THREE.CircleGeometry(1,64)'));});

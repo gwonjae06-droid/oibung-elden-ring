@@ -1,10 +1,15 @@
-import {diceDecorations,dicePortraitUv} from './dice-decoration-data.mjs';
+import {diceDecorations} from './dice-decoration-data.mjs';
+import {DICE_PHOTO_FACE} from './dice-photo-data.mjs';
 export function buildDiceDecorations(THREE,root,edge,style){
- const portrait=new THREE.MeshStandardMaterial({color:0xffdfb3,roughness:.55,metalness:0}),ember=new THREE.MeshStandardMaterial({color:style.ember,emissive:style.emissive,emissiveIntensity:1.5,roughness:.4});
- const sphere=new THREE.SphereGeometry(1,24,16),cone=new THREE.ConeGeometry(1,1,10),pos=sphere.attributes.position,uv=sphere.attributes.uv;
- for(let i=0;i<pos.count;i++)uv.setXY(i,...dicePortraitUv(pos.getX(i),pos.getY(i),1));uv.needsUpdate=true;
+ const dark=new THREE.MeshStandardMaterial({color:0x050507,roughness:.95,metalness:.1}),ember=new THREE.MeshStandardMaterial({color:style.ember,emissive:style.emissive,emissiveIntensity:1.5,roughness:.4}),disc=new THREE.CircleGeometry(1,24),cone=new THREE.ConeGeometry(1,1,10);
  for(const plan of diceDecorations(edge)){const face=new THREE.Group(),normal=new THREE.Vector3(...plan.normal);face.name='dice-decoration-face-'+plan.face;face.position.copy(normal).multiplyScalar(edge/2);face.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);root.add(face);
- for(const [x,y]of plan.points){const pip=new THREE.Mesh(sphere,portrait);pip.name='sungwon-face-pip';pip.position.set(x,y,plan.offset);pip.scale.set(plan.radius,plan.radius,plan.depth);pip.castShadow=pip.receiveShadow=true;face.add(pip);}
+ if(plan.face!==DICE_PHOTO_FACE)for(const [x,y]of plan.points){const pip=new THREE.Mesh(disc,dark);pip.name='recessed-dice-pip';pip.position.set(x,y,.008);pip.scale.set(plan.radius*.7,plan.radius*.7,1);pip.receiveShadow=true;face.add(pip);}
  for(const [x,y]of plan.spikes){const spike=new THREE.Mesh(cone,ember);spike.name='dice-face-spike';spike.position.set(x,y,plan.spikeHeight/2);spike.rotation.x=Math.PI/2;spike.scale.set(plan.spikeRadius,plan.spikeHeight,plan.spikeRadius);spike.castShadow=true;face.add(spike);}}
- return {setTexture(texture){portrait.map=texture;portrait.color.setHex(0xffffff);portrait.needsUpdate=true;},update(time=0){ember.emissiveIntensity=1.4+.3*Math.sin((Number.isFinite(time)?time:0)*6);}};
+ return {update(time=0){ember.emissiveIntensity=1.4+.3*Math.sin((Number.isFinite(time)?time:0)*6);}};
+}
+export function diceFireAnchors(edge){const h=edge*.52,a=[];for(const x of [-h,h])for(const y of [-h,h])for(const z of [-h,h])a.push([x,y,z]);for(let axis=0;axis<3;axis++)for(const s of [-h,h])for(const t of [-h,h]){const p=[0,0,0],keys=[0,1,2].filter(k=>k!==axis);p[keys[0]]=s;p[keys[1]]=t;a.push(p);}return a;}
+export function buildDiceFire(THREE,root,edge){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=64;const ctx=canvas.getContext('2d'),gradient=ctx.createRadialGradient(32,40,1,32,34,30);gradient.addColorStop(0,'rgba(255,255,180,1)');gradient.addColorStop(.25,'rgba(255,190,30,.95)');gradient.addColorStop(.6,'rgba(255,55,5,.65)');gradient.addColorStop(1,'rgba(130,10,0,0)');ctx.fillStyle=gradient;ctx.fillRect(0,0,64,64);
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const material=new THREE.SpriteMaterial({map:texture,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}),flames=diceFireAnchors(edge).map((a,i)=>{const sprite=new THREE.Sprite(material);sprite.name='hellfire-flame';sprite.position.set(...a);root.add(sprite);return {sprite,a,seed:i*.73};}),light=new THREE.PointLight(0xff4a0c,3,edge*3,2);root.add(light);let disposed=false;
+ return {update(time=0){const t=Number.isFinite(time)?time:0;for(const {sprite,a,seed}of flames){const u=(t*.8+seed)%1;sprite.position.set(a[0]+Math.sin(t*5+seed)*.12,a[1]+u*1.4,a[2]);sprite.scale.set(1.2+.35*Math.sin(t*7+seed),2.2+u*1.8,1);}light.intensity=2.8+.5*Math.sin(t*9);},dispose(){if(disposed)return;disposed=true;texture.dispose();}};
 }
