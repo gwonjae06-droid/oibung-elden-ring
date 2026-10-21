@@ -15,6 +15,7 @@ export function advanceTransition(time,dt,hidden=false){return hidden||covered?t
 export function chooseWeapon(previous,saved){return Object.hasOwn(WEAPON_NAMES,saved)?saved:Object.hasOwn(WEAPON_NAMES,previous)?previous:'sword';}
 export function makeClownLoadout(weapon,unlocked){if(!Object.hasOwn(WEAPON_NAMES,weapon))throw new Error('Unknown weapon');return {version:1,bossId:'clown',weapon,unlocked:Boolean(unlocked)};}
 if(typeof window!=='undefined'){
+ import('./boss-music.mjs').then(m=>m.installBossMusic()).catch(e=>console.error('Boss music unavailable',e));
  let running=false;
  window.addEventListener('oibung:clown-weapon-selected',async e=>{
   if(running)return;running=true;
