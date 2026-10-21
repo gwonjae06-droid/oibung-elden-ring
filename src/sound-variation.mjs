@@ -1,0 +1,2 @@
+export function soundVariation(random=Math.random){const r=()=>{const v=Number(random());return Number.isFinite(v)?Math.max(0,Math.min(1,v)):.5;};return {pitch:2**(((r()-.5)*1.2)/12),speed:.96+r()*.08,gain:.96+r()*.08};}
+export function kwonFight(doc=globalThis.document){return Boolean(doc&&!doc.getElementById('clown-battle')?.open&&!doc.getElementById('boss-transition')?.open&&doc.getElementById('boss-hud')?.hidden===false);}
