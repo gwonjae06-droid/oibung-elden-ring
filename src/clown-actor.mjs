@@ -31,10 +31,10 @@ export function createClownActor(){
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
-  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=c.yaw;body.position.y=5.2+(M?M.lift:0)+A.lift;body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=g.status==='won'?.6:v.tilt*.13;body.rotation.x=(M&&v.neck>0?v.neck*.3:0)+A.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
+  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+A.lift;body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=g.status==='won'?.6:v.tilt*.13;body.rotation.x=(M&&v.neck>0?v.neck*.3:0)+A.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
   ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=M?M.ballZ:0;ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025;
   mount.group.visible=Boolean(M?.visible);
-  if(M?.visible){mount.group.position.set(0,M.y,M.z);mount.group.rotation.z=boss.state==='transition'?0:-c.odo/2.6;const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(1,1,1+v.neck*reach/2.28);mount.setMorph({inflate:2.6,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
+  if(M?.visible){mount.group.position.set(0,M.y,M.z);mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
   head.group.visible=F.bodyHead;
   h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
   if(F.bodyHead&&v.neckTarget&&v.neck>0){target.set(v.neckTarget.x,1.2,v.neckTarget.z);body.worldToLocal(target);h.lerp(target,v.neck);}
