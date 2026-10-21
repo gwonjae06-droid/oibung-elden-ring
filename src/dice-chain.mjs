@@ -1,0 +1,14 @@
+import {createDiceGate,diceWeapon,shouldStartDice} from './dice-flow.mjs';
+import {createAudio} from './audio.mjs';
+export function installDiceChain(doc=globalThis.document,win=globalThis.window){
+ if(!doc||!win||doc.documentElement.dataset.diceChain)return;doc.documentElement.dataset.diceChain='1';let modal=null,watch=null,entrance=null;const contexts=[];
+ const audio=createAudio(()=>{const C=win.AudioContext||win.webkitAudioContext;if(!C)return null;const c=new C();contexts.push(c);return c;}),muted=()=>{try{return win.localStorage.getItem('oibung-muted')==='1';}catch{return false;}},unlock=()=>audio.setEnabled(!muted());
+ win.addEventListener('pointerdown',unlock,{capture:true,passive:true});win.addEventListener('keydown',unlock,{capture:true});
+ function scan(){const next=doc.getElementById('clown-battle');if(next===modal)return;entrance?.dispose();entrance=null;watch?.disconnect();modal=next;if(!modal)return;
+ const source=modal,root=source.firstElementChild?.shadowRoot,result=root?.getElementById('result'),shell=root?.getElementById('arena');if(!root||!result||!shell)return;const gate=createDiceGate(),button=doc.createElement('button');button.textContent='다음 시련 · 거대 주사위 박성원';button.hidden=true;result.querySelector('.small-panel').appendChild(button);
+ async function start(){if(!gate.begin())return;button.disabled=true;try{const module=await import('./dice-battle.mjs');if(source!==modal||!source.isConnected||!shouldStartDice(source.open,!result.hidden,root.getElementById('result-kicker')?.textContent))return;const current=module.playDiceEntrance(root,shell,{impact:()=>{if(!muted())audio.play('hit-boss',{amount:120,minGap:.15});}});entrance=current;const go=await current.finished;if(entrance===current)entrance=null;if(go&&source===modal&&source.isConnected)module.launchDiceBattle({weapon:diceWeapon(root.getElementById('skill-hud')?.dataset.weapon),onClose:()=>button.focus()});}catch(error){console.error(error);button.textContent='박성원 전투 다시 열기';}finally{gate.end();button.disabled=false;if(source===modal&&source.isConnected)check();}}
+ button.onclick=start;const check=()=>{if(result.hidden&&entrance&&source===modal){entrance.dispose();entrance=null;}const visible=!result.hidden,won=String(root.getElementById('result-kicker')?.textContent||'').trim()==='승리',show=visible&&won;if(button.hidden===show)button.hidden=!show;if(gate.observe(source.open,visible,won?'승리':'패배'))start();};
+ watch=new MutationObserver(check);watch.observe(result,{attributes:true,attributeFilter:['hidden'],childList:true,subtree:true});check();
+ }
+ const observer=new MutationObserver(scan);observer.observe(doc.body,{childList:true});scan();win.addEventListener('pagehide',e=>{if(e.persisted)return;observer.disconnect();watch?.disconnect();entrance?.dispose();audio.setEnabled(false);for(const c of contexts)c.close?.();win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);},{capture:true});
+}

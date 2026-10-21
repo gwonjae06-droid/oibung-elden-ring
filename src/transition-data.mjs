@@ -18,6 +18,7 @@ export function makeClownLoadout(weapon,unlocked){if(!Object.hasOwn(WEAPON_NAMES
 if(typeof window!=='undefined'){
  import('./game-ui.mjs').then(m=>m.installGameUi()).catch(e=>console.error('Game UI unavailable',e));
  import('./boss-music.mjs').then(m=>m.installBossMusic()).catch(e=>console.error('Boss music unavailable',e));
+ import('./dice-chain.mjs').then(m=>m.installDiceChain()).catch(e=>console.error('Dice chain unavailable',e));
  let running=false;
  window.addEventListener('oibung:clown-weapon-selected',async e=>{
   if(running)return;running=true;

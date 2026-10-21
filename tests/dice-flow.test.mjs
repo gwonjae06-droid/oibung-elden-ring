@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {shouldStartDice,diceWeapon,createDiceGate} from '../src/dice-flow.mjs';
+test('only a visible victory in an open clown dialog starts the next boss',()=>{assert.equal(shouldStartDice(true,true,'승리'),true);assert.equal(shouldStartDice(false,true,'승리'),false);assert.equal(shouldStartDice(true,false,'승리'),false);assert.equal(shouldStartDice(true,true,'패배'),false);});
+test('weapon selection preserves all four shared weapons',()=>{for(const w of ['sword','hammer','bow','cards'])assert.equal(diceWeapon(w),w);assert.equal(diceWeapon(undefined),'sword');assert.equal(diceWeapon('bad'),'sword');});
+test('repeated victory DOM updates do not relaunch the entrance',()=>{const g=createDiceGate();assert.equal(g.observe(true,true,'승리'),true);for(let i=0;i<100;i++)assert.equal(g.observe(true,true,'승리'),false);});
+test('only one asynchronous launch may run at a time',()=>{const g=createDiceGate();assert.equal(g.begin(),true);assert.equal(g.begin(),false);g.end();assert.equal(g.begin(),true);});
+test('retrying clown combat allows the next new victory to enter',()=>{const g=createDiceGate();assert.equal(g.observe(true,true,'승리'),true);assert.equal(g.observe(true,false,'승리'),false);assert.equal(g.observe(true,true,'승리'),true);});
+test('an active entrance cannot launch again on a retry mutation',()=>{const g=createDiceGate();g.observe(true,true,'승리');g.begin();g.observe(true,false,'승리');assert.equal(g.observe(true,true,'승리'),false);g.end();assert.equal(g.observe(true,true,'승리'),true);});
+test('failed or closed launches may be retried manually without automatic duplication',()=>{const g=createDiceGate();assert.equal(g.observe(true,true,'승리'),true);g.begin();g.end();assert.equal(g.observe(true,true,'승리'),false);assert.equal(g.begin(),true);});
