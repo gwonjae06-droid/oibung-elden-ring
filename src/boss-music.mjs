@@ -12,7 +12,7 @@ export function musicState(doc,focused=true){
 }
 export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  let ctx=null,bus=null,noise=null,enabled=false,disposed=false,state=null,next=0,tick=0,laugh=null,loading=false,retryAt=0;const groups=new Set();
- function ensure(){if(disposed)return false;if(ctx)return true;try{ctx=factory();if(!ctx)return false;bus=ctx.createGain();bus.gain.value=.22;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=18;comp.ratio.value=5;bus.connect(comp);comp.connect(ctx.destination);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
+ function ensure(){if(disposed)return false;if(ctx)return true;try{ctx=factory();if(!ctx)return false;bus=ctx.createGain();bus.gain.value=.35;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=18;comp.ratio.value=5;bus.connect(comp);comp.connect(ctx.destination);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
  function release(g){if(g.done)return;g.done=true;groups.delete(g);for(const n of g.sources){n.onended=null;try{n.stop();}catch{}n.disconnect();}for(const n of g.fx)n.disconnect();}
  function stop(){for(const g of [...groups])release(g);next=0;}
  function voices(){let n=0;for(const g of groups)n+=g.sources.length;return n;}
