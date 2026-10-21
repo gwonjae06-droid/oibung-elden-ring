@@ -1,7 +1,10 @@
+const bindings=new WeakMap();
+export function restoreBossName(hud){bindings.get(hud)?.restore();}
 const sat=v=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):0;
 const ease=t=>{t=sat(t);return t*t*(3-2*t);};
 export function chainPose(bind,pull=0){const b=sat(bind),p=b>=1?ease(pull):0;return {reach:ease(b/.24),wraps:Array.from({length:4},(_,i)=>sat((b-.24-i*.16)/.16)),pull:p,tension:ease((b-.88)/.12)};}
 export function bindBossName(hud,ownPull=true,host=null){
+ restoreBossName(hud);
  const name=hud?.querySelector('h2');if(!name)return null;
  const doc=hud.ownerDocument,win=doc.defaultView,rect=name.getBoundingClientRect(),parent=name.parentNode,anchor=doc.createComment('boss-name-position'),old=name.getAttribute('style');
  const computed=win.getComputedStyle(name),font={font:computed.font,color:computed.color,lineHeight:computed.lineHeight,letterSpacing:computed.letterSpacing,textShadow:computed.textShadow,textAlign:computed.textAlign};
@@ -25,6 +28,6 @@ export function bindBossName(hud,ownPull=true,host=null){
   draw(ends[1],'M '+w+' '+(rect.top+rect.height+50)+' Q '+((w+right)*.5)+' '+(cy-25)+' '+(w+(right-w)*pose.reach)+' '+(rect.top+rect.height+50+(cy-rect.top-rect.height-50)*pose.reach),pose.reach);
   for(let i=0;i<4;i++){const x=cx+(i-1.5)*rect.width*.2,rx=Math.max(14,rect.width*.17),ry=Math.max(16,rect.height*.85),k=pose.wraps[i];draw(coils[i].back,'M '+(x-rx)+' '+cy+' A '+rx+' '+ry+' 0 0 1 '+(x+rx)+' '+cy,Math.min(1,k*2));draw(coils[i].front,'M '+(x+rx)+' '+cy+' A '+rx+' '+ry+' 0 0 1 '+(x-rx)+' '+cy,Math.max(0,k*2-1));}
  }
- function restore(){if(restored)return;restored=true;if(anchor.parentNode){anchor.parentNode.insertBefore(name,anchor);anchor.remove();}else parent.appendChild(name);if(old===null)name.removeAttribute('style');else name.setAttribute('style',old);layer.remove();}
- update(0);return {update,restore};
+ function restore(){if(restored)return;restored=true;bindings.delete(hud);if(anchor.parentNode){anchor.parentNode.insertBefore(name,anchor);anchor.remove();}else parent.appendChild(name);if(old===null)name.removeAttribute('style');else name.setAttribute('style',old);layer.remove();}
+ update(0);const control={update,restore};bindings.set(hud,control);return control;
 }
