@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PHASE_LINES,phaseLine,createPhaseDialogue} from '../src/phase-dialogue.mjs';
+const game=clown=>({status:'playing',boss:{state:'transition'},...(clown?{clown:{}}:{})});
+function notice(){const classes=new Set();return {textContent:'기존 안내',dataset:{},style:{maxWidth:'',whiteSpace:'',textAlign:''},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x)}};}
+test('exact requested phase lines only during transition',()=>{assert.equal(phaseLine(game(false)),'그에게도 검사라는 꿈이 있었습니다');assert.equal(phaseLine(game(true)),'당신은 그의 공연을 화려하게 망쳐버렸습니다. 살아남으세요.');const g=game(false);g.boss.state='clown';assert.equal(phaseLine(g),null);g.boss.state='transition';g.status='lost';assert.equal(phaseLine(g),null);});
+test('reuses original notice, restores wrapping, clears at end',()=>{const el=notice(),ui=createPhaseDialogue({getElementById:id=>id==='notice'?el:null}),g=game(false);ui.update(g);assert.equal(el.textContent,PHASE_LINES.kwon);assert.ok(el.classList.contains('visible'));g.boss.state='idle';ui.update(g);assert.equal(el.textContent,'');assert.equal(el.style.whiteSpace,'');assert.ok(!el.classList.contains('visible'));ui.update(game(false));assert.equal(el.textContent,PHASE_LINES.kwon);ui.clear();});
+test('clown dialogue uses its Shadow DOM instead of first boss notice',()=>{const main=notice(),child=notice(),modal={firstElementChild:{shadowRoot:{getElementById:()=>child}}},ui=createPhaseDialogue({getElementById:id=>id==='clown-battle'?modal:main});ui.update(game(true));assert.equal(child.textContent,PHASE_LINES.clown);assert.equal(main.textContent,'기존 안내');ui.clear();});
+test('cleanup preserves a newer combat notice',()=>{const el=notice(),ui=createPhaseDialogue({getElementById:()=>el});ui.update(game(false));el.textContent='새로운 공격';ui.clear();assert.equal(el.textContent,'새로운 공격');assert.equal(el.style.maxWidth,'');});
