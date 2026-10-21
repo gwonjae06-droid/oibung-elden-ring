@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {chainPose,bindBossName} from '../src/boss-ui-chain.mjs';
+class El{
+ constructor(tag,doc){this.tag=tag;this.ownerDocument=doc;this.children=[];this.style={};this.attrs={};this.parentNode=null;this.namespaceURI='http://www.w3.org/2000/svg';}
+ appendChild(n){n.remove();this.children.push(n);n.parentNode=this;return n;}
+ insertBefore(n,ref){n.remove();const i=this.children.indexOf(ref);if(i<0)throw Error('missing anchor');this.children.splice(i,0,n);n.parentNode=this;return n;}
+ remove(){if(this.parentNode){const p=this.parentNode;p.children.splice(p.children.indexOf(this),1);this.parentNode=null;}}
+ setAttribute(k,v){this.attrs[k]=String(v);}getAttribute(k){return this.attrs[k]??null;}removeAttribute(k){delete this.attrs[k];}
+ getBoundingClientRect(){return {left:300,top:500,width:240,height:36};}getRootNode(){return this.ownerDocument;}
+ querySelector(tag){for(const c of this.children){if(c.tag===tag)return c;const found=c.querySelector(tag);if(found)return found;}return null;}
+}
+function fixture(){const doc={defaultView:{innerWidth:1000,innerHeight:700,getComputedStyle:()=>({font:'20px serif',color:'#fff',lineHeight:'24px',letterSpacing:'0px',textShadow:'none',textAlign:'left'}),matchMedia:()=>({matches:false})}};doc.createElement=tag=>new El(tag,doc);doc.createElementNS=(ns,tag)=>new El(tag,doc);doc.createComment=()=>new El('comment',doc);doc.body=new El('body',doc);const hud=new El('hud',doc),name=new El('h2',doc),bar=new El('bar',doc),host=new El('dialog',doc);hud.style.transform='original';hud.style.opacity='.8';name.setAttribute('style','color: gold');hud.appendChild(name);hud.appendChild(bar);doc.body.appendChild(hud);doc.body.appendChild(host);return {doc,hud,name,bar,host};}
+test('four coils build in order before pull is allowed',()=>{assert.deepEqual(chainPose(0).wraps,[0,0,0,0]);assert.deepEqual(chainPose(1).wraps,[1,1,1,1]);assert.equal(chainPose(.5,1).pull,0);assert.equal(chainPose(1,1).pull,1);const p=chainPose(.5);assert.ok(p.wraps[0]>=p.wraps[1]&&p.wraps[1]>=p.wraps[2]);});
+test('moves the exact original h2, never the health bar or hud',()=>{const f=fixture(),b=bindBossName(f.hud,true,f.host);assert.notEqual(f.name.parentNode,f.hud);assert.equal(f.bar.parentNode,f.hud);assert.equal(f.host.querySelector('h2'),f.name);b.update(1,1);assert.equal(f.hud.style.transform,'original');assert.equal(f.hud.style.opacity,'.8');assert.ok(f.name.style.transform.includes('296'));b.restore();assert.equal(f.hud.children[0],f.name);assert.equal(f.name.getAttribute('style'),'color: gold');assert.equal(f.host.children.length,0);b.restore();});
+test('restores an absent inline style and can run again',()=>{const f=fixture();f.name.removeAttribute('style');const a=bindBossName(f.hud);a.update(1,.5);a.restore();assert.equal(f.name.getAttribute('style'),null);const b=bindBossName(f.hud);b.restore();assert.equal(f.hud.children[0],f.name);});
+test('both viewport ends and finite SVG paths exist through the timeline',()=>{const f=fixture(),b=bindBossName(f.hud,true,f.host);for(let i=0;i<=20;i++){b.update(i/20,i/20);const paths=[];function walk(n){if(n.tag==='path')paths.push(n);for(const c of n.children)walk(c);}walk(f.host);assert.equal(paths.length,20);assert.ok(paths.some(p=>p.getAttribute('d').startsWith('M 0 ')));assert.ok(paths.some(p=>p.getAttribute('d').startsWith('M 1000 ')));for(const p of paths)assert.ok(!/NaN|Infinity/.test(p.getAttribute('d')));}b.restore();});
+test('bind-only mode never drags the title',()=>{const f=fixture(),b=bindBossName(f.hud,false);b.update(1,1);assert.ok(f.name.style.transform.includes('px,0px,0'));b.restore();});
+test('missing title is safe and non-finite progress is clamped',()=>{assert.equal(bindBossName(null),null);assert.equal(chainPose(NaN,Infinity).pull,0);assert.deepEqual(chainPose(-1).wraps,[0,0,0,0]);});
