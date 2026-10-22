@@ -54,5 +54,6 @@
 <script type="module">
 import('./src/arena.mjs').catch(error=>{console.error(error);document.getElementById('load-status').textContent='3D 전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';document.getElementById('start').textContent='불러오기 실패';});
 import('./src/boss-transition.mjs').then(m=>m.installBossTransition()).catch(error=>console.error('Boss transition unavailable',error));
+import('./src/coop-menu.mjs').then(m=>m.installCoopMenu()).catch(error=>console.error('Coop menu unavailable',error));
 </script>
 </body></html>

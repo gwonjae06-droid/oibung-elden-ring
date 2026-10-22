@@ -7,5 +7,5 @@ export function connectCoop(url,{onMessage=()=>{},onClose=()=>{},onError=()=>{}}
  socket.addEventListener('error',()=>onError(Error('멀티 서버 연결 오류')));
  socket.addEventListener('close',()=>{closed=true;onClose();});
  function send(type,data={}){if(closed||socket.readyState!==WebSocket.OPEN)throw Error('멀티 서버가 연결되지 않았습니다.');socket.send(JSON.stringify({...data,type}));}
- return {socket,create:(name,weapon='sword')=>send('create',{name,weapon}),join:(code,name,weapon='sword')=>send('join',{code,name,weapon}),ready:value=>send('ready',{value}),start:()=>send('start'),input:(epoch,seq,x,z,action=null)=>send('input',{epoch,seq,x,z,action}),leave:()=>send('leave'),close:()=>socket.close()};
+ return {socket,create:(name,weapon='sword',boss='kwon')=>send('create',{name,weapon,boss}),join:(code,name,weapon='sword',boss)=>send('join',{code,name,weapon,boss}),ready:value=>send('ready',{value}),start:()=>send('start'),input:(epoch,seq,x,z,action=null)=>send('input',{epoch,seq,x,z,action}),leave:()=>send('leave'),close:()=>socket.close()};
 }
