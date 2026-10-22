@@ -1,0 +1,10 @@
+import {openCoopRoom,COOP_BOSSES} from './coop-ui.mjs';
+const installed=new WeakMap();
+export function coopWeapon(doc){const modal=doc.getElementById('dice-battle')||doc.getElementById('clown-battle'),root=modal?.firstElementChild?.shadowRoot||doc;return {검:'sword',망치:'hammer',활:'bow',카드:'cards'}[root.getElementById('weapon-label')?.textContent?.trim()]||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';}
+export function installCoopMenu(doc=globalThis.document,win=globalThis.window,{openRoom=openCoopRoom}={}){
+ if(installed.has(doc))return installed.get(doc);
+ const seen=new WeakSet(),style=doc.createElement('style');style.textContent='.boss-secret .coop-secret-row{display:flex;gap:8px;align-items:stretch}.boss-secret .coop-secret-row>[data-boss]{flex:1;min-width:0}.boss-secret .coop-secret-row>[data-coop-boss]{flex:0 0 90px;width:auto}';doc.head.append(style);let active=null;
+ function scan(){for(const b of doc.querySelectorAll('.boss-secret [data-boss]')){const boss=b.dataset.boss;if(seen.has(b)||!Object.hasOwn(COOP_BOSSES,boss))continue;seen.add(b);const row=doc.createElement('div');row.className='coop-secret-row';b.parentNode.insertBefore(row,b);row.append(b);const join=doc.createElement('button');join.type='button';join.dataset.coopBoss=boss;join.textContent='방 참가';join.setAttribute('aria-label',COOP_BOSSES[boss]+' 방 참가');row.append(join);join.onclick=e=>{e.preventDefault();e.stopPropagation();try{active=openRoom({boss,weapon:coopWeapon(doc),doc,win});}catch(error){const status=row.closest('.boss-secret')?.querySelector('p');if(status)status.textContent=error.message;}};}}
+ const observer=new win.MutationObserver(scan);observer.observe(doc.body,{childList:true,subtree:true});scan();
+ const control={dispose(){observer.disconnect();active?.close();style.remove();for(const row of doc.querySelectorAll('.coop-secret-row')){const b=row.querySelector('[data-boss]');if(b)row.replaceWith(b);}installed.delete(doc);}};installed.set(doc,control);return control;
+}
