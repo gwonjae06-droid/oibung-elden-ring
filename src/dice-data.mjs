@@ -1,4 +1,4 @@
-export const DICE_RULES=Object.freeze({name:'거대 주사위 박성원',edge:8,tileWidth:10,side:11,hp:3000,warning:.9,rollTime:.7,recovery:1.2,playerSpeed:8,playerRadius:.42,playerHeight:1.8});
+export const DICE_RULES=Object.freeze({name:'거대 주사위 박성원',edge:12,tileWidth:15,side:11,hp:3000,warning:.9,rollTime:.7,recovery:1.2,playerSpeed:8,playerRadius:.42,playerHeight:1.8});
 const sat=v=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):0;
 const smooth=v=>{const t=sat(v);return t*t*(3-2*t);};
 export function diceBoard(){const n=DICE_RULES.side,e=DICE_RULES.edge,h=(n-1)*e/2,tiles=[];for(let row=0;row<n;row++)for(let col=0;col<n;col++){const x=-h+col*e,z=-h+row*e;tiles.push(Object.freeze({index:tiles.length,x,z,corner:Math.abs(x)===h&&Math.abs(z)===h,color:(row+col)%4}));}return Object.freeze(tiles);}

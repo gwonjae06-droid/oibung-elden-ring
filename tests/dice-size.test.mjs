@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {DICE_RULES as R,DICE_BOARD as B,onDiceBoard,diceDirection,diceRollPose,diceTouches,diceCrushes} from '../src/dice-data.mjs';
+import {resolveDiceContact} from '../src/dice-contact.mjs';
+test('body and board tile widths increase by exactly 1.5 without scaling the player',()=>{assert.equal(R.edge,8*1.5);assert.equal(R.tileWidth,10*1.5);assert.equal(R.playerHeight,1.8);assert.equal(R.playerRadius,.42);});
+test('the 121 tiles and all four corners remain valid',()=>{assert.equal(B.length,121);assert.equal(B.filter(t=>t.corner).length,4);for(const t of B)assert.equal(onDiceBoard(t),true);});
+test('all pursuit steps stay cardinal and match the new body edge',()=>{for(let i=0;i<B.length;i++)for(const target of [0,10,60,110,120]){const to=B[i+diceDirection(i,target)];assert.ok(to);assert.equal(Math.hypot(to.x-B[i].x,to.z-B[i].z),R.edge);}});
+test('the enlarged body settles at its own half height, not the old height',()=>{const p=diceRollPose(B[60],B[61],1);assert.equal(p.x,B[61].x);assert.ok(Math.abs(p.y-6)<1e-9);assert.ok(Math.abs(Math.hypot(...p.rotation)-1)<1e-9);});
+test('newly occupied side space is solid and safe overlap still pushes',()=>{const pose=diceRollPose({x:0,z:0},{x:R.edge,z:0},0),p={x:0,z:5.5};assert.equal(diceTouches(p,pose),true);const q=resolveDiceContact(p,pose,false);assert.equal(q.crushed,false);assert.equal(diceTouches(q,pose),false);});
+test('crushing contact and safe lanes scale in all four directions',()=>{for(const to of [{x:R.edge,z:0},{x:-R.edge,z:0},{x:0,z:R.edge},{x:0,z:-R.edge}]){const pose=diceRollPose({x:0,z:0},to,.95);assert.equal(resolveDiceContact(to,pose,true).crushed,true);}const p=diceRollPose(B[60],B[61],1);assert.equal(diceCrushes({x:p.x,z:p.z+R.edge/2+.6},p),false);});
