@@ -1,3 +1,4 @@
+import {diceInvulnerable} from './dice-defense.mjs';
 import {diceTempo} from './dice-pressure.mjs';
 import {applyDiceSlow} from './dice-slow.mjs';
 export const CHAIN_SWEEP=Object.freeze({warning:1,sweepTime:.6,width:3.2,travel:8,damage:22,cooldown:2});
@@ -32,7 +33,7 @@ export function stepChainSweep(g,dt,frozen=false,playerRadius=.42){
  const u0=Math.min(1,w.t/CHAIN_SWEEP.sweepTime);w.t+=left;const u1=Math.min(1,w.t/CHAIN_SWEEP.sweepTime);
  if(!w.resolved&&circleRectHit(g.player,chainSweptRect(w.plan,u0,u1),playerRadius)){
    w.resolved=true;
-   if(!(g.player.invuln>0)){
+   if(!diceInvulnerable(g.player)){
      const amount=Math.min(g.player.hp,CHAIN_SWEEP.damage);g.player.hp-=amount;
      applyDiceSlow(g.player);g.events.push({type:'player-hit',source:'dice-chain',amount});
      if(g.player.hp===0){g.status='lost';d.groundSpikes=null;d.telegraph=null;d.frenzyRemaining=0;g.player.slow=null;g.events.push({type:'death'});return;}

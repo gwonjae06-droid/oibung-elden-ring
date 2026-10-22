@@ -1,3 +1,4 @@
+import {diceInvulnerable} from './dice-defense.mjs';
 import {DICE_RULES as R,DICE_BOARD,onDiceBoard,nearestDiceTile,diceDirection,diceRollPose} from './dice-data.mjs';
 import {resolveDiceContact} from './dice-contact.mjs';
 import {diceTopFace} from './dice-orientation.mjs';
@@ -28,7 +29,7 @@ function tick(g,dt,input){const p=g.player,d=g.dice,x=Number.isFinite(input.x)?i
  else if(d.state==='charge-warning'&&d.t>=DICE_PATTERNS.chargeWarning){d.state='charge';d.t=0;emit(g,'dice-charge');}
  else if(d.state==='charge'){const u=Math.min(1,d.t/DICE_PATTERNS.chargeTime);d.pose=flatPose(d,d.from.x+(d.to.x-d.from.x)*u,d.from.z+(d.to.z-d.from.z)*u);if(footprint(g)){kill(g);return;}if(u===1)finishPattern(g);}
  else if(d.state==='jump-warning'&&d.t>=DICE_PATTERNS.jumpWarning){d.state='jump';d.t=0;emit(g,'dice-jump');}
- else if(d.state==='jump'){const u=Math.min(1,d.t/DICE_PATTERNS.jumpTime),s=u*u*(3-2*u);d.pose=flatPose(d,d.from.x+(d.to.x-d.from.x)*s,d.from.z+(d.to.z-d.from.z)*s,R.edge/2+4*DICE_PATTERNS.jumpHeight*u*(1-u));if(u===1){if(footprint(g)){kill(g);return;}if(squareContains(p,d.to,DICE_PATTERNS.stompRadius,R.playerRadius)&&!(p.invuln>0)){const amount=Math.min(p.hp,DICE_PATTERNS.stompDamage);p.hp-=amount;emit(g,'player-hit',{amount,source:'dice-stomp'});if(p.hp===0){g.status='lost';clearDiceFaceAttack(g);d.telegraph=null;d.groundSpikes=null;emit(g,'death');}}emit(g,'dice-stomp',{x:d.to.x,z:d.to.z,radius:DICE_PATTERNS.stompRadius,shape:'square'});if(g.status==='playing')finishPattern(g);}}
+ else if(d.state==='jump'){const u=Math.min(1,d.t/DICE_PATTERNS.jumpTime),s=u*u*(3-2*u);d.pose=flatPose(d,d.from.x+(d.to.x-d.from.x)*s,d.from.z+(d.to.z-d.from.z)*s,R.edge/2+4*DICE_PATTERNS.jumpHeight*u*(1-u));if(u===1){if(footprint(g)){kill(g);return;}if(squareContains(p,d.to,DICE_PATTERNS.stompRadius,R.playerRadius)&&!diceInvulnerable(p)){const amount=Math.min(p.hp,DICE_PATTERNS.stompDamage);p.hp-=amount;emit(g,'player-hit',{amount,source:'dice-stomp'});if(p.hp===0){g.status='lost';clearDiceFaceAttack(g);d.telegraph=null;d.groundSpikes=null;emit(g,'death');}}emit(g,'dice-stomp',{x:d.to.x,z:d.to.z,radius:DICE_PATTERNS.stompRadius,shape:'square'});if(g.status==='playing')finishPattern(g);}}
  if(g.status==='playing'&&!['charge','jump'].includes(d.state))contact(g,d.state==='rolling');
 }
 const GROUND_MARGIN=1.25;

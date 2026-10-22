@@ -1,3 +1,4 @@
+import {diceInvulnerable} from './dice-defense.mjs';
 import {groundContactFace,segmentSquareHit} from './dice-ground-face.mjs';
 import {diceTempo} from './dice-pressure.mjs';
 export const PORTRAIT_BARRAGE=Object.freeze({warning:.9,interval:.18,speed:20,life:3.2,half:.55,damage:18,cooldown:1.2});
@@ -12,7 +13,7 @@ export function stepPortraitBarrage(g,dt,frozen=false,edge=12,limit=65,playerRad
  w=d.groundSpikes={kind:'portrait-barrage',stage:'warning',t:0,tempo:diceTempo(g.boss),count:cards.length,target,cards,limit};g.events.push({type:'dice-portrait-warning',count:w.count,target:{...target},duration:PORTRAIT_BARRAGE.warning*w.tempo});return;}
  const h=dt/w.tempo;w.t+=h;if(w.stage==='warning'){if(w.t<PORTRAIT_BARRAGE.warning)return;w.stage='active';w.t=0;g.events.push({type:'dice-portrait-barrage'});return;}
  for(const c of w.cards){if(!c.alive||w.t<c.delay)continue;const step=c.launched?h:Math.min(h,w.t-c.delay);c.launched=true;const a={x:c.x,z:c.z};c.x+=c.dx*PORTRAIT_BARRAGE.speed*step;c.z+=c.dz*PORTRAIT_BARRAGE.speed*step;c.age+=step;
- if(segmentSquareHit(a,c,g.player,PORTRAIT_BARRAGE.half+playerRadius)){c.alive=false;if(!(g.player.invuln>0)){const amount=Math.min(g.player.hp,PORTRAIT_BARRAGE.damage);g.player.hp-=amount;g.events.push({type:'player-hit',source:'dice-portrait',amount});if(g.player.hp===0){g.status='lost';d.groundSpikes=null;d.telegraph=null;d.frenzyRemaining=0;g.events.push({type:'death'});return;}}}
+ if(segmentSquareHit(a,c,g.player,PORTRAIT_BARRAGE.half+playerRadius)){c.alive=false;if(!diceInvulnerable(g.player)){const amount=Math.min(g.player.hp,PORTRAIT_BARRAGE.damage);g.player.hp-=amount;g.events.push({type:'player-hit',source:'dice-portrait',amount});if(g.player.hp===0){g.status='lost';d.groundSpikes=null;d.telegraph=null;d.frenzyRemaining=0;g.events.push({type:'death'});return;}}}
  if(c.age>=PORTRAIT_BARRAGE.life||Math.abs(c.x)>limit+1||Math.abs(c.z)>limit+1)c.alive=false;}
  if(w.cards.every(c=>!c.alive)){d.groundSpikes=null;d.spikeCooldown=PORTRAIT_BARRAGE.cooldown;}
 }
