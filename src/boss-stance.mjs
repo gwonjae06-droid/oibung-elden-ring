@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {bodyPose,bodyPoint,cinematicPose,handPoint,BOSS_SCALE} from './combat.mjs';
 import {createCollapseClock} from './boss-collapse.mjs';
+import {bossMotion} from './boss-motion-data.mjs';
 
 export function createBossStance(B){
   const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
@@ -44,8 +45,8 @@ export function createBossStance(B){
   return {update(b){
     const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;
     const death=collapse.step(b,dt,document.hidden);
-    const q=bodyPose(b),c=cinematicPose(b);pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift)*S;
-    B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,death?death.roll:0);
+    const q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b);pivot.rotation.x=q.angle+m.lean;pivot.position.y=(1.5+q.lift+m.sink)*S;
+    B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);
     const shouldDetach=c.detach>0;
     if(shouldDetach&&!detached){pivot.remove(headRig);B.swordGroup.add(headRig);detached=true;}
     else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);pivot.add(headRig);detached=false;}

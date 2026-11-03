@@ -50,6 +50,20 @@ export function createSkillFx(scene,reduced=false){
     else if(ev.type==='phase'){ring(b.x,b.z,9,0xff3a2e,1.1);ring(b.x,b.z,5,0xffb35f,.8);pool.emit(b.x,2.2,b.z,n(46),[1,.35,.2]);}
     else if(ev.type==='stagger'){ring(b.x,b.z,4,0xffdc9a,.6);pool.emit(b.x,2.4,b.z,n(24),[1,.82,.5]);}
     else if(ev.type==='victory'){ring(b.x,b.z,12,0xffdc40,1.4);pool.emit(b.x,2.5,b.z,n(60),[1,.86,.3]);}
+    else if(ev.type==='boss-swing'&&!g.clown){
+      const k=b.pattern,fx=b.x+Math.sin(b.yaw)*5,fz=b.z+Math.cos(b.yaw)*5;
+      if(k==='rush'){ring(b.x,b.z,3.2,0xff6a3a,.45);pool.emit(b.x,1.1,b.z,n(26),[1,.45,.25]);}
+      else if(k==='retreat'){pool.emit(b.x,.3,b.z,n(24),[.7,.7,.65],true);ring(b.x,b.z,2.4,0xcfd6c8,.5);}
+      else if(k==='thrust'||k==='jab')pool.emit(fx,1.3,fz,n(k==='jab'?10:20),[1,.85,.55]);
+      else if(k==='whirl'){ring(b.x,b.z,7.5,0xffc34a,.7);pool.emit(b.x,1.6,b.z,n(30),[1,.75,.35]);}
+      else if(k==='stomp'){ring(b.x,b.z,6.5,0xb8a07a,.6);pool.emit(b.x,.2,b.z,n(30),[.7,.62,.5],true);}
+      else if(['sweep','reverse','cross','rise','backsweep'].includes(k))pool.emit(fx,1.6,fz,n(14),[1,.8,.5]);
+    }
+    else if(ev.type==='clown-impact'&&g.clown){
+      if(ev.key==='fireHoop')pool.emit(ev.x,.4,ev.z,n(5),[1,.5,.12]);
+      else if(ev.key==='dash'){ring(ev.x,ev.z,3.5,0xffdc9a,.5);pool.emit(ev.x,2.4,ev.z,n(22),[1,.85,.5]);}
+      else if(ev.key==='drumMarch')ring(ev.x,ev.z,2.8,0xfff0b0,.45);
+    }
   }
   function update(dt,g){
     if(lastGame!==g){clear();lastGame=g;}

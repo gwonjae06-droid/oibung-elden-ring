@@ -1,4 +1,4 @@
-export const CARTOON_DURATIONS={laughBomb:5.1,dash:4.5,juggle:4.5,clap:3.4,bounce:3.6,shove:1.6,tripleBomb:6.65,rollingSmile:5,inverseBow:3.8,lastClap:5.35,confettiCurtain:4.6,hornFan:4.1,drumMarch:4.8,balloonBouquet:5,carousel:5.6,curtainCall:7.2};
+export const CARTOON_DURATIONS={laughBomb:5.1,dash:4.5,juggle:4.5,clap:3.4,bounce:3.6,shove:1.6,tripleBomb:6.65,rollingSmile:5,inverseBow:3.8,lastClap:5.35,confettiCurtain:4.6,hornFan:4.1,drumMarch:4.8,balloonBouquet:5,carousel:5.6,curtainCall:7.2,spotlightSweep:4.4,fireHoop:4.3,humanCannon:5};
 const sat=t=>Math.max(0,Math.min(1,t));
 const pulse=(t,a,b)=>t<=a||t>=b?0:Math.sin(Math.PI*(t-a)/(b-a));
 export function cartoonPose(name,time=0,phase=1,active=true){
@@ -21,6 +21,9 @@ export function cartoonPose(name,time=0,phase=1,active=true){
   case 'balloonBouquet':inflate(pulse(t,0,2.2));a.arms+=pulse(t,0,2.6)*2;a.glove+=pulse(t,0,2.6);a.lift=pulse(t,.5,2)*.8;break;
   case 'carousel':a.twist=Math.sin(t*9)*.6*pulse(t,0,4);a.arms+=pulse(t,0,4)*2;a.glove+=pulse(t,0,4)*.8;a.bodyY+=pulse(t,0,4)*.4;a.smear=pulse(t,0,4);break;
   case 'curtainCall':a.arms+=pulse(t,0,5.2)*1.6;a.glove+=pulse(t,3.2,4.8)*2.3;inflate(pulse(t,3.2,4.8));a.lift=pulse(t,2.8,4.8)*2.5;a.twist=Math.sin(t*8)*.35*pulse(t,0,5.2);a.smear=pulse(t,3.6,4.8);break;
+  case 'spotlightSweep':{const p=pulse(t,0,3.4);a.arms+=p*1.3;a.glove+=p*1.1;a.twist=Math.sin(t*3)*.3*p;a.bodyY+=pulse(t,.1,3.2)*.18;a.lean=-pulse(t,.2,1.2)*.2;a.smear=pulse(t,.2,3)*.6;break;}
+  case 'fireHoop':{const p=pulse(t,0,3.1),hop=Math.max(pulse(t,.05,.6),pulse(t,.95,1.5),phase===2?pulse(t,1.85,2.4):0);inflate(pulse(t,0,.35)*.6);a.arms+=Math.abs(Math.sin(t*7))*1.2*p;a.glove+=p*.5;a.lift=hop*1.6;a.bodyY+=hop*.35;a.shoe+=hop*.8;break;}
+  case 'humanCannon':{inflate(pulse(t,0,1.1)*.55);a.shoe+=pulse(t,0,1.1)*1.1;const launch=pulse(t,1.05,1.75);a.bodyY+=launch*.7;a.bodyX-=launch*.2;a.bodyZ+=launch*.4;a.lift=launch*2.2;a.arms+=pulse(t,.9,3.4)*1.5;a.glove+=pulse(t,.2,3.4)*1.1;a.lean=launch*.55-pulse(t,1.3,1.8)*.2-pulse(t,2.4,2.9)*.2;a.smear=pulse(t,1.1,3.2);break;}
  }
  const fade=Math.min(1,t/.12,(d-t)/.35);
  for(const k of Object.keys(a))a[k]=neutral[k]+(a[k]-neutral[k])*fade*power;
