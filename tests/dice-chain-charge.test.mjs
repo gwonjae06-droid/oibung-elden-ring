@@ -43,7 +43,7 @@ test('the second charge starts where the first ended, with no recovery in betwee
 
 test('the chained warning is longer than the first and the sequence ends in recovery',()=>{
  const g=ready(3,2);
- advance(g,P.chargeWarning+.1);advance(g,P.chargeTime+.05);
+ advance(g,P.chargeWarning);advance(g,P.chargeTime);
  advance(g,P.chainWarning-.1);
  assert.equal(g.dice.state,'charge-warning');
  assert.ok(P.chainWarning>P.chargeWarning);

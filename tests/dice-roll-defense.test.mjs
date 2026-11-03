@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createDicePlayerGame,actDice,stepDicePlayer} from '../src/dice-player.mjs';
 import {diceInvulnerable} from '../src/dice-defense.mjs';
 import {beginChainSweep} from '../src/dice-chain-sweep.mjs';
-function game(weapon='sword'){const g=createDicePlayerGame(weapon);Object.assign(g.player,{x:10,z:0});g.dice.state='recovery';g.dice.t=0;g.dice.spikeCooldown=999;return g;}
+function game(weapon='sword'){const g=createDicePlayerGame(weapon);Object.assign(g.player,{x:10,z:0});g.dice.state='recovery';g.dice.t=0;g.dice.spikeCooldown=999;g.dice.faceAttacks=true;return g;}
 function advance(g,time){for(let left=time;left>1e-9&&g.status==='playing';){const h=Math.min(.01,left);stepDicePlayer(g,h);left-=h;}}
 function roll(g,time){assert.equal(actDice(g,'roll',{x:1,z:0}),true);advance(g,time);}
 function card(g){g.dice.groundSpikes={kind:'portrait-barrage',stage:'active',t:0,tempo:1,cards:[{x:g.player.x,z:g.player.z,dx:1,dz:0,delay:0,launched:true,alive:true,age:0}]};}

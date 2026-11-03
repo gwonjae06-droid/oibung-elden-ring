@@ -14,22 +14,22 @@ function doubles(){
  class Group{constructor(){this.children=[];this.position=new V();this.quaternion=new V();this.scale=new V(1,1,1);this.rotation={};}add(...o){this.children.push(...o);}traverse(fn){fn(this);for(const o of this.children)o.traverse?o.traverse(fn):fn(o);}}
  class Resource{constructor(...args){this.args=args;this.disposals=0;resources.push(this);}dispose(){this.disposals++;}}
  class Geometry extends Resource{setFromPoints(){return this;}}
- class Material extends Resource{constructor(p){super(p);Object.assign(this,p);this.color={value:p.color,setHex(v){this.value=v;}};}}
+ class Material extends Resource{constructor(p){super(p);Object.assign(this,p);this.emissive={setRGB(){}};this.color={value:p.color,setHex(v){this.value=v;}};}}
  class Mesh extends Group{constructor(g,m){super();this.geometry=g;this.material=m;}}
  class Sprite extends Group{constructor(m){super();this.material=m;}}
  class Light extends Group{constructor(c,i){super();this.intensity=i;}}
- return {resources,THREE:{Group,Vector3:V,BoxGeometry:Geometry,CircleGeometry:Geometry,BufferGeometry:Geometry,MeshStandardMaterial:Material,LineBasicMaterial:Material,SpriteMaterial:Material,CanvasTexture:Resource,Mesh,Line:Mesh,Sprite,PointLight:Light}};
+ return {resources,THREE:{Group,Vector3:V,Quaternion:V,BoxGeometry:Geometry,CircleGeometry:Geometry,BufferGeometry:Geometry,MeshStandardMaterial:Material,LineBasicMaterial:Material,SpriteMaterial:Material,CanvasTexture:Resource,Mesh,Line:Mesh,Sprite,PointLight:Light}};
 }
 test('ornaments share one geometry and two materials',()=>{const {THREE}=doubles(),root=new THREE.Group();buildDiceArmor(THREE,root,12);assert.equal(root.children.length,40);assert.equal(new Set(root.children.map(m=>m.geometry)).size,1);assert.equal(new Set(root.children.map(m=>m.material)).size,2);});
 test('actor integration uses real decoration/fire factories with Three and DOM doubles',async()=>{
  const {THREE,resources}=doubles(),source=readFileSync(new URL('../src/dice-actor.mjs',import.meta.url),'utf8');
- const mock={THREE,R:{edge:12},DICE_BOARD:[],...photo,H:{},diceCrackPaths:()=>[{points:[[0,0,0],[1,1,1]]}],diceTelegraphView:()=>null,buildDiceDecorations,buildDiceFire,buildGroundSpikeVisuals:()=>({update(){}}),squareDiscArgs:()=>[],frenzyShake:()=>({x:0,z:0}),buildDiceArmor,DICE_ARMOR_STYLE};
+ const mock={THREE,R:{edge:12},DICE_BOARD:[],...photo,H:{},diceCrackPaths:()=>[{points:[[0,0,0],[1,1,1]]}],diceTelegraphView:()=>null,buildDiceDecorations,buildDiceFire,buildGroundSpikeVisuals:()=>({update(){}}),squareDiscArgs:()=>[],frenzyShake:()=>({x:0,z:0}),buildDiceArmor,DICE_ARMOR_STYLE,diceMotion:()=>({sy:1,sxz:1,shake:0,glow:0})};
  const oldImage=globalThis.Image,oldDocument=globalThis.document;
  globalThis.__diceArmorTest=mock;
  globalThis.document={createElement:()=>({getContext:()=>({createRadialGradient:()=>({addColorStop(){}}),fillRect(){},drawImage(){}})})};
  globalThis.Image=class{constructor(){this.naturalWidth=640;this.naturalHeight=480;}set src(v){queueMicrotask(()=>this.onload());}};
  try{
-  const code=`const {${Object.keys(mock).join(',')}}=globalThis.__diceArmorTest;\n`+source.replace(/^import .*;\n/gm,'').replaceAll('import.meta.url',JSON.stringify(new URL('../src/dice-actor.mjs',import.meta.url).href));
+  const code=`const {${Object.keys(mock).join(',')}}=globalThis.__diceArmorTest;\n`+source.replace(/^import .*;\r?\n/gm,'').replaceAll('import.meta.url',JSON.stringify(new URL('../src/dice-actor.mjs',import.meta.url).href));
   const mod=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
   const a=mod.createDiceActor();assert.equal(await a.ready,true);
   const all=[];a.root.traverse(o=>all.push(o));

@@ -7,7 +7,7 @@ test('crescent waves are three physical projectiles with a dodgeable fan',()=>{
   g.player.x=15;tick(g,1.5);assert.equal(g.player.hp,120);
 });
 test('melee and arrows can still hit the enlarged boss in phase two',()=>{
-  for(const weapon of ['sword','bow']){const g=createGame(weapon);g.boss.phase=2;g.boss.wait=99;g.player.z=0;g.player.yaw=Math.PI;act(g,'light');tick(g,.7);assert.ok(g.boss.hp<1800);}
+  for(const weapon of ['sword','bow']){const g=createGame(weapon);g.boss.phase=2;g.boss.wait=99;g.player.z=0;g.player.yaw=Math.PI;act(g,'light');tick(g,.7);assert.ok(g.boss.hp<g.boss.maxHp);}
 });
 test('threshold cinematic does not heal boss and clears active projectiles',()=>{
   const g=createGame('hammer');g.boss.hp=901;g.boss.wait=99;g.player.z=0;g.player.yaw=Math.PI;act(g,'light');tick(g,1);assert.equal(g.boss.phase,2);assert.equal(g.boss.hp,787);assert.equal(g.boss.state,'transition');assert.deepEqual(g.bossShots,[]);assert.deepEqual(g.projectiles,[]);

@@ -30,7 +30,7 @@ function run(key,phase){
  g.boss.phase=phase;g.player.invuln=1e6;startClownPattern(g,key);
  for(let i=0;i<Math.ceil((def.dur+.1)*120);i++){
   stepClown(g,1/120,{});peak=Math.max(peak,g.clown.zones.length);
-  for(const z of g.clown.zones)if(!seen.has(z.id))seen.set(z.id,{...z});
+  for(const z of g.clown.zones)if(!seen.has(z.id))seen.set(z.id,{...z,originX:g.boss.x,originZ:g.boss.z});
  }
  return {g,zones:[...seen.values()],peak};
 }
@@ -61,7 +61,7 @@ test('spotlights step from the boss toward the locked target and the last one is
  for(const [phase,count] of [[1,4],[2,5]]){
   const {g,zones}=run('spotlightSweep',phase);
   assert.equal(zones.length,count);
-  const d=zones.map(z=>Math.hypot(z.x-g.boss.x,z.z-g.boss.z));
+  const d=zones.map(z=>Math.hypot(z.x-z.originX,z.z-z.originZ));
   for(let i=1;i<d.length;i++)assert.ok(d[i]>d[i-1]);
   assert.equal(Math.max(...zones.map(z=>z.r)),zones[zones.length-1].r);
  }
@@ -69,7 +69,7 @@ test('spotlights step from the boss toward the locked target and the last one is
 
 test('fire hoops ring the clown at widening radii and each ring keeps a gap',()=>{
  for(const [phase,rings] of [[1,2],[2,3]]){
-  const {g,zones}=run('fireHoop',phase),radii=new Set(zones.map(z=>Math.round(Math.hypot(z.x-g.boss.x,z.z-g.boss.z)*10)/10));
+  const {g,zones}=run('fireHoop',phase),radii=new Set(zones.map(z=>Math.round(Math.hypot(z.x-z.originX,z.z-z.originZ)*10)/10));
   assert.ok(radii.size<=rings&&radii.size>=Math.min(2,rings));
   for(const r of radii)assert.ok([6,10.2,14.4].some(v=>Math.abs(v-r)<.11),'radius '+r);
   assert.ok(zones.length<rings*12);
