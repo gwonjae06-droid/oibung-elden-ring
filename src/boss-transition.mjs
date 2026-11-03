@@ -7,7 +7,7 @@ import {transitionPose,advanceTransition,WEAPON_NAMES,chooseWeapon,makeClownLoad
 import {encounterStore} from './encounter-state.mjs';
 import {createProgressionGate} from './progression-gate.mjs';
 
-function buildEntrance(canvas){
+export function buildEntrance(canvas){
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x100b12);scene.fog=new THREE.Fog(0x100b12,25,65);
  const camera=new THREE.PerspectiveCamera(50,1,.1,100);scene.add(new THREE.HemisphereLight(0xffead2,0x271825,1.2));
