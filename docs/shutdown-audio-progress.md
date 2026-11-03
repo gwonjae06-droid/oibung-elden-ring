@@ -1,0 +1,11 @@
+# Shutdown audio implementation: WIP branch only
+
+This changes boss-sfx.mjs and adds terminal-disposal regression tests. It is not the completed integrated shutdown migration and is not intended to be merged into main on its own.
+
+createBossSfx now exposes dispose() and disposed. Disposal synchronously invalidates playback, clears the monitoring interval and active voices, releases all preloaded HTMLAudioElement sources and clears pool/game references. Repeated disposal returns the same completion Promise. Cleanup exceptions are collected, including context-close rejection, without rejecting that Promise. Pending play success or failure cannot restart disposed playback. A stale completion also cannot pause a clip already reused by a newer voice after clear(). Partial synthesis setup failures are cleaned up. clear() remains reusable before disposal. Existing sample recipes, variation and gameplay deadlines are retained.
+
+The module-global fallback AudioContext has been removed. Without an injected getContext, each instance lazily owns its fallback context and closes only that context. Injected contexts remain borrowed and are not closed. This is a transitional adapter, not the planned app-wide shared audio service and per-session bus architecture. Context-close completion currently has no timeout; a context that never settles can leave the completion Promise pending until the session-scope deadline support is added. Requesting HTMLAudio source release does not prove the browser has already stopped every network operation.
+
+Validation: 11 new Node tests passed in an isolated directory importing the modified module with the repository sound recipes/variation and audio/timer doubles. Syntax check passed. The full existing boss-sfx suite, full repository npm test, real browser audio and memory-leak measurements were not run.
+
+Next required integration: make skill-fx and its owner call bossSfx.dispose() on terminal teardown rather than clear(); introduce the application audio service and connect player-sound/other audio backends; connect exception-safe child scopes, main/session factories, all battle entry paths and remounting; run the full acceptance matrix. Until those call sites are wired, current game shutdown is not guaranteed to invoke this new disposal method.
