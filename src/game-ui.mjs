@@ -64,4 +64,5 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window){
   const d=doc.getElementById('boss-transition');if(d){const button=d.querySelector('.bt-confirm'),back=d.querySelector('.bt-return'),note=d.querySelector('.bt-note');text(d.querySelector('.bt-choice h3'),'무기 선택');if(button){text(button,'서커스 입장');const hidden=d.dataset.stage!=='ready';if(button.hidden!==hidden)button.hidden=hidden;if(note&&button.parentNode!==note)note.insertBefore(button,back);}for(const status of d.querySelectorAll('.bt-selection,.bt-note>span')){if(/실패|못했|불러옵니다|로딩 중/.test(status.textContent))status.setAttribute('data-ui-status','');else status.removeAttribute('data-ui-status');}}
  }
  apply();
+ import('./screen-fx.mjs').then(m=>m.installScreenFx(doc,win)).catch(error=>console.error('Screen effects unavailable',error));
 }

@@ -15,6 +15,7 @@
 .skill-hud[data-card='blue'] .card-blue,.skill-hud[data-card='red'] .card-red,.skill-hud[data-card='yellow'] .card-yellow{opacity:1;transform:translateY(-3px) scale(1.15);box-shadow:0 0 8px currentColor}
 @media (prefers-reduced-motion:reduce){.card-row i,.skill-hud .meter.skill i{transition:none}}
 #vignette{background:radial-gradient(ellipse at 50% 42%,transparent 34%,rgba(7,13,10,.38) 68%,rgba(4,8,6,.82) 100%),linear-gradient(180deg,rgba(255,170,90,.05),transparent 22%,transparent 70%,rgba(10,0,0,.28))}
+#vignette[data-fx]::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(150,16,16,calc(var(--lowhp,0)*var(--beat,0)*.7)) 100%),radial-gradient(ellipse at 50% 50%,transparent 45%,rgba(90,210,130,calc(var(--heal,0)*.45)) 100%)}
 #arena::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;mix-blend-mode:overlay;opacity:.14;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27160%27 height=%27160%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%27.9%27 numOctaves=%272%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27160%27 height=%27160%27 filter=%27url(%23n)%27/%3E%3C/svg%3E')}
 .meter{box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
 .meter.hp i{background:linear-gradient(90deg,#7e2a2a,#c4584b)}
