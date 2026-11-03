@@ -1,36 +1,29 @@
 import {hpRatio,lowHealthLevel,heartbeat,healGain,healFade} from './screen-fx-data.mjs';
-export function installScreenFx(doc=globalThis.document,win=globalThis.window,{raf=cb=>win.requestAnimationFrame(cb),now=()=>win.performance.now()}={}){
- if(!doc||!win||doc.documentElement.dataset.screenFx)return null;
- doc.documentElement.dataset.screenFx='1';
- const state=new WeakMap();let stopped=false;
- const roots=()=>{const list=[doc];for(const id of ['clown-battle','dice-battle']){const s=doc.getElementById(id)?.firstElementChild?.shadowRoot;if(s)list.push(s);}return list;};
- function read(root){
-  const hpEl=root.getElementById('hp-value'),vig=root.getElementById('vignette');
-  if(!hpEl||!vig)return null;
-  const hp=parseFloat(hpEl.textContent),meter=hpEl.parentElement&&hpEl.parentElement.querySelector?hpEl.parentElement.querySelector('.meter'):null,max=Number(meter&&meter.getAttribute('aria-valuemax'))||120;
-  return Number.isFinite(hp)?{vig,hp,max}:null;
- }
- function clear(vig){delete vig.dataset.fx;vig.style.removeProperty('--lowhp');vig.style.removeProperty('--beat');vig.style.removeProperty('--heal');}
+import {createFrameLoop} from './runtime/frame-loop.mjs';
+const installed=new WeakMap();
+export function installScreenFx(doc=globalThis.document,win=globalThis.window,{raf=cb=>win.requestAnimationFrame(cb),caf=id=>win.cancelAnimationFrame(id),now=()=>win.performance.now()}={}){
+ if(!doc||!win)return null;if(installed.has(doc))return installed.get(doc);
+ const states=new WeakMap(),owned=new Set();let last=null,clock=0,disposed=false;
+ function clear(vig){delete vig.dataset.fx;for(const key of ['--lowhp','--beat','--heal'])vig.style.removeProperty(key);}
+ function roots(){for(const id of ['dice-battle','clown-battle']){const m=doc.getElementById(id);if(m?.open&&m.firstElementChild?.shadowRoot)return [m.firstElementChild.shadowRoot];}if(doc.getElementById('boss-transition')?.open)return [];return [doc];}
+ function active(root){if(root.getElementById('boss-hud')?.hidden===true)return false;return ['menu','pause-screen','result'].every(id=>root.getElementById(id)?.hidden!==false);}
  function frame(){
-  if(stopped)return;
-  if(!doc.hidden){
-   const t=now();
-   for(const root of roots()){
-    const r=read(root);if(!r)continue;
-    const s=state.get(r.vig)||{prev:r.hp,heal:-1e9};
-    if(healGain(s.prev,r.hp,r.max))s.heal=t;
-    s.prev=r.hp;state.set(r.vig,s);
-    const level=lowHealthLevel(hpRatio(r.hp,r.max)),heal=healFade(s.heal,t);
-    if(level>0||heal>0){
-     r.vig.dataset.fx='';
-     r.vig.style.setProperty('--lowhp',level.toFixed(3));
-     r.vig.style.setProperty('--beat',heartbeat(t/1000,level).toFixed(3));
-     r.vig.style.setProperty('--heal',heal.toFixed(3));
-    }else if('fx' in r.vig.dataset)clear(r.vig);
-   }
+  const stamp=now(),dt=last===null?0:Math.max(0,stamp-last);last=stamp;if(doc.hidden)return;clock+=dt;
+  const visited=new Set(),reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  for(const root of roots()){
+   const hpEl=root.getElementById('hp-value'),vig=root.getElementById('vignette');if(!hpEl||!vig)continue;
+   visited.add(vig);owned.add(vig);const hp=parseFloat(hpEl.textContent),meter=hpEl.parentElement?.querySelector?.('.meter'),max=Number(meter?.getAttribute('aria-valuemax'))||120;
+   const state=states.get(vig)||{prev:hp,heal:-1e9,active:false};
+   if(!Number.isFinite(hp)||!active(root)){state.prev=hp;state.heal=-1e9;state.active=false;states.set(vig,state);clear(vig);continue;}
+   if(state.active&&healGain(state.prev,hp,max))state.heal=clock;
+   state.prev=hp;state.active=true;states.set(vig,state);
+   const level=lowHealthLevel(hpRatio(hp,max)),heal=healFade(state.heal,clock);
+   if(level>0||heal>0){vig.dataset.fx='';vig.style.setProperty('--lowhp',level.toFixed(3));vig.style.setProperty('--beat',(reduced?.45:heartbeat(clock/1000,level)).toFixed(3));vig.style.setProperty('--heal',heal.toFixed(3));}else clear(vig);
   }
-  raf(frame);
+  for(const vig of [...owned])if(!visited.has(vig)||vig.isConnected===false){clear(vig);const state=states.get(vig);if(state){state.active=false;state.heal=-1e9;}owned.delete(vig);}
  }
- raf(frame);
- return {dispose(){stopped=true;delete doc.documentElement.dataset.screenFx;}};
+ const loop=createFrameLoop({request:raf,cancel:caf,update:frame,onError:error=>{control.dispose();console.error('Screen effects stopped',error);}});
+ const visibility=()=>{last=null;},pagehide=e=>{if(!e.persisted)control.dispose();};
+ const control={dispose(){if(disposed)return;disposed=true;loop.stop();for(const vig of owned)clear(vig);owned.clear();doc.removeEventListener?.('visibilitychange',visibility);win.removeEventListener?.('pagehide',pagehide);installed.delete(doc);delete doc.documentElement.dataset.screenFx;}};
+ installed.set(doc,control);doc.documentElement.dataset.screenFx='1';doc.addEventListener?.('visibilitychange',visibility);win.addEventListener?.('pagehide',pagehide);try{loop.start();}catch(error){control.dispose();throw error;}return control;
 }

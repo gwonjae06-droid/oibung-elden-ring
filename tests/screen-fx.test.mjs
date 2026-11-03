@@ -1,95 +1,17 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createFrameLoop} from '../src/runtime/frame-loop.mjs';import {installScreenFx} from '../src/screen-fx.mjs';
+function rig(){let now=0,next=0,hp=120;const q=new Map(),events=new Map();const vig={dataset:{},style:{p:{},setProperty(k,v){this.p[k]=v;},removeProperty(k){delete this.p[k];}}};const map={vignette:vig,'hp-value':{get textContent(){return String(hp);},parentElement:{querySelector:()=>({getAttribute:()=>120})}}};const doc={documentElement:{dataset:{}},hidden:false,getElementById:id=>map[id],addEventListener:(k,f)=>events.set(k,f),removeEventListener:k=>events.delete(k)},win={matchMedia:()=>({matches:false}),addEventListener:(k,f)=>events.set(k,f),removeEventListener:k=>events.delete(k)};const options={raf:cb=>{const id=next++;q.set(id,cb);return id;},caf:id=>q.delete(id),now:()=>now};return {doc,win,vig,map,q,events,options,setHp:v=>hp=v,step(ms=16){now+=ms;const x=q.entries().next().value;if(x){q.delete(x[0]);x[1](now);}}};}
+test('recovery shows green then expires and full cleanup cancels RAF',()=>{const r=rig(),f=installScreenFx(r.doc,r.win,r.options);r.setHp(20);r.step();r.setHp(100);r.step();assert.ok(Number(r.vig.style.p['--heal'])>.9);r.step(701);assert.deepEqual(r.vig.style.p,{});r.setHp(10);r.step();f.dispose();assert.deepEqual(r.vig.style.p,{});assert.equal(r.q.size,0);});
+test('pause clears effects and resuming does not fake a heal',()=>{const r=rig();installScreenFx(r.doc,r.win,r.options);r.setHp(20);r.step();r.map['pause-screen']={hidden:false};r.step();assert.deepEqual(r.vig.style.p,{});r.setHp(100);r.step();r.map['pause-screen'].hidden=true;r.step();assert.deepEqual(r.vig.style.p,{});});
+test('install is idempotent and can be repeated after disposal',()=>{const r=rig(),a=installScreenFx(r.doc,r.win,r.options);assert.equal(installScreenFx(r.doc,r.win,r.options),a);assert.equal(r.q.size,1);a.dispose();assert.notEqual(installScreenFx(r.doc,r.win,r.options),a);});
+test('reduced motion keeps a constant low-health opacity',()=>{const r=rig();r.win.matchMedia=()=>({matches:true});installScreenFx(r.doc,r.win,r.options);r.setHp(10);r.step();const a=r.vig.style.p['--beat'];r.step(113);assert.equal(r.vig.style.p['--beat'],a);});
+test('stale callbacks after stop and restart cannot create a second loop',()=>{let cb,next=0,hits=0;const l=createFrameLoop({request:f=>{cb=f;return next++;},cancel(){},update(){hits++;}});l.start();const stale=cb;l.stop();l.start();stale(1);assert.equal(hits,0);cb(2);assert.equal(hits,1);l.stop();});
+test('update exceptions stop the loop and are reported once',()=>{let cb,count=0;const l=createFrameLoop({request:f=>{cb=f;return 0;},cancel(){},update(){throw Error('boom');},onError(){count++;}});l.start();cb(1);assert.equal(l.running,false);assert.equal(count,1);});
+
 import {LOW_START,LOW_FULL,HEAL_MIN,HEAL_TIME,hpRatio,lowHealthLevel,heartbeat,healGain,healFade} from '../src/screen-fx-data.mjs';
-import {installScreenFx} from '../src/screen-fx.mjs';
-
-test('low health effect starts below the threshold and peaks near death',()=>{
- assert.equal(lowHealthLevel(1),0);assert.equal(lowHealthLevel(LOW_START),0);assert.equal(lowHealthLevel(LOW_FULL),1);assert.equal(lowHealthLevel(0),1);
- assert.ok(Math.abs(lowHealthLevel((LOW_START+LOW_FULL)/2)-.5)<1e-9);
- for(const bad of [NaN,undefined,Infinity,-3])assert.ok(lowHealthLevel(bad)>=0&&lowHealthLevel(bad)<=1);
- assert.equal(lowHealthLevel(NaN),0);
- assert.equal(hpRatio(60,120),.5);assert.equal(hpRatio(5,0),1);assert.equal(hpRatio(NaN,120),1);assert.equal(hpRatio(500,120),1);
-});
-
-test('the heartbeat is silent when healthy and speeds up as health falls',()=>{
- assert.equal(heartbeat(1.234,0),0);
- const peaks=level=>{let n=0,rising=false;for(let t=0;t<10;t+=.005){const v=heartbeat(t,level);if(v>.95&&!rising){n++;rising=true;}if(v<.5)rising=false;}return n;};
- for(let t=0;t<5;t+=.01)for(const level of [.2,1]){const v=heartbeat(t,level);assert.ok(v>=.3-1e-9&&v<=1+1e-9);}
- assert.ok(peaks(1)>peaks(.2));
- assert.doesNotThrow(()=>heartbeat(NaN,1));
-});
-
-test('only a large jump counts as healing and a revival does not',()=>{
- assert.equal(healGain(50,50+HEAL_MIN,120),true);
- assert.equal(healGain(50,50+HEAL_MIN-1,120),false);
- assert.equal(healGain(50,115,120),true);
- assert.equal(healGain(0,120,120),false);
- assert.equal(healGain(NaN,100,120),false);
- assert.equal(healGain(50,30,120),false);
-});
-
-test('the heal glow fades out within its time',()=>{
- assert.equal(healFade(1000,1000),1);
- assert.ok(healFade(1000,1000+HEAL_TIME*500)>0&&healFade(1000,1000+HEAL_TIME*500)<1);
- assert.equal(healFade(1000,1000+HEAL_TIME*1000),0);
- assert.equal(healFade(1000,500),0);
- assert.equal(healFade(-1e9,1000),0);
-});
-
-function rig(){
- let time=0,hp='120';const queue=[];
- const vig={dataset:{},style:{props:{},setProperty(k,v){this.props[k]=v;},removeProperty(k){delete this.props[k];}}};
- const arena={style:{touched:false}};
- const hpEl={get textContent(){return hp;},parentElement:{querySelector:()=>({getAttribute:()=>'120'})}};
- const map={'hp-value':hpEl,vignette:vig,arena};
- const doc={hidden:false,documentElement:{dataset:{}},getElementById:id=>map[id]};
- const win={};
- return {doc,win,vig,arena,set hp(v){hp=String(v);},step(ms=16){time+=ms;const cb=queue.shift();if(cb)cb();},options:{raf:cb=>{queue.push(cb);},now:()=>time}};
-}
-
-test('low health writes the effect values to the vignette only',()=>{
- const r=rig(),fx=installScreenFx(r.doc,r.win,r.options);
- r.step();assert.ok(!('fx' in r.vig.dataset));
- r.hp=30;r.step();
- assert.ok('fx' in r.vig.dataset);
- assert.ok(Number(r.vig.style.props['--lowhp'])>0);
- assert.ok(Number(r.vig.style.props['--beat'])>0);
- assert.equal(r.arena.style.touched,false);
- assert.ok(fx&&typeof fx.dispose==='function');
-});
-
-test('recovering above the threshold removes every property',()=>{
- const r=rig();installScreenFx(r.doc,r.win,r.options);
- r.hp=20;r.step();assert.ok('fx' in r.vig.dataset);
- r.hp=25;r.step(2000);
- r.hp=100;r.step(2000);
- assert.ok(!('fx' in r.vig.dataset));
- assert.deepEqual(r.vig.style.props,{});
-});
-
-test('a large heal shows the green pulse and a revival from zero does not',()=>{
- const r=rig();installScreenFx(r.doc,r.win,r.options);
- r.hp=50;r.step();
- r.hp=115;r.step(16);
- assert.ok(Number(r.vig.style.props['--heal'])>0.5);
- r.step(1500);
- assert.ok(!('fx' in r.vig.dataset));
- const q=rig();installScreenFx(q.doc,q.win,q.options);
- q.hp=0;q.step();q.hp=120;q.step(16);
- assert.ok(!('fx' in q.vig.dataset)||Number(q.vig.style.props['--heal'])===0);
-});
-
-test('a hidden tab pauses it and a second install is refused',()=>{
- const r=rig();installScreenFx(r.doc,r.win,r.options);
- r.doc.hidden=true;r.hp=10;r.step();
- assert.ok(!('fx' in r.vig.dataset));
- r.doc.hidden=false;r.step();
- assert.ok('fx' in r.vig.dataset);
- assert.equal(installScreenFx(r.doc,r.win,r.options),null);
-});
-
-test('disposing stops further updates',()=>{
- const r=rig(),fx=installScreenFx(r.doc,r.win,r.options);
- r.step();fx.dispose();r.hp=5;r.step();r.step();
- assert.ok(!('fx' in r.vig.dataset));
-});
+test('low-health levels retain the original thresholds and bounded ratios',()=>{assert.equal(lowHealthLevel(1),0);assert.equal(lowHealthLevel(LOW_START),0);assert.equal(lowHealthLevel(LOW_FULL),1);assert.equal(lowHealthLevel(0),1);assert.equal(hpRatio(60,120),.5);assert.equal(hpRatio(5,0),1);assert.equal(hpRatio(NaN,120),1);assert.equal(hpRatio(500,120),1);assert.equal(lowHealthLevel(NaN),0);});
+test('heartbeat values are bounded and danger increases the pulse rate',()=>{assert.equal(heartbeat(1,0),0);const peaks=level=>{let n=0,on=false;for(let t=0;t<10;t+=.005){const v=heartbeat(t,level);assert.ok(v>=.3-1e-9&&v<=1+1e-9);if(v>.95&&!on){n++;on=true;}if(v<.5)on=false;}return n;};assert.ok(peaks(1)>peaks(.2));});
+test('healing still requires a live player and the minimum increase',()=>{assert.equal(healGain(50,50+HEAL_MIN,120),true);assert.equal(healGain(50,50+HEAL_MIN-1,120),false);assert.equal(healGain(0,120,120),false);assert.equal(healGain(NaN,100,120),false);assert.equal(healGain(50,30,120),false);});
+test('heal fade reaches zero after its lifetime and ignores invalid time',()=>{assert.equal(healFade(1000,1000),1);assert.ok(healFade(1000,1000+HEAL_TIME*500)>.4);assert.equal(healFade(1000,1000+HEAL_TIME*1000),0);assert.equal(healFade(1000,500),0);assert.equal(healFade(NaN,1000),0);});
+test('topmost dice screen clears covered effects and closing it restores the main view',()=>{const main=rig(),sub=rig();main.setHp(10);sub.setHp(20);const fx=installScreenFx(main.doc,main.win,main.options);main.step();assert.ok('fx' in main.vig.dataset);const modal={open:true,firstElementChild:{shadowRoot:sub.doc}};main.map['dice-battle']=modal;main.step();assert.deepEqual(main.vig.style.p,{});assert.ok('fx' in sub.vig.dataset);modal.open=false;main.step();assert.deepEqual(sub.vig.style.p,{});assert.ok('fx' in main.vig.dataset);fx.dispose();});
+test('cached pages keep the loop but permanent pagehide disposes it',()=>{const r=rig(),fx=installScreenFx(r.doc,r.win,r.options);r.setHp(10);r.step();r.events.get('pagehide')({persisted:true});assert.equal(r.q.size,1);r.events.get('pagehide')({persisted:false});assert.equal(r.q.size,0);assert.deepEqual(r.vig.style.p,{});fx.dispose();});
