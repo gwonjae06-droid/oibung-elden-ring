@@ -1,10 +1,14 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
+import {createEventScope} from './runtime/event-scope.mjs';
+import {disposeScene} from './runtime/scene-resources.mjs';
 import * as THREE from 'three';
 import {createImpactAudio} from './impact-audio.mjs';
 
 const HIT_SOUND={sword:'hit-slash',hammer:'hit-blunt',bow:'hit-pierce',cards:'hit-slash'};
 
 export function createFeel(scene,reduced=false){
-  const sfx=createImpactAudio();
+ return runThreeStartup(THREE,(THREE,own)=>{
+  const sfx=own(createImpactAudio()),callbacks=own(createEventScope(globalThis.window||globalThis));let disposed=false,completion=null;
   let armed=false;
   const muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch(e){return false;}};
   const say=name=>{
@@ -13,7 +17,7 @@ export function createFeel(scene,reduced=false){
     if(!sfx.enabled&&!sfx.setEnabled(true))return;
     sfx.play(name);
   };
-  for(const t of ['pointerdown','keydown'])addEventListener(t,()=>{armed=true;},{passive:true});
+  for(const t of ['pointerdown','keydown'])callbacks.listen(globalThis.window||globalThis,t,()=>{armed=true;},{passive:true});
 
   const root=new THREE.Group();root.name='impact-feel';scene.add(root);
   const dropGeo=new THREE.SphereGeometry(.07,5,4),decalGeo=new THREE.CircleGeometry(1,14).rotateX(-Math.PI/2);
@@ -45,12 +49,12 @@ export function createFeel(scene,reduced=false){
     }
   }
   const kick=v=>{if(!reduced)shakeT=Math.max(shakeT,v);};
-  function clear(){
+  function clear(){if(disposed)return;
     for(const o of drops)root.remove(o.m);drops.length=0;
     for(const d of decals){d.m.visible=false;d.age=0;}
     shakeT=0;scene.position.set(0,0,0);
   }
-  function event(ev,g){
+  function event(ev,g){if(disposed)return;
     if(lastGame!==g){clear();lastGame=g;}
     const p=g.player,b=g.boss;
     if(ev.type==='boss-hit'){
@@ -68,7 +72,7 @@ export function createFeel(scene,reduced=false){
     }else if(ev.type==='skill-cast'&&ev.flavor==='hammer')kick(.25);
     else if(ev.type==='phase')kick(.4);
   }
-  function update(dt,g){
+  function update(dt,g){if(disposed)return;
     if(lastGame!==g){clear();lastGame=g;}
     const h=Math.max(0,Math.min(dt,.05));
     if(h>0){
@@ -90,5 +94,7 @@ export function createFeel(scene,reduced=false){
     if(shakeT>0)scene.position.set((Math.random()-.5)*shakeT*.9,(Math.random()-.5)*shakeT*.6,(Math.random()-.5)*shakeT*.9);
     else if(scene.position.x||scene.position.y||scene.position.z)scene.position.set(0,0,0);
   }
-  return {event,update,clear};
+  function dispose(){if(completion)return completion;clear();disposed=true;const report=callbacks.dispose(),gpu=disposeScene(root,{extras:[dropGeo,decalGeo,bloodMat,sparkMat]});root.parent?.remove(root);completion=Promise.resolve(sfx.dispose()).then(audio=>({errors:[...report.errors,...gpu.errors,...(audio?.errors||[])]}));return completion;}
+  return {event,update,clear,dispose};
+ });
 }

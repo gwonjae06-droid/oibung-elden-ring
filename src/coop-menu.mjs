@@ -1,9 +1,10 @@
+import {readBattleSession} from './battle-session.mjs';
 import {openCoopRoom,COOP_BOSSES} from './coop-ui.mjs';
 const installed=new WeakMap();
 export function coopWeapon(doc){
  const names={검:'sword',망치:'hammer',활:'bow',카드:'cards'};
- for(const id of ['dice-battle','clown-battle']){const modal=doc.getElementById(id);if(!modal?.open)continue;const root=modal.firstElementChild?.shadowRoot,weapon=names[root?.getElementById('weapon-label')?.textContent?.trim()];if(weapon)return weapon;}
- return doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';
+ for(const id of ['dice-battle','clown-battle']){const modal=doc.getElementById(id);if(!modal?.open)continue;const root=modal.firstElementChild?.shadowRoot,weapon=readBattleSession(root)?.game?.weapon||names[root?.getElementById('weapon-label')?.textContent?.trim()];if(weapon)return weapon;}
+ return readBattleSession(doc)?.game?.weapon||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';
 }
 export function installCoopMenu(doc=globalThis.document,win=globalThis.window,{openRoom=openCoopRoom}={}){
  if(!doc||!win)return null;if(installed.has(doc))return installed.get(doc);

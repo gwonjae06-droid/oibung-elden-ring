@@ -17,18 +17,18 @@ export const CLEAN_UI_CSS=`
 `;
 export function compactLabel(id,text){return {retry:'재도전',change:'무기 변경',quit:'무기 선택',resume:'계속'}[id]||(id==='pause'&&text==='전투 계속'?'계속':text);}
 export function readWeapon(root,doc){const weapon=readBattleSession(root)?.game?.weapon;if(weapon)return weapon;const names={검:'sword',망치:'hammer',활:'bow',카드:'cards'},label=root.getElementById('weapon-label')?.textContent?.trim();return names[label]||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';}
-export function combatActive(root){const get=id=>root.getElementById(id),hud=get('boss-hud');return Boolean(hud&&!hud.hidden&&get('arena')?.style.visibility!=='hidden'&&['menu','pause-screen','result'].every(id=>!get(id)||get(id).hidden));}
+export function combatActive(root){const session=readBattleSession(root);if(session)return Boolean(session.active);const get=id=>root.getElementById(id),hud=get('boss-hud');return Boolean(hud&&!hud.hidden&&get('arena')?.style.visibility!=='hidden'&&['menu','pause-screen','result'].every(id=>!get(id)||get(id).hidden));}
 export function pauseForChooser(root){const session=readBattleSession(root);if(session?.pause&&session?.resume){if(!session.active||!session.pause())return ()=>{};return ()=>session.resume();}const p=root.getElementById('pause');if(!combatActive(root)||!p||p.disabled)return ()=>{};p.click();return ()=>{if(root.getElementById('pause-screen')?.hidden===false)root.getElementById('resume')?.click();};}
 export function closeDiceBattle(doc){const modal=doc.getElementById('dice-battle');if(!modal)return;const root=modal.firstElementChild?.shadowRoot,session=readBattleSession(root);if(session?.close)session.close();else{const exit=root?.querySelector?.('[data-dice-exit]')||Array.from(root?.querySelectorAll?.('button')||[]).find(b=>b.textContent?.trim()==='광대전 결과로');if(!exit)throw Error('Dice battle exit unavailable');exit.click();}if(doc.getElementById('dice-battle'))throw Error('Dice battle did not close');}
 export async function enterBoss(boss,weapon,doc=globalThis.document,loadClown=()=>import('./clown-battle.mjs'),loadDice=()=>import('./dice-battle.mjs'),{isCurrent=()=>true,onClose=()=>{}}={}){
  if(!SECRET_BOSSES.some(b=>b.id===boss)||!['sword','hammer','bow','cards'].includes(weapon))throw Error('Invalid boss selection');
  if(!isCurrent())return null;const start=doc.getElementById('start');if(!start||start.disabled)throw Error('Arena is not ready');
  closeDiceBattle(doc);const clownRoot=doc.getElementById('clown-battle')?.firstElementChild?.shadowRoot,clownSession=clownRoot&&readBattleSession(clownRoot);if(clownSession?.close)clownSession.close();else clownRoot?.getElementById('change')?.click();
- const outer=doc.getElementById('boss-transition');if(outer?.open)outer.querySelector('.bt-return')?.click();
- restoreBossName(doc.getElementById('boss-hud'));doc.querySelector('#menu .weapon[data-weapon="'+weapon+'"]')?.click();if(!isCurrent())return null;
- if(boss==='kwon'){start.click();return;}
+ const outer=doc.getElementById('boss-transition');if(outer?.open){const transition=readBattleSession(outer);if(transition?.close)transition.close();else outer.querySelector('.bt-return')?.click();}
+ restoreBossName(doc.getElementById('boss-hud'));const main=readBattleSession(doc);if(main?.selectWeapon)main.selectWeapon(weapon);else doc.querySelector('#menu .weapon[data-weapon="'+weapon+'"]')?.click();if(!isCurrent())return null;
+ if(boss==='kwon'){if(main?.start)main.start(weapon);else start.click();return;}
  const module=await (boss==='dice'?loadDice():loadClown());if(!isCurrent())return null;if(start.disabled)throw Error('Arena is not ready');
- const close=()=>{onClose();if(isCurrent())doc.getElementById('change')?.click();};
+ const close=()=>{onClose();if(isCurrent()){if(main?.menu)main.menu();else doc.getElementById('change')?.click();}};
  const view=boss==='dice'?module.launchDiceBattle({weapon,onClose:close}):module.launchClownBattle({weapon,practice:true,onClose:close});if(!view)throw Error('Battle already open');return view;
 }
 export function takeIntro(seen,boss,active){if(!active||seen.has(boss))return false;seen.add(boss);return true;}

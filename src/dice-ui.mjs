@@ -1,5 +1,5 @@
 import {loadBattleStyles} from './runtime/battle-styles.mjs';
-import {renderBattleMeter} from './battle-hud.mjs';
+import {renderBattleMeter,renderSharedHud} from './battle-hud.mjs';
 import {DICE_RULES as R} from './dice-data.mjs';
 export function diceUiVisibility(mode,coarse=false){const fight=['playing','paused','ending','result'].includes(mode);return {menu:mode==='menu',pause:mode==='paused',result:mode==='result',fight,touch:coarse&&['playing','ending'].includes(mode),pauseEnabled:['playing','paused'].includes(mode)};}
 export function createDiceUi({coarse=false,doc=globalThis.document}={}){
@@ -9,6 +9,6 @@ export function createDiceUi({coarse=false,doc=globalThis.document}={}){
  let disposed=false;const styles=loadBattleStyles(root,doc,['../style.css','../skills.css'].map(path=>new URL(path,import.meta.url))),ready=styles.ready.then(ok=>{if(!disposed)shell.style.visibility='';return ok;});doc.body.appendChild(d);
  function mode(value){const v=diceUiVisibility(value,coarse);$('menu').hidden=!v.menu;$('pause-screen').hidden=!v.pause;$('result').hidden=!v.result;for(const id of['player-hud','boss-hud','controls'])$(id).hidden=!v.fight;$('touch').hidden=!v.touch;$('pause').disabled=!v.pauseEnabled;}
  function bar(id,value,max){renderBattleMeter($(id),value,max);}
- function render(g,sv,weaponName,lock){const p=g.player;bar('hp-fill',p.hp,p.maxHp);bar('stamina-fill',p.stamina,100);bar('boss-fill',g.boss.hp,g.boss.maxHp);bar('skill-fill',sv.ratio*100,100);$('hp-value').textContent=Math.ceil(p.hp);$('stamina-value').textContent=Math.floor(p.stamina);$('flasks').textContent=p.potions;$('weapon-label').textContent=weaponName;$('lock-label').textContent=lock?'카메라 록온 · Q':'카메라 자유 · Q';$('skill-name').textContent=sv.name;$('skill-text').textContent=sv.text;Object.assign($('skill-hud').dataset,{card:sv.card,ready:String(sv.ready),weapon:g.weapon});$('boss-value').textContent=Math.ceil(g.boss.hp).toLocaleString('ko-KR')+' / '+g.boss.maxHp.toLocaleString('ko-KR');$('boss-action').textContent=g.status==='won'?'박성원이 토벌되었다':g.status==='lost'?'주사위에 깔렸습니다':g.dice.stun>0?'기절':g.dice.state==='warning'?'다음 칸으로 굴러옵니다':g.dice.state==='rolling'?'압사 주의':'빈틈 — 지금 반격하세요';}
+ function render(g,sv,weaponName,lock){renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});$('boss-action').textContent=g.status==='won'?'박성원이 토벌되었다':g.status==='lost'?'주사위에 깔렸습니다':g.dice.stun>0?'기절':g.dice.state==='warning'?'다음 칸으로 굴러옵니다':g.dice.state==='rolling'?'압사 주의':'빈틈 — 지금 반격하세요';}
  return {d,root,shell,$,canvas:$('world'),ready,exits,mode,bar,render,chipDocument:{getElementById:$,createElement:tag=>doc.createElement(tag),defaultView:doc.defaultView},dispose(){if(disposed)return;disposed=true;styles.dispose();try{if(d.open)d.close();}finally{d.remove();}}};
 }

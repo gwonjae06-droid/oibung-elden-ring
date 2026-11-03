@@ -8,7 +8,7 @@ import {DICE_RULES as R,diceEntrancePose,diceEntranceRoll} from './dice-data.mjs
 import {createDicePlayerGame,actDice,stepDicePlayer} from './dice-player.mjs';
 import {WEAPONS,skillView} from './combat.mjs';
 import {buildPlayer,posePlayer,swayCape} from './models.mjs';
-import {disposeScene} from './clown-actor.mjs';
+import {disposeScene} from './runtime/scene-resources.mjs';
 import {createAudio} from './audio.mjs';
 import {createSkillAudio} from './skill-audio.mjs';
 import {createPlayerPolish} from './player-polish.mjs';

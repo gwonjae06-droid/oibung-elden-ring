@@ -1,11 +1,14 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {createClownHead} from './clown-head.mjs';
 import {headPose} from './clown-morph.mjs';
 import {headFrame} from './clown-visual-data.mjs';
 import {cartoonPose} from './clown-cartoon.mjs';
 import {createClownCollapse} from './clown-collapse.mjs';
-export function disposeScene(scene){const gs=new Set(),ms=new Set(),ts=new Set();scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of(o.material?Array.isArray(o.material)?o.material:[o.material]:[])){ms.add(m);if(m.map)ts.add(m.map);if(m.emissiveMap)ts.add(m.emissiveMap);}});for(const x of gs)x.dispose();for(const x of ms)x.dispose();for(const x of ts)x.dispose();}
+export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
  const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
  const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
@@ -52,4 +55,6 @@ export function createClownActor(){
   }first=false;
  }
  return {root,update,head};
+
+ });
 }

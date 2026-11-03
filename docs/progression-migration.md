@@ -1,3 +1,7 @@
+# Current status
+
+The active arenas now own progression stores through battle-session.mjs. Actual arena factories use register:false, dice has an independent encounter identity, and transition gates read the source session. The global store remains a compatibility fallback. See maintenance-roadmap.md for the current verified status; the notes below describe the earlier migration.
+
 # Engine-based progression migration
 
 The active kwon-to-clown and clown-to-dice routes now use encounterStore and progression-gate instead of reading the result-kicker text. The result element's hidden attribute remains a presentation-ready signal: it does not determine who won. This is not yet a complete removal of DOM observers or a full BattleSession controller.

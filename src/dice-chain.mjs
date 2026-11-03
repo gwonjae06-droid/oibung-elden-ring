@@ -1,3 +1,4 @@
+import {readBattleSession} from './battle-session.mjs';
 import {diceWeapon} from './dice-flow.mjs';
 import {createAudio} from './audio.mjs';
 import {playDiceCrushEntrance} from './dice-entrance-view.mjs';
@@ -13,7 +14,7 @@ export function installDiceChain(doc=globalThis.document,win=globalThis.window,{
  function scan(){
   if(disposed)return;const next=doc.getElementById('clown-battle');if(next===source)return;detach();if(!next)return;
   const root=next.firstElementChild?.shadowRoot,result=root?.getElementById('result'),shell=root?.getElementById('arena'),panel=result?.querySelector('.small-panel');
-  if(!root||!result||!shell||!panel)return;source=next;const gate=createProgressionGate('clown',()=>encounterStore.read());
+  if(!root||!result||!shell||!panel)return;source=next;const readEncounter=()=>readBattleSession(root)?.encounter||encounterStore.read(),gate=createProgressionGate('clown',readEncounter);
   const b=doc.createElement('button');button=b;b.textContent='다음 시련 · 거대 주사위 박성원';b.hidden=true;panel.appendChild(b);
   const ready=()=>!disposed&&source===next&&next.isConnected&&next.open&&!result.hidden;
   async function start(ticket){
@@ -28,7 +29,7 @@ export function installDiceChain(doc=globalThis.document,win=globalThis.window,{
    finally{gate.end(attempt);b.disabled=false;if(source===next&&next.isConnected&&!disposed)check();}
   }
   b.onclick=()=>start();
-  function check(){if(disposed||source!==next)return;const canEnter=eligibleEncounter(encounterStore.read(),'clown',ready());b.hidden=!canEnter;if(!canEnter&&entrance)entrance.dispose();const ticket=gate.automatic(ready());if(ticket)start(ticket);}
+  function check(){if(disposed||source!==next)return;const canEnter=eligibleEncounter(readEncounter(),'clown',ready());b.hidden=!canEnter;if(!canEnter&&entrance)entrance.dispose();const ticket=gate.automatic(ready());if(ticket)start(ticket);}
   if(result.addEventListener){result.addEventListener('oibung:result-ready',check);watch=()=>result.removeEventListener('oibung:result-ready',check);}else{const legacy=new win.MutationObserver(check);legacy.observe(result,{attributes:true,attributeFilter:['hidden']});watch=()=>legacy.disconnect();}check();
  }
  function pagehide(e){if(!e.persisted)control.dispose();}

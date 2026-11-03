@@ -1,10 +1,11 @@
+import {readBattleSession} from './battle-session.mjs';
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused||doc.getElementById('dice-battle')?.open)return null;
  const modal=doc.getElementById('clown-battle'),root=modal?modal.firstElementChild?.shadowRoot:doc;
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
- const get=id=>root.getElementById(id),hud=get('boss-hud');
+ const session=readBattleSession(root);if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:g.clown?'clown':'kwon',phase:g.boss.phase,busy:g.clown?.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;
  if(Number(get('boss-fill')?.parentElement?.getAttribute('aria-valuenow')??1)<=0)return null;

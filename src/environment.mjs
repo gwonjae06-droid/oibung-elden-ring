@@ -1,3 +1,4 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {environmentPlan} from './environment-data.mjs';
 
@@ -60,6 +61,8 @@ function mistTexture(){
 }
 
 export function buildEnvironment(scene,ground){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
   if(scene.getObjectByName('ruined-courtyard'))return;
   const plan=environmentPlan(),root=new THREE.Group();root.name='ruined-courtyard';
   const coarse=media('(pointer:coarse)'),reduced=media('(prefers-reduced-motion: reduce)'),flames=[],lights=[],banners=[];
@@ -134,4 +137,6 @@ export function buildEnvironment(scene,ground){
   const map=pavingTexture();ground.material.map=map;ground.material.color.setHex(0xffffff);ground.material.needsUpdate=true;
   root.userData.decorativeOnly=true;scene.add(root);
   return root;
+
+ });
 }

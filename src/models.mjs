@@ -1,10 +1,13 @@
-import * as THREE from 'three';
+import {runThreeStartup} from './runtime/three-startup.mjs';
+import * as BASE_THREE from 'three';
+const THREE=BASE_THREE;
 import {SWORD} from './combat.mjs';
 import {legPlan,gait,walkPose,capeSway,ellipsoidPoint,ringAt,onSphere} from './model-data.mjs';
 
 const V=a=>new THREE.Vector3(a[0],a[1],a[2]);
 
-function noiseTexture(base,spots,size,seed){
+function noiseTexture(base,spots,size,seed,namespace=BASE_THREE){
+  const THREE=namespace;
   const c=document.createElement('canvas');c.width=c.height=size;const g=c.getContext('2d');
   g.fillStyle=base;g.fillRect(0,0,size,size);
   let s=seed;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};
@@ -17,7 +20,8 @@ function noiseTexture(base,spots,size,seed){
   return t;
 }
 
-function tube(points,r0,r1,mat,seg){
+function tube(points,r0,r1,mat,seg,namespace=BASE_THREE){
+  const THREE=namespace;
   const curve=new THREE.CatmullRomCurve3(points.map(V),false,'catmullrom',.5);
   const geo=new THREE.TubeGeometry(curve,seg,1,8,false);
   const pos=geo.attributes.position,n=seg+1,ring=pos.count/n;
@@ -34,10 +38,12 @@ function tube(points,r0,r1,mat,seg){
 }
 
 export function buildPlayer(weaponKeys){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
   const rig=new THREE.Group();rig.name='player';
   const body=new THREE.Group();body.position.y=1;rig.add(body);
   const skin=new THREE.MeshStandardMaterial({color:0xe0c7a5,roughness:.8});
-  const cloth=new THREE.MeshStandardMaterial({color:0x4f7da6,roughness:.7,transparent:true,map:noiseTexture('#4f7da6',160,128,3)});
+  const cloth=new THREE.MeshStandardMaterial({color:0x4f7da6,roughness:.7,transparent:true,map:noiseTexture('#4f7da6',160,128,3,THREE)});
   const dark=new THREE.MeshStandardMaterial({color:0x2a3340,roughness:.85,transparent:true,side:THREE.DoubleSide});
   const leather=new THREE.MeshStandardMaterial({color:0x4a3526,roughness:.8,transparent:true});
   const hair=new THREE.MeshStandardMaterial({color:0x1b1a1f,roughness:.6});
@@ -135,12 +141,16 @@ export function buildPlayer(weaponKeys){
   const presentationParts=Object.freeze({rig,body,pivot,arms:Object.freeze([arms.L,arms.R]),elbows:Object.freeze([elbows.L,elbows.R]),legs:Object.freeze([legs.L,legs.R]),knees:Object.freeze([knees.L,knees.R]),weapons:Object.freeze({...weaponRigs}),cape});
   Object.defineProperty(rig,'presentationParts',{value:presentationParts});
   return {rig,body,mats,pivot,weaponRigs,legs,arms,capeParts,cloth,elbows,knees,cape,presentationParts};
+
+ });
 }
 
 export function buildBoss(){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
   const root=new THREE.Group();
   const model=new THREE.Group();root.add(model);
-  const carapace=new THREE.MeshStandardMaterial({color:0x4b3a33,roughness:.55,metalness:.15,map:noiseTexture('#4b3a33',420,256,11)});
+  const carapace=new THREE.MeshStandardMaterial({color:0x4b3a33,roughness:.55,metalness:.15,map:noiseTexture('#4b3a33',420,256,11,THREE)});
   const joint=new THREE.MeshStandardMaterial({color:0x2b211d,roughness:.7});
   const hairMat=new THREE.MeshStandardMaterial({color:0x211a17,roughness:.95});
   const markMat=new THREE.MeshStandardMaterial({color:0x8a2b1f,roughness:.5,emissive:0x2a0804,emissiveIntensity:.6});
@@ -188,13 +198,13 @@ export function buildBoss(){
   for(const side of [-1,1]){
     const fang=new THREE.Mesh(new THREE.ConeGeometry(.12,.7,8),new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4}));
     fang.position.set(side*.78,2.0,2.35);fang.rotation.x=Math.PI*.92;model.add(fang);
-    model.add(tube([[side*.9,2.5,2.5],[side*1.35,2.2,3.0],[side*1.5,1.6,3.4]],.1,.06,joint,10));
-    model.add(tube([[side*.55,2.6,2.55],[side*.75,2.25,3.0],[side*.6,1.95,3.3]],.085,.05,joint,8));
+    model.add(tube([[side*.9,2.5,2.5],[side*1.35,2.2,3.0],[side*1.5,1.6,3.4]],.1,.06,joint,10,THREE));
+    model.add(tube([[side*.55,2.6,2.55],[side*.75,2.25,3.0],[side*.6,1.95,3.3]],.085,.05,joint,8,THREE));
   }
   const clawMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4});
   const legs=[];
   for(const plan of legPlan()){
-    const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;g.add(tube(plan.points,.22,.07,carapace,28));
+    const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;g.add(tube(plan.points,.22,.07,carapace,28,THREE));
     for(let i=1;i<4;i++){const j=new THREE.Mesh(new THREE.SphereGeometry(i===3?.07:.17-.03*i,10,8),joint);j.position.set(...plan.points[i]);j.castShadow=true;g.add(j);}
     const claw=new THREE.Mesh(new THREE.ConeGeometry(.07,.38,6),clawMat);claw.rotation.x=Math.PI;claw.position.set(plan.points[3][0],plan.points[3][1]+.12,plan.points[3][2]);g.add(claw);
     model.add(g);legs.push({g,plan,baseYaw:plan.yaw,baseY:plan.root[1]});
@@ -204,6 +214,8 @@ export function buildBoss(){
   const fallbackBlade=new THREE.Mesh(new THREE.ConeGeometry(.5,SWORD.length,4).rotateX(Math.PI/2).translate(0,0,SWORD.length/2),boneMat);
   fallbackBlade.scale.y=.45;fallbackBlade.castShadow=true;swordGroup.add(fallbackBlade);
   return {root,model,carapace,joint,glowMat,eyes,legs,HEAD,swordGroup,fallbackBlade,boneMat};
+
+ });
 }
 export function poseLegs(legs,phase,speed){for(const L of legs){const g=gait(L.plan,phase,speed);L.g.rotation.y=L.baseYaw+g.yaw;L.g.position.y=L.baseY+g.lift;}}
 export function posePlayer(parts,phase,speed){const w=walkPose(phase,speed);parts.legs.L.rotation.x=w.legL;parts.legs.R.rotation.x=w.legR;parts.arms.L.rotation.x=w.armL;parts.arms.R.rotation.x=w.armR;return w;}

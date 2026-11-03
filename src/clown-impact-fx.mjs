@@ -1,6 +1,9 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {blastTheme,blastParticles,writeWave} from './clown-impact-data.mjs';
 export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
  const root=new THREE.Group();root.name='clown-impact-effects';scene.add(root);const limit=reduced?70:mobile?160:360,pos=new Float32Array(limit*3),rgb=new Float32Array(limit*3),geo=new THREE.BufferGeometry(),color=new THREE.Color();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(rgb,3));geo.setDrawRange(0,0);
  const points=new THREE.Points(geo,new THREE.PointsMaterial({size:mobile?.23:.3,vertexColors:true,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending}));points.frustumCulled=false;points.renderOrder=11;root.add(points);const particles=[],decor=[],live=[];let serial=0,game=null;
  function slot(){const a=new Float32Array(32*18),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(a,3));const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));m.frustumCulled=false;m.visible=false;m.renderOrder=10;root.add(m);return {a,m,life:0};}
@@ -15,4 +18,6 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
   const waves=game?.clown?.waves||[];for(let j=0;j<live.length;j++){const s=live[j],w=waves[j];s.m.visible=Boolean(w);if(!w)continue;writeWave(s.a,w.r,w.half,w.yaw,w.x,w.z,.18,0,w.width);s.m.geometry.attributes.position.needsUpdate=true;s.m.material.color.setHex(w.kind==='clap'?0xffce59:0x65e5ff);s.m.material.opacity=.85-.25*w.r/w.range;}
  }
  return {event,update,clear,root};
+
+ });
 }

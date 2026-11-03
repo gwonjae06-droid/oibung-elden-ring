@@ -1,3 +1,4 @@
+import {bindBattleSession,readBattleSession} from './battle-session.mjs';
 import * as THREE from 'three';
 import {createClownHead} from './clown-head.mjs';
 import {createAudio} from './audio.mjs';
@@ -37,7 +38,7 @@ export function installBossTransition(){
  if(document.getElementById('boss-transition'))return;
  const result=document.getElementById('result'),menu=document.getElementById('menu'),change=document.getElementById('change');
  if(!result||!menu||!change)throw new Error('Transition requires the arena result/menu controls');
- const gate=createProgressionGate('kwon',()=>encounterStore.read());
+ const gate=createProgressionGate('kwon',()=>readBattleSession(document)?.encounter||encounterStore.read());
  const dialog=document.createElement('dialog');dialog.id='boss-transition';dialog.setAttribute('aria-label','이권재 토벌과 광대 오슬우 등장');
  dialog.innerHTML='<div class="bt-shade"></div><canvas aria-label="공 위에서 인사하는 광대 오슬우"></canvas><div class="bt-title" role="status">이권재가 토벌되었다</div><section class="bt-next"><small>즐거운 공연 · 거구의 곡예사</small><h2>광대 오슬우</h2><div class="bt-fullbar" aria-hidden="true"></div></section><section class="bt-choice" hidden aria-labelledby="bt-choice-title"><h3 id="bt-choice-title">광대전 무기 재선택</h3><p>무기를 고른 뒤 선택을 확정하세요.</p><div class="bt-weapons" role="group" aria-label="광대전 무기"></div><button class="bt-confirm">선택 확정</button><p class="bt-selection" role="status"></p></section><div class="bt-note"><span>다음 공연이 시작됩니다.</span><br><button class="bt-return" hidden>메인 메뉴로</button></div>';
  document.body.appendChild(dialog);
@@ -51,7 +52,7 @@ export function installBossTransition(){
  function pick(key){weapon=chooseWeapon(key);for(const b of buttons)b.setAttribute('aria-pressed',String(b.dataset.weapon===weapon));confirm.disabled=false;selection.textContent=WEAPON_NAMES[weapon]+' 선택 중';}
  for(const [key,name] of Object.entries(WEAPON_NAMES)){const b=document.createElement('button');b.type='button';b.className='bt-weapon';b.dataset.weapon=key;b.textContent=name;b.onclick=()=>{pick(key);play('ui');};dialog.querySelector('.bt-weapons').appendChild(b);buttons.push(b);}
  confirm.onclick=()=>{if(!active||stage!=='ready'||confirm.disabled)return;if(fromVictory&&!submitted&&!gate.valid(transitionTicket)){close(false);return;}const loadout=makeClownLoadout(weapon,fromVictory);if(fromVictory){try{sessionStorage.setItem(STORAGE,JSON.stringify(loadout));}catch(e){console.warn('Clown loadout storage unavailable',e);}}submitted=true;dialog.dispatchEvent(new CustomEvent('oibung:clown-weapon-selected',{bubbles:true,detail:{...loadout,preview:!fromVictory}}));selection.textContent=WEAPON_NAMES[weapon]+' 선택 확정 · 광대전 로딩 중입니다.';confirm.disabled=true;play('ui');};
- function close(returnToMenu=true){if(!active)return;active=false;cancelAnimationFrame(frameId);gate.end(transitionTicket);transitionTicket=null;nameBinding?.restore();nameBinding=null;entrance?.dispose();entrance=null;audio.ambience(false);dialog.close();if(fromVictory&&returnToMenu)change.click();}
+ function close(returnToMenu=true){if(!active)return;active=false;cancelAnimationFrame(frameId);gate.end(transitionTicket);transitionTicket=null;nameBinding?.restore();nameBinding=null;entrance?.dispose();entrance=null;audio.ambience(false);dialog.close();if(fromVictory&&returnToMenu){const main=readBattleSession(document);if(main?.menu)main.menu();else change.click();}}
  back.onclick=()=>close();
  dialog.addEventListener('cancel',e=>{e.preventDefault();if(stage==='ready')close();});
  dialog.addEventListener('keydown',e=>{e.stopPropagation();if(stage==='ready'&&['1','2','3','4'].includes(e.key)){e.preventDefault();pick(Object.keys(WEAPON_NAMES)[Number(e.key)-1]);play('ui');}});
@@ -64,5 +65,5 @@ export function installBossTransition(){
  function check(){if(active||disposed)return;const ticket=gate.automatic(!result.hidden);if(ticket&&!start(true,ticket))gate.end(ticket);}
  result.addEventListener('oibung:result-ready',check);
  const preview=document.createElement('button');preview.type='button';preview.textContent='보스 전환 연출 미리보기';preview.style.marginTop='10px';preview.onclick=()=>start(false);menu.querySelector('.menu-panel').appendChild(preview);check();
- return {start:()=>start(false),dispose(){disposed=true;result.removeEventListener('oibung:result-ready',check);close();removeEventListener('pointerdown',unlock);preview.remove();dialog.remove();}};
+ const unbindTransition=bindBattleSession(dialog,()=>({close:()=>close()}));return {start:()=>start(false),dispose(){disposed=true;unbindTransition();result.removeEventListener('oibung:result-ready',check);close();removeEventListener('pointerdown',unlock);preview.remove();dialog.remove();}};
 }

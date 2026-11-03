@@ -12,7 +12,7 @@ test('page loads an arena module that exists',()=>{
   assert.ok(existsSync(join(root,m[1])),m[1]+' is missing');
 });
 test('every element id used by arena.mjs exists in spider-combat.html',()=>{
-  const ids=new Set([...arena.matchAll(/(?:\$|setText|setBar)\('([\w-]+)'/g)].map(m=>m[1]));
+  const hud=read('src/battle-hud.mjs'),combined=arena+hud;const ids=new Set([...combined.matchAll(/(?<![\w])(?:\$|setText|setBar|text|get)\('([\w-]+)'/g)].map(m=>m[1]));
   assert.ok(ids.size>25);
   const missing=[...ids].filter(id=>!html.includes('id="'+id+'"'));
   assert.deepEqual(missing,[]);
@@ -33,7 +33,7 @@ test('names imported from local modules are exported by those modules',()=>{
 });
 test('models.mjs only imports three, the combat module and the model data',()=>{
   const specs=[...read('src/models.mjs').matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
-  assert.deepEqual(specs,['./combat.mjs','./model-data.mjs','three']);
+  assert.deepEqual(specs,['./combat.mjs','./model-data.mjs','./runtime/three-startup.mjs','three']);
 });
 test('the boss face photo is embedded as data, not fetched from the network',()=>{
   assert.match(arena,/data:image\/jpeg;base64,/);
@@ -58,9 +58,9 @@ test('every sound name arena.mjs asks for exists in audio.mjs',async()=>{
   assert.deepEqual([...used].filter(n=>!names.has(n)),[]);
 });
 test('every boss pattern has a telegraph and a swing sound',async()=>{
-  const m=read('src/combat.mjs').match(/export const PATTERNS = \{([\s\S]*?)\n\};/);
-  const keys=m?[...m[1].matchAll(/^\s{2}(\w+):\{name:/gm)].map(x=>x[1]):[];
-  assert.ok(keys.length>=5,'could not read the boss pattern list');
+  const {PATTERNS}=await import('../src/combat.mjs');
+  const keys=Object.keys(PATTERNS);
+  assert.ok(keys.length>=5);
   for(const k of keys){
     assert.match(arena,new RegExp('TELEGRAPH_SOUND=\\{[^}]*\\b'+k+':'),k+' has no telegraph sound');
     assert.match(arena,new RegExp('SWING_SOUND=\\{[^}]*\\b'+k+':'),k+' has no swing sound');

@@ -1,3 +1,4 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {createBossChip} from './boss-chip.mjs';
 import {createPlayerPolish} from './player-polish.mjs';
@@ -10,8 +11,10 @@ import {createParticlePool,FX_LIMIT} from './effects-data.mjs';
 import {SKILL_COLORS,SKILL_HEX} from './skills.mjs';
 import {AMBIENT_LIMIT,atmosphereMood,createAmbientField,stepAmbientField} from './atmosphere-data.mjs';
 export function createSkillFx(scene,reduced=false,{makeBossSfx=createBossSfx,makePlayerFx=createPlayerPolish,bossSoundOptions,playerSoundOptions}={}){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
  let disposed=false,completion=null;const errors=[];
- const bossSfx=makeBossSfx(bossSoundOptions),phaseDialogue=createPhaseDialogue(),mobileUi=createMobileCombatUi(),bossChip=createBossChip();
+ const bossSfx=own(makeBossSfx(bossSoundOptions)),phaseDialogue=own(createPhaseDialogue()),mobileUi=own(createMobileCombatUi()),bossChip=own(createBossChip(),'clear');
  const mobile=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches);let circus=null,clownFx=null;
  const limit=reduced?70:Math.min(FX_LIMIT,260),pool=createParticlePool(limit),root=new THREE.Group();root.name='skill-effects';scene.add(root);
  const geo=new THREE.BufferGeometry(),positions=new Float32Array(limit*3),colors=new Float32Array(limit*3);geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setDrawRange(0,0);
@@ -22,7 +25,7 @@ export function createSkillFx(scene,reduced=false,{makeBossSfx=createBossSfx,mak
  const rings=[],ringGeo=new THREE.RingGeometry(.9,1,64);for(let i=0;i<6;i++){const m=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.visible=false;root.add(m);rings.push({m,life:0,max:.7,radius:2});}
  let acc=0,lastGame=null;const n=k=>reduced?Math.ceil(k/3):k;
  function ring(x,z,radius,hex,max=.7){if(disposed)return;const r=rings.find(q=>q.life<=0)||rings[0];r.life=r.max=max;r.radius=radius;r.m.position.set(x,.05,z);r.m.material.color.setHex(hex);r.m.visible=true;r.m.scale.setScalar(.1);}
- const playerFx=makePlayerFx(scene,{reduced,mobile,soundOptions:playerSoundOptions,emit:(...args)=>{if(!disposed)pool.emit(...args);},ring});
+ const playerFx=own(makePlayerFx(scene,{reduced,mobile,soundOptions:playerSoundOptions,emit:(...args)=>{if(!disposed)pool.emit(...args);},ring}));
  function clear(){if(disposed)return;bossChip.clear();playerFx.clear();clownFx?.clear();mobileUi.clear();phaseDialogue.clear();bossSfx.clear();pool.clear();geo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}acc=0;}
  function event(ev,g){
   if(disposed)return;if(lastGame!==g){clear();lastGame=g;}bossSfx.event(ev,g);playerFx.event(ev,g);if(g.clown){clownFx||=createClownImpactFx(scene,{mobile,reduced});clownFx.event(ev,g);}
@@ -59,4 +62,6 @@ export function createSkillFx(scene,reduced=false,{makeBossSfx=createBossSfx,mak
  function dispose(){return finishDispose(false);}
  const onOwnerDispose=()=>{finishDispose(true);};geo.addEventListener('dispose',onOwnerDispose);
  return {event,update,clear,dispose,get disposed(){return disposed;}};
+
+ });
 }

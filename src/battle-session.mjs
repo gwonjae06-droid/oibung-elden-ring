@@ -1,11 +1,31 @@
-// Associates each independently rendered arena with its live combat state.
+import {createEncounterStore} from './encounter-state.mjs';
+// Each independently rendered arena owns its progression state.
 const sessions = new WeakMap();
 
 export function bindBattleSession(root, read) {
-  if (!root || typeof read !== 'function') throw new TypeError('A root and state reader are required');
-  const session = {read};
+  if (!root || typeof read !== 'function')
+    throw new TypeError('A root and state reader are required');
+  const store = createEncounterStore();
+  let game = null;
+  const session = {
+    read() {
+      const state = read();
+      if (state?.game?.player && state.game.boss) {
+        if (game !== state.game) {
+          game = state.game;
+          store.register(game);
+        }
+        return {...state, encounter: store.read()};
+      }
+      return state;
+    },
+  };
   sessions.set(root, session);
-  return () => { if (sessions.get(root) === session) sessions.delete(root); };
+  return () => {
+    store.clear();
+    game = null;
+    if (sessions.get(root) === session) sessions.delete(root);
+  };
 }
 
 export function readBattleSession(root) {

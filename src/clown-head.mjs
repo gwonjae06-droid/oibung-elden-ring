@@ -1,7 +1,10 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {CLOWN_FACE,applyFaceAlpha} from './clown-face.mjs';
 import {HEAD_RADII,uvFor,morphHead,headPose} from './clown-morph.mjs';
 export function createClownHead(){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
  const group=new THREE.Group();group.name='clown-head';const R=HEAD_RADII;
  const make=(start,front)=>{const geo=new THREE.SphereGeometry(1,72,56,start,Math.PI);geo.scale(R.x,R.y,R.z);const base=Float32Array.from(geo.attributes.position.array);if(front){const uv=geo.attributes.uv;for(let i=0;i<geo.attributes.position.count;i++){const t=uvFor(base[i*3],base[i*3+1],CLOWN_FACE.crop);uv.setXY(i,t[0],t[1]);}uv.needsUpdate=true;}return {geo,base};};
  const f=make(0,true),b=make(Math.PI,false),fm=new THREE.MeshStandardMaterial({color:0xd9b9a8,roughness:.72,alphaTest:.5}),bm=new THREE.MeshStandardMaterial({color:0x17120f,roughness:.92,side:THREE.DoubleSide});
@@ -11,4 +14,6 @@ export function createClownHead(){
  function setPose(name,t=0,time=0){setMorph(headPose(name,t),time);}
  function dispose(){f.geo.dispose();b.geo.dispose();fm.dispose();bm.dispose();texture?.dispose();}
  setPose('idle');return {group,setMorph,setPose,ready,dispose};
+
+ });
 }

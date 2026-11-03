@@ -9,6 +9,13 @@ function fake(){
     createOscillator:()=>node({type:'',frequency:param(),detune:param(),start(){log.starts++;},stop(){log.stops++;}}),createBufferSource:()=>node({buffer:null,loop:false,start(){log.starts++;},stop(){log.stops++;}}),createBiquadFilter:()=>node({type:'',frequency:param(),Q:param()})};
   return {ctx,log};
 }
+
+test('impact backend closes once and cannot be reactivated after terminal disposal',async()=>{
+  const {ctx}=fake();let closes=0;ctx.close=()=>{closes++;return Promise.resolve();};
+  const audio=createImpactAudio(()=>ctx);audio.setEnabled(true);const completion=audio.dispose();
+  assert.equal(audio.dispose(),completion);assert.equal(audio.enabled,false);assert.equal(audio.setEnabled(true),false);assert.equal(audio.play('hit-slash'),false);
+  assert.deepEqual(await completion,{errors:[]});assert.equal(closes,1);
+});
 test('every impact sound is valid, balanced and listed',()=>{
   const {ctx,log}=fake(),a=createImpactAudio(()=>ctx);assert.equal(a.setEnabled(true),true);assert.deepEqual([...a.names].sort(),[...IMPACT_SOUND_NAMES].sort());
   for(const n of a.names){ctx.currentTime+=1;const before=log.starts;assert.equal(a.play(n),true,n);assert.ok(log.starts>before,n);}

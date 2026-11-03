@@ -1,10 +1,13 @@
+import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {findPlayerParts,playerPose,PLAYER_COLORS} from './player-presentation.mjs';
 import {createPlayerSound} from './player-sound.mjs';
 export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,makeSound=createPlayerSound,soundOptions}={}){
+ return runThreeStartup(THREE,(THREE,own)=>{
+
  let disposed=false,completion=null;const nodes=new Set(),geometries=new Set(),materials=new Set(),errors=[];
  const safe=fn=>{try{return fn();}catch(error){errors.push(error);}},geometry=g=>(geometries.add(g),g),mat=m=>(materials.add(m),m),owned=n=>(nodes.add(n),n);
- let parts=null,lastGame=null,lastTime=null,lastPos=null,speed=0,phase=0,walked=0,trailLife=0,nock=null;const sound=makeSound(soundOptions),samples=[],mats=[],v0=new THREE.Vector3(),v1=new THREE.Vector3();
+ let parts=null,lastGame=null,lastTime=null,lastPos=null,speed=0,phase=0,walked=0,trailLife=0,nock=null;const sound=own(makeSound(soundOptions)),samples=[],mats=[],v0=new THREE.Vector3(),v1=new THREE.Vector3();
  const a=new Float32Array(9*18),geo=geometry(new THREE.BufferGeometry());geo.setAttribute('position',new THREE.BufferAttribute(a,3));geo.setDrawRange(0,0);const material=mat(new THREE.MeshBasicMaterial({color:0x8cdeff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending})),trail=owned(new THREE.Mesh(geo,material));trail.frustumCulled=false;trail.renderOrder=9;scene.add(trail);
  function decorate(){
   if(disposed)return false;if(parts)return true;parts=findPlayerParts(scene);if(!parts)return false;
@@ -52,4 +55,6 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
  function dispose(){return finishDispose(false);}
  const onOwnerDispose=()=>{finishDispose(true);};geo.addEventListener('dispose',onOwnerDispose);
  return {event,update,clear,dispose,get disposed(){return disposed;}};
+
+ });
 }
