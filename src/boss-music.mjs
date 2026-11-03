@@ -5,15 +5,17 @@ export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused)return null;
  const dice=doc.getElementById('dice-battle'),clown=doc.getElementById('clown-battle');
- const modal=dice?.open?dice:clown?.open?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
+ const diceOpen=Boolean(dice?.open),clownOpen=Boolean(clown?.open)&&!diceOpen;
+ const modal=diceOpen?dice:clownOpen?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
+ const selectedBoss=diceOpen?'dice':clownOpen?'clown':'kwon';
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const session=readBattleSession(root);
- if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:modal===dice?'dice':g.clown?'clown':'kwon',phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}
+ if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:g.clown?'clown':selectedBoss,phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}
  const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;
  if(Number(get('boss-fill')?.parentElement?.getAttribute('aria-valuenow')??1)<=0)return null;
- return {boss:modal===dice?'dice':modal===clown?'clown':'kwon',phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
+ return {boss:selectedBoss,phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
 }
 export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  let ctx=null,bus=null,noise=null,enabled=false,disposed=false,state=null,next=0,tick=0,laugh=null,loading=false,retryAt=0;const groups=new Set();
