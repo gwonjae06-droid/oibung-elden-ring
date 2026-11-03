@@ -60,7 +60,7 @@ export function installBossMusic(doc=globalThis.document,win=globalThis.window,{
  function sync(){if(disposed)return;readMute();const selection=musicState(doc,focused);const external=tracks.update(selection,!muted);music.update(selection,!muted&&!external);}
  function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm'))){music.reset();tracks.reset();}queueMicrotask(()=>{if(disposed)return;readMute();if(!muted){music.unlock();tracks.unlock();}sync();});}
  const blur=()=>{focused=false;sync();},focus=()=>{focused=true;sync();};
- function pagehide(e){if(e.persisted)music.reset();else control.dispose();}
+ function pagehide(e){if(e.persisted){music.reset();tracks.reset();}else control.dispose();}
  const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{tracks.dispose();music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
  installations.set(doc,control);
  try{win.addEventListener('pointerdown',gesture,{passive:true});win.addEventListener('keydown',gesture);win.addEventListener('blur',blur);win.addEventListener('focus',focus);doc.addEventListener('visibilitychange',sync);timer=win.setInterval(sync,80);win.addEventListener('pagehide',pagehide,{capture:true});}
