@@ -48,6 +48,7 @@ python -m http.server 8000
 - `src/player-combat.mjs`, `src/player-tick.mjs`: 세 보스가 공유하는 플레이어 초기 상태, 공격 타이밍, 투사체와 스킬 보상, 자원 회복
 - `src/boss-motion-data.mjs`, `src/boss-stance.mjs`: 이권재 공격별 몸 자세
 - `src/arena.mjs`: 첫 전투의 입력, 렌더링, 카메라, HUD
+- `src/runtime/battle-loop.mjs`: 세 전투의 프레임 예약, 시간 계산, 중복 실행 및 종료 후 콜백 차단
 - `src/clown-combat.mjs`, `src/clown-cartoon.mjs`: 광대 패턴과 몸짓
 - `src/clown-battle.mjs`: 광대전 화면과 수명주기
 - `src/dice-combat.mjs`, `src/dice-motion-data.mjs`: 주사위 패턴과 모션

@@ -1,11 +1,11 @@
-import {createFrameLoop} from './frame-loop.mjs';
+import {createBattleLoop} from './battle-loop.mjs';
 import {checkCleanupTimeout,settleCleanup,combineCleanupReports} from './cleanup-completion.mjs';
 export function createArenaRuntime({win,scene,renderer,update,onStart=()=>{},onStop=()=>{},onDispose=()=>{},onError=error=>console.error('Arena lifecycle failed',error),cleanupTimeoutMs=2000}){
  checkCleanupTimeout(cleanupTimeoutMs);
  let disposed=false,stopped=true,completion=null,cleanupErrors=null;const listeners=new Set(),timers=new Set(),contexts=new Set(),captures=new Map(),extras=new Set();
  const safe=fn=>{try{fn();}catch(error){cleanupErrors?.push({label:'Arena cleanup',error});try{onError(error);}catch{}}};
  function releaseCaptures(){const pending=[...captures];captures.clear();for(const [target,ids] of pending)for(const id of ids)safe(()=>{if(target.hasPointerCapture?.(id))target.releasePointerCapture(id);});}
- const loop=createFrameLoop({request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),update,onError:error=>{stop();safe(()=>onError(error));}});
+ const loop=createBattleLoop({now:()=>win.performance?.now?.()??performance.now(),request:fn=>win.requestAnimationFrame(fn),cancel:id=>win.cancelAnimationFrame(id),update,onError:error=>{stop();safe(()=>onError(error));}});
  function stop(){safe(()=>loop.stop());releaseCaptures();if(stopped)return;stopped=true;safe(onStop);}
  function disposeResources(initial){
   const resources=new Set(initial),visited=new Set();
