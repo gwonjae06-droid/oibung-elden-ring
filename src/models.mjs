@@ -75,8 +75,18 @@ export function buildPlayer(weaponKeys){
     const el=new THREE.Group();el.position.y=-.38;sh.add(el);
     const lo=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.28,4,10),leather);lo.position.y=-.18;lo.castShadow=true;el.add(lo);
     const hand=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),skin);hand.position.y=-.38;el.add(hand);
+    const bracer=new THREE.Mesh(new THREE.CylinderGeometry(.092,.086,.15,10),gold);bracer.position.y=-.14;el.add(bracer);
     arms[side<0?'L':'R']=sh;
   }
+
+  for(const side of [-1,1]){
+    const plate=new THREE.Mesh(new THREE.SphereGeometry(.24,14,10,0,Math.PI*2,0,Math.PI*.55),dark);plate.position.set(side*.52,.78,0);plate.scale.set(1.2,.8,1.1);plate.rotation.z=side*-.25;plate.castShadow=true;body.add(plate);
+    const edge=new THREE.Mesh(new THREE.TorusGeometry(.21,.018,6,18),gold);edge.position.set(side*.52,.74,0);edge.rotation.x=Math.PI/2;edge.scale.set(1.2,1.1,1);body.add(edge);
+  }
+  const emblem=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);emblem.position.set(0,.5,.31);emblem.scale.set(1,1.5,.5);body.add(emblem);
+  const scarfMat=new THREE.MeshStandardMaterial({color:0x8d2f3a,roughness:.8,transparent:true});mats.push(scarfMat);
+  const scarf=new THREE.Mesh(new THREE.TorusGeometry(.14,.045,8,16),scarfMat);scarf.position.y=.86;scarf.rotation.x=Math.PI/2;body.add(scarf);
+  const scarfTail=new THREE.Mesh(new THREE.BoxGeometry(.12,.5,.04),scarfMat);scarfTail.position.set(.08,.62,-.2);scarfTail.rotation.x=.2;body.add(scarfTail);
 
   const capeParts=[];
   {
@@ -93,16 +103,18 @@ export function buildPlayer(weaponKeys){
 
   const pivot=new THREE.Group();pivot.position.set(0,-.78,.05);arms.R.add(pivot);
   const metal=new THREE.MeshStandardMaterial({color:0xcfd4d8,metalness:.8,roughness:.28});
+  const glint=new THREE.MeshStandardMaterial({color:0xdff6ff,emissive:0x2f7aa0,emissiveIntensity:.7,metalness:.6,roughness:.25});
   const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:.8});
   const weaponRigs={};
   {
     const sword=new THREE.Group();
     const blade=new THREE.Mesh(new THREE.BoxGeometry(.07,.12,1.5),metal);blade.position.z=1.05;
+    const bladeEdge=new THREE.Mesh(new THREE.BoxGeometry(.018,.128,1.46),glint);bladeEdge.position.z=1.05;
     const tip=new THREE.Mesh(new THREE.ConeGeometry(.06,.3,4).rotateX(Math.PI/2),metal);tip.position.z=1.9;tip.scale.y=1.6;
     const guard=new THREE.Mesh(new THREE.BoxGeometry(.5,.07,.09),gold);guard.position.z=.3;
     const grip=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.3,8).rotateX(Math.PI/2),leather);grip.position.z=.1;
     const pommel=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),gold);pommel.position.z=-.06;
-    sword.add(blade,tip,guard,grip,pommel);weaponRigs.sword=sword;
+    sword.add(blade,bladeEdge,tip,guard,grip,pommel);weaponRigs.sword=sword;
     const hammer=new THREE.Group();
     const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.6,8).rotateX(Math.PI/2),wood);shaft.position.z=.7;
     const mass=new THREE.Mesh(new THREE.BoxGeometry(.6,.5,.55),metal);mass.position.z=1.6;
@@ -163,6 +175,20 @@ export function buildBoss(){
   }
   hairs.instanceMatrix.needsUpdate=true;model.add(hairs);
 
+  const spinePlan=[[0,-.2,1],[0,-1,1.1],[0,-1.8,1.2],[0,-2.6,1.1],[0,-3.4,.9],[.9,-1.4,.9],[-.9,-1.4,.9],[1,-2.4,.8],[-1,-2.4,.8]];
+  const spines=new THREE.InstancedMesh(new THREE.ConeGeometry(.12,.7,6),joint,spinePlan.length);
+  spinePlan.forEach(([x,z,s],i)=>{
+    const e=ellipsoidPoint(AB.c,AB.r,x,z);
+    if(!e.inside){dummy.position.set(0,-50,0);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.0001);}
+    else{
+      dummy.position.set(e.point[0]+e.normal[0]*.2,e.point[1]+e.normal[1]*.2,e.point[2]+e.normal[2]*.2);
+      dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);
+      dummy.rotateX(Math.PI/2);dummy.scale.setScalar(s);
+    }
+    dummy.updateMatrix();spines.setMatrixAt(i,dummy.matrix);
+  });
+  spines.instanceMatrix.needsUpdate=true;spines.castShadow=true;model.add(spines);
+
   const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,28,20),carapace);
   thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;model.add(thorax);
   const waist=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,.9,14).rotateX(Math.PI/2),joint);waist.position.set(0,2.1,-.35);model.add(waist);
@@ -180,8 +206,10 @@ export function buildBoss(){
     const fang=new THREE.Mesh(new THREE.ConeGeometry(.12,.7,8),new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4}));
     fang.position.set(side*.78,2.0,2.35);fang.rotation.x=Math.PI*.92;model.add(fang);
     model.add(tube([[side*.9,2.5,2.5],[side*1.35,2.2,3.0],[side*1.5,1.6,3.4]],.1,.06,joint,10));
+    model.add(tube([[side*.55,2.6,2.55],[side*.75,2.25,3.0],[side*.6,1.95,3.3]],.085,.05,joint,8));
   }
 
+  const clawMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4});
   const legs=[];
   for(const plan of legPlan()){
     const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;
@@ -189,6 +217,7 @@ export function buildBoss(){
     for(let i=1;i<4;i++){
       const j=new THREE.Mesh(new THREE.SphereGeometry(i===3?.07:.17-.03*i,10,8),joint);j.position.set(...plan.points[i]);j.castShadow=true;g.add(j);
     }
+    const claw=new THREE.Mesh(new THREE.ConeGeometry(.07,.38,6),clawMat);claw.rotation.x=Math.PI;claw.position.set(plan.points[3][0],plan.points[3][1]+.12,plan.points[3][2]);g.add(claw);
     model.add(g);legs.push({g,plan,baseYaw:plan.yaw,baseY:plan.root[1]});
   }
 

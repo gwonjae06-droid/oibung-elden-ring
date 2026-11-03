@@ -8,6 +8,7 @@ import {createBossSfx} from './boss-sfx.mjs';
 import {createPhaseDialogue} from './phase-dialogue.mjs';
 import {createParticlePool,FX_LIMIT} from './effects-data.mjs';
 import {SKILL_COLORS,SKILL_HEX} from './skills.mjs';
+import {AMBIENT_LIMIT,atmosphereMood,createAmbientField,stepAmbientField} from './atmosphere-data.mjs';
 
 export function createSkillFx(scene,reduced=false){
   const bossSfx=createBossSfx(),phaseDialogue=createPhaseDialogue(),mobileUi=createMobileCombatUi(),bossChip=createBossChip();
@@ -20,6 +21,9 @@ export function createSkillFx(scene,reduced=false){
   gradient.addColorStop(0,'#ffffffff');gradient.addColorStop(.35,'#ffffffaa');gradient.addColorStop(1,'#ffffff00');c.fillStyle=gradient;c.fillRect(0,0,32,32);
   const material=new THREE.PointsMaterial({size:.34,map:new THREE.CanvasTexture(canvas),vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
   const points=new THREE.Points(geo,material);points.frustumCulled=false;root.add(points);
+  const ambientLimit=reduced?36:mobile?80:AMBIENT_LIMIT,field=createAmbientField({count:ambientLimit}),aGeo=new THREE.BufferGeometry(),aPos=new Float32Array(ambientLimit*3),aCol=new Float32Array(ambientLimit*3);
+  aGeo.setAttribute('position',new THREE.BufferAttribute(aPos,3));aGeo.setAttribute('color',new THREE.BufferAttribute(aCol,3));aGeo.setDrawRange(0,0);
+  const ambient=new THREE.Points(aGeo,new THREE.PointsMaterial({size:.2,map:material.map,vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));ambient.frustumCulled=false;root.add(ambient);let ambientTime=0;
   const rings=[],ringGeo=new THREE.RingGeometry(.9,1,64);
   for(let i=0;i<6;i++){const m=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.visible=false;root.add(m);rings.push({m,life:0,max:.7,radius:2});}
   let acc=0,lastGame=null;
@@ -43,6 +47,9 @@ export function createSkillFx(scene,reduced=false){
     else if(ev.type==='skill-heal'){ring(p.x,p.z,1.8,SKILL_HEX.heal);pool.emit(p.x,.6,p.z,n(24),SKILL_COLORS.heal);}
     else if(ev.type==='skill-ready'){ring(p.x,p.z,1.6,SKILL_HEX[f]||0xffffff,.55);pool.emit(p.x,1,p.z,n(14),col);}
     else if(ev.type==='skill-pierce')pool.emit(p.x+Math.sin(p.yaw)*5,1.3,p.z+Math.cos(p.yaw)*5,n(14),SKILL_COLORS.bow);
+    else if(ev.type==='phase'){ring(b.x,b.z,9,0xff3a2e,1.1);ring(b.x,b.z,5,0xffb35f,.8);pool.emit(b.x,2.2,b.z,n(46),[1,.35,.2]);}
+    else if(ev.type==='stagger'){ring(b.x,b.z,4,0xffdc9a,.6);pool.emit(b.x,2.4,b.z,n(24),[1,.82,.5]);}
+    else if(ev.type==='victory'){ring(b.x,b.z,12,0xffdc40,1.4);pool.emit(b.x,2.5,b.z,n(60),[1,.86,.3]);}
   }
   function update(dt,g){
     if(lastGame!==g){clear();lastGame=g;}
@@ -52,6 +59,10 @@ export function createSkillFx(scene,reduced=false){
     bossChip.update(dt,g);
     if(g.clown){circus||=buildCircus(scene,{mobile,reduced});circus.update(g.clown.time,g.boss.phase);}else circus?.hide();
     const h=Math.max(0,Math.min(dt,.05));playerFx.update(h,g);clownFx?.update(h);pool.step(h);acc+=h;
+    ambientTime+=h;const mood=atmosphereMood(g);stepAmbientField(field,h,ambientTime,mood);
+    const na=field.particles.length;
+    for(let k=0;k<na;k++){const q=field.particles[k];aPos[k*3]=q.x;aPos[k*3+1]=q.y;aPos[k*3+2]=q.z;for(let j=0;j<3;j++)aCol[k*3+j]=(mood.a[j]*(1-q.tint)+mood.b[j]*q.tint)*q.alpha;}
+    aGeo.setDrawRange(0,na);aGeo.attributes.position.needsUpdate=true;aGeo.attributes.color.needsUpdate=true;
     const every=reduced?.2:.07;
     if(h>0&&acc>=every){
       acc=0;const p=g.player,s=p.skill,jx=()=>(Math.random()-.5)*1.2;
