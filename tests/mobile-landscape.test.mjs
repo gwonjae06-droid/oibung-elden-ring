@@ -80,3 +80,15 @@ test('fullscreen/landscape request is user initiated and handles unsupported bro
  assert.equal(f.locks,1);
  ctrl.dispose();
 });
+
+
+test('landscape touch controls are enlarged with short-screen fallback',()=>{
+ const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
+ const landscape=css.split('@media (pointer:coarse) and (orientation:landscape){').at(-1).split('@media (pointer:coarse) and (orientation:landscape) and (max-height:340px)')[0];
+ assert.match(landscape,/#stick\{width:120px;height:120px/);
+ assert.match(landscape,/#thumb\{width:42px;height:42px/);
+ assert.match(landscape,/\.touch-actions\{grid-template-columns:repeat\(3,54px\);gap:6px\}/);
+ assert.match(landscape,/\.touch-actions button\{height:53px;min-height:53px/);
+ assert.match(css,/@media \(pointer:coarse\) and \(orientation:landscape\) and \(max-height:340px\)/);
+ assert.match(css,/#stick\{width:108px;height:108px\}/);
+});
