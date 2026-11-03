@@ -1,24 +1,11 @@
 export const MUSIC_LOOP=128;
-export function musicTempo(boss,phase=1){return boss==='dice'?(phase===2?144:132):boss==='clown'?(phase===2?138:116):(phase===2?108:84);}
+export function musicTempo(boss,phase=1){return boss==='clown'?(phase===2?138:116):(phase===2?108:84);}
 const hz=n=>440*2**((n-69)/12);
 export function score(boss,phase,tick){
- if(!['kwon','clown','dice'].includes(boss)||!Number.isFinite(tick))return [];
+ if(!['kwon','clown'].includes(boss)||!Number.isFinite(tick))return [];
  const b=((Math.floor(tick)%MUSIC_LOOP)+MUSIC_LOOP)%MUSIC_LOOP,bar=Math.floor(b/8),s=b%8,p=phase===2?2:1,u=30/musicTempo(boss,p),notes=[];
  const add=(voice,n,length,vol,at=0)=>notes.push({voice,f:hz(n),dur:length*u,vol,at:at*u});
- if(boss==='dice'){
-  // Original upbeat swing: walking bass, syncopated piano shells and brass call-and-response.
-  const roots=[48,48,45,45,50,55,48,55,53,54,48,45,50,55,48,55],r=roots[bar],minor=[2,3,4,11,12].includes(bar),third=minor?3:4,seventh=[5,7,9,13,15].includes(bar)?10:11;
-  const swing=s%2?.33:0;
-  if(s%2===0)add('bass',r-12+[0,third,7,9][s/2],1.7,.12);
-  if([1,4,7].includes(s)){add('piano',r+12+third,1.2,.047,swing);add('piano',r+12+seventh,1.2,.037,swing);add('piano',r+19,1.2,.025,swing);}
-  if(s===0||s===4)add('kick',36,.65,.065);
-  if(s===2||s===6)add('snare',60,.45,.028);
-  add('cymbal',84,.38,s%2?.013:.019,swing);
-  const hook=[12,16,19,21,19,16,14,11];
-  if(bar%4<2&&[0,3,4,6].includes(s))add('trumpet',r+hook[(bar%2)*4+[0,3,4,6].indexOf(s)],.85,.045,swing);
-  if(bar%4>=2&&[1,4,7].includes(s))add('trombone',r+12+[third,7,seventh][[1,4,7].indexOf(s)],1,.045,swing);
- }else if(boss==='kwon'){
-
+ if(boss==='kwon'){
   const roots=[50,46,53,45,50,43,46,45,50,53,55,46,43,46,45,50],thirds=[3,4,4,4,3,3,4,4,3,4,3,4,3,4,4,3],r=roots[bar],third=thirds[bar],arp=[0,7,12,12+third,7,12,19,12+third];
   if(p===2||s%2===0)add('piano',r+arp[s],p===2?1.7:2.5,s%4===0?.095:.065);
   if(s===0)add('piano',r-12,6,.09);

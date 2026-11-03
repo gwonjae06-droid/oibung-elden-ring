@@ -1,16 +1,19 @@
 import {readBattleSession} from './battle-session.mjs';
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
+import {createBossTracks} from './boss-tracks.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused)return null;
- const dice=doc.getElementById('dice-battle');if(dice?.open){const session=readBattleSession(dice.firstElementChild?.shadowRoot);if(!session?.active||session.game.status!=='playing')return null;return {boss:'dice',phase:session.game.boss.phase,busy:false};}
- const modal=doc.getElementById('clown-battle'),root=modal?modal.firstElementChild?.shadowRoot:doc;
+ const dice=doc.getElementById('dice-battle'),clown=doc.getElementById('clown-battle');
+ const modal=dice?.open?dice:clown?.open?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
- const session=readBattleSession(root);if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:g.clown?'clown':'kwon',phase:g.boss.phase,busy:g.clown?.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}const get=id=>root.getElementById(id),hud=get('boss-hud');
+ const session=readBattleSession(root);
+ if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:modal===dice?'dice':g.clown?'clown':'kwon',phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}
+ const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;
  if(Number(get('boss-fill')?.parentElement?.getAttribute('aria-valuenow')??1)<=0)return null;
- return {boss:modal?'clown':'kwon',phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
+ return {boss:modal===dice?'dice':modal===clown?'clown':'kwon',phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
 }
 export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  let ctx=null,bus=null,noise=null,enabled=false,disposed=false,state=null,next=0,tick=0,laugh=null,loading=false,retryAt=0;const groups=new Set();
@@ -19,7 +22,7 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  function stop(){for(const g of [...groups])release(g);next=0;}
  function voices(){let n=0;for(const g of groups)n+=g.sources.length;return n;}
  function voice(note,time){
-  const count=note.voice==='piano'||note.voice==='violin'?3:note.voice==='trumpet'||note.voice==='voice'||note.voice==='bass'?2:1;if(voices()+count>96)return;
+  const count=note.voice==='piano'||note.voice==='violin'?3:note.voice==='trumpet'||note.voice==='voice'?2:1;if(voices()+count>96)return;
   const t=time+(note.at||0),end=t+note.dur,g={sources:[],fx:[],end:end+.04,done:false},env=ctx.createGain();g.fx.push(env);env.connect(bus);
   const attack=note.voice==='violin'?.055:note.voice==='voice'?.045:.008;
   env.gain.setValueAtTime(.0001,t);env.gain.linearRampToValueAtTime(note.vol,t+Math.min(attack,note.dur*.3));env.gain.exponentialRampToValueAtTime(.0001,end);
@@ -28,7 +31,6 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
   function part(f,type,amount,cutoff,formant=false){const o=ctx.createOscillator(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();o.type=type;const slide=note.voice==='trombone'?.94:note.voice==='trumpet'?.985:1;o.frequency.setValueAtTime(f*slide,t);o.frequency.exponentialRampToValueAtTime(f,t+.045);filter.type=formant?'bandpass':'lowpass';filter.frequency.setValueAtTime(cutoff,t);filter.Q.value=formant?4:.8;gain.gain.value=amount;o.connect(filter);filter.connect(gain);gain.connect(env);g.fx.push(filter,gain);start(o);return o;}
   if(['snare','cymbal'].includes(note.voice)){const s=ctx.createBufferSource(),filter=ctx.createBiquadFilter();s.buffer=noise;filter.type='highpass';filter.frequency.value=note.voice==='cymbal'?6500:1900;s.connect(filter);filter.connect(env);g.fx.push(filter);start(s);}
   else if(['kick','tom'].includes(note.voice)){const o=part(note.voice==='kick'?120:155,'sine',1,650);o.frequency.exponentialRampToValueAtTime(note.voice==='kick'?42:65,end);}
-  else if(note.voice==='bass'){part(note.f,'triangle',.85,620);part(note.f*.5,'sine',.28,280);}
   else if(note.voice==='piano'){part(note.f,'triangle',.8,4800);part(note.f*2,'sine',.18,5800);part(note.f*3,'sine',.06,6500);}
   else if(note.voice==='violin'){const o=part(note.f,'sawtooth',.7,3200);part(note.f*2,'triangle',.12,4200);const l=ctx.createOscillator(),depth=ctx.createGain();l.frequency.value=5.5;depth.gain.value=9;l.connect(depth);depth.connect(o.detune);g.fx.push(depth);start(l);}
   else if(note.voice==='voice'){part(note.f,'sawtooth',.5,800,true);part(note.f,'sawtooth',.28,1200,true);}
@@ -55,14 +57,14 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
 const installations=new WeakMap();
 export function installBossMusic(doc=globalThis.document,win=globalThis.window,{makeMusic=createBossMusic}={}){
  if(!doc||!win)return null;if(installations.has(doc))return installations.get(doc);
- const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null);
+ const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null),tracks=createBossTracks(win);
  let focused=typeof doc.hasFocus==='function'?doc.hasFocus():true,muted=false,disposed=false,timer=null;
  const readMute=()=>{try{muted=win.localStorage.getItem('oibung-muted')==='1';}catch{}};
- function sync(){if(disposed)return;readMute();music.update(musicState(doc,focused),!muted);}
- function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm')))music.reset();queueMicrotask(()=>{if(disposed)return;readMute();if(!muted)music.unlock();sync();});}
+ function sync(){if(disposed)return;readMute();const selection=musicState(doc,focused);const external=tracks.update(selection,!muted);music.update(selection,!muted&&!external);}
+ function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm'))){music.reset();tracks.reset();}queueMicrotask(()=>{if(disposed)return;readMute();if(!muted){music.unlock();tracks.unlock();}sync();});}
  const blur=()=>{focused=false;sync();},focus=()=>{focused=true;sync();};
- function pagehide(e){if(e.persisted)music.reset();else control.dispose();}
- const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
+ function pagehide(e){if(e.persisted){music.reset();tracks.reset();}else control.dispose();}
+ const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{tracks.dispose();music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
  installations.set(doc,control);
  try{win.addEventListener('pointerdown',gesture,{passive:true});win.addEventListener('keydown',gesture);win.addEventListener('blur',blur);win.addEventListener('focus',focus);doc.addEventListener('visibilitychange',sync);timer=win.setInterval(sync,80);win.addEventListener('pagehide',pagehide,{capture:true});}
  catch(error){control.dispose();throw error;}

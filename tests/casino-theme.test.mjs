@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ROULETTE_NUMBERS,ROULETTE_TABLE} from '../src/roulette-table.mjs';
 import {DICE_RULES as R} from '../src/dice-data.mjs';
-import {score,musicTempo,MUSIC_LOOP} from '../src/boss-score.mjs';
 import {musicState} from '../src/boss-music.mjs';
 import {bindBattleSession} from '../src/battle-session.mjs';
 import {diceMotion} from '../src/dice-motion-data.mjs';
@@ -15,17 +14,7 @@ test('roulette pockets cover 0 through 36 once and the full combat board fits in
   assert.ok(ROULETTE_TABLE.pocketInner>ROULETTE_TABLE.feltRadius);
 });
 
-test('casino score includes swung comping, walking bass and a complete bounded arrangement',()=>{
-  for(const phase of [1,2]){
-    assert.ok(musicTempo('dice',phase)>=130);
-    const notes=Array.from({length:MUSIC_LOOP},(_,tick)=>score('dice',phase,tick)).flat();
-    for(const voice of ['bass','piano','trumpet','trombone','snare','cymbal'])assert.ok(notes.some(note=>note.voice===voice));
-    assert.ok(notes.some(note=>note.at>0));
-    assert.ok(notes.every(note=>[note.f,note.dur,note.vol,note.at].every(Number.isFinite)&&note.dur>0&&note.vol>0));
-  }
-});
-
-test('active dice session selects casino music and a paused session silences it',()=>{
+test('active dice session selects the existing dice soundtrack and a paused session silences it',()=>{
   const root={},modal={open:true,firstElementChild:{shadowRoot:root}},doc={hidden:false,getElementById:id=>id==='dice-battle'?modal:null};
   let active=true;const release=bindBattleSession(root,()=>({active,game:{status:'playing',player:{},boss:{phase:2},dice:{}}}));
   assert.deepEqual(musicState(doc),{boss:'dice',phase:2,busy:false});active=false;assert.equal(musicState(doc),null);release();
