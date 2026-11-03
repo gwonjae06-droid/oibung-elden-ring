@@ -17,7 +17,7 @@ export function loadProfile(storage){
  try{const p=JSON.parse(storage.getItem(SAVE_KEY));if(p?.version!==1)return freshProfile();
  const validTime=n=>Number.isFinite(n)&&n>=0&&n<1e8;
  const validRun=r=>r&&['sword','hammer','bow','cards'].includes(r.weapon)&&Object.hasOwn(MODES,r.mode)&&Number.isInteger(r.stage)&&r.stage>=0&&r.stage<3&&Array.isArray(r.relics)&&r.relics.length<=2&&r.relics.every(x=>RELICS.some(y=>y.id===x))&&validTime(r.elapsed)&&Number.isInteger(r.deaths)&&r.deaths>=0&&typeof r.pending==='boolean'&&Array.isArray(r.splits)&&r.splits.every(validTime);
- return {version:1,memories:Array.isArray(p.memories)?p.memories.filter(m=>m?.id==='kwon'&&typeof m.firstClear==='string').slice(0,1):[],clears:Number.isInteger(p.clears)&&p.clears>=0?p.clears:0,records:Array.isArray(p.records)?p.records.filter(r=>validTime(r.time)&&Object.hasOwn(MODES,r.mode)&&['sword','hammer','bow','cards'].includes(r.weapon)&&Number.isInteger(r.deaths)&&r.deaths>=0).slice(-40):[],run:validRun(p.run)?p.run:null};
+ return {version:1,memories:Array.isArray(p.memories)?p.memories.filter(m=>m?.id==='kwon'&&(typeof m.firstClear==='string'||m.firstClear===null)).slice(0,1):[],clears:Number.isInteger(p.clears)&&p.clears>=0?p.clears:0,records:Array.isArray(p.records)?p.records.filter(r=>validTime(r.time)&&Object.hasOwn(MODES,r.mode)&&['sword','hammer','bow','cards'].includes(r.weapon)&&Number.isInteger(r.deaths)&&r.deaths>=0).slice(-40):[],run:validRun(p.run)?p.run:null};
  }catch{return freshProfile();}
 }
 export function saveProfile(storage,profile){try{storage.setItem(SAVE_KEY,JSON.stringify(profile));return true;}catch{return false;}}
