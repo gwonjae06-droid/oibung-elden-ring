@@ -17,11 +17,10 @@ export function playerPose(g,phase=0,speed=0){
  else if(a.kind==='hurt'){p.lean=-.35;p.armL=p.armR=.35;p.elbowL=p.elbowR=.6;}
  return p;
 }
-const cache=new WeakMap();
 export function findPlayerParts(scene){
- const old=cache.get(scene);if(old?.rig.parent===scene)return old;let found=null;
- scene.traverse(pivot=>{if(found||pivot.children?.length!==4||!pivot.children.every((o,i)=>o.isGroup&&o.children.length===[5,4,2,4][i]))return;const arm=pivot.parent,body=arm?.parent,rig=body?.parent;if(rig?.parent!==scene||!arm.isGroup||Math.abs(arm.position.y-.7)>.01)return;const groups=body.children.filter(o=>o.isGroup),left=groups.find(o=>o.position.x<-.45&&Math.abs(o.position.y-.7)<.01),legs=groups.filter(o=>Math.abs(o.position.y+.42)<.01).sort((a,b)=>a.position.x-b.position.x);if(!left||legs.length!==2)return;const elbow=o=>o.children.find(o=>o.isGroup&&Math.abs(o.position.y+.38)<.01);const elbows=[elbow(left),elbow(arm)],knees=legs.map(o=>o.children.find(o=>o.isGroup));if(!elbows.every(Boolean)||!knees.every(Boolean))return;found={rig,body,pivot,arms:[left,arm],elbows,legs,knees,weapons:Object.fromEntries(['sword','hammer','bow','cards'].map((k,i)=>[k,pivot.children[i]])),cape:groups.find(o=>o.position.z<-.25&&o.position.y>.75)};});
- if(found){cache.set(scene,found);if(!found.rig.name)found.rig.name='player';}return found;
+ if(!scene||!Array.isArray(scene.children))return null;
+ for(const rig of scene.children){const parts=rig.presentationParts;if(parts&&parts.rig===rig&&rig.parent===scene)return parts;}
+ return null;
 }
 export function playerSoundRecipe(key,weapon='sword'){
  if(key==='step')return [['n',340,160,.055,.025],['t',75,45,.06,.012]];

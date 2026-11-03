@@ -34,7 +34,7 @@ function tube(points,r0,r1,mat,seg){
 }
 
 export function buildPlayer(weaponKeys){
-  const rig=new THREE.Group();
+  const rig=new THREE.Group();rig.name='player';
   const body=new THREE.Group();body.position.y=1;rig.add(body);
   const skin=new THREE.MeshStandardMaterial({color:0xe0c7a5,roughness:.8});
   const cloth=new THREE.MeshStandardMaterial({color:0x4f7da6,roughness:.7,transparent:true,map:noiseTexture('#4f7da6',160,128,3)});
@@ -59,16 +59,16 @@ export function buildPlayer(weaponKeys){
     const eye=new THREE.Mesh(new THREE.SphereGeometry(.028,8,6),new THREE.MeshStandardMaterial({color:0x111111}));eye.position.set(side*.095,1.14,.235);body.add(eye);
   }
 
-  const legs={};
+  const legs={},knees={};
   for(const side of [-1,1]){
     const hip=new THREE.Group();hip.position.set(side*.18,-.42,0);body.add(hip);
     const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.38,4,10),dark);thigh.position.y=-.22;thigh.castShadow=true;hip.add(thigh);
     const knee=new THREE.Group();knee.position.y=-.45;hip.add(knee);
     const shin=new THREE.Mesh(new THREE.CapsuleGeometry(.1,.34,4,10),leather);shin.position.y=-.2;shin.castShadow=true;knee.add(shin);
     const boot=new THREE.Mesh(new THREE.BoxGeometry(.2,.12,.34),dark);boot.position.set(0,-.42,.06);knee.add(boot);
-    legs[side<0?'L':'R']=hip;
+    const key=side<0?'L':'R';legs[key]=hip;knees[key]=knee;
   }
-  const arms={};
+  const arms={},elbows={};
   for(const side of [-1,1]){
     const sh=new THREE.Group();sh.position.set(side*.52,.7,0);body.add(sh);
     const up=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.3,4,10),cloth);up.position.y=-.2;up.castShadow=true;sh.add(up);
@@ -76,7 +76,7 @@ export function buildPlayer(weaponKeys){
     const lo=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.28,4,10),leather);lo.position.y=-.18;lo.castShadow=true;el.add(lo);
     const hand=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),skin);hand.position.y=-.38;el.add(hand);
     const bracer=new THREE.Mesh(new THREE.CylinderGeometry(.092,.086,.15,10),gold);bracer.position.y=-.14;el.add(bracer);
-    arms[side<0?'L':'R']=sh;
+    const key=side<0?'L':'R';arms[key]=sh;elbows[key]=el;
   }
 
   for(const side of [-1,1]){
@@ -88,9 +88,9 @@ export function buildPlayer(weaponKeys){
   const scarf=new THREE.Mesh(new THREE.TorusGeometry(.14,.045,8,16),scarfMat);scarf.position.y=.86;scarf.rotation.x=Math.PI/2;body.add(scarf);
   const scarfTail=new THREE.Mesh(new THREE.BoxGeometry(.12,.5,.04),scarfMat);scarfTail.position.set(.08,.62,-.2);scarfTail.rotation.x=.2;body.add(scarfTail);
 
-  const capeParts=[];
+  const capeParts=[];let cape;
   {
-    const root=new THREE.Group();root.position.set(0,.8,-.3);body.add(root);
+    const root=new THREE.Group();root.position.set(0,.8,-.3);body.add(root);cape=root;
     let parent=root;
     for(let i=0;i<3;i++){
       const seg=new THREE.Group();parent.add(seg);
@@ -132,7 +132,9 @@ export function buildPlayer(weaponKeys){
     weaponRigs.cards=cards;
     for(const k of weaponKeys){weaponRigs[k].visible=false;pivot.add(weaponRigs[k]);}
   }
-  return {rig,body,mats,pivot,weaponRigs,legs,arms,capeParts,cloth};
+  const presentationParts=Object.freeze({rig,body,pivot,arms:Object.freeze([arms.L,arms.R]),elbows:Object.freeze([elbows.L,elbows.R]),legs:Object.freeze([legs.L,legs.R]),knees:Object.freeze([knees.L,knees.R]),weapons:Object.freeze({...weaponRigs}),cape});
+  Object.defineProperty(rig,'presentationParts',{value:presentationParts});
+  return {rig,body,mats,pivot,weaponRigs,legs,arms,capeParts,cloth,elbows,knees,cape,presentationParts};
 }
 
 export function buildBoss(){
@@ -142,22 +144,19 @@ export function buildBoss(){
   const joint=new THREE.MeshStandardMaterial({color:0x2b211d,roughness:.7});
   const hairMat=new THREE.MeshStandardMaterial({color:0x211a17,roughness:.95});
   const markMat=new THREE.MeshStandardMaterial({color:0x8a2b1f,roughness:.5,emissive:0x2a0804,emissiveIntensity:.6});
-
   const AB={c:[0,2.1,-1.5],r:[2.1,1.785,2.625]};
   const abdomen=new THREE.Mesh(new THREE.SphereGeometry(1,40,28),carapace);
   abdomen.scale.set(AB.r[0],AB.r[1],AB.r[2]);abdomen.position.set(...AB.c);abdomen.castShadow=true;model.add(abdomen);
   for(let i=0;i<5;i++){
     const rg=ringAt(AB.c,AB.r,-.2-i*.78);
     const band=new THREE.Mesh(new THREE.TorusGeometry(1,.035,8,36),joint);
-    band.position.set(0,rg.y,rg.z);band.scale.set(rg.rx*1.01,rg.ry*1.01,1);
-    model.add(band);
+    band.position.set(0,rg.y,rg.z);band.scale.set(rg.rx*1.01,rg.ry*1.01,1);model.add(band);
   }
   for(const [x,z,s] of [[0,-2.6,1],[.8,-3.2,.7],[-.8,-3.2,.7],[0,-3.6,.6]]){
     const e=ellipsoidPoint(AB.c,AB.r,x,z);
     const mark=new THREE.Mesh(new THREE.SphereGeometry(.2*s,12,8),markMat);
     mark.scale.set(1,.35,1.5);mark.position.set(e.point[0],e.point[1]-.02,e.point[2]);
-    mark.lookAt(e.point[0]+e.normal[0],e.point[1]+e.normal[1],e.point[2]+e.normal[2]);
-    model.add(mark);
+    mark.lookAt(e.point[0]+e.normal[0],e.point[1]+e.normal[1],e.point[2]+e.normal[2]);model.add(mark);
   }
   const hairCount=90;
   const hairs=new THREE.InstancedMesh(new THREE.ConeGeometry(.045,.55,5),hairMat,hairCount);
@@ -166,33 +165,17 @@ export function buildBoss(){
     const x=(rnd()*2-1)*AB.r[0]*.85,z=AB.c[2]+(rnd()*2-1)*AB.r[2]*.85;
     const e=ellipsoidPoint(AB.c,AB.r,x,z);
     if(!e.inside){dummy.position.set(0,-50,0);dummy.scale.setScalar(.0001);}
-    else{
-      dummy.position.set(e.point[0]+e.normal[0]*.1,e.point[1]+e.normal[1]*.1,e.point[2]+e.normal[2]*.1);
-      dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);
-      dummy.rotateX(Math.PI/2);dummy.scale.setScalar(.7+rnd()*.8);
-    }
+    else{dummy.position.set(e.point[0]+e.normal[0]*.1,e.point[1]+e.normal[1]*.1,e.point[2]+e.normal[2]*.1);dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);dummy.rotateX(Math.PI/2);dummy.scale.setScalar(.7+rnd()*.8);}
     dummy.updateMatrix();hairs.setMatrixAt(i,dummy.matrix);
   }
   hairs.instanceMatrix.needsUpdate=true;model.add(hairs);
-
   const spinePlan=[[0,-.2,1],[0,-1,1.1],[0,-1.8,1.2],[0,-2.6,1.1],[0,-3.4,.9],[.9,-1.4,.9],[-.9,-1.4,.9],[1,-2.4,.8],[-1,-2.4,.8]];
   const spines=new THREE.InstancedMesh(new THREE.ConeGeometry(.12,.7,6),joint,spinePlan.length);
-  spinePlan.forEach(([x,z,s],i)=>{
-    const e=ellipsoidPoint(AB.c,AB.r,x,z);
-    if(!e.inside){dummy.position.set(0,-50,0);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.0001);}
-    else{
-      dummy.position.set(e.point[0]+e.normal[0]*.2,e.point[1]+e.normal[1]*.2,e.point[2]+e.normal[2]*.2);
-      dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);
-      dummy.rotateX(Math.PI/2);dummy.scale.setScalar(s);
-    }
-    dummy.updateMatrix();spines.setMatrixAt(i,dummy.matrix);
-  });
+  spinePlan.forEach(([x,z,s],i)=>{const e=ellipsoidPoint(AB.c,AB.r,x,z);if(!e.inside){dummy.position.set(0,-50,0);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.0001);}else{dummy.position.set(e.point[0]+e.normal[0]*.2,e.point[1]+e.normal[1]*.2,e.point[2]+e.normal[2]*.2);dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);dummy.rotateX(Math.PI/2);dummy.scale.setScalar(s);}dummy.updateMatrix();spines.setMatrixAt(i,dummy.matrix);});
   spines.instanceMatrix.needsUpdate=true;spines.castShadow=true;model.add(spines);
-
   const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,28,20),carapace);
   thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;model.add(thorax);
   const waist=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,.9,14).rotateX(Math.PI/2),joint);waist.position.set(0,2.1,-.35);model.add(waist);
-
   const HEAD={x:0,y:2.75,z:1.75,r:1.12};
   const bossHead=new THREE.Mesh(new THREE.SphereGeometry(HEAD.r,32,24),carapace);
   bossHead.position.set(HEAD.x,HEAD.y,HEAD.z);bossHead.castShadow=true;model.add(bossHead);
@@ -208,39 +191,20 @@ export function buildBoss(){
     model.add(tube([[side*.9,2.5,2.5],[side*1.35,2.2,3.0],[side*1.5,1.6,3.4]],.1,.06,joint,10));
     model.add(tube([[side*.55,2.6,2.55],[side*.75,2.25,3.0],[side*.6,1.95,3.3]],.085,.05,joint,8));
   }
-
   const clawMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4});
   const legs=[];
   for(const plan of legPlan()){
-    const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;
-    g.add(tube(plan.points,.22,.07,carapace,28));
-    for(let i=1;i<4;i++){
-      const j=new THREE.Mesh(new THREE.SphereGeometry(i===3?.07:.17-.03*i,10,8),joint);j.position.set(...plan.points[i]);j.castShadow=true;g.add(j);
-    }
+    const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;g.add(tube(plan.points,.22,.07,carapace,28));
+    for(let i=1;i<4;i++){const j=new THREE.Mesh(new THREE.SphereGeometry(i===3?.07:.17-.03*i,10,8),joint);j.position.set(...plan.points[i]);j.castShadow=true;g.add(j);}
     const claw=new THREE.Mesh(new THREE.ConeGeometry(.07,.38,6),clawMat);claw.rotation.x=Math.PI;claw.position.set(plan.points[3][0],plan.points[3][1]+.12,plan.points[3][2]);g.add(claw);
     model.add(g);legs.push({g,plan,baseYaw:plan.yaw,baseY:plan.root[1]});
   }
-
   const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
   const swordGroup=new THREE.Group();swordGroup.rotation.order='YXZ';model.add(swordGroup);
   const fallbackBlade=new THREE.Mesh(new THREE.ConeGeometry(.5,SWORD.length,4).rotateX(Math.PI/2).translate(0,0,SWORD.length/2),boneMat);
   fallbackBlade.scale.y=.45;fallbackBlade.castShadow=true;swordGroup.add(fallbackBlade);
   return {root,model,carapace,joint,glowMat,eyes,legs,HEAD,swordGroup,fallbackBlade,boneMat};
 }
-
-export function poseLegs(legs,phase,speed){
-  for(const L of legs){
-    const g=gait(L.plan,phase,speed);
-    L.g.rotation.y=L.baseYaw+g.yaw;
-    L.g.position.y=L.baseY+g.lift;
-  }
-}
-export function posePlayer(parts,phase,speed){
-  const w=walkPose(phase,speed);
-  parts.legs.L.rotation.x=w.legL;parts.legs.R.rotation.x=w.legR;
-  parts.arms.L.rotation.x=w.armL;parts.arms.R.rotation.x=w.armR;
-  return w;
-}
-export function swayCape(parts,time,speed){
-  parts.capeParts.forEach((seg,i)=>{seg.rotation.x=-capeSway(i,time,speed);});
-}
+export function poseLegs(legs,phase,speed){for(const L of legs){const g=gait(L.plan,phase,speed);L.g.rotation.y=L.baseYaw+g.yaw;L.g.position.y=L.baseY+g.lift;}}
+export function posePlayer(parts,phase,speed){const w=walkPose(phase,speed);parts.legs.L.rotation.x=w.legL;parts.legs.R.rotation.x=w.legR;parts.arms.L.rotation.x=w.armL;parts.arms.R.rotation.x=w.armR;return w;}
+export function swayCape(parts,time,speed){parts.capeParts.forEach((seg,i)=>{seg.rotation.x=-capeSway(i,time,speed);});}
