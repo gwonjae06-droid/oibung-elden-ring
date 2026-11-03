@@ -49,3 +49,20 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey .j-evolutions{grid-template-columns:repeat(2,1fr)}.j-votive,.j-votive-bowl{display:none}#journey[data-defeated~='kwon'] [data-emblem='spider'] .j-votive,#journey[data-defeated~='clown'] [data-emblem='clown'] .j-votive,#journey[data-defeated~='dice'] [data-emblem='dice'] .j-votive{display:block;filter:drop-shadow(0 0 6px #ffc264) drop-shadow(0 0 18px #ffb54c);animation:seal-fire 1.7s ease-in-out infinite alternate}
 #journey[data-defeated~='kwon'] [data-emblem='spider'] .j-rune,#journey[data-defeated~='clown'] [data-emblem='clown'] .j-rune,#journey[data-defeated~='dice'] [data-emblem='dice'] .j-rune{filter:drop-shadow(0 0 12px #ffdc80);stroke:#ffe9ae}
 @keyframes seal-fire{to{opacity:.65;transform:translateY(-2px)}}@media(prefers-reduced-motion:reduce){.j-votive{animation:none!important}}body[data-motion='reduced'] .j-votive{animation:none!important}@media(max-width:650px){#journey .j-evolutions{grid-template-columns:1fr}}
+/* Photographic limestone reliefs; the victory fire is inside the engraved paths. */
+.j-photographic{background:#090c0d url('./assets/art/temple-wall-v1.jpg') center/cover}
+#journey .j-photographic:after{background:radial-gradient(ellipse at center,#04080918 20%,#03060955 100%)}
+.j-photographic .j-stone-wall{filter:brightness(.82)}
+.j-photographic .j-relief image{filter:brightness(.78) saturate(.7)}
+.j-photographic .mural-grooves{opacity:0;fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+#journey[data-defeated~='kwon'] [data-boss='kwon'] .mural-grooves,#journey[data-defeated~='clown'] [data-boss='clown'] .mural-grooves,#journey[data-defeated~='dice'] [data-boss='dice'] .mural-grooves,#journey[data-defeated~='blood'] [data-boss='blood'] .mural-grooves,#journey[data-defeated~='mirror'] [data-boss='mirror'] .mural-grooves{opacity:1}
+#journey[data-screen='home'] .j-copy{background:radial-gradient(ellipse,#080b0ec9,transparent 73%);text-shadow:0 2px 8px #000}
+#journey[data-screen='home'] .j-title{color:#ede0bf;text-shadow:0 2px 2px #000,0 -1px 0 #f3e5bb55,0 0 24px #000;letter-spacing:16px}
+#journey .j-top{border-bottom-color:transparent}#journey .j-footer{border-top-color:#b19b6833}
+#journey[data-screen='home'] .j-primary{background:linear-gradient(110deg,#77613eeb,#b8995fe8);color:#fff0cd;border-color:#c5ab78;box-shadow:inset 0 1px #edd29944,0 3px 16px #0008}
+@media(max-width:650px){#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,120px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,280px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,280px) scale(.55)}}
+/* Emission is extracted from the artwork's real warm inlay pixels, so it follows its carving. */
+.j-photographic .j-relief .groove-inlay{filter:url(#stone-hot-inlay)}
+.j-photographic .mural-grooves{animation:inlay-ignite 2.8s ease-out both}
+@keyframes inlay-ignite{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0)}}
+@media(prefers-reduced-motion:reduce){.j-photographic .mural-grooves{animation:none;clip-path:none}}body[data-motion='reduced'] .j-photographic .mural-grooves{animation:none;clip-path:none}

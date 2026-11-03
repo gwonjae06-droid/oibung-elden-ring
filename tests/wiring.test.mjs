@@ -9,7 +9,7 @@ const html=read('spider-combat.html'),arena=read('src/arena.mjs');
 test('page loads an arena module that exists',()=>{
   const m=html.match(/import\('(\.\/[^']+)'\)/);
   assert.ok(m,'spider-combat.html must import a game module');
-  assert.ok(existsSync(join(root,m[1])),m[1]+' is missing');
+  assert.ok(existsSync(join(root,m[1].split('?')[0])),m[1]+' is missing');
 });
 test('every element id used by arena.mjs exists in spider-combat.html',()=>{
   const hud=read('src/battle-hud.mjs'),combined=arena+hud;const ids=new Set([...combined.matchAll(/(?<![\w])(?:\$|setText|setBar|text|get)\('([\w-]+)'/g)].map(m=>m[1]));

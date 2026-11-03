@@ -1,13 +1,38 @@
-// Five carved emblems around the central sanctuary.
-const seal='<circle r="98" fill="#11191b" stroke="#9d8961" stroke-width="2"/><circle r="89" fill="none" stroke="#7a725b" stroke-dasharray="2 12"/><path d="M-60-78L0-112L60-78M-60 78L0 112L60 78" fill="none" stroke="#8f7e53"/>';
-const emblem=(name,x,y,art)=>`<g class="j-emblem" data-emblem="${name}" transform="translate(${x} ${y})">${seal}${art}<path class="j-votive" d="M-14 78Q-22 64-5 48Q-6 62 5 56Q22 73 10 83Q0 92-14 78Z" fill="#ffe3a0"/><path class="j-votive-bowl" d="M-24 86H24L16 95H-16Z" fill="#a98b51"/></g>`;
-const WALL=`<div class="j-scene j-temple" aria-hidden="true"><svg class="j-wall-wide" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet"><defs><radialGradient id="sanctum"><stop stop-color="#1b3032"/><stop offset="1" stop-color="#080e12"/></radialGradient><pattern id="masonry" width="260" height="150" patternUnits="userSpaceOnUse"><path d="M0 0H260V150H0M130 0V150" fill="none" stroke="#a19675" stroke-opacity=".08"/></pattern></defs><path fill="url(#sanctum)" d="M0 0H1600V1000H0Z"/><path fill="url(#masonry)" d="M0 0H1600V1000H0Z"/><g fill="none" stroke="#ac986a" opacity=".22"><circle cx="800" cy="500" r="397"/><circle cx="800" cy="500" r="417"/><path d="M800 83L1197 372L1045 840H555L403 372ZM800 83L1045 840L403 372H1197L555 840Z"/><path d="M65 60H1535V940H65ZM85 80H1515V920H85Z"/></g>
-${emblem('spider',800,140,'<g fill="none" stroke="#ad9a76" stroke-width="5"><path d="M-15-30L-64-60L-76-7M-20-10L-78-25L-83 30M-20 12L-65 26L-67 63M15-30L64-60L76-7M20-10L78-25L83 30M20 12L65 26L67 63"/><path d="M-27-36L0-58L27-36L20 38L0 62L-20 38Z" fill="#28312e"/></g><path class="j-rune" d="M-14-18L-5-10M14-18L5-10" stroke="#cceada" stroke-width="5"/>')}
-${emblem('clown',1220,380,'<path d="M-54-25L-59-66L-22-42L0-79L22-42L59-66L54-25ZM-49-17Q-66 41 0 71Q66 41 49-17Z" fill="#302c2c" stroke="#ac9670" stroke-width="3"/><path d="M-34 3L-11 12L-32 17M34 3L11 12L32 17" fill="none" stroke="#c2af84" stroke-width="4"/><path class="j-rune" d="M-30 34Q0 59 30 34" fill="none" stroke="#e0bd91" stroke-width="3"/>')}
-${emblem('dice',1110,795,'<path d="M0-64L62-31V40L0 73L-62 40V-31ZM-62-31L0 0L62-31M0 0V73" fill="#252b2a" stroke="#b3a078" stroke-width="3"/><g class="j-rune" fill="#d3c699"><circle cx="-34" cy="5" r="5"/><circle cx="-20" cy="40" r="5"/><circle cx="22" cy="12" r="5"/><circle cx="45" cy="0" r="5"/><circle cx="22" cy="46" r="5"/><circle cx="45" cy="34" r="5"/></g>')}
-${emblem('blood',490,795,'<path d="M0-73C-10-38-50-2-50 26A50 50 0 0 0 50 26C50-2 10-38 0-73Z" fill="#3b2325" stroke="#b79075" stroke-width="3"/><path class="j-rune" d="M-27 8Q-43 38-16 48M0-31L0-10" stroke="#df9b91" fill="none" stroke-width="4"/>')}
-${emblem('mirror',380,380,'<ellipse cy="-12" rx="42" ry="56" fill="#202e32" stroke="#b6a17a" stroke-width="5"/><ellipse cy="-12" rx="32" ry="46" fill="none" stroke="#7e897d"/><path d="M-12 44L-16 77H16L12 44" fill="#292d2a" stroke="#b6a17a" stroke-width="3"/><path class="j-rune" d="M-14-39L-24-16M3-43L-17 5" fill="none" stroke="#b1e0de" stroke-width="3"/>')}
-</svg><div class="j-embers"></div></div>`;
-
-const tall=WALL.match(/<svg[\s\S]*?<\/svg>/)[0].replace('class="j-wall-wide"','class="j-wall-tall"').replace('viewBox="0 0 1600 1000"','viewBox="560 0 480 1000"');
-export const JOURNEY_ART=WALL.replace('</svg>','</svg>'+tall);
+const asset=name=>new URL('../assets/art/'+name,import.meta.url).href;
+// Each boss relief shares its carved artwork with the filtered victory emission layer.
+export const MURAL_SEALS=[
+  {
+    "id": "spider",
+    "boss": "kwon",
+    "x": 800,
+    "y": 110
+  },
+  {
+    "id": "clown",
+    "boss": "clown",
+    "x": 1265,
+    "y": 435
+  },
+  {
+    "id": "dice",
+    "boss": "dice",
+    "x": 1125,
+    "y": 785
+  },
+  {
+    "id": "blood",
+    "boss": "blood",
+    "x": 480,
+    "y": 785
+  },
+  {
+    "id": "mirror",
+    "boss": "mirror",
+    "x": 340,
+    "y": 435
+  }
+];
+const defs='<defs><clipPath id="stone-seal-clip"><circle cx="500" cy="500" r="485"/></clipPath><filter id="stone-hot-inlay" color-interpolation-filters="sRGB" x="-10%" y="-10%" width="120%" height="120%"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 .38  0 0 0 0 .045  10 2 -12 0 -.5"/><feComponentTransfer><feFuncA type="gamma" amplitude="1" exponent="1.8" offset="0"/></feComponentTransfer><feGaussianBlur stdDeviation=".6" result="hot"/><feGaussianBlur in="hot" stdDeviation="4" result="halo"/><feMerge><feMergeNode in="halo"/><feMergeNode in="hot"/></feMerge></filter></defs>';
+const seal=s=>`<g class="j-emblem j-relief" data-emblem="${s.id}" data-boss="${s.boss}" transform="translate(${s.x} ${s.y})"><g transform="translate(-105 -105) scale(.21)"><image href="${asset('seal-'+s.id+'-v1.jpg')}" width="1000" height="1000" clip-path="url(#stone-seal-clip)"/><g class="mural-grooves"><image class="groove-inlay" href="${asset('seal-'+s.id+'-v1.jpg')}" width="1000" height="1000" filter="url(#stone-hot-inlay)" clip-path="url(#stone-seal-clip)"/></g></g></g>`;
+const content=defs+`<image class="j-stone-wall" href="${asset('temple-wall-v1.jpg')}" width="1600" height="1000"/>`+MURAL_SEALS.map(seal).join('');
+export const JOURNEY_ART=`<div class="j-scene j-temple j-photographic" aria-hidden="true"><svg class="j-wall-wide" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet">${content}</svg><svg class="j-wall-tall" viewBox="560 0 480 1000" preserveAspectRatio="xMidYMid meet">${content}</svg><div class="j-embers"></div></div>`;

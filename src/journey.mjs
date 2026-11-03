@@ -4,7 +4,7 @@ import {KWON_MEMORY,rememberKwon} from './chapter-story.mjs';
 import {playJourneyTransition} from './journey-transition.mjs';
 import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,MODES,RELICS,newRun,loadProfile,saveProfile,finishAttempt,chooseRelic,configureJourney} from './journey-state.mjs';
-import {JOURNEY_ART} from './journey-art.mjs';
+import {JOURNEY_ART} from './journey-art.mjs?art=stone-v1';
 import {createMenuTheme} from './menu-theme.mjs';
 const WEAPONS={sword:'검',hammer:'망치',bow:'활',cards:'카드'};
 const DESCRIPTIONS={sword:'짧은 틈을 가르는 질풍검',hammer:'네 번의 적중, 흡혈의 강타',bow:'거리를 지배하는 관통 화살',cards:'세 가지 색으로 바꾸는 운명'};
