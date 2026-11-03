@@ -57,7 +57,7 @@ export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createMe
  }
  function setTarget(value){
   if(!audio||Math.abs(target-value)<1e-5)return;
-  tick();
+  if(timer!==null)tick();
   if(!audio)return;
   from=audio.volume;target=value;started=now();
   if(Math.abs(from-target)<1e-5){audio.volume=target;if(!target)audio.pause();clearTimer();}
