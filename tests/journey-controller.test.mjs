@@ -36,3 +36,5 @@ test('loss and home discard the run while permanent kill records remain',async()
 test('story and reward precede the chain pull and next boss cinematic',async()=>{
  const f=rig({holdClown:true});await f.click('new');await f.click('begin');const defeated=f.game();defeated.status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);await f.click('memory-next');assert.match(f.dialog.html,/진화를 두 가지/);assert.deepEqual(f.scenes,['kwon']);await f.click('relic',{relic:'blade-wave'});assert.equal(f.game(),defeated);const pending=f.click('next');assert.deepEqual(f.scenes,['kwon','pull']);await Promise.resolve();await Promise.resolve();assert.deepEqual(f.scenes,['kwon','pull','clown']);f.finishScene();await pending;assert.notEqual(f.game(),defeated);await f.api.dispose();f.release();
 });
+
+test('closing during the victory animation still preserves the defeated boss but never the active run',async()=>{const f=rig();await f.click('new');await f.click('begin');f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,['kwon']);assert.equal(saved.run,null);f.release();});
