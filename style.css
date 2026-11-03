@@ -21,10 +21,10 @@
 @media (pointer:coarse) and (orientation:landscape){
  #arena{height:100dvh;min-height:0}
  #touch{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));align-items:end}
- #stick{width:88px;height:88px;background:#111a1490}
- #thumb{width:34px;height:34px}
- .touch-actions{grid-template-columns:repeat(3,48px);gap:5px}
- .touch-actions button{height:46px;min-height:46px;padding:2px;font-size:11px;background:#182018c9}
+ #stick{width:120px;height:120px;background:#111a14aa}
+ #thumb{width:42px;height:42px}
+ .touch-actions{grid-template-columns:repeat(3,54px);gap:6px}
+ .touch-actions button{height:53px;min-height:53px;padding:3px;font-size:12px;background:#182018df}
  .touch-actions .attack{grid-column:2/4}
  .hud{left:max(10px,env(safe-area-inset-left));top:max(54px,env(safe-area-inset-top));width:min(230px,32vw);padding:6px 8px;background:#1118128c;border:1px solid #baaf9055;backdrop-filter:none}
  .hud .player-line{margin-bottom:3px;font-size:11px}
@@ -49,4 +49,11 @@
  .brand span{display:none}
  #notice{top:18%;max-width:65%;font-size:12px}
  #controls{display:none}
+}
+/* Keep both thumbs usable on very short landscape screens. */
+@media (pointer:coarse) and (orientation:landscape) and (max-height:340px){
+ #stick{width:108px;height:108px}
+ #thumb{width:40px;height:40px}
+ .touch-actions{grid-template-columns:repeat(3,51px);gap:5px}
+ .touch-actions button{height:49px;min-height:49px;font-size:11.5px}
 }
