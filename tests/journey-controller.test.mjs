@@ -19,7 +19,7 @@ function rig({holdClown=false}={}){
 }
 test('controller traverses all real result stages, saves choices, records final clear and unlocks challenges',async()=>{
  const f=rig();await f.click('new');await f.click('begin');assert.equal(f.dialog.open,false);assert.equal(f.states.at(-1),false);
- f.game().status='won';await f.poll();assert.match(f.dialog.html,/서약을 선택/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run.pending,true);
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);await f.click('memory-next');assert.match(f.dialog.html,/서약을 선택/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run.pending,true);
  f.poll();assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run.splits.length,1);
  await f.click('relic',{relic:'heavy'});assert.match(f.dialog.html,/다음 도전/);assert.equal(f.dialog.open,true);await f.click('next');assert.equal(f.game().journey.damage,1.25);assert.equal(f.dialog.open,false);
  f.game().status='won';await f.poll();await f.click('relic',{relic:'vital'});await f.click('next');assert.equal(f.game().player.maxHp,145);
@@ -34,5 +34,5 @@ test('loss offers retry without losing the checkpoint, and home pauses and persi
 });
 
 test('victory transition finishes before reward and selecting a relic waits for Next challenge',async()=>{
- const f=rig({holdClown:true});await f.click('new');await f.click('begin');const defeated=f.game();defeated.status='won';const pending=f.poll();assert.equal(f.dialog.open,false);await f.click('relic',{relic:'heavy'});assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run.relics.length,0);f.finishScene();await pending;assert.match(f.dialog.html,/서약을 선택/);await f.click('relic',{relic:'heavy'});assert.equal(f.game(),defeated);assert.match(f.dialog.html,/다음 도전/);await f.click('next');assert.notEqual(f.game(),defeated);await f.api.dispose();f.release();
+ const f=rig({holdClown:true});await f.click('new');await f.click('begin');const defeated=f.game();defeated.status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);const pending=f.click('memory-next');assert.equal(f.dialog.open,false);await f.click('relic',{relic:'heavy'});assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run.relics.length,0);f.finishScene();await pending;assert.match(f.dialog.html,/서약을 선택/);await f.click('relic',{relic:'heavy'});assert.equal(f.game(),defeated);assert.match(f.dialog.html,/다음 도전/);await f.click('next');assert.notEqual(f.game(),defeated);await f.api.dispose();f.release();
 });

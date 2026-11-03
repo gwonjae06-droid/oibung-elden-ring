@@ -53,14 +53,14 @@ export function createBossStance(B){
     if(detached){headRig.scale.setScalar(S);headRig.position.set(0,-1.0*S,-.5*S);headRig.rotation.set(-Math.PI/2,0,0);}
     else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(B.HEAD.x,B.HEAD.y-1.5,B.HEAD.z+1.5);}
     cinema.style.display=b.state==='transition'?'block':'none';
-    if(b.state==='transition')caption.textContent=b.t<1.8?'긴턱의 왕, 이권재':b.t<2.9?'왕이 자신의 검을 취한다':b.t<3.8?'머리는 검이 되고':'두 번째 시련 — 왕검';
+    if(b.state==='transition')caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?'내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';
     for(const L of B.legs){const p=bodyPoint(b,{x:L.plan.root[0],y:L.plan.root[1],z:L.plan.root[2]});L.g.position.set(p.x,p.y,p.z);L.g.scale.setScalar(S);L.g.rotation.x=-.45*q.standing;L.g.rotation.z=-L.plan.side*1.15*q.standing;if(L.plan.k!==3)L.g.rotation.y=L.baseYaw*(1-q.standing)+L.plan.side*.65*q.standing;}
     for(const R of supports){const s=q.standing,side=R.L.plan.side;R.g.visible=s>0;R.L.g.visible=s===0;const root=bodyPoint(b,{x:side*1.15,y:2,z:-1.6});solve(R,[root,{x:side*2.2,y:2.2,z:-1.4},{x:side*1.9,y:.9,z:-2.8},{x:side*1.8,y:.06,z:-3.5}]);}
     const head=bodyPoint(b,B.HEAD);
-    for(const R of arms){const side=R.L.plan.side;R.g.visible=c.reach>0;R.L.g.visible=c.reach===0;
+    for(const R of arms){const side=R.L.plan.side;R.g.visible=!!death||c.reach>0;R.L.g.visible=!death&&c.reach===0;
       const shoulder=bodyPoint(b,{x:side*1.4,y:2.6,z:1.1}),grip=handPoint(b,side);
       const reach={x:head.x+side*.55,y:head.y-.3,z:head.z+.4},rest={x:shoulder.x+side*.8,y:shoulder.y-1.2,z:shoulder.z+.5};
-      const target=lerp(lerp(rest,reach,c.reach),grip,c.detach);
+      const target=death?{x:side*.8,y:1.1,z:3.6}:lerp(lerp(rest,reach,c.reach),grip,c.detach);
       solve(R,[shoulder,{x:shoulder.x+side*1.0,y:(shoulder.y+target.y)/2-.55,z:(shoulder.z+target.z)/2-.5},target]);
     }
   }};

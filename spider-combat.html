@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#121614"><title>오이붕 · 오슬우의 시련</title>
+<meta name="theme-color" content="#121614"><title>오든링 · 두상의 서약</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
@@ -12,18 +12,18 @@
 <link rel="stylesheet" href="./journey.css">
 </head>
 <body data-journey="1">
-<dialog id="journey" open aria-label="오이붕 메인"><div class="j-shell"><main class="j-main"><div class="j-copy"><p class="j-kicker">THE GATE OPENS</p><h1 class="j-title">오이붕</h1><p class="j-status" id="journey-loading">세 지배자의 문을 열고 있습니다…</p></div></main></div></dialog>
+<dialog id="journey" open aria-label="오든링 메인"><div class="j-shell"><main class="j-main"><div class="j-copy"><p class="j-kicker">THE GATE OPENS</p><h1 class="j-title">오든링</h1><p class="j-status" id="journey-loading">세 지배자의 문을 열고 있습니다…</p></div></main></div></dialog>
 <a class="skip" href="#menu">메뉴로 이동</a>
-<main id="arena" aria-label="오슬우와 긴턱 거미 이권재의 3D 전투">
+<main id="arena" aria-label="응시자와 긴턱 거미 이권재의 3D 전투">
 <canvas id="world" tabindex="0" aria-label="전투 화면. WASD 이동, J 또는 좌클릭 공격, L 또는 우클릭 스킬, Space 회피, E 회복, Q 록온, Esc 일시정지."></canvas>
 <div id="vignette" aria-hidden="true"></div><div id="hit-flash" aria-hidden="true"></div>
 <header class="brand">
-<svg role="img" aria-label="오이붕 문장" viewBox="0 0 36 36" width="32" height="32" fill="none"><path d="M18 3 31 11v14l-13 8L5 25V11Z" stroke="currentColor"/><path d="M12 10 18 27l6-17M9 18h18M18 5v7" stroke="currentColor" stroke-width="1.5"/></svg>
-<div><strong>오이붕</strong><span>전투 실험실 · 01</span></div>
+<svg role="img" aria-label="오든링 문장" viewBox="0 0 36 36" width="32" height="32" fill="none"><path d="M18 3 31 11v14l-13 8L5 25V11Z" stroke="currentColor"/><path d="M12 10 18 27l6-17M9 18h18M18 5v7" stroke="currentColor" stroke-width="1.5"/></svg>
+<div><strong>오든링</strong><span>전투 실험실 · 01</span></div>
 </header>
 <nav class="top-actions" aria-label="게임 설정"><button id="theme" title="메뉴 밝기 전환" aria-label="메뉴 밝기 전환">밝기</button><button id="sound" aria-pressed="false">소리 꺼짐</button><button id="pause" disabled>일시정지</button></nav>
-<section id="player-hud" class="hud" aria-label="오슬우 상태" hidden>
-<div class="player-line"><strong>오슬우</strong><span id="weapon-label">검</span></div>
+<section id="player-hud" class="hud" aria-label="응시자 상태" hidden>
+<div class="player-line"><strong>응시자</strong><span id="weapon-label">검</span></div>
 <div class="stat"><span>생명</span><div class="meter hp" role="progressbar" aria-label="생명" aria-valuemin="0" aria-valuemax="120" aria-valuenow="120"><i id="hp-fill"></i></div><b id="hp-value">120</b></div>
 <div class="stat"><span>기력</span><div class="meter stamina" role="progressbar" aria-label="기력" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><i id="stamina-fill"></i></div><b id="stamina-value">100</b></div>
 <div id="skill-hud" class="skill-hud" data-card="" data-ready="true" data-weapon="sword">
@@ -39,7 +39,7 @@
 <footer id="controls" hidden><span><kbd>WASD</kbd> 이동</span><span><kbd>J / 좌클릭</kbd> 공격</span><span><kbd>L / 우클릭</kbd> 스킬</span><span><kbd>Space</kbd> 회피</span><span><kbd>Q</kbd> 록온</span><span>휠 클릭 드래그 · 시점</span></footer>
 <section id="touch" aria-label="터치 조작" hidden><div id="stick" aria-label="이동 조이스틱"><i id="thumb"></i></div><div class="touch-actions"><button data-act="heal">회복</button><button data-act="lock">록온</button><button data-act="skill">스킬</button><button data-act="roll">회피</button><button data-act="light" class="attack">공격</button></div></section>
 <section id="menu" class="overlay" aria-labelledby="menu-title"><div class="menu-panel">
-<p class="eyebrow">오슬우의 첫 번째 시련</p><h1 id="menu-title">긴턱의 이권재</h1><p class="intro">여덟 다리, 두 자루의 턱.<br>칼날이 지나간 자리에 당신의 기회가 남습니다.</p>
+<p class="eyebrow">응시자의 첫 번째 시련</p><h1 id="menu-title">긴턱의 이권재</h1><p class="intro">여덟 다리, 두 자루의 턱.<br>칼날이 지나간 자리에 당신의 기회가 남습니다.</p>
 <fieldset id="weapon-select"><legend>시작 무기</legend><div class="weapon-grid">
 <button class="weapon selected" data-weapon="sword" aria-pressed="true"><span>01</span><strong>검</strong><small>스킬 · 5초간 공격 속도 대폭 증가</small></button>
 <button class="weapon" data-weapon="hammer" aria-pressed="false"><span>02</span><strong>망치</strong><small>스킬 · 4회 적중 후 흡혈 강타</small></button>

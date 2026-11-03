@@ -1,3 +1,4 @@
+import {buildSanctuary} from './sanctuary.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {environmentPlan} from './environment-data.mjs';
@@ -24,13 +25,13 @@ function makeCanvas(w,h=w){const c=document.createElement('canvas');c.width=w;c.
 function asTexture(canvas){const t=new THREE.CanvasTexture(canvas);t.colorSpace=THREE.SRGBColorSpace;return t;}
 function skyTexture(){
   const c=makeCanvas(16,256),g=c.getContext('2d'),grad=g.createLinearGradient(0,0,0,256);
-  for(const [p,col] of [[0,'#05080b'],[.3,'#0b1418'],[.46,'#4a3426'],[.5,'#6a4528'],[.54,'#2a241f'],[.75,'#121814'],[1,'#0d120f']])grad.addColorStop(p,col);
+  for(const [p,col] of [[0,'#05080b'],[.3,'#0b1418'],[.46,'#253440'],[.5,'#384452'],[.54,'#1e2832'],[.75,'#121814'],[1,'#0d120f']])grad.addColorStop(p,col);
   g.fillStyle=grad;g.fillRect(0,0,16,256);return asTexture(c);
 }
 function moonTexture(){
   const c=makeCanvas(256),g=c.getContext('2d'),halo=g.createRadialGradient(128,128,20,128,128,128);
-  halo.addColorStop(0,'rgba(255,214,150,.55)');halo.addColorStop(1,'rgba(255,170,100,0)');g.fillStyle=halo;g.fillRect(0,0,256,256);
-  g.fillStyle='#e9dcb4';g.beginPath();g.arc(128,128,52,0,Math.PI*2);g.fill();
+  halo.addColorStop(0,'rgba(190,213,240,.4)');halo.addColorStop(1,'rgba(150,190,230,0)');g.fillStyle=halo;g.fillRect(0,0,256,256);
+  g.fillStyle='#d8e5f2';g.beginPath();g.arc(128,128,52,0,Math.PI*2);g.fill();
   g.fillStyle='rgba(120,98,66,.32)';
   for(const [x,y,r] of [[110,112,12],[146,130,16],[126,150,9],[150,100,7]]){g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();}
   return asTexture(c);
@@ -125,17 +126,18 @@ export function buildEnvironment(scene,ground){
   const mistA=new THREE.Mesh(mistGeo,new THREE.MeshBasicMaterial({map:mistTex,transparent:true,opacity:coarse?.16:.22,depthWrite:false}));mistA.position.y=.35;
   const mistB=new THREE.Mesh(mistGeo,new THREE.MeshBasicMaterial({map:mistTex,transparent:true,opacity:coarse?.1:.15,depthWrite:false}));mistB.position.y=1;mistB.rotation.y=1.7;
   for(const m of [mistA,mistB]){m.frustumCulled=false;m.renderOrder=2;root.add(m);}
-  let lastT=-1;
+  let lastT=-1,silenced=false;
   mistA.onBeforeRender=()=>{
     const t=performance.now()/1000;if(t===lastT)return;lastT=t;
     mistA.rotation.y=t*.012;mistB.rotation.y=1.7-t*.008;
     const amp=reduced?.03:.14;
-    lights.forEach((L,i)=>{L.intensity=L.userData.base*(1+amp*(Math.sin(t*9.1+i*1.7)*.5+Math.sin(t*15.3+i*3.1)*.3+Math.sin(t*23+i)*.2));});
-    if(!reduced)flames.forEach((F,i)=>{F.scale.set(1,1+.18*Math.sin(t*11+i*2.3)+.1*Math.sin(t*19+i),1);});
-    banners.forEach((B,i)=>{B.rotation.z=Math.sin(t*.9+i)*(reduced?.01:.05);});
+    lights.forEach((L,i)=>{L.intensity=L.userData.base*(silenced?.12:1)*(1+(silenced?0:amp)*(Math.sin(t*9.1+i*1.7)*.5+Math.sin(t*15.3+i*3.1)*.3+Math.sin(t*23+i)*.2));});
+    if(!reduced&&!silenced)flames.forEach((F,i)=>{F.scale.set(1,1+.18*Math.sin(t*11+i*2.3)+.1*Math.sin(t*19+i),1);});
+    banners.forEach((B,i)=>{B.rotation.z=Math.sin(t*.9+i)*(silenced?0:reduced?.01:.05);});
   };
   const map=pavingTexture();ground.material.map=map;ground.material.color.setHex(0xffffff);ground.material.needsUpdate=true;
-  root.userData.decorativeOnly=true;scene.add(root);
+  const sanctuary=buildSanctuary(THREE,root);root.userData.updateSanctuary=(game,dt)=>{const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;};
+  grass.visible=false;root.userData.decorativeOnly=true;scene.add(root);
   return root;
 
  });
