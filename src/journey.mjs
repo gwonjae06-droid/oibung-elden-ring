@@ -6,6 +6,7 @@ import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,MODES,RELICS,newRun,loadProfile,saveProfile,finishAttempt,chooseRelic,configureJourney} from './journey-state.mjs';
 import {JOURNEY_ART} from './journey-art.mjs';
 import {createMenuTheme} from './menu-theme.mjs';
+import {MOBILE_LANDSCAPE_GATE_HTML} from './mobile-landscape.mjs';
 const WEAPONS={sword:'검',hammer:'망치',bow:'활',cards:'카드'};
 const DESCRIPTIONS={sword:'짧은 틈을 가르는 질풍검',hammer:'네 번의 적중, 흡혈의 강타',bow:'거리를 지배하는 관통 화살',cards:'세 가지 색으로 바꾸는 운명'};
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -23,7 +24,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function unlock(){music.unlock();syncMusic();}
  function show(content){
   if(dialog.dataset){dialog.dataset.screen=screen;dialog.dataset.defeated=(profile.defeated||[]).join(' ');}
-  dialog.innerHTML=JOURNEY_ART+`<div class="j-shell"><header class="j-top"><span><span class="j-mark">♜</span> ODENRING · THE OATH</span><span>다섯 소망. 하나의 서약.</span></header><main class="j-main">${content}</main><footer class="j-footer"><span>WASD 이동 · J 공격 · L 스킬 · SPACE 회피</span><span>두상의 서약 · ${profile.clears?'세 번의 문을 넘어선 자':'아직 끝나지 않은 여정'}</span></footer></div>`;
+  dialog.innerHTML=JOURNEY_ART+`<div class="j-shell"><header class="j-top"><span><span class="j-mark">♜</span> ODENRING · THE OATH</span><span>다섯 소망. 하나의 서약.</span></header><main class="j-main">${content}</main><footer class="j-footer"><span>WASD 이동 · J 공격 · L 스킬 · SPACE 회피</span><span>두상의 서약 · ${profile.clears?'세 번의 문을 넘어선 자':'아직 끝나지 않은 여정'}</span></footer></div>`+MOBILE_LANDSCAPE_GATE_HTML;
   if(!dialog.open)dialog.showModal();syncMusic();dialog.querySelector('button:not(:disabled)')?.focus();
  }
  const button=(action,label,extra='')=>`<button data-j="${action}" ${extra}>${label}</button>`;
