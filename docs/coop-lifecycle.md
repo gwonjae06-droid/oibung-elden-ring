@@ -1,0 +1,11 @@
+# Cooperative lobby shutdown
+
+The cooperative menu already had a disposal handle; this patch hardens its terminal behavior rather than adding a new installer. Menu disposal disconnects its observer, disables retained join callbacks, removes owned row wrappers and CSS, disposes the active room and permits reinstall. It restores row children rather than deleting unrelated chooser nodes. Independent cleanup continues after room disposal fails. Setup failure rolls back installed resources.
+
+Room close() is now idempotent and terminal. It invalidates connection tickets, cancels the response timer, removes the pending socket-open listener and dialog/window listeners, nulls owned button handlers and removes the dialog. A retained button or late socket callback cannot reconnect a closed room. Native dialog close also cleans up. dispose() performs close without restoring focus, suitable for global game shutdown; ordinary close restores prior focus at most once. A persisted pagehide preserves the room; permanent pagehide disposes it. A synchronous connection failure closes a transport returned after its ticket was invalidated. Repeated open callbacks cannot duplicate the room handshake.
+
+connectCoop close()/dispose() immediately mark the transport closed and remove message/error/close listeners before requesting socket close. Already queued callbacks are guarded and sends after close fail. Intentional local close does not invoke onClose; remote close invokes it once. The close request is not awaited and does not prove the server has released membership. Room wire messages and the unimplemented cooperative-combat UI remain unchanged.
+
+Validation: 16 tests passed in an isolated Node directory: nine new lifecycle tests and seven existing coop-ui-components tests copied from the repository. The actual three revised modules were imported with DOM/window/socket doubles. No live server connection, full npm test, real browser test or browser-cache lifecycle test was run. The injected cleanup error in the final new test is expected.
+
+This patch does not complete all game shutdown work. Hidden resources and async work inside boss audio/environment/effect modules, secondary battle-session ownership, startup cancellation and same-document remounting still need separate work.
