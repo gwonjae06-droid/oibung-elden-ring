@@ -1,14 +1,16 @@
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
+import {createBossTracks} from './boss-tracks.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
- if(doc.hidden||!focused||doc.getElementById('dice-battle')?.open)return null;
- const modal=doc.getElementById('clown-battle'),root=modal?modal.firstElementChild?.shadowRoot:doc;
+ if(doc.hidden||!focused)return null;
+ const dice=doc.getElementById('dice-battle'),clown=doc.getElementById('clown-battle');
+ const modal=dice?.open?dice:clown?.open?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;
  if(Number(get('boss-fill')?.parentElement?.getAttribute('aria-valuenow')??1)<=0)return null;
- return {boss:modal?'clown':'kwon',phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
+ return {boss:modal===dice?'dice':modal===clown?'clown':'kwon',phase:/두 번째|앙코르/.test(get('phase-label')?.textContent||'')?2:1,busy:/폭탄|팽창|마지막 박수/.test(get('boss-action')?.textContent||'')};
 }
 export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  let ctx=null,bus=null,noise=null,enabled=false,disposed=false,state=null,next=0,tick=0,laugh=null,loading=false,retryAt=0;const groups=new Set();
@@ -52,14 +54,14 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
 const installations=new WeakMap();
 export function installBossMusic(doc=globalThis.document,win=globalThis.window,{makeMusic=createBossMusic}={}){
  if(!doc||!win)return null;if(installations.has(doc))return installations.get(doc);
- const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null);
+ const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null),tracks=createBossTracks(win);
  let focused=typeof doc.hasFocus==='function'?doc.hasFocus():true,muted=false,disposed=false,timer=null;
  const readMute=()=>{try{muted=win.localStorage.getItem('oibung-muted')==='1';}catch{}};
- function sync(){if(disposed)return;readMute();music.update(musicState(doc,focused),!muted);}
- function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm')))music.reset();queueMicrotask(()=>{if(disposed)return;readMute();if(!muted)music.unlock();sync();});}
+ function sync(){if(disposed)return;readMute();const selection=musicState(doc,focused);const external=tracks.update(selection,!muted);music.update(selection,!muted&&!external);}
+ function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm'))){music.reset();tracks.reset();}queueMicrotask(()=>{if(disposed)return;readMute();if(!muted){music.unlock();tracks.unlock();}sync();});}
  const blur=()=>{focused=false;sync();},focus=()=>{focused=true;sync();};
  function pagehide(e){if(e.persisted)music.reset();else control.dispose();}
- const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
+ const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{tracks.dispose();music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
  installations.set(doc,control);
  try{win.addEventListener('pointerdown',gesture,{passive:true});win.addEventListener('keydown',gesture);win.addEventListener('blur',blur);win.addEventListener('focus',focus);doc.addEventListener('visibilitychange',sync);timer=win.setInterval(sync,80);win.addEventListener('pagehide',pagehide,{capture:true});}
  catch(error){control.dispose();throw error;}
