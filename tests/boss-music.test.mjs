@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {score,musicTempo,MUSIC_LOOP} from '../src/boss-score.mjs';
 import {musicState,createBossMusic} from '../src/boss-music.mjs';
+import {bindBattleSession} from '../src/battle-session.mjs';
 for(const boss of ['kwon','clown'])for(const phase of [1,2])test(boss+' phase '+phase+' has a finite 128-step arrangement',()=>{const voices=new Set();for(let i=0;i<MUSIC_LOOP;i++)for(const n of score(boss,phase,i)){voices.add(n.voice);assert.ok(Number.isFinite(n.f)&&n.f>0);assert.ok(n.vol>0&&n.vol<=.15);assert.ok(n.dur>0&&n.at>=0&&n.at<30/musicTempo(boss,phase));}for(const v of boss==='kwon'?['piano','violin']:['kick','snare','tom','cymbal','trumpet','trombone','voice'])assert.ok(voices.has(v));assert.deepEqual(score(boss,phase,0),score(boss,phase,128));});
 test('second phase changes orchestration as well as tempo',()=>{assert.ok(musicTempo('kwon',2)>musicTempo('kwon',1));assert.ok(musicTempo('clown',2)>musicTempo('clown',1));for(const boss of ['kwon','clown'])assert.notDeepEqual(score(boss,1,0),score(boss,2,0));});
 test('unknown bosses and invalid clocks do not create notes',()=>{assert.deepEqual(score('unknown',1,0),[]);assert.deepEqual(score('kwon',1,NaN),[]);});
-function fixture(){const els={'boss-hud':{hidden:false},'pause-screen':{hidden:true},result:{hidden:true},menu:{hidden:true},'phase-label':{textContent:'첫 번째 단계'},'boss-action':{textContent:''},'boss-fill':{parentElement:{getAttribute:()=>100}}};return {els,doc:{hidden:false,getElementById:id=>els[id]}};}
+function fixture(){const els={'boss-hud':{hidden:false},'pause-screen':{hidden:true},result:{hidden:true},menu:{hidden:true},'phase-label':{textContent:'첫 번째 단계'},'boss-action':{textContent:''},'boss-fill':{parentElement:{getAttribute:()=>100}}};return {els,doc:{hidden:false,getElementById:id=>els[id]??null}};}
 test('menu pause result and focus loss stop music selection',()=>{const {doc,els}=fixture();assert.deepEqual(musicState(doc),{boss:'kwon',phase:1,busy:false});for(const id of ['menu','pause-screen','result']){els[id].hidden=false;assert.equal(musicState(doc),null);els[id].hidden=true;}assert.equal(musicState(doc,false),null);doc.hidden=true;assert.equal(musicState(doc),null);});
 test('clown selection detects phase two and suppresses extra laugh during bomb patterns',()=>{const f=fixture(),child=fixture();f.els['clown-battle']={open:true,firstElementChild:{shadowRoot:child.doc}};child.els['phase-label'].textContent='끝나지 않는 앙코르';child.els['boss-action'].textContent='삼중 웃음 폭탄';assert.deepEqual(musicState(f.doc),{boss:'clown',phase:2,busy:true});});
 function audioFixture(){const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}),node=()=>({connect(){},disconnect(){},start(){},stop(){}});const ctx={currentTime:0,state:'running',sampleRate:8000,destination:{},resume:()=>Promise.resolve(),close(){this.state='closed';return Promise.resolve();},createGain:()=>({...node(),gain:param()}),createDynamicsCompressor:()=>({...node(),threshold:param(),knee:param(),ratio:param()}),createBiquadFilter:()=>({...node(),frequency:param(),Q:param()}),createBuffer:(c,n)=>({getChannelData:()=>new Float32Array(n)}),createOscillator:()=>({...node(),frequency:param(),detune:param()}),createBufferSource:()=>({...node()}),decodeAudioData:()=>Promise.resolve({duration:1})};return ctx;}
@@ -14,3 +15,21 @@ test('audio unavailable is safe',()=>{const m=createBossMusic(()=>null);assert.e
 test('returning from a large clock jump does not burst unlimited notes',()=>{const ctx=audioFixture(),m=createBossMusic(()=>ctx);m.unlock();m.update({boss:'kwon',phase:2});ctx.currentTime=10000;m.update({boss:'kwon',phase:2});assert.ok(m.activeVoices<=96);m.dispose();});
 
 test('dice battle soundtrack follows the actual phase in its shadow HUD',()=>{const host=fixture(),inner=fixture();host.els['dice-battle']={open:true,firstElementChild:{shadowRoot:inner.doc}};inner.els['phase-label'].textContent='두 번째 단계 · 카지노의 심판';assert.deepEqual(musicState(host.doc),{boss:'dice',phase:2,busy:false});inner.els['pause-screen'].hidden=false;assert.equal(musicState(host.doc),null);});
+
+
+test('real DOM null returns cannot classify the first boss as dice',()=>{
+ const {doc}=fixture();
+ assert.equal(doc.getElementById('dice-battle'),null);
+ assert.equal(doc.getElementById('clown-battle'),null);
+ assert.deepEqual(musicState(doc),{boss:'kwon',phase:1,busy:false});
+});
+
+test('live battle session still selects sword BGM without any boss dialog',()=>{
+ const {doc}=fixture(),game={status:'playing',player:{hp:100},boss:{hp:900,phase:2}};
+ const release=bindBattleSession(doc,()=>({game,active:true}));
+ try {
+  assert.deepEqual(musicState(doc),{boss:'kwon',phase:2,busy:false});
+  game.boss.phase=1;
+  assert.deepEqual(musicState(doc),{boss:'kwon',phase:1,busy:false});
+ } finally {release();}
+});
