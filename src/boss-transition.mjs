@@ -62,7 +62,7 @@ export function installBossTransition(){
  }
  function start(victory,ticket=null){if(active||disposed||(victory&&!gate.valid(ticket,!result.hidden)))return false;transitionTicket=ticket;submitted=false;fromVictory=victory;active=true;time=0;last=0;stage='';back.hidden=true;choice.hidden=true;note.textContent='다음 공연이 시작됩니다.';let saved=null;if(victory){try{const v=JSON.parse(sessionStorage.getItem(STORAGE)||'null');if(v?.bossId==='clown'&&v.unlocked)saved=v.weapon;}catch(e){saved=null;}}pick(chooseWeapon(menu.querySelector('.weapon.selected')?.dataset.weapon,saved));try{dialog.showModal();if(victory)nameBinding=bindBossName(document.getElementById('boss-hud'),true,dialog);}catch(e){active=false;if(dialog.open)dialog.close();console.error(e);return false;}if(victory)result.hidden=true;frameId=requestAnimationFrame(frame);return true;}
  function check(){if(active||disposed)return;const ticket=gate.automatic(!result.hidden);if(ticket&&!start(true,ticket))gate.end(ticket);}
- const observer=new MutationObserver(check);observer.observe(result,{attributes:true,attributeFilter:['hidden']});
+ result.addEventListener('oibung:result-ready',check);
  const preview=document.createElement('button');preview.type='button';preview.textContent='보스 전환 연출 미리보기';preview.style.marginTop='10px';preview.onclick=()=>start(false);menu.querySelector('.menu-panel').appendChild(preview);check();
- return {start:()=>start(false),dispose(){disposed=true;observer.disconnect();close();removeEventListener('pointerdown',unlock);preview.remove();dialog.remove();}};
+ return {start:()=>start(false),dispose(){disposed=true;result.removeEventListener('oibung:result-ready',check);close();removeEventListener('pointerdown',unlock);preview.remove();dialog.remove();}};
 }

@@ -10,6 +10,9 @@ import {createAudio} from './audio.mjs';
 import {bindBossName} from './boss-ui-chain.mjs';
 import {createSkillFx} from './skill-fx.mjs';
 import {createSkillAudio} from './skill-audio.mjs';
+import {bindBattleSession} from './battle-session.mjs';
+import {cameraMovement} from './battle-input.mjs';
+import {createBattleCleanup} from './runtime/battle-cleanup.mjs';
 export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}={}){
  if(document.getElementById('clown-battle'))return;weapon=selectedWeapon(weapon);
  const source=document.getElementById('arena'),originalBoss=document.getElementById('boss-hud');if(!source||!originalBoss)throw new Error('Missing original game UI');
@@ -40,7 +43,7 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  function notice(text){$('notice').textContent=text;$('notice').classList.add('visible');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice')?.classList.remove('visible'),1800);}
  function floatText(text,x,y,z,player=false){screen.set(x,y,z).project(camera);if(Math.abs(screen.z)>1)return;const el=document.createElement('span');el.className='damage-number'+(player?' player':'');el.textContent=text;el.style.left=(screen.x*.5+.5)*canvas.clientWidth+'px';el.style.top=(-screen.y*.5+.5)*canvas.clientHeight+'px';$('damage-layer').appendChild(el);setTimeout(()=>el.remove(),850);}
  function reset(){winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearMap(bombs);clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,12,33);aim.set(0,CLOWN_CAMERA.target,5);yaw=Math.PI;canvas.focus();}
- function input(){let x=(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+stick.x,z=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)+stick.z;const n=Math.max(1,Math.hypot(x,z)),s=Math.sin(yaw),c=Math.cos(yaw);x/=n;z/=n;return {x:s*z-c*x,z:c*z+s*x,lock};}
+ function input(){return cameraMovement(keys,stick,yaw,lock);}
  function request(type){if(!ready||paused||g.status!=='playing')return;if(type==='lock'){lock=!lock;return;}soundState();const p=g.player,b=g.boss,v=input();if(!p.action){if(lock||Math.hypot(b.x-p.x,b.z-p.z)<7)p.yaw=Math.atan2(b.x-p.x,b.z-p.z);else if(!v.x&&!v.z)p.yaw=yaw;}if(type==='skill'){act(g,type);return;}queued={type,until:performance.now()+250};}
  function toggle(){if(g.status!=='playing')return;paused=!paused;keys.clear();stick.x=stick.z=0;$('pause-screen').hidden=!paused;$('pause').textContent=paused?'전투 계속':'일시정지';if(paused)$('resume').focus();else canvas.focus();}
  d.addEventListener('keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();if(!ready)close();else toggle();return;}if(e.code==='KeyQ'){if(!e.repeat)request('lock');return;}const a={KeyJ:'light',KeyL:'skill',Space:'roll',KeyE:'heal'}[e.code];if(a){e.preventDefault();if(!e.repeat)request(a);}else keys.add(e.code);});d.addEventListener('keyup',e=>{e.stopPropagation();keys.delete(e.code);});d.addEventListener('cancel',e=>{e.preventDefault();toggle();});
@@ -50,7 +53,19 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  const pauseOnBlur=()=>{if(!paused&&g.status==='playing')toggle();};window.addEventListener('blur',pauseOnBlur);const visibility=()=>{if(document.hidden)pauseOnBlur();};document.addEventListener('visibilitychange',visibility);
  $('pause').onclick=toggle;$('resume').onclick=toggle;$('quit').onclick=close;$('retry').onclick=()=>{soundState();reset();};$('change').onclick=close;
  base.onerror=()=>{shell.style.visibility='';notice('기본 UI 스타일을 불러오지 못했습니다. Esc로 돌아가 새로고침해 주세요.');};
- function close(){if(closed)return;closed=true;winBinding?.restore();cancelAnimationFrame(raf);clearTimeout(noticeTimer);window.removeEventListener('blur',pauseOnBlur);document.removeEventListener('visibilitychange',visibility);audio.setEnabled(false);skillAudio.setEnabled(false);for(const c of contexts)c.close?.();clearMap(zones);clearMap(bombs);clearMap(shots);disposeScene(scene);confettiGeo.dispose();smokeGeo.dispose();bloodGeo.dispose();starGeo.dispose();for(const m of mats)m.dispose();renderer.dispose();d.close();d.remove();onClose({weapon,status:g.status,practice});}
+ function close(){return cleanupClose();}
+ const cleanupClose=createBattleCleanup(()=>[
+  ['Stop clown battle',()=>{closed=true;unbindSession();base.onload=base.onerror=null;winBinding?.restore();cancelAnimationFrame(raf);clearTimeout(noticeTimer);window.removeEventListener('blur',pauseOnBlur);document.removeEventListener('visibilitychange',visibility);}],
+  ['Clown effects',()=>fx.dispose()],
+  ['Clown audio',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);}],
+  ...contexts.map((context,i)=>['Clown audio context '+i,()=>context.close?.()]),
+  ['Clown transient meshes',()=>{clearMap(zones);clearMap(bombs);clearMap(shots);}],
+  ['Clown scene',()=>disposeScene(scene)],
+  ['Clown particles',()=>{confettiGeo.dispose();smokeGeo.dispose();bloodGeo.dispose();starGeo.dispose();for(const m of mats)m.dispose();}],
+  ['Clown renderer',()=>renderer.dispose()],
+  ['Clown dialog',()=>{d.close();d.remove();}],
+  ['Clown close callback',()=>onClose({weapon,status:g.status,practice})]
+ ]);
  function zoneMesh(z){const material=new THREE.MeshBasicMaterial({color:z.kind==='push'?0x4da6ff:z.visual?0xffc34a:0xff3929,transparent:true,opacity:.2,depthTest:false,depthWrite:false,side:THREE.DoubleSide});let geo;if(z.shape==='lane')geo=new THREE.BoxGeometry(z.w,.02,z.len).translate(0,0,z.len/2);else if(z.shape==='cone'){const s=new THREE.Shape();s.moveTo(0,0);for(let i=0;i<=40;i++){const a=-z.half+z.half*2*i/40;s.lineTo(Math.sin(a)*z.r,Math.cos(a)*z.r);}s.lineTo(0,0);geo=new THREE.ShapeGeometry(s).rotateX(Math.PI/2);}else geo=new THREE.CircleGeometry(z.r,48).rotateX(-Math.PI/2);const m=new THREE.Mesh(geo,material);m.renderOrder=100;scene.add(m);return m;}
  function bar(id,value,max){$(id).style.transform='scaleX('+Math.max(0,value/max)+')';$(id).parentElement.setAttribute('aria-valuenow',String(Math.ceil(value)));$(id).parentElement.setAttribute('aria-valuemax',String(max));}
  function sync(dt){
@@ -67,8 +82,8 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  }
  function frame(now){if(closed)return;const dt=Math.min(.05,(now-last)/1000);last=now;if(ready&&!paused&&g.status==='playing'){const v=input();if(queued){if(now>queued.until)queued=null;else if(!g.player.action&&act(g,queued.type)){if(queued.type==='roll'&&!v.x&&!v.z)g.player.action.yaw=g.player.yaw+Math.PI;queued=null;}}for(let left=dt;left>1e-6;){const h=Math.min(left,1/60);stepClown(g,h,v);left-=h;}}events();const h=ready&&!paused?dt:0;g.clown.flash=Math.max(0,(g.clown.flash||0)-h);for(let i=particles.length-1;i>=0;i--){const o=particles[i];o.life-=h;o.vy-=9*h;o.m.position.x+=o.vx*h;o.m.position.y+=o.vy*h;o.m.position.z+=o.vz*h;o.m.rotation.x+=h*4;if(o.life<=0){scene.remove(o.m);particles.splice(i,1);}}sync(h);fx.update(h,g);
   if(g.status==='won'){if(winAt===null){winAt=now;winBinding=bindBossName($('boss-hud'));}winBinding?.update(clamp((now-winAt)/900,0,1),clamp((now-winAt-900)/900,0,1));}
-  if(g.status!=='playing'&&$('result').hidden&&(g.status!=='won'||now-winAt>=1800)){$('result').hidden=false;$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'광대 오슬우 토벌':'쓰러졌습니다';$('result-text').textContent=g.status==='won'?'끝나지 않던 공연이 마침내 끝났습니다.':'광대전부터 다시 도전할 수 있습니다.';$('result-stats').textContent='적중 '+g.stats.hits+'회 · 회피 '+g.stats.dodges+'회 · '+g.time.toFixed(1)+'초';$('retry').focus();if(g.status==='won'&&!practice){try{sessionStorage.setItem('oibung.clown.clear','1');}catch(e){}}}
+  if(g.status!=='playing'&&$('result').hidden&&(g.status!=='won'||now-winAt>=1800)){$('result').hidden=false;$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'광대 오슬우 토벌':'쓰러졌습니다';$('result-text').textContent=g.status==='won'?'끝나지 않던 공연이 마침내 끝났습니다.':'광대전부터 다시 도전할 수 있습니다.';$('result-stats').textContent='적중 '+g.stats.hits+'회 · 회피 '+g.stats.dodges+'회 · '+g.time.toFixed(1)+'초';$('retry').focus();if(g.status==='won'&&!practice){try{sessionStorage.setItem('oibung.clown.clear','1');}catch(e){}}$('result').dispatchEvent(new Event('oibung:result-ready'));}
   const w=canvas.clientWidth||innerWidth,hc=canvas.clientHeight||innerHeight;if(w!==width||hc!==height){width=w;height=hc;renderer.setSize(w,hc,false);camera.aspect=w/hc;camera.updateProjectionMatrix();}renderer.render(scene,camera);raf=requestAnimationFrame(frame);
  }
- reset();raf=requestAnimationFrame(frame);return {close};
+ reset();const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!paused&&g.status==='playing'}));raf=requestAnimationFrame(frame);return {close};
 }

@@ -4,7 +4,7 @@ const installed=new WeakMap();
 export function installClownEntry(doc=globalThis.document,win=globalThis.window,{loadBattle=()=>import('./clown-battle.mjs'),restoreName=restoreBossName,setCovered=setTransitionCovered}={}){
  if(!doc||!win)return null;
  if(installed.has(doc))return installed.get(doc);
- let disposed=false,running=false,serial=0,view=null,restoreCurrent=null;
+ let disposed=false,running=false,serial=0,view=null,restoreCurrent=null,completion=null;
  async function enter(event){
   if(disposed||running)return false;
   const outer=doc.getElementById('boss-transition'),data=event?.detail;
@@ -27,6 +27,6 @@ export function installClownEntry(doc=globalThis.document,win=globalThis.window,
    view=battle;setCovered(true);outer.style.visibility='hidden';if(label)label.textContent='광대전 진행 중';return true;
   }catch(error){console.error('Clown entry failed',error);restore();if(outer.isConnected&&outer.open&&label)label.textContent='광대전 로딩 실패. 다시 시도해 주세요.';return false;}
  }
- const control={enter,dispose(){if(disposed)return;disposed=true;win.removeEventListener('oibung:clown-weapon-selected',enter);try{view?.close?.();}catch(error){console.error('Clown entry cleanup failed',error);}restoreCurrent?.();serial++;running=false;view=null;installed.delete(doc);}};
+ const control={enter,dispose(){if(completion)return completion;disposed=true;win.removeEventListener('oibung:clown-weapon-selected',enter);let pending;try{pending=view?.close?.();}catch(error){pending=Promise.reject(error);}restoreCurrent?.();serial++;running=false;view=null;installed.delete(doc);completion=Promise.resolve(pending);return completion;}};
  installed.set(doc,control);win.addEventListener('oibung:clown-weapon-selected',enter);return control;
 }

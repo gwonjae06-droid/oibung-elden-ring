@@ -19,7 +19,8 @@ test('every element id used by arena.mjs exists in spider-combat.html',()=>{
 });
 test('arena.mjs only imports three and its own local modules',()=>{
   const specs=[...arena.matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
-  assert.deepEqual(specs,['./audio.mjs','./boss-face.mjs','./combat.mjs','./face.mjs','./models.mjs','three']);
+  assert.ok(specs.includes('three'));
+  for(const spec of specs.filter(s=>s!=='three')){assert.ok(spec.startsWith('./'),spec);assert.ok(existsSync(join(root,'src',spec)),spec+' is missing');}
   for(const f of ['combat','audio','boss-face','face','models','model-data'])assert.ok(existsSync(join(root,'src/'+f+'.mjs')),f+'.mjs is missing');
 });
 test('names imported from local modules are exported by those modules',()=>{

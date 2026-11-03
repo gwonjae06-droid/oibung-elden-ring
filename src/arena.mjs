@@ -5,6 +5,7 @@ import {BOSS_FACE} from './boss-face.mjs';
 import {faceSize,bladeSize,drawFace,drawBlade} from './face.mjs';
 import {buildPlayer,buildBoss,poseLegs,posePlayer,swayCape} from './models.mjs';
 import {createArenaRuntime} from './runtime/arena-runtime.mjs';
+import {bindBattleSession} from './battle-session.mjs';
 const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a)),fmt=n=>Math.round(n).toLocaleString('ko-KR');
 const WEAPON_KEYS=['sword','hammer','bow','cards'],reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches,coarse=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window),canvas=$('world');
 const cache={};
@@ -15,15 +16,17 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMa
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
 const camera=new THREE.PerspectiveCamera(58,1,.1,120);scene.add(new THREE.HemisphereLight(0xbac6b4,0x1b221b,1.05));
 // Arena lifecycle bindings.
-let stoppedAt=null,skinImage=null,resetStick=()=>{};
+let stoppedAt=null,skinImage=null,resetStick=()=>{},unbindSession=()=>{};
 function stopArena(){
   if(stoppedAt!==null)return;
   stoppedAt=performance.now();keys.clear();stick.x=stick.y=0;queued=null;dragging=false;resetStick();pauseGame();audio.ambience(false);
 }
 function disposeArena(){
+  unbindSession();
   for(const cleanup of [()=>clearFx(),()=>audio.setEnabled(false),()=>skillAudio?.setEnabled(false),()=>{if(skinImage)skinImage.onload=skinImage.onerror=null;skinImage=null;},()=>{mode='disposed';setUi();$('start').disabled=true;$('hit-flash').classList.remove('visible');$('notice').classList.remove('visible');$('reticle').hidden=true;}]){
     try{cleanup();}catch(error){console.error('Arena cleanup failed',error);}
   }
+  return skillFx?.dispose();
 }
 export const arenaRuntime=createArenaRuntime({win:window,scene,renderer,update:now=>frame(now),onStart:()=>{last=performance.now();if(stoppedAt!==null&&mode==='ending')endAt+=last-stoppedAt;stoppedAt=null;},onStop:stopArena,onDispose:disposeArena});
 const listen=(target,type,fn,options)=>arenaRuntime.listen(target,type,event=>{if(arenaRuntime.running||type==='resize'||type==='visibilitychange'||type==='blur')fn(event);},options);
@@ -74,7 +77,7 @@ function startBattle(weapon){game=createGame(weapon);selectedWeapon=weapon;setWe
 function backToMenu(){mode='menu';queued=null;clearFx();audio.ambience(false);game=createGame(selectedWeapon);setWeaponVisual();setUi();vis.px=game.player.x;vis.pz=game.player.z;$('start').focus();}
 function pauseGame(){if(mode==='playing'){mode='paused';keys.clear();stick.x=stick.y=0;audio.ambience(false);setUi();$('resume').focus();}}
 function resumeGame(){if(mode==='paused'){mode='playing';audio.ambience(true);setUi();canvas.focus({preventScroll:true});}}
-function showResult(){const won=game.status==='won';mode='result';audio.ambience(false);setText('result-kicker',won?'승리':'패배');setText('result-title',won?'이권재 격파':'쓰러졌습니다');setText('result-text',won?'긴턱이 땅에 내려앉았습니다. 오슬우의 첫 번째 시련이 끝났습니다.':'긴턱이 지나간 자리에 다시 기회가 남아 있습니다.');const s=game.stats;setText('result-stats','적중 '+s.hits+'회 · 회피 '+s.dodges+'회 · 누적 피해 '+fmt(s.damage)+' · '+game.time.toFixed(1)+'초');setUi();$('retry').focus();}
+function showResult(){const won=game.status==='won';mode='result';audio.ambience(false);setText('result-kicker',won?'승리':'패배');setText('result-title',won?'이권재 격파':'쓰러졌습니다');setText('result-text',won?'긴턱이 땅에 내려앉았습니다. 오슬우의 첫 번째 시련이 끝났습니다.':'긴턱이 지나간 자리에 다시 기회가 남아 있습니다.');const s=game.stats;setText('result-stats','적중 '+s.hits+'회 · 회피 '+s.dodges+'회 · 누적 피해 '+fmt(s.damage)+' · '+game.time.toFixed(1)+'초');setUi();$('retry').focus();$('result').dispatchEvent(new Event('oibung:result-ready'));}
 function camBasis(){const sx=Math.sin(view.yaw),cz=Math.cos(view.yaw);return {fx:sx,fz:cz,rx:-cz,rz:sx};}
 function readInput(){let sx=0,sy=0;if(keys.has('KeyW')||keys.has('ArrowUp'))sy+=1;if(keys.has('KeyS')||keys.has('ArrowDown'))sy-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))sx+=1;if(keys.has('KeyA')||keys.has('ArrowLeft'))sx-=1;sx+=stick.x;sy+=stick.y;const m=Math.hypot(sx,sy);if(m>1){sx/=m;sy/=m;}const b=camBasis();return {x:b.fx*sy+b.rx*sx,z:b.fz*sy+b.rz*sx,lock};}
 function prepareAim(input){const p=game.player,b=game.boss;if(p.action)return;const d=Math.hypot(b.x-p.x,b.z-p.z),toB=Math.atan2(b.x-p.x,b.z-p.z);if(lock||d<7)p.yaw=toB;else if(!(input.x||input.z))p.yaw=view.yaw;}
@@ -110,4 +113,4 @@ function updateHud(){const p=game.player,b=game.boss;setBar('hp-fill',p.hp/p.max
 let last=performance.now();
 function frame(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;vis.time+=dt;if(mode==='playing'){const input=readInput();tryQueued(input);let left=dt;while(left>1e-6){const h=Math.min(left,1/60);step(game,h,input);left-=h;}if(game.status!=='playing'){mode='ending';endAt=now+1200;setUi();}}else if(mode==='ending'&&now>=endAt)showResult();handleEvents();syncPlayer(dt);syncBoss(dt);syncProjectiles(dt);updateBursts(dt);stance?.update(game.boss);effects?.update(mode==='paused'?0:dt,game);skillFx?.update(mode==='paused'?0:dt,game);updateCamera(dt);updateHud();renderer.render(scene,camera);}
 function resize(){const w=canvas.clientWidth||innerWidth,h=canvas.clientHeight||innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-listen(window,'resize',resize);resize();setWeaponVisual();setUi();$('start').disabled=false;$('start').textContent='전투 시작';$('load-status').textContent='준비 완료. 시작 무기를 고른 뒤 전투를 시작하세요.';arenaRuntime.start();
+unbindSession=bindBattleSession(document,()=>({game,active:mode==='playing'}));listen(window,'resize',resize);resize();setWeaponVisual();setUi();$('start').disabled=false;$('start').textContent='전투 시작';$('load-status').textContent='준비 완료. 시작 무기를 고른 뒤 전투를 시작하세요.';arenaRuntime.start();

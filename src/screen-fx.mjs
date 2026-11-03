@@ -1,5 +1,6 @@
 import {hpRatio,lowHealthLevel,heartbeat,healGain,healFade} from './screen-fx-data.mjs';
 import {createFrameLoop} from './runtime/frame-loop.mjs';
+import {readBattleSession} from './battle-session.mjs';
 const installed=new WeakMap();
 export function installScreenFx(doc=globalThis.document,win=globalThis.window,{raf=cb=>win.requestAnimationFrame(cb),caf=id=>win.cancelAnimationFrame(id),now=()=>win.performance.now()}={}){
  if(!doc||!win)return null;if(installed.has(doc))return installed.get(doc);
@@ -12,9 +13,9 @@ export function installScreenFx(doc=globalThis.document,win=globalThis.window,{r
   const visited=new Set(),reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   for(const root of roots()){
    const hpEl=root.getElementById('hp-value'),vig=root.getElementById('vignette');if(!hpEl||!vig)continue;
-   visited.add(vig);owned.add(vig);const hp=parseFloat(hpEl.textContent),meter=hpEl.parentElement?.querySelector?.('.meter'),max=Number(meter?.getAttribute('aria-valuemax'))||120;
+   visited.add(vig);owned.add(vig);const session=readBattleSession(root),player=session?.game?.player,meter=hpEl.parentElement?.querySelector?.('.meter'),hp=player?player.hp:parseFloat(hpEl.textContent),max=player?player.maxHp:Number(meter?.getAttribute('aria-valuemax'))||120;
    const state=states.get(vig)||{prev:hp,heal:-1e9,active:false};
-   if(!Number.isFinite(hp)||!active(root)){state.prev=hp;state.heal=-1e9;state.active=false;states.set(vig,state);clear(vig);continue;}
+   if(!Number.isFinite(hp)||!(session?session.active:active(root))){state.prev=hp;state.heal=-1e9;state.active=false;states.set(vig,state);clear(vig);continue;}
    if(state.active&&healGain(state.prev,hp,max))state.heal=clock;
    state.prev=hp;state.active=true;states.set(vig,state);
    const level=lowHealthLevel(hpRatio(hp,max)),heal=healFade(state.heal,clock);

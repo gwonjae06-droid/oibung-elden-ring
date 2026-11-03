@@ -1,6 +1,8 @@
 import {restoreBossName} from './boss-ui-chain.mjs';
 import {playBossIntro} from './boss-intro.mjs';
 import {createDisposerScope} from './runtime/disposer.mjs';
+import {readBattleSession} from './battle-session.mjs';
+import {settleCleanup,combineCleanupReports} from './runtime/cleanup-completion.mjs';
 export const SECRET_BOSSES=Object.freeze([{id:'kwon',name:'긴턱의 이권재'},{id:'clown',name:'광대 오슬우'},{id:'dice',name:'거대 주사위 박성원'}].map(Object.freeze));
 export const CLEAN_UI_CSS=`
 #arena[data-clean-ui] #damage-layer,#arena[data-clean-ui] #boss-action,#arena[data-clean-ui] .brand>div>span,#arena[data-clean-ui] #load-status[data-ready-hidden]{display:none!important}
@@ -14,7 +16,7 @@ export const CLEAN_UI_CSS=`
 .boss-secret{position:fixed;inset:0;margin:auto;width:min(360px,86vw);max-height:80dvh;padding:24px;border:1px solid #ae925b;border-radius:10px;background:#19151c;color:#f5e8ce;text-align:center}.boss-secret::backdrop{background:#0009}.boss-secret button{display:block;width:100%;margin:10px 0;padding:12px;color:inherit;background:#352831;border:1px solid #937b53;border-radius:5px}.boss-secret button:disabled{opacity:.5}.boss-secret h2{margin:0 0 16px}.boss-secret p{font-size:13px}
 `;
 export function compactLabel(id,text){return {retry:'재도전',change:'무기 변경',quit:'무기 선택',resume:'계속'}[id]||(id==='pause'&&text==='전투 계속'?'계속':text);}
-export function readWeapon(root,doc){const names={검:'sword',망치:'hammer',활:'bow',카드:'cards'},label=root.getElementById('weapon-label')?.textContent?.trim();return names[label]||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';}
+export function readWeapon(root,doc){const weapon=readBattleSession(root)?.game?.weapon;if(weapon)return weapon;const names={검:'sword',망치:'hammer',활:'bow',카드:'cards'},label=root.getElementById('weapon-label')?.textContent?.trim();return names[label]||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';}
 export function combatActive(root){const get=id=>root.getElementById(id),hud=get('boss-hud');return Boolean(hud&&!hud.hidden&&get('arena')?.style.visibility!=='hidden'&&['menu','pause-screen','result'].every(id=>!get(id)||get(id).hidden));}
 export function pauseForChooser(root){const p=root.getElementById('pause');if(!combatActive(root)||!p||p.disabled)return ()=>{};p.click();return ()=>{if(root.getElementById('pause-screen')?.hidden===false)root.getElementById('resume')?.click();};}
 export function closeDiceBattle(doc){const modal=doc.getElementById('dice-battle');if(!modal)return;const root=modal.firstElementChild?.shadowRoot,exit=root?.querySelector?.('[data-dice-exit]')||Array.from(root?.querySelectorAll?.('button')||[]).find(b=>b.textContent?.trim()==='광대전 결과로');if(!exit)throw Error('Dice battle exit unavailable');exit.click();if(doc.getElementById('dice-battle'))throw Error('Dice battle did not close');}
@@ -34,7 +36,7 @@ const INTRO_LINES={kwon:'틈을 읽고, 대검을 피해 파고드세요.',clown
 export function installGameUi(doc=globalThis.document,win=globalThis.window,{loadScreenFx=()=>import('./screen-fx.mjs'),playIntro=playBossIntro,loadClown=()=>import('./clown-battle.mjs'),loadDice=()=>import('./dice-battle.mjs')}={}){
  if(!doc||!win)return null;if(installations.has(doc))return installations.get(doc);
  const safe=fn=>{try{return fn();}catch(error){console.warn('Game UI cleanup failed',error);}},scope=createDisposerScope(error=>console.warn('Game UI cleanup failed',error)),roots=new Map(),seen=new Set(),battles=new Set(),noisy=new Set(['hp-value','stamina-value','boss-value','skill-text','skill-name','weapon-label','flasks','phase-label','boss-action','notice','damage-layer']);
- let closing=false,navigating=false,rafId=null,screenFx=null;const alive=()=>!closing&&!scope.disposed;
+ let closing=false,navigating=false,rafId=null,screenFx=null,completion=null;const alive=()=>!closing&&!scope.disposed;
  const text=(el,value)=>{if(el&&el.textContent!==value)el.textContent=value;};
  function schedule(){if(!alive()||rafId!==null)return;rafId=win.requestAnimationFrame(()=>{rafId=null;if(alive())apply();});}
  function attr(entry,el,key,value){if(!el)return;let keys=entry.attrs.get(el);if(!keys){keys=new Set();entry.attrs.set(el,keys);}if(!keys.has(key)){keys.add(key);const old=el.getAttribute(key);entry.scope.add(()=>{if(old===null)el.removeAttribute(key);else el.setAttribute(key,old);});}if(value===null)el.removeAttribute(key);else if(el.getAttribute(key)!==value)el.setAttribute(key,value);}
@@ -74,7 +76,7 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window,{loa
   for(const [root,entry] of [...roots])if(!active.has(root)){entry.scope.dispose();entry.untrack();roots.delete(root);}for(const [root,boss] of active)polish(root,boss);
   const d=doc.getElementById('boss-transition');if(d){const button=d.querySelector('.bt-confirm'),back=d.querySelector('.bt-return'),note=d.querySelector('.bt-note');text(d.querySelector('.bt-choice h3'),'무기 선택');if(button){text(button,'서커스 입장');const hidden=d.dataset.stage!=='ready';if(button.hidden!==hidden)button.hidden=hidden;if(note&&button.parentNode!==note)note.insertBefore(button,back);}for(const status of d.querySelectorAll('.bt-selection,.bt-note>span'))if(/실패|못했|불러옵니다|로딩 중/.test(status.textContent))status.setAttribute('data-ui-status','');else status.removeAttribute('data-ui-status');}
  }
- const control={dispose(){if(!alive())return;closing=true;if(rafId!==null)safe(()=>win.cancelAnimationFrame(rafId));rafId=null;scope.dispose();roots.clear();for(const view of [...battles])safe(()=>view.close?.());battles.clear();safe(()=>screenFx?.dispose());screenFx=null;installations.delete(doc);},get disposed(){return !alive();}};
+ const control={dispose(){if(completion)return completion;let finish;completion=new Promise(resolve=>{finish=resolve;});closing=true;if(rafId!==null)safe(()=>win.cancelAnimationFrame(rafId));rafId=null;scope.dispose();roots.clear();const pending=[...battles].map(view=>settleCleanup(()=>view.close?.(),'Game UI battle'));battles.clear();pending.push(settleCleanup(()=>screenFx?.dispose(),'Game UI screen effects'));screenFx=null;installations.delete(doc);Promise.all(pending).then(reports=>finish(combineCleanupReports(reports)));return completion;},get disposed(){return !alive();}};
  const pagehide=e=>{if(!e.persisted)control.dispose();};installations.set(doc,control);scope.add(()=>win.removeEventListener?.('pagehide',pagehide,true));
  try{win.addEventListener?.('pagehide',pagehide,{capture:true});apply();}catch(error){control.dispose();throw error;}
  Promise.resolve().then(()=>alive()?loadScreenFx():null).then(module=>{if(alive()&&module)screenFx=module.installScreenFx(doc,win);}).catch(error=>{if(alive())console.error('Screen effects unavailable',error);});return control;

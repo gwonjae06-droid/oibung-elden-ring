@@ -21,8 +21,8 @@ test('hammer swings that miss do not charge the skill',()=>{const g=createGame('
 test('bow stores three piercing charges, spends one each shot and refills over time',()=>{
   const g=createGame('bow');arena(g);for(let i=0;i<3;i++){g.player.action=null;assert.ok(act(g,'skill'),String(i));}assert.equal(g.player.skill.charges,0);g.player.action=null;assert.equal(act(g,'skill'),false);
   tick(g,STANDARD_COOLDOWN+.1);assert.equal(g.player.skill.charges,1);
-  const n=createGame('bow');arena(n);act(n,'skill');tick(n,.3);assert.equal(n.projectiles.length,1);assert.equal(n.projectiles[0].piercing,true);
-  tick(n,1.5);assert.ok(1800-n.boss.hp>68*2.9);assert.equal(n.stats.hits,1);
+  const n=createGame('bow'),initialHp=n.boss.hp;arena(n);act(n,'skill');tick(n,.3);assert.equal(n.projectiles.length,1);assert.equal(n.projectiles[0].piercing,true);
+  tick(n,1.5);assert.ok(initialHp-n.boss.hp>68*2.9);assert.equal(n.stats.hits,1);
 });
 test('piercing arrow removes boss waves in its path',()=>{
   const g=createGame('bow');arena(g);g.bossShots.push({id:99,x:0,z:-1,yaw:Math.PI,speed:0,life:5,damage:30});act(g,'skill');tick(g,.45);assert.equal(g.bossShots.length,0);
@@ -36,7 +36,7 @@ test('blue card gives 50 percent faster movement for three seconds only',()=>{
   const g=createGame('cards');arena(g);g.boss.x=20;g.boss.z=-20;act(g,'skill');tick(g,3.1);const z0=g.player.z;tick(g,1,{x:0,z:-1});assert.ok(Math.abs(Math.abs(g.player.z-z0)/normal-1)<.02);
 });
 test('red card boosts only the next attack by 50 percent',()=>{
-  const g=createGame('cards');arena(g);g.player.skill.cycle=.7;act(g,'skill');swing(g);const first=1800-g.boss.hp;g.boss.hp=1800;swing(g);const second=1800-g.boss.hp;
+  const g=createGame('cards'),initialHp=g.boss.hp;arena(g);g.player.skill.cycle=.7;act(g,'skill');swing(g);const first=initialHp-g.boss.hp;g.boss.hp=initialHp;swing(g);const second=initialHp-g.boss.hp;
   assert.ok(Math.abs(first/second-1.5)<1e-9);assert.equal(g.player.skill.nextRed,false);
 });
 test('yellow card stuns for one second once, even with a three card volley',()=>{
