@@ -27,6 +27,7 @@ test('MP3 waits for a gesture, plays once, fades and resumes from its position',
  player.update(true,.6);
  assert.equal(s.counts.created,0);
  player.unlock();
+ await Promise.resolve(); // HTMLMediaElement.play resolves asynchronously.
  assert.equal(s.counts.created,1);
  assert.equal(s.media[0].src,MENU_THEME_URL);
  assert.equal(s.media[0].loop,true);
@@ -61,7 +62,7 @@ test('MP3 waits for a gesture, plays once, fades and resumes from its position',
 
 test('mute or window blur pauses immediately, then recovers',async()=>{
  const s=setup(),p=createMenuTheme(s.win,{makeFallback:s.makeFallback});
- p.update(true,.8);p.unlock();p.update(true,.8);s.advance(300);
+ p.update(true,.8);p.unlock();await Promise.resolve();p.update(true,.8);s.advance(300);
  assert.equal(s.media[0].volume,.8);
  p.update(false,.8,{immediateStop:true});
  assert.equal(s.media[0].volume,0);
