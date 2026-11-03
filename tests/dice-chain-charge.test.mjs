@@ -15,15 +15,16 @@ test('phase one never chains a charge',()=>{
  for(let count=0;count<9;count++){const g=ready(count,1);assert.ok(!g.dice.chainCharges,'count '+count);}
 });
 
-test('phase two adds a fourth chained charge after charge, jump and frenzy',()=>{
+test('phase two adds a chained charge and a pip burst to the pattern cycle',()=>{
  assert.equal(ready(0,2).dice.state,'charge-warning');assert.ok(!ready(0,2).dice.chainCharges);
  assert.equal(ready(1,2).dice.state,'jump-warning');
  assert.equal(ready(2,2).dice.state,'frenzy-windup');
  const g=ready(3,2);
  assert.equal(g.dice.state,'charge-warning');
  assert.equal(g.dice.chainCharges,1);
- assert.equal(ready(4,2).dice.state,'charge-warning');
- assert.ok(!ready(4,2).dice.chainCharges);
+ assert.equal(ready(4,2).dice.state,'pip-warning');
+ assert.equal(ready(5,2).dice.state,'charge-warning');
+ assert.ok(!ready(5,2).dice.chainCharges);
 });
 
 test('the second charge starts where the first ended, with no recovery in between',()=>{

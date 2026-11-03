@@ -6,7 +6,7 @@ import {beginChainSweep} from '../src/dice-chain-sweep.mjs';
 import {applyDiceSlow,diceSlowFactor} from '../src/dice-slow.mjs';
 import {buildChainSweepVisuals} from '../src/dice-chain-fx.mjs';
 const photo=[0,0,-Math.SQRT1_2,Math.SQRT1_2];
-function fixture(){const g=createDiceGame();g.player.x=20;g.player.z=10;g.dice.pose={x:0,y:6,z:0,rotation:[0,0,0,1],dx:1,dz:0,angle:0};g.dice.nextFaceAttack='chain';return g;}
+function fixture(){const g=createDiceGame();g.dice.faceAttacks=true;g.player.x=20;g.player.z=10;g.dice.pose={x:0,y:6,z:0,rotation:[0,0,0,1],dx:1,dz:0,angle:0};g.dice.nextFaceAttack='chain';return g;}
 function advance(g,time,fn=stepDiceFaceAttacks){for(let left=time;left>1e-9;){const h=Math.min(.01,left);fn(g,h);left-=h;}}
 test('walk uses actual slow factor while roll retains full speed',()=>{const run=(slow,roll=false,blue=false)=>{const g=fixture();g.player.x=g.player.z=0;g.dice.pose.x=-50;g.dice.pose.z=-50;if(slow)applyDiceSlow(g.player);stepDice(g,.05,{x:1,freezeBoss:true,roll,blue});return g.player.x;};assert.ok(Math.abs(run(true)/run(false)-.6)<1e-9);assert.ok(Math.abs(run(true,true)-.5)<1e-9);assert.ok(Math.abs(run(true,false,true)-.36)<1e-9);});
 test('slow expires on engine clock even during boss freeze',()=>{const g=fixture();applyDiceSlow(g.player);advance(g,1.6,(g,h)=>stepDice(g,h,{freezeBoss:true}));assert.equal(diceSlowFactor(g.player),1);});
