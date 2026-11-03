@@ -52,6 +52,7 @@ python -m http.server 8000
 - `src/battle-pause.mjs`: 공통 일시정지·재개 명령과 이동 입력 초기화
 - `src/runtime/event-scope.mjs`: 보조 전투의 입력 리스너, DOM 콜백, 타이머 소유권 및 종료 후 실행 차단
 - `src/battle-hud.mjs`, `src/runtime/battle-styles.mjs`: 공통 HUD 게이지와 취소 가능한 스타일 준비 처리
+- `src/runtime/battle-startup.mjs`: 보조 전투 초기화 실패 시 생성한 자원의 역순 정리와 성공 시 소유권 이전
 - `src/clown-combat.mjs`, `src/clown-cartoon.mjs`: 광대 패턴과 몸짓
 - `src/clown-battle.mjs`: 광대전 화면과 수명주기
 - `src/dice-combat.mjs`, `src/dice-motion-data.mjs`: 주사위 패턴과 모션
