@@ -1,5 +1,7 @@
-import {createSkillState,consumeSkill,currentCard,skillReady,SKILLS,STANDARD_COOLDOWN} from './skills.mjs';
-import {tickPlayerResources,completePlayerHeal} from './player-tick.mjs';
+import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
+import {actPlayer,createPlayerState,tickPlayerAction,advancePlayerProjectile,rewardPlayerHit} from './player-combat.mjs';
+import {currentCard,skillReady,SKILLS,STANDARD_COOLDOWN} from './skills.mjs';
+import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
@@ -9,12 +11,7 @@ export const BOSS_SCALE=1.4;
 export const CINEMATIC=5.2;
 export const HUG_RANGE=3.3;
 export const HUG_TIME=2.2;
-export const WEAPONS = {
-  sword:{name:'검',damage:72,cost:18,wind:.17,active:.14,end:.32,range:3.5,poise:24},
-  hammer:{name:'망치',damage:114,cost:27,wind:.43,active:.18,end:.52,range:3.7,poise:62},
-  bow:{name:'활',damage:68,cost:17,wind:.30,active:.08,end:.28,range:38,poise:13,projectile:true},
-  cards:{name:'카드',damage:27,cost:22,wind:.23,active:.10,end:.33,range:30,poise:9,projectile:true}
-};
+export const WEAPONS = PLAYER_WEAPONS;
 export const PATTERNS = {
   sweep:{name:'왕검 횡단',wind:.48,active:.22,recover:.95,damage:25},
   reverse:{name:'역린 참격',wind:.24,active:.22,recover:1.05,damage:28},
@@ -56,15 +53,8 @@ export function attackZone(b){
  return null;
 }
 export function inZone(z,p){return Math.hypot(p.x-z.x,p.z-z.z)<z.r&&(z.shape==='circle'||Math.abs(angleDelta(z.yaw,toward(z,p)))<z.half);}
-export function createGame(weapon='sword'){if(!WEAPONS[weapon])throw new Error('Unknown weapon');return registerEncounter({status:'playing',time:0,hitstop:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,player:{x:0,z:13,yaw:Math.PI,hp:120,maxHp:120,stamina:100,regen:0,action:null,invuln:0,potions:3,skill:createSkillState()},boss:{x:0,z:-4,yaw:0,hp:2100,maxHp:2100,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1,queue:[],lastOpening:null,recovery:0,punishable:false,leapSpeed:0,aim:0,pressure:0,stun:0,hug:0,from:null,zone:null,turnTarget:0},stats:{hits:0,dodges:0,damage:0}});}
-export function act(g,type){
- const p=g.player,w=WEAPONS[g.weapon],s=p.skill;if(g.status!=='playing'||p.action||g.boss.state==='transition')return false;
- if(type==='heal'){if(!p.potions||p.hp>=p.maxHp)return false;p.potions--;p.action={kind:'heal',t:0,total:1.05,done:false};emit(g,'heal-start');return true;}
- if(type==='roll'){if(p.stamina<25)return false;p.stamina-=25;p.regen=.85;p.action={kind:'roll',t:0,total:.52,yaw:p.yaw};emit(g,'roll');return true;}
- if(type==='skill'){const flavor=consumeSkill(s,g.weapon);if(!flavor)return false;emit(g,'skill-cast',{flavor});if(g.weapon==='hammer'||g.weapon==='bow'){const hammer=g.weapon==='hammer';p.action={kind:'skill',t:0,wind:hammer?.5:.3,active:.12,total:hammer?.95:.65,yaw:p.yaw,done:false,hit:false,basic:false,mult:hammer?SKILLS.hammer.multiplier:SKILLS.bow.multiplier,skill:true};}return true;}
- if(type!=='light'||p.stamina<w.cost)return false;p.stamina-=w.cost;p.regen=.85;const rate=s.haste>0?SKILLS.sword.rate:1,wind=w.wind/rate,active=w.active/rate,end=w.end/rate;
- p.action={kind:'attack',t:0,total:wind+active+end,wind,active,yaw:p.yaw,done:false,hit:false,basic:true,mult:s.nextRed?SKILLS.cards.redDamage:1,stun:s.nextYellow,stunUsed:false,credited:false};s.nextRed=false;s.nextYellow=false;emit(g,'attack-start');return true;
-}
+export function createGame(weapon='sword'){if(!WEAPONS[weapon])throw new Error('Unknown weapon');return registerEncounter({status:'playing',time:0,hitstop:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,player:createPlayerState(),boss:{x:0,z:-4,yaw:0,hp:2100,maxHp:2100,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1,queue:[],lastOpening:null,recovery:0,punishable:false,leapSpeed:0,aim:0,pressure:0,stun:0,hug:0,from:null,zone:null,turnTarget:0},stats:{hits:0,dodges:0,damage:0}});}
+export function act(g,type){return actPlayer(g,type);}
 export function rolling(p){return p.action?.kind==='roll'&&p.action.t>=.075&&p.action.t<=.35;}
 function poseParams(pattern,stand,carry,cut){let ly=0,ey=0,lp=carry,ep=cut,back=0;switch(pattern){case 'sweep':ly=1.3;ey=-1.3;lp=cut;break;case 'reverse':ly=-1.35;ey=1.35;lp=cut;break;case 'cross':ly=1.15;ey=-1.2;lp=-.75;ep=.85;break;case 'thrust':case 'jab':lp=ep=mix(.18,.68,stand);back=pattern==='jab'?1:1.4;break;case 'slam':lp=-1.15;ep=mix(.4,1.03,stand);break;case 'stomp':lp=-1.2;ep=mix(.5,1.05,stand);break;case 'backsweep':ly=-1.5;ey=1.5;lp=ep=cut;break;case 'shove':lp=ep=mix(.3,.6,stand);back=.9;break;case 'leap':lp=-1;ep=.45;break;case 'whirl':ly=ey=1.32;lp=ep=cut;break;case 'rise':lp=1.05;ep=-.8;ey=.3;break;case 'rush':ly=1.5;ey=-1.45;lp=cut;break;case 'retreat':ly=ey=-1.25;lp=ep=.15;break;case 'wave':lp=-.8;ep=.85;break;}return {ly,ey,lp,ep,back};}
 function endPose(b){const stand=cinematicPose(b).standing,P=poseParams(b.pattern,stand,mix(.25,-.6,stand),mix(.25,.72,stand));return {yaw:P.ey,pitch:P.ep,offset:P.back*.7};}
@@ -82,17 +72,16 @@ export function swordSegment(b){const p=swordPose(b),c=Math.cos(b.yaw),s=Math.si
 export function handPoint(b,side){const p=swordPose(b),x=side*.35,z=-.35,cy=Math.cos(p.yaw),sy=Math.sin(p.yaw),cp=Math.cos(p.pitch),sp=Math.sin(p.pitch);return {x:p.x+x*cy+z*cp*sy,y:p.y-z*sp,z:p.z-x*sy+z*cp*cy};}
 export function bladeHits(p,{a,b},width=SWORD.width){const dy=b.y-a.y;let lo=0,hi=1;if(Math.abs(dy)<1e-8){if(a.y<.1||a.y>2.2)return false;}else{const t0=(.1-a.y)/dy,t1=(2.2-a.y)/dy;lo=Math.max(0,Math.min(t0,t1));hi=Math.min(1,Math.max(t0,t1));if(lo>hi)return false;}const at=t=>({x:mix(a.x,b.x,t),z:mix(a.z,b.z,t)});return segmentDistance(p,at(lo),at(hi))<width;}
 function bossDamage(g,amount,poise){const b=g.boss;if(b.hp<=0||b.state==='transition')return 0;const damage=Math.min(b.hp,amount*(b.state==='stagger'?1.25:1)),big=damage>=150;b.hp-=damage;g.stats.damage+=damage;g.stats.hits++;b.poise+=poise;emit(g,'boss-hit',{amount:Math.round(damage),big});freeze(g,big?.09:.035);if(b.hp<=0){b.hp=0;b.state='dead';b.queue=[];g.status='won';g.projectiles=[];g.bossShots=[];emit(g,'victory');return damage;}if(b.phase===1&&b.hp<=b.maxHp*.5){b.phase=2;b.state='transition';b.t=0;b.queue=[];b.poise=0;b.stun=0;b.punishable=false;g.projectiles=[];g.bossShots=[];g.player.action=null;emit(g,'phase');}else if(b.poise>=(b.phase===2?280:180)&&!['transition','stagger'].includes(b.state)){b.poise=0;b.state='stagger';b.t=0;b.queue=[];b.punishable=false;emit(g,'stagger');}return damage;}
-function landHit(g,amount,poise,a){const actual=bossDamage(g,amount,poise),s=g.player.skill,b=g.boss;if(actual<=0)return;if(a.basic&&g.weapon==='hammer'&&!a.credited){a.credited=true;s.hammerHits=Math.min(4,s.hammerHits+1);if(s.hammerHits===4)emit(g,'skill-ready',{flavor:'hammer'});}if(a.stun&&!a.stunUsed&&b.hp>0&&b.state!=='transition'){a.stunUsed=true;b.stun=SKILLS.cards.stun;emit(g,'skill-stun',{flavor:'yellow'});}if(a.skill&&g.weapon==='hammer'){const gain=Math.min(g.player.maxHp-g.player.hp,actual*SKILLS.hammer.heal);g.player.hp+=gain;emit(g,'skill-heal',{flavor:'hammer',amount:gain});}}
+function landHit(g,amount,poise,a){const actual=bossDamage(g,amount,poise),b=g.boss;rewardPlayerHit(g,actual,a,{canStun:b.hp>0&&b.state!=='transition',stun:duration=>{b.stun=duration;}});}
 function hurtPlayer(g,damage){const p=g.player;if(g.status!=='playing'||p.invuln>0||g.boss.state==='transition')return;if(rolling(p)){g.stats.dodges++;emit(g,'dodge');return;}p.hp=Math.max(0,p.hp-damage);p.invuln=.32;p.action={kind:'hurt',t:0,total:.22};emit(g,'player-hit',{amount:damage});freeze(g,.07);if(!p.hp){g.status='lost';g.bossShots=[];emit(g,'death');}}
-function shoot(g,a){const w=WEAPONS[g.weapon],n=g.weapon==='cards'?3:1,skill=Boolean(a.skill);for(let i=0;i<n;i++)g.projectiles.push({id:g.nextId++,x:g.player.x,z:g.player.z,y:1.2,yaw:a.yaw+(i-(n-1)/2)*.075,speed:skill?36:g.weapon==='bow'?26:20,life:skill?2:1.7,damage:w.damage*a.mult,poise:w.poise*(skill?2:1),kind:g.weapon,source:a,piercing:skill,bossHit:false,skill});emit(g,'shot');}
 function moveBoss(b,v,dt,side=0){const y=b.aim??b.yaw;b.x+=(Math.sin(y)*v+Math.cos(y)*side)*dt;b.z+=(Math.cos(y)*v-Math.sin(y)*side)*dt;confine(b);}
 export function step(g,dt,input={}){
  if(g.status!=='playing')return;dt=clamp(dt,0,1/30);if(g.hitstop>0){g.hitstop=Math.max(0,g.hitstop-dt);return;}g.time+=dt;const p=g.player,b=g.boss,w=WEAPONS[g.weapon];
  if(b.state==='transition'){b.t+=dt;if(b.t>=CINEMATIC){b.state='idle';b.t=0;b.wait=.55;emit(g,'armed');}return;}
  tickPlayerResources(g,dt);
  const mx=input.x||0,mz=input.z||0,mag=Math.hypot(mx,mz),speed=p.skill.blue>0?4.7*SKILLS.cards.blueSpeed:4.7;if(!p.action&&mag){p.x+=mx/Math.max(1,mag)*speed*dt;p.z+=mz/Math.max(1,mag)*speed*dt;}if(!p.action){if(input.lock)p.yaw=toward(p,b);else if(mag)p.yaw=Math.atan2(mx,mz);}
- if(p.action){const a=p.action;a.t+=dt;if(a.kind==='roll'){if(a.t<=dt*1.1&&mag)a.yaw=Math.atan2(mx,mz);p.x+=Math.sin(a.yaw)*10*dt;p.z+=Math.cos(a.yaw)*10*dt;}else if(a.kind==='heal'){completePlayerHeal(g,a);}else if(a.kind==='attack'||a.kind==='skill'){if(a.t>=a.wind&&!a.done){a.done=true;emit(g,'swing');if(w.projectile)shoot(g,a);}const range=a.skill?6.8:w.range+2.5;if(!w.projectile&&!a.hit&&a.t>=a.wind&&a.t<=a.wind+a.active&&dist(p,b)<=range&&Math.abs(angleDelta(a.yaw,toward(p,b)))<1.25){a.hit=true;landHit(g,w.damage*a.mult,w.poise*(a.skill?2.5:1),a);}}if(a.t>=a.total&&p.action===a)p.action=null;}confine(p);
- for(const q of g.projectiles){const old={x:q.x,z:q.z};q.x+=Math.sin(q.yaw)*q.speed*dt;q.z+=Math.cos(q.yaw)*q.speed*dt;q.life-=dt;if(q.piercing&&g.bossShots.length){const n=g.bossShots.length;g.bossShots=g.bossShots.filter(s=>segmentDistance(s,old,q)>1.8);if(g.bossShots.length<n)emit(g,'skill-pierce',{flavor:'bow'});}if(q.life>0&&!q.bossHit&&segmentDistance(b,old,q)<2.8){q.bossHit=true;if(!q.piercing)q.life=0;landHit(g,q.damage,q.poise,q.source);}}g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing'||b.state==='transition')return;
+ tickPlayerAction(g,dt,w,{roll:a=>{if(a.t<=dt*1.1&&mag)a.yaw=Math.atan2(mx,mz);p.x+=Math.sin(a.yaw)*10*dt;p.z+=Math.cos(a.yaw)*10*dt;},melee:a=>{const range=a.skill?6.8:w.range+2.5;if(dist(p,b)<=range&&Math.abs(angleDelta(a.yaw,toward(p,b)))<1.25){a.hit=true;landHit(g,w.damage*a.mult,w.poise*(a.skill?2.5:1),a);}}});confine(p);
+ for(const q of g.projectiles){const old=advancePlayerProjectile(q,dt);if(q.piercing&&g.bossShots.length){const n=g.bossShots.length;g.bossShots=g.bossShots.filter(s=>segmentDistance(s,old,q)>1.8);if(g.bossShots.length<n)emit(g,'skill-pierce',{flavor:'bow'});}if(q.life>0&&!q.bossHit&&segmentDistance(b,old,q)<2.8){q.bossHit=true;if(!q.piercing)q.life=0;landHit(g,q.damage,q.poise,q.source);}}g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing'||b.state==='transition')return;
  for(const q of g.bossShots){const old={x:q.x,z:q.z};q.x+=Math.sin(q.yaw)*q.speed*dt;q.z+=Math.cos(q.yaw)*q.speed*dt;q.life-=dt;if(Math.hypot(q.x,q.z)>27)q.life=0;if(q.life>0&&segmentDistance(p,old,q)<.9){q.life=0;hurtPlayer(g,q.damage);}}g.bossShots=g.bossShots.filter(q=>q.life>0);if(g.status!=='playing')return;if(b.stun>0){b.stun=Math.max(0,b.stun-dt);return;}
  b.poise=Math.max(0,b.poise-dt*5);b.t+=dt;const cfg=patternConfig(b);if(b.state==='stagger'){if(b.t>=(b.phase===2?1.3:2.1)){b.state='idle';b.t=0;b.wait=.35;}return;}b.hug=dist(p,b)<HUG_RANGE?(b.hug||0)+dt:0;
  if(b.state==='idle'){b.punishable=false;b.yaw+=clamp(angleDelta(b.yaw,toward(b,p)),-dt*2.7,dt*2.7);b.aim=b.yaw;if(dist(p,b)>8)moveBoss(b,b.phase===1?6.8:6.5,dt);if(b.hug>HUG_TIME){b.hug=0;beginSequence(g,'shove');}else{b.wait-=dt;if(b.wait<=0)beginSequence(g,chooseOpening(g));}}

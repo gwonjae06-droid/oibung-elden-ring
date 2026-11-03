@@ -43,7 +43,9 @@ python -m http.server 8000
 
 ## 코드 지도
 
-- `src/combat.mjs`: 기본 전투, 무기, 이권재 패턴과 연속기
+- `src/combat.mjs`: 기본 전투, 이권재 패턴과 연속기, 기존 플레이어 API의 호환 진입점
+- `src/weapon-data.mjs`: 네 무기의 피해량, 기력 소모와 공격 시간 및 사거리 정의
+- `src/player-combat.mjs`, `src/player-tick.mjs`: 세 보스가 공유하는 플레이어 초기 상태, 공격 타이밍, 투사체와 스킬 보상, 자원 회복
 - `src/boss-motion-data.mjs`, `src/boss-stance.mjs`: 이권재 공격별 몸 자세
 - `src/arena.mjs`: 첫 전투의 입력, 렌더링, 카메라, HUD
 - `src/clown-combat.mjs`, `src/clown-cartoon.mjs`: 광대 패턴과 몸짓
