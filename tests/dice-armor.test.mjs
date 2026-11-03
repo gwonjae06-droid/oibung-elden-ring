@@ -1,3 +1,4 @@
+import {buildCasinoDiceAccents} from '../src/roulette-table.mjs';
 import {runThreeStartup} from '../src/runtime/three-startup.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,12 +20,12 @@ function doubles(){
  class Mesh extends Group{constructor(g,m){super();this.geometry=g;this.material=m;}}
  class Sprite extends Group{constructor(m){super();this.material=m;}}
  class Light extends Group{constructor(c,i){super();this.intensity=i;}}
- return {resources,THREE:{Group,Vector3:V,Quaternion:V,BoxGeometry:Geometry,CircleGeometry:Geometry,BufferGeometry:Geometry,MeshStandardMaterial:Material,LineBasicMaterial:Material,SpriteMaterial:Material,CanvasTexture:Resource,Mesh,Line:Mesh,Sprite,PointLight:Light}};
+ return {resources,THREE:{Group,Vector3:V,Quaternion:V,SphereGeometry:Geometry,BoxGeometry:Geometry,CircleGeometry:Geometry,BufferGeometry:Geometry,MeshStandardMaterial:Material,LineBasicMaterial:Material,SpriteMaterial:Material,CanvasTexture:Resource,Mesh,Line:Mesh,Sprite,PointLight:Light}};
 }
 test('ornaments share one geometry and two materials',()=>{const {THREE}=doubles(),root=new THREE.Group();buildDiceArmor(THREE,root,12);assert.equal(root.children.length,40);assert.equal(new Set(root.children.map(m=>m.geometry)).size,1);assert.equal(new Set(root.children.map(m=>m.material)).size,2);});
 test('actor integration uses real decoration/fire factories with Three and DOM doubles',async()=>{
  const {THREE,resources}=doubles(),source=readFileSync(new URL('../src/dice-actor.mjs',import.meta.url),'utf8');
- const mock={runThreeStartup,THREE,R:{edge:12},DICE_BOARD:[],...photo,H:{},diceCrackPaths:()=>[{points:[[0,0,0],[1,1,1]]}],diceTelegraphView:()=>null,buildDiceDecorations,buildDiceFire,buildGroundSpikeVisuals:()=>({update(){}}),squareDiscArgs:()=>[],frenzyShake:()=>({x:0,z:0}),buildDiceArmor,DICE_ARMOR_STYLE,diceMotion:()=>({sy:1,sxz:1,shake:0,glow:0})};
+ const mock={buildCasinoDiceAccents,runThreeStartup,THREE,R:{edge:12},DICE_BOARD:[],...photo,H:{},diceCrackPaths:()=>[{points:[[0,0,0],[1,1,1]]}],diceTelegraphView:()=>null,buildDiceDecorations,buildDiceFire,buildGroundSpikeVisuals:()=>({update(){}}),squareDiscArgs:()=>[],frenzyShake:()=>({x:0,z:0}),buildDiceArmor,DICE_ARMOR_STYLE,diceMotion:()=>({sy:1,sxz:1,shake:0,glow:0})};
  const oldImage=globalThis.Image,oldDocument=globalThis.document;
  globalThis.__diceArmorTest=mock;
  globalThis.document={createElement:()=>({getContext:()=>({createRadialGradient:()=>({addColorStop(){}}),fillRect(){},drawImage(){}})})};
@@ -37,7 +38,7 @@ test('actor integration uses real decoration/fire factories with Three and DOM d
   const pips=all.filter(o=>o.name==='recessed-dice-pip');assert.equal(pips.length,20);
   const face=all.find(o=>o.name==='dice-decoration-face-0');assert.equal(face.children.length,0);
   const body=a.root.children[0];assert.deepEqual(body.geometry.args,[12,12,12]);assert.equal(body.material.length,6);assert.ok(pips.every(p=>p.material.map===body.material[0].map));
-  assert.equal(all.filter(o=>o.name==='dice-solid-gold-edge').length,12);assert.equal(all.filter(o=>o.name==='dice-gold-corner-cap').length,8);assert.equal(all.filter(o=>o.name==='hellfire-flame').length,20);
+  assert.equal(all.filter(o=>o.name==='dice-solid-gold-edge').length,12);assert.equal(all.filter(o=>o.name==='dice-gold-corner-cap').length,8);assert.equal(all.filter(o=>o.name==='casino-dice-stud').length,8);
   a.update({dice:{pose:{x:0,y:6,z:0,rotation:[0,0,0,1]}}});assert.ok(all.every(o=>[o.position.x,o.position.y,o.position.z].every(Number.isFinite)));assert.deepEqual([a.root.scale.x,a.root.scale.y,a.root.scale.z],[1,1,1]);assert.equal(body.material[1].color.value,DICE_ARMOR_STYLE.black);
   a.dispose();a.dispose();assert.ok(resources.every(r=>r.disposals===1));
   const before=resources.length,b=mod.createDiceActor();b.dispose();assert.equal(await b.ready,false);assert.ok(resources.slice(before).every(r=>r.disposals===1));

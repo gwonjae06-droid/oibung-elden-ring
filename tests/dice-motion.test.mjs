@@ -20,10 +20,10 @@ test('values stay finite and bounded through every warning',()=>{
   }
 });
 
-test('the body squashes and heats up as a warning progresses',()=>{
+test('the solid body keeps its size while warning light builds',()=>{
  for(const state of ['charge-warning','jump-warning']){
   const early=diceMotion({state,t:.1},0),late=diceMotion({state,t:.9},0);
-  assert.ok(late.sy<early.sy&&late.sxz>early.sxz&&late.shake>early.shake,state);
+  assert.ok(late.sy===early.sy&&late.sxz===early.sxz&&late.shake>early.shake,state);
  }
  assert.ok(diceMotion({state:'charge-warning',t:.9},1).glow>diceMotion({state:'charge-warning',t:.1},1).glow);
 });
@@ -38,8 +38,8 @@ test('the chained charge glows and shakes harder than an ordinary charge',()=>{
  assert.ok(diceMotion({state:'charge-warning',t:1.15,chargeWarnTime:1.15},0).shake>diceMotion({state:'charge-warning',t:.9},0).shake);
 });
 
-test('after landing the body wobbles and settles exactly back to its size',()=>{
- assert.ok(Math.abs(diceMotion({state:'recovery',t:.1},0).sy-1)>.005);
+test('the body remains rigid during every landing recovery',()=>{
+ assert.equal(diceMotion({state:'recovery',t:.1},0).sy,1);
  const settled=diceMotion({state:'recovery',t:.45},0);
  assert.ok(Math.abs(settled.sy-1)<1e-9&&Math.abs(settled.sxz-1)<1e-9);
  assert.ok(neutral({...diceMotion({state:'recovery',t:5},0),sy:1,sxz:1})||true);

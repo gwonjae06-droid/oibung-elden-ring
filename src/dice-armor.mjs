@@ -1,4 +1,4 @@
-export const DICE_ARMOR_STYLE=Object.freeze({black:0x090a0e,red:0x650d19,gold:0xdba632});
+export const DICE_ARMOR_STYLE=Object.freeze({black:0xe8dfc6,red:0x8d162b,gold:0xdba632});
 export function diceArmorPlan(edge){
  if(!Number.isFinite(edge)||edge<=0)throw new RangeError('Invalid edge');
  const h=edge/2,thickness=edge*.055,cap=edge*.105,beams=[],caps=[],panels=[];

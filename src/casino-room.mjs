@@ -1,39 +1,42 @@
-import {DICE_RULES as R} from './dice-data.mjs';
 export function casinoRoomPlan(mobile=false){
- const edge=(R.side-1)*R.edge/2+R.tileWidth/2,count=mobile?4:8;
- return Array.from({length:count},(_,i)=>{const a=(i+.5)/count*Math.PI*2,c=Math.cos(a),s=Math.sin(a),m=Math.max(Math.abs(c),Math.abs(s)),d=edge+61;return {x:c/m*d,z:s/m*d,yaw:Math.atan2(-c,-s),seed:i*1.37};});
+ const count=mobile?4:8,radius=150;
+ return Array.from({length:count},(_,i)=>{const a=(i+.5)/count*Math.PI*2,c=Math.cos(a),s=Math.sin(a);return {x:c*radius,z:s*radius,yaw:Math.atan2(-c,-s),seed:i*1.37};});
 }
 export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  const root=new T.Group();root.name='giant-casino-lounge';parent.add(root);
- const black=new T.MeshStandardMaterial({color:0x050509,roughness:.82}),trim=new T.MeshStandardMaterial({color:0x997239,metalness:.55,roughness:.45}),felt=new T.MeshStandardMaterial({color:0x12543c,roughness:.9}),wood=new T.MeshStandardMaterial({color:0x25121d,roughness:.8}),pink=new T.MeshBasicMaterial({color:0xff409e}),cyan=new T.MeshBasicMaterial({color:0x50d7e8});
- const box=new T.BoxGeometry(1,1,1),sphere=new T.SphereGeometry(1,12,8),cyl=new T.CylinderGeometry(1,1,1,16),ring=new T.TorusGeometry(1,.035,6,32);
- const mesh=(geo,mat,p,scale,group=root)=>{const m=new T.Mesh(geo,mat);m.position.set(...p);m.scale.set(...scale);group.add(m);return m;};
+ const suit=new T.MeshStandardMaterial({color:0x10101b,roughness:.85}),skin=new T.MeshStandardMaterial({color:0x29212a,roughness:.95}),gold=new T.MeshStandardMaterial({color:0xb59152,metalness:.65,roughness:.4}),wood=new T.MeshStandardMaterial({color:0x24131b,roughness:.7}),ivory=new T.MeshStandardMaterial({color:0xaaa28d,roughness:.8}),neon=new T.MeshBasicMaterial({color:0xe6b35e});
+ const sphere=new T.SphereGeometry(1,16,12),box=new T.BoxGeometry(1,1,1),cylinder=new T.CylinderGeometry(1,1,1,16);
+ const mesh=(geometry,material,p,size,group=root)=>{const m=new T.Mesh(geometry,material);m.position.set(...p);m.scale.set(...size);group.add(m);return m;};
  const patrons=[];
  for(const p of casinoRoomPlan(coarse)){
-  const station=new T.Group();station.position.set(p.x,0,p.z);station.rotation.y=p.yaw;root.add(station);
-  mesh(cyl,wood,[0,10,9],[16,2.5,10],station);mesh(cyl,felt,[0,11.3,9],[15.3,.25,9.4],station);
-  const border=mesh(ring,trim,[0,11.5,9],[15.6,9.6,1],station);border.rotation.x=-Math.PI/2;
-  const roulette=mesh(cyl,trim,[-5,11.8,10],[4,.4,4],station);const wheel=mesh(ring,p.seed%2?pink:cyan,[-5,12.05,10],[3.5,3.5,1],station);wheel.rotation.x=-Math.PI/2;
-  mesh(sphere,trim,[-5,12.4,10],[.45,.45,.45],station);
-  for(let i=0;i<5;i++){mesh(cyl,i%2?pink:cyan,[4+i*.8,11.8+(i%3)*.4,7],[.6,.7+(i%3)*.8,.6],station);}
-  const person=new T.Group();station.add(person);
-  mesh(box,wood,[0,8,-7],[12,2,10],person);mesh(box,wood,[0,18,-11],[12,22,2],person);
-  const torso=mesh(sphere,black,[0,21,-6],[7,12,4.8],person);torso.rotation.x=.14;
-  mesh(sphere,black,[0,36,-3],[4.1,5.4,3.8],person);mesh(cyl,black,[0,30,-4],[1.8,4,1.8],person);
-  for(const s of [-1,1]){mesh(box,black,[s*3.4,7,-2],[4,11,5],person);mesh(box,black,[s*3.4,1.2,1],[4.2,2.5,8],person);}
-  const arms=[];
-  for(const s of [-1,1]){const arm=new T.Group();arm.position.set(s*5.8,27,-5);person.add(arm);mesh(box,black,[0,-5,1],[3.2,11,3.2],arm);const fore=mesh(box,black,[0,-10,6],[3,3,12],arm);fore.rotation.x=-.1;mesh(sphere,black,[0,-10,12],[2.3,1.4,2.8],arm);arms.push(arm);}
-  patrons.push({torso,arms,wheel,seed:p.seed});
+  const guest=new T.Group();guest.name='watching-casino-guest';guest.position.set(p.x,0,p.z);guest.rotation.y=p.yaw;root.add(guest);
+  const torso=mesh(sphere,suit,[0,5,0],[18,30,12],guest);torso.rotation.x=.2;
+  mesh(cylinder,skin,[0,32,13],[5,9,5],guest);
+  const head=mesh(sphere,skin,[0,43,23],[10,12,9],guest);head.rotation.x=.22;
+  mesh(box,suit,[0,52,24],[24,1.8,16],guest);mesh(cylinder,suit,[0,57,23],[10,9,8],guest);
+  for(const side of [-1,1]){
+   const lapel=mesh(box,ivory,[side*5,20,13],[5,16,1],guest);lapel.rotation.z=side*.35;
+   mesh(sphere,gold,[side*3,44,31.2],[.65,.4,.25],guest);
+  }
+  mesh(box,gold,[0,18,14],[2,7,1],guest);
+  const hands=[];
+  for(const side of [-1,1]){
+   const arm=mesh(sphere,suit,[side*20,8,18],[7,12,22],guest);arm.rotation.x=-.25;
+   mesh(box,ivory,[side*20,4,36],[10,4,5],guest);
+   const hand=new T.Group();hand.position.set(side*20,3,42);guest.add(hand);
+   mesh(sphere,skin,[0,0,0],[7,3,9],hand);
+   for(let finger=0;finger<4;finger++)mesh(sphere,skin,[(finger-1.5)*2.7,-.4,7],[1.25,1.6,6],hand);
+   mesh(cylinder,gold,[side*20,6,41],[5,2,5],guest);hands.push(hand);
+  }
+  patrons.push({torso,head,hands,seed:p.seed});
  }
- const half=(R.side-1)*R.edge/2+R.tileWidth/2+96;
+ const half=250;
  for(let side=0;side<4;side++){
   const wall=new T.Group();wall.rotation.y=side*Math.PI/2;root.add(wall);
-  mesh(box,wood,[0,23,-half],[half*2,49,3],wall);
-  mesh(box,trim,[0,46,-half+2],[half*2,1,1],wall);mesh(box,side%2?pink:cyan,[0,42,-half+2],[half*1.9,.35,.4],wall);
-  for(let i=0;i<(coarse?3:5);i++){const x=(i-((coarse?3:5)-1)/2)*22;mesh(box,black,[x,7,-half+10],[10,17,7],wall);mesh(box,trim,[x,10,-half+14],[8,9,.4],wall);mesh(box,side%2?cyan:pink,[x,10,-half+14.3],[7,7,.25],wall);for(let j=0;j<3;j++)mesh(cyl,trim,[x+(j-1)*2.1,3.8,-half+15],[.6,.6,.6],wall);}
+  mesh(box,wood,[0,0,-half],[half*2,180,3],wall);mesh(box,gold,[0,68,-half+2],[half*2,1,1],wall);
+  for(let i=0;i<(coarse?3:5);i++){const x=(i-2)*45;mesh(box,suit,[x,-35,-half+12],[23,47,15],wall);mesh(box,gold,[x,-25,-half+20],[19,26,1],wall);mesh(box,neon,[x,-25,-half+21],[17,23,.5],wall);}
  }
- const ceiling=mesh(box,black,[0,58,0],[half*2,2,half*2]);
- for(const s of [-1,1]){const rail=mesh(ring,s<0?pink:cyan,[0,54,0],[half*.7,half*.7,1]);rail.rotation.x=Math.PI/2;}
+ for(const x of [-75,75]){mesh(cylinder,gold,[x,110,0],[.5,80,.5]);mesh(sphere,neon,[x,70,0],[18,3,18]);}
  root.userData.decorativeOnly=true;
- return {root,update(time){const t=Number.isFinite(time)?time:0;for(const p of patrons){p.torso.rotation.x=.14+(reduced?0:Math.sin(t*.5+p.seed)*.015);p.arms.forEach((a,i)=>{a.rotation.x=reduced?0:Math.sin(t*.65+p.seed+i*2)*.07;a.rotation.z=reduced?0:Math.sin(t*.4+p.seed+i)*.035;});p.wheel.rotation.z=reduced?0:t*.15+p.seed;}}};
+ return {root,update(time=0){const t=Number.isFinite(time)?time:0;for(const p of patrons){p.torso.rotation.x=.2+(reduced?0:Math.sin(t*.35+p.seed)*.018);p.head.rotation.y=reduced?0:Math.sin(t*.27+p.seed)*.12;p.hands.forEach((hand,i)=>hand.position.y=3+(reduced?0:Math.max(0,Math.sin(t*.65+p.seed+i*3))*.8));}}};
 }

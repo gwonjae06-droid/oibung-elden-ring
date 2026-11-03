@@ -1,26 +1,27 @@
+import {buildCasinoDiceAccents,buildRouletteTable} from './roulette-table.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {DICE_RULES as R,DICE_BOARD} from './dice-data.mjs';
 import {DICE_PHOTO_FACE,DICE_PHOTO_PATH,fitDicePhoto} from './dice-photo-data.mjs';
 import {DICE_HELL_STYLE as H,diceCrackPaths,diceTelegraphView} from './dice-visual-data.mjs';
-import {buildDiceDecorations,buildDiceFire} from './dice-decoration-renderer.mjs';
+import {buildDiceDecorations} from './dice-decoration-renderer.mjs';
 import {buildGroundSpikeVisuals} from './dice-ground-spikes.mjs';
 import {squareDiscArgs} from './dice-square.mjs';
 import {frenzyShake} from './dice-frenzy-windup.mjs';
 import {buildDiceArmor,DICE_ARMOR_STYLE} from './dice-armor.mjs';
 import {diceMotion} from './dice-motion-data.mjs';
-import {CASINO_COLORS,feltIndex,gridLines,chipStacks,pillars} from './casino-data.mjs';
+import {CASINO_COLORS,gridLines,chipStacks} from './casino-data.mjs';
 import {createAmbientField,stepAmbientField} from './atmosphere-data.mjs';
 import {buildCasinoRoom} from './casino-room.mjs';
 export function createDiceActor(){
  return runThreeStartup(THREE,(THREE,own)=>{
 const root=new THREE.Group();root.name='park-sungwon-dice';const e=R.edge,box=new THREE.BoxGeometry(e,e,e),iron=new THREE.MeshStandardMaterial({color:DICE_ARMOR_STYLE.black,roughness:.42,metalness:.65}),photoMaterial=new THREE.MeshStandardMaterial({color:0xd5c6ac,roughness:.8,metalness:0}),materials=Array.from({length:6},(_,i)=>i===DICE_PHOTO_FACE?photoMaterial:iron),die=new THREE.Mesh(box,materials);die.castShadow=die.receiveShadow=true;root.add(die);buildDiceArmor(THREE,root,e);
- const decorations=buildDiceDecorations(THREE,root,e,H),fire=own(buildDiceFire(THREE,root,e));
+ const decorations=buildDiceDecorations(THREE,root,e,H),fire=own(buildCasinoDiceAccents(THREE,root,e));
  const crackMaterial=new THREE.LineBasicMaterial({color:0x9d1727});for(const path of diceCrackPaths(e,DICE_PHOTO_FACE)){const geo=new THREE.BufferGeometry().setFromPoints(path.points.map(p=>new THREE.Vector3(...p)));root.add(new THREE.Line(geo,crackMaterial));}
  let texture=null,disposed=false,image=null,finishReady=()=>{};
- const upAxis=new THREE.Vector3(),invRotation=new THREE.Quaternion();
+
  const ready=new Promise(resolve=>{finishReady=ok=>{if(image)image.onload=image.onerror=null;image=null;resolve(ok);};try{image=new Image();image.onload=()=>{if(disposed){finishReady(false);return;}try{const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d'),r=fitDicePhoto(image.naturalWidth,image.naturalHeight);ctx.fillStyle='#201a17';ctx.fillRect(0,0,512,512);ctx.drawImage(image,r.x,r.y,r.width,r.height);texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;photoMaterial.map=texture;photoMaterial.color.setHex(0xffffff);photoMaterial.needsUpdate=true;decorations.setPortrait(texture);finishReady(true);}catch(error){console.warn('Sungwon dice photo unavailable',error);finishReady(false);}};image.onerror=()=>finishReady(false);image.src=new URL(DICE_PHOTO_PATH,import.meta.url).href;}catch{finishReady(false);}});
- return {root,ready,update(g){const p=g.dice.pose,time=Number.isFinite(g.time)?g.time:0,shake=frenzyShake(g.dice),m=diceMotion(g.dice,time),jitter=Math.sin(time*57)*m.shake;root.quaternion.set(...p.rotation);if(m.sy===1&&m.sxz===1)root.scale.set(1,1,1);else{upAxis.set(0,1,0).applyQuaternion(invRotation.copy(root.quaternion).invert());const ax=Math.abs(upAxis.x)>Math.abs(upAxis.y)&&Math.abs(upAxis.x)>Math.abs(upAxis.z)?0:Math.abs(upAxis.z)>Math.abs(upAxis.y)?2:1,s=[m.sxz,m.sxz,m.sxz];s[ax]=m.sy;root.scale.set(s[0],s[1],s[2]);}root.position.set(p.x+shake.x+jitter,p.y-(1-m.sy)*e/2,p.z+shake.z);decorations.update(time);fire.update(time);iron.color.setHex(g.dice.blockFlash>0?0x6e3a22:DICE_ARMOR_STYLE.black);iron.emissive.setRGB(m.glow*.9,m.glow*.15,m.glow*.05);},dispose(){if(disposed)return;disposed=true;finishReady(false);fire.dispose();const geometries=new Set(),mats=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);});texture?.dispose();for(const g of geometries)g.dispose();for(const m of mats)m.dispose();}};
+ return {root,ready,update(g){const p=g.dice.pose,time=Number.isFinite(g.time)?g.time:0,shake=frenzyShake(g.dice),m=diceMotion(g.dice,time),jitter=Math.sin(time*57)*m.shake;root.quaternion.set(...p.rotation);root.scale.set(1,1,1);root.position.set(p.x+shake.x+jitter,p.y,p.z+shake.z);decorations.update(time);fire.update(time);iron.color.setHex(g.dice.blockFlash>0?0x6e3a22:DICE_ARMOR_STYLE.black);iron.emissive.setRGB(m.glow*.9,m.glow*.15,m.glow*.05);},dispose(){if(disposed)return;disposed=true;finishReady(false);fire.dispose();const geometries=new Set(),mats=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);});texture?.dispose();for(const g of geometries)g.dispose();for(const m of mats)m.dispose();}};
 
  });
 }
@@ -28,24 +29,21 @@ function carpetTexture(){const c=document.createElement('canvas');c.width=c.heig
 function sparkTexture(){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d'),gr=g.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#ffffffff');gr.addColorStop(.4,'#ffffffaa');gr.addColorStop(1,'#ffffff00');g.fillStyle=gr;g.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);}
 export function buildDiceBoard(scene){
  return runThreeStartup(THREE,(THREE,own)=>{
-const root=new THREE.Group();root.name='lava-property-board';scene.add(root);const groundSpikes=buildGroundSpikeVisuals(THREE,root),coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS;
+const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);const groundSpikes=buildGroundSpikeVisuals(THREE,root),coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS;
  const room=buildCasinoRoom(THREE,root,{coarse,reduced:Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)});
  if(scene.background&&scene.background.setHex)scene.background.setHex(C.sky);
- if(scene.fog){scene.fog.color.setHex(C.fog);scene.fog.near=130;scene.fog.far=300;}
+ if(scene.fog){scene.fog.color.setHex(C.fog);scene.fog.near=170;scene.fog.far=460;}
  scene.traverse(o=>{if(o.isHemisphereLight){o.color.setHex(0xffe3c4);o.groundColor.setHex(0x2a0c18);o.intensity=1.5;}else if(o.isDirectionalLight)o.color.setHex(0xfff1da);});
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(420,420).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({map:carpetTexture(),color:0xffffff,roughness:.95}));floor.position.y=-1.4;floor.receiveShadow=true;root.add(floor);
- const rim=new THREE.Mesh(new THREE.BoxGeometry(135,1.2,135),new THREE.MeshStandardMaterial({color:C.rim,roughness:.7,metalness:.15}));rim.position.y=-.62;rim.receiveShadow=true;root.add(rim);
- const m4=new THREE.Matrix4(),col=new THREE.Color(),felt=new THREE.InstancedMesh(new THREE.BoxGeometry(R.edge-.1,1.2,R.edge-.1),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92}),DICE_BOARD.length);
- DICE_BOARD.forEach((t,i)=>{m4.makeTranslation(t.x,-.6,t.z);felt.setMatrixAt(i,m4);felt.setColorAt(i,col.setHex(C.felt[feltIndex(Math.floor(i/R.side),i%R.side)]));});
- felt.instanceMatrix.needsUpdate=true;felt.instanceColor.needsUpdate=true;felt.receiveShadow=true;root.add(felt);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(420,420).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({map:carpetTexture(),color:0xffffff,roughness:.95}));floor.position.y=-64;floor.receiveShadow=true;root.add(floor);
+ buildRouletteTable(THREE,root);
+ const m4=new THREE.Matrix4(),col=new THREE.Color();
+ const felt=new THREE.Mesh(new THREE.CircleGeometry(97.5,96).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x07563c,roughness:.95}));felt.position.y=0;felt.receiveShadow=true;root.add(felt);
  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(gridLines(),3));const lines=new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:C.gold}));lines.position.y=.05;root.add(lines);
  const goldMat=new THREE.MeshStandardMaterial({color:C.gold,roughness:.35,metalness:.7});
  for(const t of DICE_BOARD)if(t.corner){const mark=new THREE.Mesh(new THREE.RingGeometry(1,1.4,4).rotateX(-Math.PI/2),goldMat);mark.position.set(t.x,.06,t.z);root.add(mark);}
- const ringMat=new THREE.MeshBasicMaterial({color:0xffffff}),pl=pillars(coarse?8:12),pillarMesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(3,3.4,1,14),new THREE.MeshStandardMaterial({color:0x2b1410,roughness:.6,metalness:.2}),pl.length),ringMesh=new THREE.InstancedMesh(new THREE.TorusGeometry(3.6,.32,8,24).rotateX(Math.PI/2),ringMat,pl.length*3);
- pl.forEach((p,i)=>{m4.makeScale(1,p.height,1).setPosition(p.x,p.height/2-1.4,p.z);pillarMesh.setMatrixAt(i,m4);for(let k=0;k<3;k++){m4.makeTranslation(p.x,5+k*8,p.z);ringMesh.setMatrixAt(i*3+k,m4);ringMesh.setColorAt(i*3+k,col.setHex(C.neon[(i+k)%2]));}});
- pillarMesh.instanceMatrix.needsUpdate=true;ringMesh.instanceMatrix.needsUpdate=true;ringMesh.instanceColor.needsUpdate=true;pillarMesh.castShadow=true;root.add(pillarMesh,ringMesh);
+ const ringMat=new THREE.MeshBasicMaterial({color:0xffffff});
  const cs=chipStacks(coarse?16:28),chipMesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(2.2,2.2,1,16),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5,metalness:.1}),cs.length);
- cs.forEach((c,i)=>{m4.makeScale(1,c.height,1).setPosition(c.x,c.height/2-1.4,c.z);chipMesh.setMatrixAt(i,m4);chipMesh.setColorAt(i,col.setHex(C.chips[c.color]));});
+ cs.forEach((c,i)=>{m4.makeScale(1,c.height,1).setPosition(c.x,c.height/2,c.z);chipMesh.setMatrixAt(i,m4);chipMesh.setColorAt(i,col.setHex(C.chips[c.color]));});
  chipMesh.instanceMatrix.needsUpdate=true;chipMesh.instanceColor.needsUpdate=true;chipMesh.castShadow=true;root.add(chipMesh);
  const lights=[];for(let i=0;i<(coarse?2:4);i++){const L=new THREE.PointLight(C.neon[i%2],coarse?3500:5000,220,2);L.position.set(i<2?-110:110,26,i%2?-110:110);L.userData.base=L.intensity;root.add(L);lights.push(L);}
  const sparkN=coarse?40:100,field=createAmbientField({count:sparkN,radius:80}),sGeo=new THREE.BufferGeometry(),sPos=new Float32Array(sparkN*3),sCol=new Float32Array(sparkN*3);

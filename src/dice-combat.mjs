@@ -7,7 +7,7 @@ import {diceSlowFactor,stepDiceSlow,clearDiceFaceAttack} from './dice-slow.mjs';
 import {syncDiceClock,updateDicePhase} from './dice-pressure.mjs';
 import {squareContains} from './dice-square.mjs';
 import {FRENZY_WINDUP,advanceFrenzyWindup} from './dice-frenzy-windup.mjs';
-export const DICE_PATTERNS=Object.freeze({chargeWarning:.9,chargeTime:.5,jumpWarning:1.1,jumpTime:1.6,jumpHeight:17,stompRadius:14,stompDamage:44,frenzyRolls:6,frenzyWarning:.3,frenzyRollTime:.22,chainWarning:1.15,pipWarning:1.2,pipWarningP2:1,pipDamage:34,pipDamageP2:38,pipFlash:.4,pipHalf:6});
+export const DICE_PATTERNS=Object.freeze({chargeWarning:.9,chargeTime:.5,jumpWarning:1.1,jumpTime:1.6,jumpHeight:17,stompRadius:14,stompDamage:44,frenzyRolls:4,frenzyWarning:.6,frenzyRollTime:.38,chainWarning:1.15,pipWarning:1.2,pipWarningP2:1,pipDamage:34,pipDamageP2:38,pipFlash:.4,pipHalf:6});
 const PIP_LAYOUT=Object.freeze({1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]});
 const emit=(g,type,data={})=>{const tempo=syncDiceClock(g);g.events.push({type,...data,...(data.duration===undefined?{}:{duration:data.duration*tempo})});};
 function prepare(g,announce=true){const d=g.dice;d.from=DICE_BOARD[d.index];d.to=DICE_BOARD[d.index+diceDirection(d.index,nearestDiceTile(g.player))];d.base=[...d.rotation];d.warningTime=d.frenzyRemaining>0&&!d.frenzyFirst?DICE_PATTERNS.frenzyWarning:R.warning;d.rollTime=d.frenzyRemaining>0?DICE_PATTERNS.frenzyRollTime:R.rollTime;d.frenzyFirst=false;d.state='warning';d.t=0;d.longRecovery=false;d.pose=diceRollPose(d.from,d.to,0,d.base);if(announce)emit(g,'dice-warning',{from:d.from.index,to:d.to.index,duration:d.warningTime,frenzy:d.frenzyRemaining>0});}
@@ -30,7 +30,7 @@ function tick(g,dt,input){const p=g.player,d=g.dice,x=Number.isFinite(input.x)?i
  if(d.state==='frenzy-windup'){if(advanceFrenzyWindup(d,dt)){d.state='warning';d.t=0;emit(g,'dice-warning',{from:d.from.index,to:d.to.index,duration:d.warningTime,frenzy:true});emit(g,'dice-frenzy-start',{rolls:d.frenzyRemaining});}contact(g,false);return;}d.t+=dt/syncDiceClock(g);
  if(d.state==='warning'&&d.t>=(d.warningTime??R.warning)){d.state='rolling';d.t=0;emit(g,'dice-roll');}
  else if(d.state==='rolling'){const u=Math.min(1,d.t/(d.rollTime??R.rollTime));d.pose=diceRollPose(d.from,d.to,u,d.base);if(contact(g,true))return;if(u===1)finishRoll(g);}
- else if(d.state==='recovery'&&d.t>=R.recovery*(d.longRecovery?1.5:1)){d.longRecovery=false;if(d.pendingPattern)beginPattern(g);else prepare(g);}
+ else if(d.state==='recovery'&&d.t>=R.recovery*(d.longRecovery?2:1)){d.longRecovery=false;if(d.pendingPattern)beginPattern(g);else prepare(g);}
  else if(d.state==='pip-warning'&&d.pips&&d.t>=d.pips.warn){burstPips(g);}
  else if(d.state==='charge-warning'&&d.t>=(d.chargeWarnTime??DICE_PATTERNS.chargeWarning)){d.state='charge';d.t=0;emit(g,'dice-charge');}
  else if(d.state==='charge'){const u=Math.min(1,d.t/DICE_PATTERNS.chargeTime);d.pose=flatPose(d,d.from.x+(d.to.x-d.from.x)*u,d.from.z+(d.to.z-d.from.z)*u);if(footprint(g)){kill(g);return;}if(u===1)finishPattern(g);}
