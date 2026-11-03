@@ -52,8 +52,6 @@
 <div id="damage-layer" aria-hidden="true"></div>
 </main>
 <script type="module">
-import('./src/arena.mjs').catch(error=>{console.error(error);document.getElementById('load-status').textContent='3D 전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';document.getElementById('start').textContent='불러오기 실패';});
-import('./src/boss-transition.mjs').then(m=>m.installBossTransition()).catch(error=>console.error('Boss transition unavailable',error));
-import('./src/coop-menu.mjs').then(m=>m.installCoopMenu()).catch(error=>console.error('Coop menu unavailable',error));
+import('./src/bootstrap.mjs').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
 </script>
 </body></html>
