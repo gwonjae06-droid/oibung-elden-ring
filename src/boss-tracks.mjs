@@ -56,7 +56,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
       suspendedAt=null;
     }
     if(!current||current.key!==track.key){
-      release(outgoing);outgoing=current;
+      release(outgoing);outgoing=current;if(outgoing)outgoing.from=outgoing.audio.volume;
       try{
         const audio=new AudioClass(track.url);
         audio.loop=true;audio.preload='auto';audio.volume=0;
