@@ -1,7 +1,7 @@
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
- if(doc.hidden||!focused)return null;
+ if(doc.hidden||!focused||doc.getElementById('dice-battle')?.open)return null;
  const modal=doc.getElementById('clown-battle'),root=modal?modal.firstElementChild?.shadowRoot:doc;
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const get=id=>root.getElementById(id),hud=get('boss-hud');
@@ -49,14 +49,19 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
   get activeVoices(){return voices();}
  };
 }
-let installed=false;
-export function installBossMusic(doc=globalThis.document,win=globalThis.window){
- if(installed||!doc||!win)return;installed=true;const C=win.AudioContext||win.webkitAudioContext;if(!C)return;
- const music=createBossMusic(()=>new C());let focused=doc.hasFocus(),muted=false;
+const installations=new WeakMap();
+export function installBossMusic(doc=globalThis.document,win=globalThis.window,{makeMusic=createBossMusic}={}){
+ if(!doc||!win)return null;if(installations.has(doc))return installations.get(doc);
+ const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null);
+ let focused=typeof doc.hasFocus==='function'?doc.hasFocus():true,muted=false,disposed=false,timer=null;
  const readMute=()=>{try{muted=win.localStorage.getItem('oibung-muted')==='1';}catch{}};
- function sync(){readMute();music.update(musicState(doc,focused),!muted);}
- function gesture(e){const path=e.composedPath();if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm')))music.reset();queueMicrotask(()=>{readMute();if(!muted)music.unlock();sync();});}
+ function sync(){if(disposed)return;readMute();music.update(musicState(doc,focused),!muted);}
+ function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm')))music.reset();queueMicrotask(()=>{if(disposed)return;readMute();if(!muted)music.unlock();sync();});}
  const blur=()=>{focused=false;sync();},focus=()=>{focused=true;sync();};
- win.addEventListener('pointerdown',gesture,{passive:true});win.addEventListener('keydown',gesture);win.addEventListener('blur',blur);win.addEventListener('focus',focus);doc.addEventListener('visibilitychange',sync);
- const timer=win.setInterval(sync,80);win.addEventListener('pagehide',e=>{music.reset();if(!e.persisted){win.clearInterval(timer);music.dispose();}},{capture:true});
+ function pagehide(e){if(e.persisted)music.reset();else control.dispose();}
+ const control={sync,dispose(){if(disposed)return;disposed=true;if(timer!==null)win.clearInterval(timer);timer=null;win.removeEventListener('pointerdown',gesture);win.removeEventListener('keydown',gesture);win.removeEventListener('blur',blur);win.removeEventListener('focus',focus);win.removeEventListener('pagehide',pagehide,true);doc.removeEventListener('visibilitychange',sync);try{music.dispose();}finally{installations.delete(doc);}},get disposed(){return disposed;}};
+ installations.set(doc,control);
+ try{win.addEventListener('pointerdown',gesture,{passive:true});win.addEventListener('keydown',gesture);win.addEventListener('blur',blur);win.addEventListener('focus',focus);doc.addEventListener('visibilitychange',sync);timer=win.setInterval(sync,80);win.addEventListener('pagehide',pagehide,{capture:true});}
+ catch(error){control.dispose();throw error;}
+ return control;
 }
