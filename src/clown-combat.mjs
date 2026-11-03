@@ -21,7 +21,7 @@ const throwHead=(g,r,d)=>bombAt(g,target(g),r,d,FLY,'head',SWELL),throwBall=g=>b
 function updateBombs(g,dt){const c=g.clown;for(const q of c.bombs){const old={x:q.px,z:q.pz},was=q.t;q.t+=dt;if(q.kind==='roll'){const p=rollPosition(q);q.px=p.x;q.pz=p.z;if(!q.hit&&was<=q.travel){const a=c.prevPlayer||g.player,b=g.player;if(segmentGap({x:0,z:0},{x:old.x-a.x,z:old.z-a.z},{x:p.x-b.x,z:p.z-b.z})<ROLL.radius){q.hit=true;hurt(g,ROLL.damage,'roll'+q.id);}}}}c.bombs=c.bombs.filter(q=>q.t<q.warn+.3);}
 function fitLen(b,yaw,len){for(let i=0;i<64&&Math.hypot(b.x+Math.sin(yaw)*len,b.z+Math.cos(yaw)*len)>BALL_LIMIT;i++)len=Math.max(0,len-.5);return len;}
 function rosette(g,p,r,warn,n=10,damage=25,gap=0){for(let i=0;i<n;i++){if(i===gap||i===(gap+1)%n)continue;const a=i/n*Math.PI*2,q={x:p.x+Math.sin(a)*r,z:p.z+Math.cos(a)*r};if(Math.hypot(q.x,q.z)<22)zone(g,{shape:'circle',...q,r:1.7,warn,damage,blast:true});}}
-const definitions=[['laughBomb','웃음 폭탄',5.1,1.4,[1,2]],['dash','곡예 돌진',4.5,1.1,[1,2]],['juggle','저글링 낙하',4.5,1.2,[1,2]],['clap','풍선 박수',3.4,1.1,[1,2]],['bounce','공 튀기기',3.6,1.1,[1,2]],['shove','관객 밀어내기',1.6,1,[1,2]],['tripleBomb','삼중 웃음 폭탄',6.65,2.1,[2]],['rollingSmile','굴러오는 미소',3.8,1.5,[2]],['inverseBow','거꾸로 된 인사',3.8,1.1,[2]],['lastClap','마지막 박수',5.35,1.7,[2]],['confettiCurtain','색종이 커튼',4.6,1.2,[1,2]],['hornFan','나팔 부채꼴',4.1,1.1,[1,2]],['drumMarch','행진 북 연타',4.8,1.2,[1,2]],['balloonBouquet','풍선 꽃다발',5,1.2,[1,2]],['carousel','회전목마',5.6,1.2,[1,2]],['curtainCall','커튼콜',7.2,1.5,[2]]];
+const definitions=[['laughBomb','웃음 폭탄',5.1,1.4,[1,2]],['dash','곡예 돌진',4.5,1.1,[1,2]],['juggle','저글링 낙하',4.5,1.2,[1,2]],['clap','풍선 박수',3.4,1.1,[1,2]],['bounce','공 튀기기',3.6,1.1,[1,2]],['shove','관객 밀어내기',1.6,1,[1,2]],['tripleBomb','삼중 웃음 폭탄',6.65,2.1,[2]],['rollingSmile','굴러오는 미소',3.8,1.5,[2]],['inverseBow','거꾸로 된 인사',3.8,1.1,[2]],['lastClap','마지막 박수',5.35,1.7,[2]],['confettiCurtain','색종이 커튼',4.6,1.2,[1,2]],['hornFan','나팔 부채꼴',4.1,1.1,[1,2]],['drumMarch','행진 북 연타',4.8,1.2,[1,2]],['balloonBouquet','풍선 꽃다발',5,1.2,[1,2]],['carousel','회전목마',5.6,1.2,[1,2]],['curtainCall','커튼콜',7.2,1.5,[2]],['spotlightSweep','스포트라이트 쇼',4.4,1.2,[1,2]],['fireHoop','불의 고리',4.3,1.2,[1,2]],['humanCannon','인간 대포',5,1.4,[2]]];
 export const PATTERNS=Object.fromEntries(definitions.map(([key,name,dur,recover,phases])=>[key,{name,dur,recover,phases}]));
 function dashPart(g,c,a,t,start,key){if(t<start)return;const b=g.boss,L=once(c,key,()=>{const yaw=toward(b,g.player),len=fitLen(b,yaw,12);c.yaw=yaw;zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*2,warn:.9,visual:true});emit(g,'clown-stomp');return {x:b.x,z:b.z,yaw,len,hit:false,done:false};});if(L.done)return;const u=t-start;c.vis.stomp=u<.9?Math.abs(Math.sin(u*16)):0;c.vis.crouch=u<.9?smooth(u/.9):0;if(cross(a,t,start+.9))emit(g,'clown-dash');if(u>=.9){const old={x:b.x,z:b.z},k=clamp((u-.9)/.45,0,1),x=L.x+Math.sin(L.yaw)*L.len*k,z=L.z+Math.cos(L.yaw)*L.len*k;c.odo+=Math.hypot(x-b.x,z-b.z);b.x=x;b.z=z;c.noSeparate=u<1.35;const p=c.prevPlayer||g.player;if(!L.hit&&segmentGap({x:0,z:0},{x:old.x-p.x,z:old.z-p.z},{x:x-g.player.x,z:z-g.player.z})<BODY_R){L.hit=true;hurt(g,30,'dash'+key);}if(u>=1.35)L.done=true;}}
 const RUN={
@@ -40,7 +40,28 @@ const RUN={
  drumMarch(g,c,a,t){c.vis.stomp=Math.abs(Math.sin(t*9));const T=g.boss.phase===2?[.1,.75,1.4,2.05]:[.1,1,1.9];for(let i=0;i<T.length;i++)if(cross(a,t,T[i])){const final=i===T.length-1;zone(g,{shape:'circle',...target(g),r:final?3.5:2.3,warn:final?1.1:.8,damage:final?34:21,blast:true,sound:'drumMarch'});emit(g,'clown-drum',{final});}},
  balloonBouquet(g,c,a,t){c.vis.juggle=t<3?1:0;once(c,'s',()=>{const p=target(g),n=g.boss.phase===2?7:5;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,q={x:p.x+Math.sin(a)*4.8,z:p.z+Math.cos(a)*4.8};confine(q,21);bombAt(g,q,2.1,26,.9,'ball',.6+i*.28);}emit(g,'clown-balloon');});},
  carousel(g,c,a,t){once(c,'s',()=>{c.f.aim=toward(g.boss,g.player);});for(let i=0;i<(g.boss.phase===2?6:4);i++)if(cross(a,t,.1+i*.55)){c.yaw=c.f.aim+i*Math.PI/3;cone(g,c.yaw,.85,12,.4,27,'carousel');emit(g,'clown-carousel');}c.vis.tilt=Math.sin(t*5)*.6;},
- curtainCall(g,c,a,t){c.vis.juggle=t<4?1:0;if(cross(a,t,.1)){c.f.aim=toward(g.boss,g.player);cone(g,c.f.aim,1,20,.35,30,'curtainCall');}for(const at of[1.4,2.1,2.8])if(cross(a,t,at))throwBall(g);if(cross(a,t,3.6)){const p=target(g);zone(g,{shape:'circle',...p,r:3.6,warn:1.2,damage:36,blast:true,sound:'curtainCall'});rosette(g,p,7,1.5,10,25,c.seq%10);emit(g,'clown-finale');}}
+ curtainCall(g,c,a,t){c.vis.juggle=t<4?1:0;if(cross(a,t,.1)){c.f.aim=toward(g.boss,g.player);cone(g,c.f.aim,1,20,.35,30,'curtainCall');}for(const at of[1.4,2.1,2.8])if(cross(a,t,at))throwBall(g);if(cross(a,t,3.6)){const p=target(g);zone(g,{shape:'circle',...p,r:3.6,warn:1.2,damage:36,blast:true,sound:'curtainCall'});rosette(g,p,7,1.5,10,25,c.seq%10);emit(g,'clown-finale');}},
+ spotlightSweep(g,c,a,t){
+  const aim=once(c,'aim',()=>({...target(g)})),n=g.boss.phase===2?5:4,at=[.2,.75,1.3,1.85,2.4];
+  c.vis.glove=.55+Math.sin(t*5)*.25;c.vis.tilt=Math.sin(t*3)*.45;
+  for(let i=0;i<n;i++)if(cross(a,t,at[i])){
+   const b=g.boss,k=(i+1)/n,last=i===n-1;
+   zone(g,{shape:'circle',x:b.x+(aim.x-b.x)*k,z:b.z+(aim.z-b.z)*k,r:last?3.4:2.5,warn:.85,damage:last?32:24,blast:true,sound:'drumMarch'});
+   emit(g,'clown-drum',{final:last});
+  }
+ },
+ fireHoop(g,c,a,t){
+  c.vis.juggle=t<3?1:0;c.vis.jump=t<.6?Math.sin(Math.PI*t/.6)*.5:0;
+  const rings=g.boss.phase===2?3:2;
+  for(let i=0;i<rings;i++)if(cross(a,t,.3+i*.9)){rosette(g,g.boss,6+i*4.2,1.1,12,24+i*2,(c.seq*5+i*4)%12);emit(g,'clown-balloon');}
+ },
+ humanCannon(g,c,a,t){
+  const b=g.boss,L=once(c,'aim',()=>{const yaw=toward(b,g.player);c.yaw=yaw;return {yaw,len:fitLen(b,yaw,26)};}),side=c.seq%2?1:-1;
+  c.vis.crouch=t<1.1?smooth(t/1.1):0;c.vis.jump=t>=1.1&&t<1.5?Math.sin(Math.PI*(t-1.1)/.4):0;c.vis.stomp=t<1.1?Math.abs(Math.sin(t*14)):0;
+  if(cross(a,t,.1)){zone(g,{shape:'lane',x:b.x,z:b.z,yaw:L.yaw,len:L.len,w:5.2,warn:1.1,damage:36,sound:'dash'});emit(g,'clown-stomp');}
+  if(cross(a,t,1.3)){const yaw=L.yaw+side*.42;zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len:fitLen(b,yaw,26),w:5.2,warn:1,damage:34,sound:'dash'});emit(g,'clown-stomp');}
+  if(cross(a,t,2.4)){const yaw=L.yaw-side*.42;zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len:fitLen(b,yaw,26),w:5.2,warn:1,damage:34,sound:'dash'});emit(g,'clown-stomp');}
+ }
 };
 export function choosePattern(g){const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);c.used||={};let list=Object.keys(PATTERNS).filter(k=>PATTERNS[k].phases.includes(phase)&&k!==c.last&&k!=='shove');if(d<4&&c.shoveCd<=0&&c.seq%4===0){c.seq++;return 'shove';}const min=Math.min(...list.map(k=>c.used[k]||0));list=list.filter(k=>(c.used[k]||0)===min);const close=new Set(['clap','bounce','inverseBow','lastClap','carousel']),prefer=list.filter(k=>d<5.5?close.has(k):d>12?!close.has(k):true);if(prefer.length)list=prefer;return list[(c.seq++)%list.length];}
 export function startClownPattern(g,name){if(!PATTERNS[name])throw Error('Unknown clown pattern');const c=g.clown;c.used||={};c.used[name]=(c.used[name]||0)+1;Object.assign(c,{state:'pattern',name,pt:0,f:{},punish:false,noSeparate:false});resetVis(c);emit(g,'clown-telegraph',{name:PATTERNS[name].name,key:name});}
