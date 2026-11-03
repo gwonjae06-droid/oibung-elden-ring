@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bindBattleSession,readBattleSession} from '../src/battle-session.mjs';
-import {readWeapon} from '../src/game-ui.mjs';
+import {readWeapon,pauseForChooser} from '../src/game-ui.mjs';
+
+test('chooser uses session commands without looking for pause buttons',()=>{
+  const root={getElementById(){throw Error('DOM pause lookup');}},calls=[];
+  const unbind=bindBattleSession(root,()=>({active:true,pause:()=>{calls.push('pause');return true;},resume:()=>calls.push('resume')}));
+  const resume=pauseForChooser(root);assert.deepEqual(calls,['pause']);resume();assert.deepEqual(calls,['pause','resume']);unbind();
+});
 
 test('each arena reads its current game and stale cleanup cannot remove a replacement',()=>{
   const root={getElementById:()=>({textContent:'검'})},doc={querySelector:()=>null};
