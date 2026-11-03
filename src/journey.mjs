@@ -5,11 +5,11 @@ import {playJourneyTransition} from './journey-transition.mjs';
 import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,MODES,RELICS,newRun,loadProfile,saveProfile,finishAttempt,chooseRelic,configureJourney} from './journey-state.mjs';
 import {JOURNEY_ART} from './journey-art.mjs';
-import {createMenuScore} from './menu-score.mjs';
+import {createMenuTheme} from './menu-theme.mjs';
 const WEAPONS={sword:'검',hammer:'망치',bow:'활',cards:'카드'};
 const DESCRIPTIONS={sword:'짧은 틈을 가르는 질풍검',hammer:'네 번의 적중, 흡혈의 강타',bow:'거리를 지배하는 관통 화살',cards:'세 가지 색으로 바꾸는 운명'};
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=boss=>import(boss==='clown'?'./clown-battle.mjs':'./dice-battle.mjs'),makeMusic=createMenuScore,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
+export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=boss=>import(boss==='clown'?'./clown-battle.mjs':'./dice-battle.mjs'),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',mode='story',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
  let transition=null;
@@ -19,7 +19,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const persist=()=>{saveFailed=!saveProfile(storage,profile);};
  if(doc.body?.dataset){doc.body.dataset.motion=pref('oibung.motion','auto');doc.body.dataset.quality=pref('oibung.quality','auto');}
  let volume=Number(pref('oibung.menu.volume','.55'));if(!Number.isFinite(volume))volume=.55;
- function syncMusic(){music.update(dialog.open&&screen!=='transition'&&screen!=='loading'&&!doc.hidden&&focused&&pref('oibung-muted','0')!=='1',volume);}
+ function syncMusic(){const muted=pref('oibung-muted','0')==='1';music.update(dialog.open&&screen!=='transition'&&screen!=='loading'&&!doc.hidden&&focused&&!muted,volume,{immediateStop:muted||doc.hidden||!focused});}
  function unlock(){music.unlock();syncMusic();}
  function show(content){
   if(dialog.dataset){dialog.dataset.screen=screen;dialog.dataset.defeated=(profile.defeated||[]).join(' ');}
