@@ -1,3 +1,4 @@
+import {renderBattleMeter} from './battle-hud.mjs';
 import {createBattlePause,clearMovement} from './battle-pause.mjs';
 import * as THREE from 'three';
 import {createGame,act,step,rolling,swordPose,skillView,SWORD,WEAPONS,PATTERNS} from './combat.mjs';
@@ -11,7 +12,7 @@ const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
 const WEAPON_KEYS=['sword','hammer','bow','cards'],reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches,coarse=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window),canvas=$('world');
 const cache={};
 const setText=(id,v)=>{if(cache['t'+id]!==v){cache['t'+id]=v;$(id).textContent=v;}};
-const setBar=(id,ratio,now,max)=>{const r=clamp(ratio,0,1),k='b'+id;if(cache[k]!==r){cache[k]=r;const el=$(id);el.style.transform='scaleX('+r+')';el.parentElement.setAttribute('aria-valuenow',String(Math.round(now)));el.parentElement.setAttribute('aria-valuemax',String(max));}};
+const setBar=(id,ratio,now,max)=>renderBattleMeter($(id),now,max,{round:Math.round});
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
