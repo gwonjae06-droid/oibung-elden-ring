@@ -1,4 +1,5 @@
 import {createSkillState,tickSkills,consumeSkill,currentCard,skillReady,SKILLS,STANDARD_COOLDOWN} from './skills.mjs';
+import {registerEncounter} from './encounter-state.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -54,7 +55,7 @@ export function attackZone(b){
  return null;
 }
 export function inZone(z,p){return Math.hypot(p.x-z.x,p.z-z.z)<z.r&&(z.shape==='circle'||Math.abs(angleDelta(z.yaw,toward(z,p)))<z.half);}
-export function createGame(weapon='sword'){if(!WEAPONS[weapon])throw new Error('Unknown weapon');return {status:'playing',time:0,hitstop:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,player:{x:0,z:13,yaw:Math.PI,hp:120,maxHp:120,stamina:100,regen:0,action:null,invuln:0,potions:3,skill:createSkillState()},boss:{x:0,z:-4,yaw:0,hp:2100,maxHp:2100,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1,queue:[],lastOpening:null,recovery:0,punishable:false,leapSpeed:0,aim:0,pressure:0,stun:0,hug:0,from:null,zone:null,turnTarget:0},stats:{hits:0,dodges:0,damage:0}};}
+export function createGame(weapon='sword'){if(!WEAPONS[weapon])throw new Error('Unknown weapon');return registerEncounter({status:'playing',time:0,hitstop:0,weapon,events:[],projectiles:[],bossShots:[],nextId:0,player:{x:0,z:13,yaw:Math.PI,hp:120,maxHp:120,stamina:100,regen:0,action:null,invuln:0,potions:3,skill:createSkillState()},boss:{x:0,z:-4,yaw:0,hp:2100,maxHp:2100,phase:1,state:'idle',t:0,wait:.8,pattern:'sweep',sequence:0,attackId:0,hit:false,poise:0,combo:false,chain:0,speed:1,queue:[],lastOpening:null,recovery:0,punishable:false,leapSpeed:0,aim:0,pressure:0,stun:0,hug:0,from:null,zone:null,turnTarget:0},stats:{hits:0,dodges:0,damage:0}});}
 export function act(g,type){
  const p=g.player,w=WEAPONS[g.weapon],s=p.skill;if(g.status!=='playing'||p.action||g.boss.state==='transition')return false;
  if(type==='heal'){if(!p.potions||p.hp>=p.maxHp)return false;p.potions--;p.action={kind:'heal',t:0,total:1.05,done:false};emit(g,'heal-start');return true;}
