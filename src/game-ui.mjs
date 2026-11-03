@@ -1,4 +1,5 @@
 import {restoreBossName} from './boss-ui-chain.mjs';
+import {playBossIntro} from './boss-intro.mjs';
 export const SECRET_BOSSES=Object.freeze([{id:'kwon',name:'긴턱의 이권재'},{id:'clown',name:'광대 오슬우'},{id:'dice',name:'거대 주사위 박성원'}].map(Object.freeze));
 export const CLEAN_UI_CSS=`
 #arena[data-clean-ui] #damage-layer,#arena[data-clean-ui] #boss-action,#arena[data-clean-ui] .brand>div>span,#arena[data-clean-ui] #load-status[data-ready-hidden]{display:none!important}
@@ -27,6 +28,7 @@ export async function enterBoss(boss,weapon,doc=globalThis.document,loadClown=()
  const {launchClownBattle}=await loadClown();const view=launchClownBattle({weapon,practice:true,onClose:()=>doc.getElementById('change')?.click()});if(!view)throw Error('Battle already open');return view;
 }
 export function takeIntro(seen,boss,active){if(!active||seen.has(boss))return false;seen.add(boss);return true;}
+const INTRO_LINES={kwon:'틈을 읽고, 대검을 피해 파고드세요.',clown:'공연이 시작됩니다.',dice:'눈금이 켜진 칸을 벗어나고, 착지 후 반격하세요.'};
 const installed=new WeakSet();
 export function installGameUi(doc=globalThis.document,win=globalThis.window){
  if(!doc||!win||installed.has(doc))return;installed.add(doc);
@@ -41,6 +43,13 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window){
   for(const b of d.querySelectorAll('[data-boss]')){b.disabled=Boolean(doc.getElementById('start')?.disabled);b.onclick=async()=>{if(navigating)return;navigating=true;for(const x of d.querySelectorAll('button'))x.disabled=true;text(d.querySelector('p'),'불러오는 중…');try{await enterBoss(b.dataset.boss,weapon,doc);selected=true;finish();const battle=doc.getElementById('dice-battle')||doc.getElementById('clown-battle');(battle?.firstElementChild?.shadowRoot||doc).getElementById('world')?.focus();}catch(error){console.error(error);text(d.querySelector('p'),'전투를 불러오지 못했습니다.');for(const x of d.querySelectorAll('button'))x.disabled=false;}finally{navigating=false;}};}
   try{d.showModal();d.querySelector('[data-boss]')?.focus();}catch(error){d.remove();resume();console.error(error);}
  }
+ function showLine(arena,boss){const p=doc.createElement('p');p.className='game-intro';p.textContent=INTRO_LINES[boss];arena.appendChild(p);win.setTimeout(()=>p.remove(),3500);}
+ function startIntro(root,arena,boss){
+  const resume=pauseForChooser(root),pauseScreen=root.getElementById('pause-screen'),old=pauseScreen?pauseScreen.style.visibility:'';
+  if(pauseScreen)pauseScreen.style.visibility='hidden';
+  const reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches),view=playBossIntro(doc,arena,boss,{reduced});
+  view.finished.finally(()=>{if(pauseScreen)pauseScreen.style.visibility=old;resume();if(arena.isConnected)showLine(arena,boss);});
+ }
  function polish(root,boss){
   watch(root);const arena=root.getElementById('arena');if(!arena)return;if(!arena.hasAttribute('data-clean-ui'))arena.setAttribute('data-clean-ui','');
   const brand=arena.querySelector('.brand');text(brand?.querySelector('div>span'),'');if(brand&&!brands.has(brand)){brands.add(brand);brand.setAttribute('role','button');brand.setAttribute('tabindex','0');brand.setAttribute('aria-label','오이붕');brand.onclick=()=>open(root);brand.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();open(root);}};}
@@ -48,7 +57,7 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window){
   const status=root.getElementById('load-status');if(status){const value=status.textContent.trim();if(value.startsWith('준비 완료')){status.setAttribute('data-ready-hidden','');text(status,'');}else if(value)status.removeAttribute('data-ready-hidden');}
   for(const id of ['retry','change','quit','resume','pause']){const b=root.getElementById(id);if(b)text(b,compactLabel(id,b.textContent));}
   const panel=root.getElementById('pause-screen')?.querySelector('.small-panel');if(panel){let settings=panel.querySelector('.pause-settings');if(!settings){settings=doc.createElement('div');settings.className='pause-settings';settings.setAttribute('aria-label','설정');panel.insertBefore(settings,root.getElementById('quit'));}for(const id of ['theme','sound']){const b=root.getElementById(id);if(b&&b.parentNode!==settings)settings.appendChild(b);}}
-  if(takeIntro(seen,boss,combatActive(root)&&!(root===doc&&doc.getElementById('boss-transition')?.open))){const p=doc.createElement('p');p.className='game-intro';p.textContent={kwon:'틈을 읽고, 대검을 피해 파고드세요.',clown:'공연이 시작됩니다.',dice:'다음 칸을 피하고, 착지 후 반격하세요.'}[boss];arena.appendChild(p);win.setTimeout(()=>p.remove(),3500);}else if(!combatActive(root))arena.querySelector('.game-intro')?.remove();
+  if(takeIntro(seen,boss,combatActive(root)&&!(root===doc&&doc.getElementById('boss-transition')?.open)))startIntro(root,arena,boss);else if(!combatActive(root))arena.querySelector('.game-intro')?.remove();
  }
  function apply(){
   polish(doc,'kwon');for(const [id,boss]of [['clown-battle','clown'],['dice-battle','dice']]){const shadow=doc.getElementById(id)?.firstElementChild?.shadowRoot;if(shadow)polish(shadow,boss);}
