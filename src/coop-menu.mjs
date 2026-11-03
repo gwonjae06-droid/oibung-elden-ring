@@ -1,6 +1,16 @@
 import {openCoopRoom,COOP_BOSSES} from './coop-ui.mjs';
 const installed=new WeakMap();
-export function coopWeapon(doc){const modal=doc.getElementById('dice-battle')||doc.getElementById('clown-battle'),root=modal?.firstElementChild?.shadowRoot||doc;return {검:'sword',망치:'hammer',활:'bow',카드:'cards'}[root.getElementById('weapon-label')?.textContent?.trim()]||doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';}
+export function coopWeapon(doc){
+ const names={검:'sword',망치:'hammer',활:'bow',카드:'cards'};
+ for(const id of ['dice-battle','clown-battle']){
+  const modal=doc.getElementById(id);
+  if(!modal?.open)continue;
+  const root=modal.firstElementChild?.shadowRoot;
+  const weapon=names[root?.getElementById('weapon-label')?.textContent?.trim()];
+  if(weapon)return weapon;
+ }
+ return doc.querySelector('#menu .weapon.selected')?.dataset.weapon||'sword';
+}
 export function installCoopMenu(doc=globalThis.document,win=globalThis.window,{openRoom=openCoopRoom}={}){
  if(installed.has(doc))return installed.get(doc);
  const seen=new WeakSet(),style=doc.createElement('style');style.textContent='.boss-secret .coop-secret-row{display:flex;gap:8px;align-items:stretch}.boss-secret .coop-secret-row>[data-boss]{flex:1;min-width:0}.boss-secret .coop-secret-row>[data-coop-boss]{flex:0 0 90px;width:auto}';doc.head.append(style);let active=null;
