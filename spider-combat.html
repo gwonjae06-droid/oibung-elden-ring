@@ -54,6 +54,9 @@
 <div id="damage-layer" aria-hidden="true"></div>
 </main>
 <script type="module">
+import {installMobileLandscape} from './src/mobile-landscape.mjs';
+const mobileLandscape=installMobileLandscape();
+window.addEventListener('pagehide',event=>{if(!event.persisted)mobileLandscape?.dispose();});
 import('./src/bootstrap.mjs?art=stone-v1').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
 </script>
 </body></html>
