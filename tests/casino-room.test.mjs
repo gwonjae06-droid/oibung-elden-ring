@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {casinoRoomPlan} from '../src/casino-room.mjs';
+import {DICE_RULES as R} from '../src/dice-data.mjs';
+import {playDiceCrushEntrance} from '../src/dice-entrance-view.mjs';
+test('giant patrons and their tables are well outside gameplay',()=>{const edge=(R.side-1)*R.edge/2+R.tileWidth/2;for(const mobile of [false,true]){const plan=casinoRoomPlan(mobile);assert.equal(plan.length,mobile?4:8);assert.deepEqual(plan,casinoRoomPlan(mobile));for(const p of plan){for(const n of Object.values(p))assert.ok(Number.isFinite(n));assert.ok(Math.max(Math.abs(p.x),Math.abs(p.z))-32>edge);}}});
+function fixture(fail=false){let callback,time=0,removed=false;const el=()=>({style:{},children:[],setAttribute(){},appendChild(x){this.children.push(x);},addEventListener(){},focus(){},remove(){removed=true;},showModal(){if(fail)throw Error('blocked');},close(){}});const doc={hidden:false,body:el(),createElement:el},shell={isConnected:true,style:{transform:'old',transformOrigin:'center',filter:'none'}},win={matchMedia:()=>({matches:false}),requestAnimationFrame(cb){callback=cb;return 1;},cancelAnimationFrame(){callback=null;}};return {doc,shell,win,step(){time+=50;const cb=callback;callback=null;cb?.(time);},get removed(){return removed;}};}
+test('independent entrance completes and restores only owned styles',async()=>{const r=fixture(),v=playDiceCrushEntrance(r.doc,r.shell,{win:r.win});for(let i=0;i<120&&!r.removed;i++)r.step();assert.equal(await v.finished,true);assert.equal(r.shell.style.transform,'old');assert.equal(r.shell.style.filter,'none');});
+test('modal failure resolves instead of leaving a hanging transition',async()=>{const r=fixture(true),v=playDiceCrushEntrance(r.doc,r.shell,{win:r.win});assert.equal(await v.finished,false);assert.ok(r.removed);});
+test('removed battle cancels and restores the original screen',async()=>{const r=fixture(),v=playDiceCrushEntrance(r.doc,r.shell,{win:r.win});r.shell.isConnected=false;r.step();assert.equal(await v.finished,false);assert.equal(r.shell.style.transform,'old');});
