@@ -1,3 +1,4 @@
+import {qualityPixelRatio,reducedMotion} from './display-preferences.mjs';
 import {runBattleStartup} from './runtime/battle-startup.mjs';
 import {renderSharedHud} from './battle-hud.mjs';
 import {createEventScope} from './runtime/event-scope.mjs';
@@ -19,7 +20,7 @@ import {createSkillAudio} from './skill-audio.mjs';
 import {bindBattleSession} from './battle-session.mjs';
 import {cameraMovement} from './battle-input.mjs';
 import {createBattleCleanup} from './runtime/battle-cleanup.mjs';
-export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}={}){
+export function launchClownBattle({weapon='sword',practice=false,configure=()=>{},onClose=()=>{}}={}){
  return runBattleStartup(startup=>{
  if(document.getElementById('clown-battle'))return;weapon=selectedWeapon(weapon);
  const source=document.getElementById('arena'),originalBoss=document.getElementById('boss-hud');if(!source||!originalBoss)throw new Error('Missing original game UI');
@@ -31,7 +32,7 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  const $=id=>shadow.getElementById(id),canvas=$('world');$('damage-layer').replaceChildren();$('notice').textContent='';$('notice').classList.remove('visible');$('hit-flash').classList.remove('visible');
  for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;const coarse=matchMedia('(pointer:coarse)').matches;$('touch').hidden=!coarse;$('pause-screen').hidden=$('result').hidden=true;$('pause').disabled=false;
  $('boss-hud').querySelector('h2').textContent='광대 오슬우';$('boss-hud').setAttribute('aria-label','광대 오슬우 상태');shell.querySelector('.brand span').textContent='전투 실험실 · 02';$('quit').textContent='광대전 무기 선택으로';$('change').textContent='광대전 무기 재선택';$('retry').textContent='같은 무기로 광대전 재도전';
- const renderer=new THREE.WebGLRenderer({canvas,antialias:true});startup.own('Clown renderer',()=>renderer.dispose());renderer.setPixelRatio(Math.min(devicePixelRatio||1,coarse?1.25:1.75));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;d.showModal();
+ const renderer=new THREE.WebGLRenderer({canvas,antialias:true});startup.own('Clown renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;d.showModal();
  const eventScope=createEventScope(window);startup.own('Battle callbacks',()=>eventScope.dispose());
  const scene=new THREE.Scene();startup.own('Battle scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,35,80);const camera=new THREE.PerspectiveCamera(58,1,.1,120);scene.add(new THREE.HemisphereLight(0xffead2,0x211424,1.2));
  const sun=new THREE.DirectionalLight(0xffd1a0,2.4);sun.position.set(8,20,15);sun.castShadow=true;sun.shadow.mapSize.set(coarse?512:1024,coarse?512:1024);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:80});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0005;scene.add(sun);
@@ -40,7 +41,7 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  const actor=createClownActor();scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);const P=buildPlayer(Object.keys(WEAPONS));scene.add(P.rig);for(const k of Object.keys(P.weaponRigs))P.weaponRigs[k].visible=k===weapon;
  const mark=new THREE.Mesh(new THREE.RingGeometry(.45,.55,24).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x89ffd0,depthTest:false,transparent:true,opacity:.8}));mark.renderOrder=102;scene.add(mark);
  const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const c=new C();contexts.push(c);if(startup.pending)startup.own('Battle audio context',()=>c.close?.());return c;};
- const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches,fx=createSkillFx(scene,reduced);startup.own('Clown effects',()=>fx.dispose());
+ const reduced=reducedMotion(),fx=createSkillFx(scene,reduced);startup.own('Clown effects',()=>fx.dispose());
  const audio=createAudio(makeAudio);startup.own('Clown audio',()=>audio.setEnabled(false));const skillAudio=createSkillAudio(makeAudio);startup.own('Clown skill audio',()=>skillAudio.setEnabled(false));
  const muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch(e){return false;}};function soundState(){const on=!muted();audio.setEnabled(on);skillAudio.setEnabled(on);$('sound').textContent=on?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(on));}soundState();
  $('theme').onclick=()=>document.getElementById('theme')?.click();$('sound').onclick=()=>{document.getElementById('sound')?.click();soundState();};
@@ -53,7 +54,7 @@ export function launchClownBattle({weapon='sword',practice=false,onClose=()=>{}}
  const aim=new THREE.Vector3(),camPos=new THREE.Vector3(),camTarget=new THREE.Vector3(),screen=new THREE.Vector3(),keys=new Set(),stick={x:0,z:0};
  function notice(text){$('notice').textContent=text;$('notice').classList.add('visible');eventScope.clearTimeout(noticeTimer);noticeTimer=eventScope.setTimeout(()=>$('notice')?.classList.remove('visible'),1800);}
  function floatText(text,x,y,z,player=false){screen.set(x,y,z).project(camera);if(Math.abs(screen.z)>1)return;const el=document.createElement('span');el.className='damage-number'+(player?' player':'');el.textContent=text;el.style.left=(screen.x*.5+.5)*canvas.clientWidth+'px';el.style.top=(-screen.y*.5+.5)*canvas.clientHeight+'px';$('damage-layer').appendChild(el);eventScope.setTimeout(()=>el.remove(),850);}
- function reset(){winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearMap(bombs);clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,12,33);aim.set(0,CLOWN_CAMERA.target,5);yaw=Math.PI;canvas.focus();}
+ function reset(){winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});configure(g);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearMap(bombs);clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,12,33);aim.set(0,CLOWN_CAMERA.target,5);yaw=Math.PI;canvas.focus();}
  let dragPointer=null;
  function input(){return cameraMovement(keys,stick,yaw,lock);}
  function request(type){if(!ready||paused||g.status!=='playing')return;if(type==='lock'){lock=!lock;return;}soundState();const p=g.player,b=g.boss,v=input();if(!p.action){if(lock||Math.hypot(b.x-p.x,b.z-p.z)<7)p.yaw=Math.atan2(b.x-p.x,b.z-p.z);else if(!v.x&&!v.z)p.yaw=yaw;}if(type==='skill'){act(g,type);return;}queued={type,until:performance.now()+250};}

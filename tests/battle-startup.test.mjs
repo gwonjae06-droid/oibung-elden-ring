@@ -1,3 +1,4 @@
+import {qualityPixelRatio,reducedMotion} from '../src/display-preferences.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -26,7 +27,7 @@ for(const boss of ['clown','dice'])test(boss+' launch removes its dialog and ren
   const node=(tag='node')=>({style:{},classList:{remove(){}},setAttribute(){},appendChild(){},append(){},remove(){if(tag==='dialog')log.push('remove');},
     showModal(){},replaceChildren(){},querySelector:()=>node(),querySelectorAll:()=>[],attachShadow:()=>({getElementById:()=>node(),append(){}}),cloneNode:()=>node()});
   const renderer=class{constructor(){this.shadowMap={};}setPixelRatio(){}dispose(){log.push('renderer');}};
-  const context={URL,runBattleStartup,selectedWeapon:weapon=>weapon,matchMedia:()=>({matches:false}),devicePixelRatio:1,
+  const context={qualityPixelRatio,reducedMotion,URL,runBattleStartup,selectedWeapon:weapon=>weapon,matchMedia:()=>({matches:false}),devicePixelRatio:1,
     document:{getElementById:id=>id==='arena'||id==='boss-hud'?node():null,createElement:tag=>node(tag),body:{appendChild(){}}},
     THREE:{WebGLRenderer:renderer,Scene:class{constructor(){throw original;}},PCFSoftShadowMap:1},
     window:{},createEventScope:()=>({dispose(){log.push('events');}}),createDiceUi:()=>({d:node(),root:{},$:()=>node(),canvas:{},dispose(){log.push('remove');}})};

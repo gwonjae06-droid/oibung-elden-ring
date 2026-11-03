@@ -131,8 +131,9 @@ export function actPlayer(game, type) {
     return true;
   }
   if (type === 'roll') {
-    if (player.stamina < 25) return false;
-    player.stamina -= 25;
+    const cost=game.journey?.rollCost??25;
+    if (player.stamina < cost) return false;
+    player.stamina -= cost;
     player.regen = 0.85;
     player.action = {kind: 'roll', t: 0, total: 0.52, yaw: player.yaw};
     emit(game, 'roll');
@@ -160,10 +161,11 @@ export function actPlayer(game, type) {
     }
     return true;
   }
-  if (type !== 'light' || player.stamina < weapon.cost) return false;
-  player.stamina -= weapon.cost;
+  const attackCost=weapon.cost+(game.journey?.cost??0);
+  if (type !== 'light' || player.stamina < attackCost) return false;
+  player.stamina -= attackCost;
   player.regen = 0.85;
-  const rate = skill.haste > 0 ? SKILLS.sword.rate : 1;
+  const rate = (skill.haste > 0 ? SKILLS.sword.rate : 1)/(game.journey?.speed??1);
   const wind = weapon.wind / rate,
     active = weapon.active / rate,
     end = weapon.end / rate;
@@ -177,7 +179,7 @@ export function actPlayer(game, type) {
     done: false,
     hit: false,
     basic: true,
-    mult: skill.nextRed ? SKILLS.cards.redDamage : 1,
+    mult: (skill.nextRed ? SKILLS.cards.redDamage : 1)*(game.journey?.damage??1),
     stun: skill.nextYellow,
     stunUsed: false,
     credited: false,

@@ -12,7 +12,7 @@ export function installDiceChain(doc=globalThis.document,win=globalThis.window,{
  const safely=fn=>{try{fn();}catch(error){console.warn('Dice chain cleanup failed',error);}};
  function detach(){const oldWatch=watch,oldEntrance=entrance,oldButton=button;watch=null;entrance=null;button=null;source=null;safely(()=>oldWatch?.());safely(()=>oldEntrance?.dispose());safely(()=>oldButton?.remove());}
  function scan(){
-  if(disposed)return;const next=doc.getElementById('clown-battle');if(next===source)return;detach();if(!next)return;
+  if(disposed||doc.body?.dataset?.journey)return;const next=doc.getElementById('clown-battle');if(next===source)return;detach();if(!next)return;
   const root=next.firstElementChild?.shadowRoot,result=root?.getElementById('result'),shell=root?.getElementById('arena'),panel=result?.querySelector('.small-panel');
   if(!root||!result||!shell||!panel)return;source=next;const readEncounter=()=>readBattleSession(root)?.encounter||encounterStore.read(),gate=createProgressionGate('clown',readEncounter);
   const b=doc.createElement('button');button=b;b.textContent='다음 시련 · 거대 주사위 박성원';b.hidden=true;panel.appendChild(b);

@@ -2,15 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#121614"><title>오이붕 · 긴턱의 이권재</title>
+<meta name="theme-color" content="#121614"><title>오이붕 · 오슬우의 시련</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./skills.css">
 <link rel="stylesheet" href="./boss-transition.css">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+<link rel="stylesheet" href="./journey.css">
 </head>
-<body>
+<body data-journey="1">
+<dialog id="journey" open aria-label="오이붕 메인"><div class="j-shell"><main class="j-main"><div class="j-copy"><p class="j-kicker">THE GATE OPENS</p><h1 class="j-title">오이붕</h1><p class="j-status" id="journey-loading">세 지배자의 문을 열고 있습니다…</p></div></main></div></dialog>
 <a class="skip" href="#menu">메뉴로 이동</a>
 <main id="arena" aria-label="오슬우와 긴턱 거미 이권재의 3D 전투">
 <canvas id="world" tabindex="0" aria-label="전투 화면. WASD 이동, J 또는 좌클릭 공격, L 또는 우클릭 스킬, Space 회피, E 회복, Q 록온, Esc 일시정지."></canvas>
@@ -52,6 +54,6 @@
 <div id="damage-layer" aria-hidden="true"></div>
 </main>
 <script type="module">
-import('./src/bootstrap.mjs').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
+import('./src/bootstrap.mjs').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
 </script>
 </body></html>

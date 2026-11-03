@@ -1,3 +1,4 @@
+import {reducedMotion} from './display-preferences.mjs';
 import {restoreBossName} from './boss-ui-chain.mjs';
 import {playBossIntro} from './boss-intro.mjs';
 import {createDisposerScope} from './runtime/disposer.mjs';
@@ -48,6 +49,7 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window,{loa
   local.add(()=>observer.disconnect());observer.observe(root===doc?doc.body:root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','data-stage','style']});return entry;
  }
  function open(root,entry){
+  if(doc.body?.dataset?.journey){win.dispatchEvent(new win.CustomEvent('oibung:home'));return;}
   if(!alive()||entry.scope.disposed||navigating||doc.querySelector('.boss-secret[open]'))return;
   const resume=pauseForChooser(root),weapon=readWeapon(root,doc),d=doc.createElement('dialog');d.className='boss-secret';d.setAttribute('aria-label','보스 선택');d.innerHTML='<h2>보스 선택</h2>'+SECRET_BOSSES.map(b=>'<button data-boss="'+b.id+'">'+b.name+'</button>').join('')+'<p role="status"></p><button data-close>닫기</button>';doc.body.appendChild(d);
   let selected=false,closed=false,cancelled=false,untrack=()=>{};const current=()=>alive()&&!entry.scope.disposed&&!cancelled;
@@ -60,7 +62,7 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window,{loa
  function startIntro(entry,root,arena,boss){
   const resume=pauseForChooser(root),pauseScreen=root.getElementById('pause-screen'),old=pauseScreen?.style.visibility;let done=false,view=null,untrack=()=>{};
   function finish(line){if(done)return;done=true;if(pauseScreen)pauseScreen.style.visibility=old;untrack();safe(resume);if(line)showLine(entry,arena,boss);}
-  try{if(pauseScreen)pauseScreen.style.visibility='hidden';view=playIntro(doc,arena,boss,{reduced:Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches)});untrack=entry.scope.add(()=>{try{view.skip();}finally{finish(false);}});Promise.resolve(view.finished).then(ok=>finish(ok!==false),()=>finish(false));}catch(error){finish(false);console.error(error);}
+  try{if(pauseScreen)pauseScreen.style.visibility='hidden';view=playIntro(doc,arena,boss,{reduced:reducedMotion()});untrack=entry.scope.add(()=>{try{view.skip();}finally{finish(false);}});Promise.resolve(view.finished).then(ok=>finish(ok!==false),()=>finish(false));}catch(error){finish(false);console.error(error);}
  }
  function polish(root,boss){
   const entry=watch(root),arena=root.getElementById('arena');if(!arena)return;attr(entry,arena,'data-clean-ui','');

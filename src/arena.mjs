@@ -1,3 +1,4 @@
+import {qualityPixelRatio,reducedMotion} from './display-preferences.mjs';
 import {combineCleanupReports} from './runtime/cleanup-completion.mjs';
 import {runBattleStartup} from './runtime/battle-startup.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
@@ -13,12 +14,12 @@ import {createArenaRuntime} from './runtime/arena-runtime.mjs';
 import {bindBattleSession} from './battle-session.mjs';
 export const arenaRuntime=runBattleStartup(startup=>{
 const $=id=>document.getElementById(id),clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),angleDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a)),fmt=n=>Math.round(n).toLocaleString('ko-KR');
-const WEAPON_KEYS=['sword','hammer','bow','cards'],reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches,coarse=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window),canvas=$('world');
+const WEAPON_KEYS=['sword','hammer','bow','cards'],reduceMotion=reducedMotion(),coarse=matchMedia('(pointer: coarse)').matches||('ontouchstart' in window),canvas=$('world');
 const cache={};
 const setText=(id,v)=>{if(cache['t'+id]!==v){cache['t'+id]=v;$(id).textContent=v;}};
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 const releaseRendererRollback=startup.own('Arena renderer',()=>renderer.dispose());
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(qualityPixelRatio(2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();const releaseSceneRollback=startup.own('Arena scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
 const camera=new THREE.PerspectiveCamera(58,1,.1,120);scene.add(new THREE.HemisphereLight(0xbac6b4,0x1b221b,1.05));
 // Arena lifecycle bindings.
@@ -80,7 +81,7 @@ const view={yaw:Math.PI,pitch:.4,dist:9.5},vis={pyaw:Math.PI,time:0,legPhase:0,b
 function setWeaponVisual(){for(const k of WEAPON_KEYS)weaponRigs[k].visible=k===game.weapon;setText('weapon-label',WEAPONS[game.weapon].name);}
 function selectWeapon(key){if(!WEAPONS[key])return;selectedWeapon=key;document.querySelectorAll('.weapon').forEach(btn=>{const on=btn.dataset.weapon===key;btn.classList.toggle('selected',on);btn.setAttribute('aria-pressed',String(on));});if(mode==='menu'){game=createGame(key,{register:false});setWeaponVisual();}}
 function setUi(){const inFight=mode==='playing'||mode==='paused'||mode==='ending'||mode==='result';$('menu').hidden=mode!=='menu';$('pause-screen').hidden=mode!=='paused';$('result').hidden=mode!=='result';$('player-hud').hidden=!inFight;$('boss-hud').hidden=!inFight;$('controls').hidden=!inFight;$('touch').hidden=!(coarse&&(mode==='playing'||mode==='ending'));$('pause').disabled=!(mode==='playing'||mode==='paused');}
-function startBattle(weapon){game=createGame(weapon,{register:false});selectedWeapon=weapon;setWeaponVisual();clearFx();queued=null;lock=true;shake=0;vis.cast=0;view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;vis.px=game.player.x;vis.pz=game.player.z;mode='playing';setUi();audio.ambience(true);canvas.focus({preventScroll:true});notice('이권재가 모습을 드러냅니다');}
+function startBattle(weapon,configure=()=>{}){game=createGame(weapon,{register:false});configure(game);selectedWeapon=weapon;setWeaponVisual();clearFx();queued=null;lock=true;shake=0;vis.cast=0;view.yaw=Math.atan2(game.boss.x-game.player.x,game.boss.z-game.player.z);view.pitch=.4;vis.pyaw=game.player.yaw;vis.bx=game.boss.x;vis.bz=game.boss.z;vis.px=game.player.x;vis.pz=game.player.z;mode='playing';setUi();audio.ambience(true);canvas.focus({preventScroll:true});notice('이권재가 모습을 드러냅니다');}
 function backToMenu(){mode='menu';queued=null;clearFx();audio.ambience(false);game=createGame(selectedWeapon,{register:false});setWeaponVisual();setUi();vis.px=game.player.x;vis.pz=game.player.z;$('start').focus();}
 const pauseControl=createBattlePause({isPlaying:()=>mode==='playing',isPaused:()=>mode==='paused',setPaused:value=>{mode=value?'paused':'playing';},clearInput:()=>{clearMovement(keys,stick);queued=null;dragging=false;if(dragPointer!==null)arenaRuntime.release(canvas,dragPointer);dragPointer=null;resetStick();},onPause:()=>{audio.ambience(false);setUi();$('resume').focus();},onResume:()=>{audio.ambience(true);setUi();canvas.focus({preventScroll:true});}});
 function pauseGame(){return pauseControl.pause();}
