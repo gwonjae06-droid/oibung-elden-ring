@@ -4,7 +4,7 @@ import {KWON_MEMORY,rememberKwon} from './chapter-story.mjs';
 import {playJourneyTransition} from './journey-transition.mjs';
 import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,MODES,RELICS,newRun,loadProfile,saveProfile,finishAttempt,chooseRelic,configureJourney} from './journey-state.mjs';
-import {JOURNEY_ART} from './journey-art.mjs?art=stone-v1';
+import {JOURNEY_ART} from './journey-art.mjs?art=stone-motion-v1';
 import {createMenuTheme} from './menu-theme.mjs';
 import {MOBILE_LANDSCAPE_GATE_HTML} from './mobile-landscape.mjs';
 const WEAPONS={sword:'검',hammer:'망치',bow:'활',cards:'카드'};

@@ -66,3 +66,31 @@ body[data-motion='reduced'] .j-rune{animation:none}
 .j-photographic .mural-grooves{animation:inlay-ignite 2.8s ease-out both}
 @keyframes inlay-ignite{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0)}}
 @media(prefers-reduced-motion:reduce){.j-photographic .mural-grooves{animation:none;clip-path:none}}body[data-motion='reduced'] .j-photographic .mural-grooves{animation:none;clip-path:none}
+/* Slow ritual motion: stone stays fixed while the light and air move around it. */
+.j-light-shafts,.j-haze,.j-ash,.j-relief-sheen{display:none;pointer-events:none}
+#journey[data-screen='home'] .j-light-shafts{display:block;position:absolute;inset:-20%;background:linear-gradient(113deg,transparent 23%,#eeddb51a 28%,#eeddb504 34%,transparent 40%,#cfdfd90d 55%,transparent 62%);transform-origin:50% 0;animation:temple-rays 19s ease-in-out infinite alternate}
+#journey[data-screen='home'] .j-haze{display:block;position:absolute;inset:-12%;background:radial-gradient(ellipse at 18% 85%,#b7c6c016,transparent 52%),radial-gradient(ellipse at 85% 20%,#e8d6ac0c,transparent 46%);animation:temple-haze 24s ease-in-out infinite alternate}
+#journey[data-screen='home'] .j-embers{opacity:.4;animation:temple-dust 29s linear infinite}
+#journey[data-screen='home'] .j-ash{display:block;position:absolute;inset:-20%;opacity:.35;background-image:radial-gradient(circle,#e6d8ae66 .8px,transparent 2px),radial-gradient(circle,#d6c39755 1.2px,transparent 3px);background-size:311px 227px,421px 337px;background-position:51px 83px,137px 19px;animation:temple-ash 38s linear infinite}
+#journey[data-screen='home'] .j-relief-sheen{display:block;animation:temple-carving-light 17s ease-in-out infinite;animation-delay:var(--seal-delay,0s)}
+#journey[data-screen='home'] .groove-inlay{animation:temple-fire 3.7s ease-in-out infinite;animation-delay:var(--seal-delay,0s)}
+#journey[data-screen='home'] .j-copy>*{animation:temple-reveal .95s cubic-bezier(.2,.7,.3,1) both}
+#journey[data-screen='home'] .j-copy>.j-title{animation:temple-reveal 1.1s .12s both,temple-title-glow 7s 1.3s ease-in-out infinite alternate}
+#journey[data-screen='home'] .j-subtitle{animation-delay:.24s}#journey[data-screen='home'] .j-prose{animation-delay:.38s}#journey[data-screen='home'] .j-menu{animation-delay:.52s}#journey[data-screen='home'] .j-links{animation-delay:.66s}#journey[data-screen='home'] .j-route{animation-delay:.8s}#journey[data-screen='home'] .j-status{animation-delay:.9s}
+#journey[data-screen='home'] .j-primary{position:relative;overflow:hidden;transition:background .25s,border-color .25s,box-shadow .25s}
+#journey[data-screen='home'] .j-primary:after{content:'';position:absolute;inset:-100% -60%;pointer-events:none;background:linear-gradient(110deg,transparent 43%,#fff3c91f 50%,transparent 57%);animation:temple-button-light 9s 1s ease-in-out infinite}
+#journey[data-screen='home'] .j-primary:hover{box-shadow:inset 0 1px #edd29966,0 0 24px #c7a46a44}
+#journey:not([open]) *,#journey:not([open]) *:before,#journey:not([open]) *:after{animation-play-state:paused!important}
+@keyframes temple-rays{from{opacity:.4;transform:translateX(-3%) rotate(-3deg)}to{opacity:1;transform:translateX(3%) rotate(3deg)}}
+@keyframes temple-haze{from{opacity:.35;transform:translate(-2%,1%)}to{opacity:.85;transform:translate(3%,-2%)}}
+@keyframes temple-dust{from{transform:translate(0,0)}to{transform:translate(40px,-140px)}}
+@keyframes temple-ash{from{transform:translate(0,0)}to{transform:translate(-52px,-100px)}}
+@keyframes temple-carving-light{0%,18%{transform:translateX(-1100px)}52%,100%{transform:translateX(1100px)}}
+@keyframes temple-fire{0%,100%{opacity:.72}17%{opacity:.95}31%{opacity:.67}47%{opacity:1}64%{opacity:.78}83%{opacity:.93}}
+@keyframes temple-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes temple-title-glow{from{text-shadow:0 2px 2px #000,0 -1px 0 #f3e5bb55,0 0 24px #000}to{text-shadow:0 2px 2px #000,0 -1px 0 #f3e5bb77,0 0 28px #d9bd762e}}
+@keyframes temple-button-light{0%,55%{transform:translateX(-65%)}85%,100%{transform:translateX(65%)}}
+body[data-quality='low'] #journey .j-haze,body[data-quality='low'] #journey .j-ash{display:none}
+body[data-motion='reduced'] #journey[data-screen='home'] *,body[data-motion='reduced'] #journey[data-screen='home'] *:before,body[data-motion='reduced'] #journey[data-screen='home'] *:after{animation:none!important}
+body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced'] #journey .j-haze,body[data-motion='reduced'] #journey .j-ash,body[data-motion='reduced'] #journey .j-relief-sheen,body[data-motion='reduced'] #journey .j-primary:after{display:none}
+@media(prefers-reduced-motion:reduce){#journey[data-screen='home'] *,#journey[data-screen='home'] *:before,#journey[data-screen='home'] *:after{animation:none!important}#journey .j-light-shafts,#journey .j-haze,#journey .j-ash,#journey .j-relief-sheen,#journey .j-primary:after{display:none}}
