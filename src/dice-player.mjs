@@ -8,8 +8,8 @@ import {
   createPlayerState,
   tickPlayerAction,
   advancePlayerProjectile,
-  rewardPlayerHit,
 } from './player-combat.mjs';
+import {settlePlayerHit} from './player-hit.mjs';
 import {createDiceGame, stepDice, damageDice} from './dice-combat.mjs';
 import {DICE_BOARD, DICE_RULES as R} from './dice-data.mjs';
 
@@ -54,9 +54,7 @@ function hit(g, amount, action, impact) {
   const dealt=g.dice.giant?(impact.part==='hand'?strikeGiantHand(g,impact.index,amount):amount*2.8):amount;
   const damage = damageDice(g, dealt);
   if (!damage) return;
-  g.stats.hits++;
-  g.stats.damage += damage;
-  rewardPlayerHit(g, damage, action, {
+  settlePlayerHit(g, damage, action, {
     canStun: g.status === 'playing',
     stun: (duration) => {
       g.dice.stun = duration;
