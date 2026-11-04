@@ -1,0 +1,50 @@
+[
+  {
+    "asset": "cobblestone_floor_03",
+    "map": "Diffuse",
+    "file": "cobblestone_floor_03_diff_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_03/cobblestone_floor_03_diff_1k.jpg",
+    "md5": "d5e23f634ea666527747ea22734d1984",
+    "license": "CC0"
+  },
+  {
+    "asset": "cobblestone_floor_03",
+    "map": "nor_gl",
+    "file": "cobblestone_floor_03_nor_gl_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_03/cobblestone_floor_03_nor_gl_1k.jpg",
+    "md5": "714091302c0177ff073ee385a07800e5",
+    "license": "CC0"
+  },
+  {
+    "asset": "cobblestone_floor_03",
+    "map": "rough",
+    "file": "cobblestone_floor_03_rough_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cobblestone_floor_03/cobblestone_floor_03_rough_1k.jpg",
+    "md5": "e136999af6faa42d51aef4ddfe9e7b87",
+    "license": "CC0"
+  },
+  {
+    "asset": "castle_brick_broken_06",
+    "map": "Diffuse",
+    "file": "castle_brick_broken_06_diff_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/castle_brick_broken_06/castle_brick_broken_06_diff_1k.jpg",
+    "md5": "dd45cefede465cb0c1633e2d7497ad69",
+    "license": "CC0"
+  },
+  {
+    "asset": "castle_brick_broken_06",
+    "map": "nor_gl",
+    "file": "castle_brick_broken_06_nor_gl_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/castle_brick_broken_06/castle_brick_broken_06_nor_gl_1k.jpg",
+    "md5": "3e84a829f901df5c5d25d15120727190",
+    "license": "CC0"
+  },
+  {
+    "asset": "castle_brick_broken_06",
+    "map": "rough",
+    "file": "castle_brick_broken_06_rough_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/castle_brick_broken_06/castle_brick_broken_06_rough_1k.jpg",
+    "md5": "c93f161c0f356e2588563135ee6ad477",
+    "license": "CC0"
+  }
+]
