@@ -79,7 +79,7 @@
 #arena #controls{display:none!important}
 #arena .brand{opacity:.72}
 #arena #notice[data-critical].visible{display:block!important;font-weight:700;border-left:2px solid #c39b64;background:#111912bb}
-@media (pointer:coarse) and (orientation:landscape){
+@media (orientation:landscape) and (pointer:coarse){
  #arena .hud{top:max(64px,env(safe-area-inset-top) + 56px);left:max(10px,env(safe-area-inset-left));width:min(215px,32vw);padding:4px 6px}
  #arena .hud .stat b{display:none}
  #arena .hud .skill-line strong{font-size:11px}
@@ -88,7 +88,7 @@
  #arena .top-actions button{font-size:11px}
  #arena #giant-hud{padding:5px 8px!important;width:min(250px,33vw)!important;font-size:11px!important}
 }
-@media (pointer:coarse) and (orientation:landscape) and (max-height:340px){
+@media (orientation:landscape) and (pointer:coarse) and (max-height:340px){
  #arena .hud{top:50px}
  #arena .boss-hud{top:8px}
 }
