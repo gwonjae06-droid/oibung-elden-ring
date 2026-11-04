@@ -16,8 +16,8 @@ export const SOUND_SAMPLES=Object.freeze({
  death:Object.freeze(['assets/sfx/dead.mp3'])
 });
 export const PLAYER_CLIP_ENVELOPES=Object.freeze({
- healed:Object.freeze({gain:.72,seconds:1.75,fade:.28,minGap:.25}),
- 'skill-heal':Object.freeze({gain:.58,seconds:1.12,fade:.23,minGap:.25}),
+ healed:Object.freeze({gain:1.35,seconds:2.2,fade:.36,minGap:.25}),
+ 'skill-heal':Object.freeze({gain:1.1,seconds:1.5,fade:.28,minGap:.25}),
  death:Object.freeze({gain:.9,seconds:2.65,fade:.45,minGap:.5})
 });
 export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now(),storage,coarse=()=>globalThis.matchMedia?.('(pointer: coarse)')?.matches||false,random=Math.random,schedule=fn=>globalThis.setInterval(fn,40),cancel=id=>globalThis.clearInterval(id)}={}){
@@ -53,7 +53,7 @@ export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.
   get activeCount(){return active;},
   get names(){return Object.keys(SOUND_SAMPLES);},
   setEnabled(value){enabled=Boolean(value)&&!disposed;if(!enabled)for(const clips of pool.values())for(const v of clips)stop(v);return enabled;},
-  play(name,{volume=1,minGap}={}){
+  play(name,{volume=1,minGap,onFailure}={}){
    if(!enabled||disposed||active>=maxVoices||!Object.hasOwn(SOUND_SAMPLES,name))return false;
    const envelope=PLAYER_CLIP_ENVELOPES[name],time=now(),lastAt=last.get(name)??-Infinity;
    if(time-lastAt<(minGap??envelope?.minGap??.065)*1000)return false;
@@ -69,7 +69,7 @@ export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.
     v.audio.playbackRate=.95+random()*.12;
     v.audio.currentTime=0;
     v.audio.onended=()=>release(v);
-    v.audio.onerror=()=>{v.failed=true;release(v);};
+    v.audio.onerror=()=>{if(!v.playing)return;v.failed=true;stop(v);onFailure?.();};
     const task=v.audio.play();
     if(envelope){
      const full=v.audio.volume,start=time;
@@ -81,7 +81,7 @@ export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.
      });
      v.timer?.unref?.();
     }
-    task?.catch?.(()=>{v.failed=true;stop(v);});
+    task?.catch?.(()=>{if(!v.playing)return;v.failed=true;stop(v);onFailure?.();});
     return true;
    }catch{v.failed=true;release(v);return false;}
   },
