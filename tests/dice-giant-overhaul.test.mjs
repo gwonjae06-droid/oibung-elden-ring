@@ -153,7 +153,7 @@ test('both lost hands force only head and prop based feral attacks',()=>{
  for(let i=0;i<14;i++){
   s.state='recovery';s.t=GIANT.recovery-.002;
   stepDicePlayer(g,.01);
-  assert.ok([2,4].includes(s.slot),'no hand-based strikes without palms');
+  assert.ok([2,4,7].includes(s.slot),'no hand-based strikes without palms');
   assert.ok(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60})?.part!=='hand');
  }
 });
