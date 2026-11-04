@@ -32,14 +32,14 @@ test('a failing reverb does not disable audio',()=>{
  assert.equal(a.play('ui'),true);
 });
 
-test('layered ambience starts six sources once and stops them all',()=>{
+test('filtered natural ambience uses one noise source and stops cleanly',()=>{
  const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
  a.setEnabled(true);
  const before=log.starts;
  a.ambience(true);
- assert.equal(log.starts-before,6);
+ assert.equal(log.starts-before,1);
  a.ambience(true);
- assert.equal(log.starts-before,6);
+ assert.equal(log.starts-before,1);
  assert.equal(a.activeDrone,true);
  a.ambience(false);
  assert.equal(a.activeDrone,false);
