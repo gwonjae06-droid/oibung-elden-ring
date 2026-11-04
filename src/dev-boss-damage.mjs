@@ -3,7 +3,7 @@ export function installDevBossDamage(root, read) {
   const win = (root.ownerDocument || root).defaultView;
   if (!win?.addEventListener) return () => {};
   function onKey(event) {
-    if (event.key !== '"' || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.defaultPrevented) return;
+    if (event.key !== ';' || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.defaultPrevented) return;
     if (event.composedPath?.().some(el => el?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el?.tagName || ''))) return;
     const state = read();
     const g = state?.game, b = g?.boss;
