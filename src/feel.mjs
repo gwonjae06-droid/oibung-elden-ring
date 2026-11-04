@@ -61,14 +61,14 @@ export function createFeel(scene,reduced=false){
       const big=Boolean(ev.big),x=b.x+(p.x-b.x)*.35,z=b.z+(p.z-b.z)*.35,y=1.6+Math.random()*1.4;
       spray('blood',x,y,z,p.x-b.x,p.z-b.z,big?30:ev.amount>=60?16:10,big?6:4);
       if(g.weapon==='sword'||g.weapon==='hammer')spray('spark',x,y,z,p.x-b.x,p.z-b.z,big?14:8,7);
-      say(HIT_SOUND[g.weapon]||'hit-slash');if(big)say('hit-crit');
+      // The dedicated player weapon SFX owns all attack/impact audio.
       kick(big?.32:.1);
     }else if(ev.type==='player-hit'){
       spray('blood',p.x,1.3,p.z,p.x-b.x,p.z-b.z,18,5);say('hit-flesh');kick(.25);
     }else if(ev.type==='stagger'){
-      spray('blood',b.x,2.4,b.z,p.x-b.x,p.z-b.z,22,6);say('hit-crit');kick(.3);
+      spray('blood',b.x,2.4,b.z,p.x-b.x,p.z-b.z,22,6);kick(.3);
     }else if(ev.type==='victory'){
-      spray('blood',b.x,2.5,b.z,p.x-b.x,p.z-b.z,70,8);say('hit-crit');kick(.45);
+      spray('blood',b.x,2.5,b.z,p.x-b.x,p.z-b.z,70,8);kick(.45);
     }else if(ev.type==='skill-cast'&&ev.flavor==='hammer')kick(.25);
     else if(ev.type==='phase')kick(.4);
   }
