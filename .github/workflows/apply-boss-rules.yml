@@ -1,0 +1,53 @@
+name: Apply boss rules (one shot)
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/apply-boss-rules.yml]
+permissions:
+  contents: write
+  issues: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js for 3D regression tests
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Baseline tests before changes
+        shell: bash
+        run: |
+          touch /tmp/apply.log
+          if npm test > /tmp/baseline.log 2>&1; then echo 'baseline: pass' | tee -a /tmp/apply.log; else echo 'baseline: FAIL' | tee -a /tmp/apply.log; tail -n 40 /tmp/baseline.log | tee -a /tmp/apply.log; fi
+      - name: Apply patch
+        shell: bash
+        run: python3 tools/apply_boss_rules.py 2>&1 | tee -a /tmp/apply.log
+      - name: Syntax check
+        shell: bash
+        run: |
+          for f in src/*.mjs tests/*.mjs; do node --check "$f" 2>&1 | tee -a /tmp/apply.log; done
+      - name: Regression tests after changes
+        shell: bash
+        run: npm test 2>&1 | tee -a /tmp/apply.log
+      - name: Commit tested changes
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm -r -q tools
+          git add src tests scripts docs README.md
+          git commit -m 'refactor: enforce boss design rules, remove skip controls and low-quality/reduced-motion modes'
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Report failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          touch /tmp/apply.log
+          { echo 'The one-shot boss-rules workflow failed. Last log lines:'; echo '```'; tail -n 150 /tmp/apply.log; echo '```'; } > /tmp/body.md
+          gh issue create --title 'apply-boss-rules failed' --body-file /tmp/body.md
