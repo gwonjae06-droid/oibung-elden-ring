@@ -62,7 +62,7 @@ export function giantPosture(g){
  }
  if(s.state==='wounded'){
   const lean=ease(sat(s.t/.6))*(1-ease((s.t-GIANT.wound+1.5)/1.5));
-  return {lean:lean*.78,bodyX:0,head:{x:0,y:lerp(58,9,lean),z:lerp(-106,-62,lean),rotation}};
+  return {lean:lean*.78,bodyX:0,head:{x:0,y:lerp(58,8.5,lean),z:lerp(-106,-62,lean),rotation}};
  }
  if(s.state==='attack'&&s.temperament==='feral'&&[2,6].includes(s.slot)){
   const h=s.hazards?.find(h=>h.headSlam&&s.t>=h.start-.35&&s.t<=h.start+h.warn+h.active+1.1);

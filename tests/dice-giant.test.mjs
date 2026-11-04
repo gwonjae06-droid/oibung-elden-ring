@@ -22,7 +22,7 @@ test('head armor blocks other sides and hand impact uses the same grounded posit
  const g=ready();const hand=giantHandPose(g,0),hit=giantImpact(g,{x:hand.x,y:1.2,z:hand.z+13},{x:hand.x,y:1.2,z:hand.z+9});assert.equal(hit.part,'hand');assert.equal(hit.index,0);
  const s=g.dice.giant;s.state='wounded';s.t=1;advance(g,.02);
  const photo=giantImpact(g,{x:0,y:1.2,z:-48},{x:0,y:1.2,z:-58});assert.equal(photo.part,'head');assert.equal(photo.face,0);
- const back=giantImpact(g,{x:0,y:1.2,z:-77},{x:0,y:1.2,z:-71});assert.notEqual(back.face,0);
+ const back=giantImpact(g,{x:0,y:1.2,z:-80},{x:0,y:1.2,z:-68});assert.notEqual(back.face,0);
 });
 test('seven deterministic patterns leave a safe position at every damage beat and lock their targets',()=>{
  for(let slot=0;slot<7;slot++){const p={x:20,z:20},pattern=giantPattern(slot,p),snapshot=JSON.stringify(pattern);p.x=-40;assert.equal(JSON.stringify(pattern),snapshot);

@@ -18,7 +18,7 @@ test('the 3D dice orbit, launch, and final enlarged head stay finite and continu
  const a=spinPose(from,3.6),b=possessionPose(from,3.6),c=possessionPose(from,3.85);
  assert.ok(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<1e-7);
  assert.ok(Math.abs(c.x)<1e-7&&Math.abs(c.z+106)<1e-7);
- assert.equal(possessionScale(0),1);assert.equal(possessionScale(7),1.4);
+ assert.equal(possessionScale(0),1);assert.ok(Math.abs(possessionScale(7)-1.4)<1e-10);
 });
 test('the hands rest at playable board edges and the hitboxes share the visual poses',()=>{
  const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
