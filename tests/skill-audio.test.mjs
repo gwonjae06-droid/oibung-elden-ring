@@ -9,17 +9,22 @@ function fake(){
     createOscillator:()=>node({type:'',frequency:param(),detune:param(),start(){log.starts++;},stop(){log.stops++;}}),createBufferSource:()=>node({buffer:null,loop:false,start(){log.starts++;},stop(){log.stops++;}}),createBiquadFilter:()=>node({type:'',frequency:param(),Q:param()})};
   return {ctx,log};
 }
-test('every skill sound plays valid, balanced audio and matches the declared name list',()=>{
-  const {ctx,log}=fake(),a=createSkillAudio(()=>ctx);assert.equal(a.setEnabled(true),true);assert.deepEqual([...a.names].sort(),[...SKILL_SOUND_NAMES].sort());
-  for(const name of a.names){ctx.currentTime+=1;const before=log.starts;assert.equal(a.play(name),true,name);assert.ok(log.starts>before,name);}
-  assert.deepEqual(log.errors,[]);assert.equal(log.starts,log.stops);
+test('legacy pitched skill tunes never generate oscillators',()=>{
+ const {ctx,log}=fake(),a=createSkillAudio(()=>ctx);
+ assert.equal(a.setEnabled(true),true);
+ assert.deepEqual([...a.names].sort(),[...SKILL_SOUND_NAMES].sort());
+ for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name),false,name);}
+ assert.equal(log.starts,0);assert.deepEqual(log.errors,[]);
 });
+
 test('skill audio stays silent when disabled or unsupported, and ignores unknown names',()=>{
   let made=0;const a=createSkillAudio(()=>{made++;return fake().ctx;});assert.equal(a.play('skill-sword'),false);assert.equal(made,0);
   assert.equal(createSkillAudio(()=>null).setEnabled(true),false);assert.equal(createSkillAudio(()=>{throw new Error('x');}).setEnabled(true),false);
   const {ctx}=fake(),b=createSkillAudio(()=>ctx);b.setEnabled(true);assert.equal(b.play('nope'),false);b.setEnabled(false);assert.equal(b.play('skill-heal'),false);
 });
-test('rapid repeats are throttled and floods are capped',()=>{
-  const {ctx,log}=fake(),a=createSkillAudio(()=>ctx);a.setEnabled(true);assert.equal(a.play('skill-ready'),true);assert.equal(a.play('skill-ready'),false);
-  for(let i=0;i<300;i++)a.play('skill-hammer',{minGap:0});assert.ok(log.starts<=40,String(log.starts));
+test('skill-ready and unsupported skill synths stay silent under floods',()=>{
+ const {ctx,log}=fake(),a=createSkillAudio(()=>ctx);a.setEnabled(true);
+ assert.equal(a.play('skill-ready'),false);
+ for(let i=0;i<300;i++)a.play('skill-hammer',{minGap:0});
+ assert.equal(log.starts,0);
 });
