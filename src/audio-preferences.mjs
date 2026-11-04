@@ -6,18 +6,20 @@ export function clampVolume(value,fallback=1){
  const number=Number(value);
  return Number.isFinite(number)?Math.max(0,Math.min(1,number)):fallback;
 }
-export function readAudioVolume(channel,storage=globalThis.localStorage){
+export function readAudioVolume(channel,storage){
+ if(storage===undefined){try{storage=globalThis.localStorage;}catch{storage=null;}}
  if(!AUDIO_CHANNELS.includes(channel))return 1;
  try{
   const value=storage?.getItem?.(AUDIO_VOLUME_PREFIX+channel);
   return value==null?1:clampVolume(value);
  }catch{return 1;}
 }
-export function writeAudioVolume(channel,value,storage=globalThis.localStorage){
+export function writeAudioVolume(channel,value,storage){
+ if(storage===undefined){try{storage=globalThis.localStorage;}catch{storage=null;}}
  if(!AUDIO_CHANNELS.includes(channel))return false;
  try{storage?.setItem?.(AUDIO_VOLUME_PREFIX+channel,String(clampVolume(value)));return !!storage;}
  catch{return false;}
 }
-export function audioChannelGain(channel,storage=globalThis.localStorage){
+export function audioChannelGain(channel,storage){
  return readAudioVolume('master',storage)*(channel==='master'?1:readAudioVolume(channel,storage));
 }
