@@ -3,7 +3,7 @@ import {loadSurfaceTexture} from './kwon-surface.mjs';
 import {reducedMotion} from './display-preferences.mjs';
 
 export function installKwonVisuals({scene,renderer,ground,boss,sun,sanctuary,runtime}){
- let low=false;try{low=localStorage.getItem('oibung.quality')==='low';}catch{}
+ let low=false;
  low=low||globalThis.matchMedia?.('(pointer:coarse)').matches;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
  renderer.outputColorSpace=THREE.SRGBColorSpace;

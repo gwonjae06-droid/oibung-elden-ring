@@ -46,7 +46,7 @@ test('puddles spread gradually instead of appearing at full size',()=>{
  assert.ok(sizes[0]<sizes[1]*.6,'early '+sizes);assert.ok(sizes[2]>sizes[0]*2,'late '+sizes);fx.clear();disposeScene(scene);
 });
 test('puddles slide back into the boss during recovery and ripples stay within their cap',()=>{
- const scene=new THREE.Scene(),q=bloodQuality({storage:{getItem:()=> 'low'}}),fluid=createBloodFluid(q),fx=createBloodParticles(scene,fluid,q);
+ const scene=new THREE.Scene(),q=bloodQuality({coarse:true}),fluid=createBloodFluid(q),fx=createBloodParticles(scene,fluid,q);
  fx.puddle(10,0,1.5);for(let t=0;t<5;t+=.05)fx.update(.05,t,{retract:{x:0,z:0}});assert.equal(fx.puddles,0);
  for(let i=0;i<200;i++){fx.ripple(i%9,0,{});assert.ok(fx.ripples<=q.ripples);}
  for(let t=0;t<5;t+=.05)fx.update(.05,t);assert.equal(fx.ripples,0);fx.clear();disposeScene(scene);

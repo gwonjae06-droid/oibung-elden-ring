@@ -49,7 +49,7 @@ test('the cutscene draws once, runs for its duration, then removes itself',async
  const r=rig(),view=playBossIntro(r.doc,r.arena,'kwon',r.options);
  assert.equal(r.arena.children.length,1);
  const overlay=r.arena.children[0];
- assert.equal(overlay.children.at(-1).focused,true);
+ assert.equal(overlay.focused,true);assert.equal(overlay.children.length,4);
  let elapsed=0;
  while(r.arena.children.length&&elapsed<6000){r.step(50);elapsed+=50;}
  assert.equal(await view.finished,true);
@@ -57,9 +57,10 @@ test('the cutscene draws once, runs for its duration, then removes itself',async
  assert.ok(elapsed>=INTRO_DURATION*1000-100&&elapsed<=INTRO_DURATION*1000+300,'ran '+elapsed+'ms');
 });
 
-test('the skip button and the skip method end it at once',async()=>{
+test('no skip control is rendered and the cinematic ends only by itself',async()=>{
  const a=rig(),va=playBossIntro(a.doc,a.arena,'clown',a.options);
- a.arena.children[0].children.at(-1).onclick();
+ assert.equal(a.arena.children[0].children.length,4);
+ for(let i=0;i<130&&a.arena.children.length;i++)a.step(50);
  assert.equal(await va.finished,true);assert.equal(a.arena.children.length,0);
  const b=rig(),vb=playBossIntro(b.doc,b.arena,'dice',b.options);
  vb.skip();vb.skip();
@@ -79,11 +80,4 @@ test('removing the arena ends the cutscene without resuming a stale fight',async
  const r=rig(),view=playBossIntro(r.doc,r.arena,'kwon',r.options);
  r.arena.isConnected=false;r.step(50);
  assert.equal(await view.finished,false);
-});
-
-test('reduced motion uses opacity instead of sliding bars',async()=>{
- const r=rig(),view=playBossIntro(r.doc,r.arena,'kwon',{...r.options,reduced:true}),top=r.arena.children[0].children[1];
- r.step(300);assert.equal(top.style.transform,'none');assert.ok(Number(top.style.opacity)>=0);
- let elapsed=0;while(r.arena.children.length&&elapsed<4000){r.step(50);elapsed+=50;}
- assert.equal(await view.finished,true);assert.ok(elapsed<=INTRO_DURATION_REDUCED*1000+300);
 });

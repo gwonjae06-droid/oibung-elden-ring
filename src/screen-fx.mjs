@@ -11,7 +11,7 @@ export function installScreenFx(doc=globalThis.document,win=globalThis.window,{r
  function active(root){if(root.getElementById('boss-hud')?.hidden===true)return false;return ['menu','pause-screen','result'].every(id=>root.getElementById(id)?.hidden!==false);}
  function frame(){
   const stamp=now(),dt=last===null?0:Math.max(0,stamp-last);last=stamp;if(doc.hidden)return;clock+=dt;
-  const visited=new Set(),reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  const visited=new Set(),reduced=false;
   for(const root of roots()){
    const hpEl=root.getElementById('hp-value'),vig=root.getElementById('vignette');if(!hpEl||!vig)continue;
    visited.add(vig);owned.add(vig);const session=readBattleSession(root),player=session?.game?.player,meter=hpEl.parentElement?.querySelector?.('.meter'),hp=player?player.hp:parseFloat(hpEl.textContent),max=player?player.maxHp:Number(meter?.getAttribute('aria-valuemax'))||120;

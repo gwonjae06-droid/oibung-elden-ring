@@ -111,7 +111,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   lastBirth=c.active?c.t:0;dripTime+=dt;if(c.wings>.9&&dripTime>.2&&!dead){dripTime=0;const a=b.yaw;for(const side of [-1,1])particles.burst(b.x+Math.cos(a)*side*5.8,5+s.elevation,b.z-Math.sin(a)*side*5.8,{count:reduced?1:2,power:.5});}
   birthWave.visible=c.active&&c.wave>0&&c.wave<1;birthWave.position.set(b.x,.35,b.z);birthWave.scale.setScalar(.1+c.wave*28);birthWave.material.opacity=(1-c.wave)*.28;
   if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});actor.rotation.z=reduced?0:.055;}else actor.rotation.z*=Math.exp(-dt*13);lastHp=b.hp;
-  const seen=new Set();for(const h of s.hazards){seen.add(h.id);warning(h,g);}for(const[id,m]of hazards)if(!seen.has(id)){releaseWarning(m);hazards.delete(id);}
+  const seen=new Set();for(const h of s.hazards){if(h.shape==='lane')continue;seen.add(h.id);warning(h,g);}for(const[id,m]of hazards)if(!seen.has(id)){releaseWarning(m);hazards.delete(id);}
   spells.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   const live=new Set();for(const q of g.projectiles){live.add(q.id);let m=shots.get(q.id);if(!m){m=new THREE.Mesh(shotGeo,shotMat);shots.set(q.id,m);scene.add(m);}m.position.set(q.x,1.3+s.elevation,q.z);}for(const[id,m]of shots)if(!live.has(id)){scene.remove(m);shots.delete(id);}
   shake*=Math.exp(-dt*14);

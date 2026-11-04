@@ -7,7 +7,7 @@ export function bindBossName(hud,ownPull=true,host=null,{loadVisuals=()=>import(
  if(!hud)return null;restoreBossName(hud);if(!host)return {update(){},restore(){}};
  const arena=hud.closest('#arena');if(!arena||arena.contains(host))return null;
  const doc=hud.ownerDocument,win=doc.defaultView,parent=arena.parentNode,anchor=doc.createComment('arena-before-screen-chain'),old=arena.getAttribute('style');
- const reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches),mobile=Boolean(win.matchMedia?.('(pointer:coarse)').matches),count=reduced?20:mobile?36:64;
+ const reduced=false,mobile=Boolean(win.matchMedia?.('(pointer:coarse)').matches),count=reduced?20:mobile?36:64;
  const layer=doc.createElement('div');layer.className='boss-screen-chain-layer';layer.style.cssText='position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1000;background:#101114;isolation:isolate';layer.setAttribute('aria-hidden','true');
  const sheet=doc.createElement('style');sheet.textContent='.boss-screen-chain-layer #controls,.boss-screen-chain-layer #touch,.boss-screen-chain-layer #reticle,.boss-screen-chain-layer #result,.boss-screen-chain-layer #pause-screen{visibility:hidden!important}.boss-screen-chain-layer #arena{pointer-events:none!important}';layer.appendChild(sheet);
  parent.insertBefore(anchor,arena);layer.appendChild(arena);host.appendChild(layer);

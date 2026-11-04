@@ -2,7 +2,7 @@ import {installBossMusic} from '../src/boss-music.mjs';
 // QA only; this module is never imported by the production entry point.
 import {launchBloodBattle} from '../src/blood-battle.mjs';
 import {readBattleSession} from '../src/battle-session.mjs';
-import {damageBlood,stepBlood,startBloodPattern,skipBloodTransition} from '../src/blood-combat.mjs';
+import {damageBlood,stepBlood,startBloodPattern} from '../src/blood-combat.mjs';
 import {BLOOD_PATTERNS} from '../src/blood-data.mjs';
 let battle=null,report={},run=0;
 const post=()=>parent.postMessage({bloodQaStatus:report},location.origin),sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -20,12 +20,12 @@ async function repeat(){const s=state(),g=s.game;s.pause();const iterations=[];f
 window.addEventListener('message',async e=>{if(e.origin!==location.origin||e.source!==parent||!e.data.bloodQa)return;try{
  const cmd=e.data.bloodQa,s=state(),g=s?.game;
  if(cmd==='start'||cmd==='retry'){run++;report={};start();}
- if(cmd==='low'||cmd==='normal'){localStorage.setItem('oibung.quality',cmd==='low'?'low':'high');run++;start();}
+ 
  if(cmd==='close'){run++;battle?.close();}
  if(cmd==='pause')s.pause();if(cmd==='resume'){s.resume();}
  if(cmd==='pattern')cast(e.data.pattern);
  if(cmd==='transition'){g.boss.phase=1;g.boss.state='recovery';g.blood.transitioned=false;damageBlood(g,g.boss.maxHp*.6);s.resume();}
- if(cmd==='skip'){skipBloodTransition(g);s.resume();}if(cmd==='mute')localStorage.setItem('oibung-muted','1');if(cmd==='unmute')localStorage.removeItem('oibung-muted');
+ if(cmd==='mute')localStorage.setItem('oibung-muted','1');if(cmd==='unmute')localStorage.removeItem('oibung-muted');
  if(cmd==='sequence')void sequence().catch(error);
  if(cmd==='repeat')void repeat().catch(error);
  

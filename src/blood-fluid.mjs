@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 
-export function bloodQuality({coarse=false,storage}={}){
- let low=false;try{storage??=globalThis.localStorage;low=storage?.getItem('oibung.quality')==='low';}catch{}
- return {low,segments:low?8:coarse?12:20,drops:low?96:coarse?192:360,puddles:low?14:coarse?28:44,ripples:low?8:coarse?16:28,wingRibs:low?4:6};
+export function bloodQuality({coarse=false}={}){
+ return {low:false,segments:coarse?12:20,drops:coarse?192:360,puddles:coarse?28:44,ripples:coarse?16:28,wingRibs:6};
 }
 // A single shared wet dielectric material. The shader deforms the surface, never collision.
 export function createBloodFluid(quality){

@@ -46,11 +46,11 @@ export function bossFoleySpec(ev,g){
    case 'dice-warning':return cue(f.coin,.09,.62,.12,.32);
    case 'dice-roll':return cue(f.roll,.17,.94,.14,.22);
    case 'dice-charge':return cue(f.longRoll,.28,1.6,.2,.25);
-   case 'dice-jump':return cue(f.jump,.27,1,.16,.25);
+   case 'dice-jump':return cue(f.jump,.2,1,.16,.25);
    case 'dice-pip-warning':return cue(f.coinSecond,.16,.72,.1,.28);
    case 'dice-pip-burst':return cue(f.coinThird,.17,.85,.15,.2);
-   case 'dice-impact':return cue(f.impact,.34,1.25,.22,.17);
-   case 'dice-stomp':return cue(f.giant,.39,1.55,.26,.25);
+   case 'dice-impact':return cue(f.impact,.22,1.25,.22,.17);
+   case 'dice-stomp':return cue(f.giant,.25,1.55,.26,.25);
    case 'player-crushed':return cue(f.giant,.42,1.65,.28,.35,.92);
    case 'dice-giant-warning':return cue(f.coinThird,.18,.77,.13,.35);
    case 'dice-giant-hand-hit':return cue(f.impact,.32,.95,.18,.13);

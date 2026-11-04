@@ -10,7 +10,6 @@ export function createPlayerHitFeedback(shell,{AudioClass=globalThis.Audio,muted
  .oden-hit-overlay{position:absolute;inset:0;pointer-events:none;z-index:38;opacity:0;visibility:hidden;background:radial-gradient(ellipse 72% 68% at 50% 48%,transparent 30%,rgba(122,0,12,.38) 65%,rgba(92,0,6,.89) 100%),linear-gradient(120deg,rgba(255,221,211,.16),transparent 40%);mix-blend-mode:normal}
  .oden-hit-overlay.active{visibility:visible;animation:oden-damage-flash .48s cubic-bezier(.08,.65,.3,1) both}
  @keyframes oden-damage-flash{0%{opacity:.95}17%{opacity:1}35%{opacity:.63}100%{opacity:0}}
- @media(prefers-reduced-motion:reduce){.oden-hit-overlay.active{animation:oden-damage-flash .65s ease-out both}}
  `;
  cover.className='oden-hit-overlay';cover.setAttribute('aria-hidden','true');
  shell.append(style,cover);

@@ -17,7 +17,7 @@ test('each real pattern causes its defined damage when the player enters the act
  }
 });
 test('particle and puddle caps hold after thousands of impacts, merge and drain on the visual clock',()=>{
- const scene=new THREE.Scene(),q=bloodQuality({storage:{getItem:()=> 'low'}}),fluid=createBloodFluid(q),fx=createBloodParticles(scene,fluid,q);
+ const scene=new THREE.Scene(),q=bloodQuality({coarse:true}),fluid=createBloodFluid(q),fx=createBloodParticles(scene,fluid,q);
  for(let i=0;i<1000;i++){fx.burst(i%20,1,i%13,{count:30});fx.puddle(i%20,i%13,1);fx.update(.01,i*.01);assert.ok(fx.active<=q.drops);assert.ok(fx.puddles<=q.puddles);}
  const snapshot=fx.active;fx.update(0,10);assert.equal(fx.active,snapshot);
  // Blood now runs on a slowed clock and puddles linger about six seconds, so allow twelve seconds to drain.
@@ -31,7 +31,7 @@ test('all 14 spell pools settle to a fixed resource count across repeated fights
  }
  assert.equal(sizes[1],sizes[0]);assert.equal(sizes[2],sizes[1]);view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
-test('mobile and low tiers reduce geometry, particle count and wing ribs without dropping spell forms',()=>{
- const normal=bloodQuality({storage:null}),mobile=bloodQuality({coarse:true,storage:null}),low=bloodQuality({storage:{getItem:()=> 'low'}});
- assert.ok(low.drops<mobile.drops&&mobile.drops<normal.drops);assert.ok(low.segments<mobile.segments&&mobile.segments<normal.segments);assert.ok(low.wingRibs<normal.wingRibs);
+test('the touch tier reduces geometry and particle count without dropping spell forms',()=>{
+ const normal=bloodQuality({}),mobile=bloodQuality({coarse:true});
+ assert.ok(mobile.drops<normal.drops);assert.ok(mobile.segments<normal.segments);
 });

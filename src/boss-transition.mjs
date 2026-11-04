@@ -17,7 +17,7 @@ export function installBossTransition(){
  dialog.innerHTML='<div class="bt-shade"></div><canvas aria-label="공 위에서 인사하는 광대 오슬우"></canvas><div class="bt-title" role="status">이권재가 토벌되었다</div><section class="bt-next"><small>즐거운 공연 · 거구의 곡예사</small><h2>광대 오슬우</h2><div class="bt-fullbar" aria-hidden="true"></div></section><section class="bt-choice" hidden aria-labelledby="bt-choice-title"><h3 id="bt-choice-title">광대전 무기 재선택</h3><p>무기를 고른 뒤 선택을 확정하세요.</p><div class="bt-weapons" role="group" aria-label="광대전 무기"></div><button class="bt-confirm">선택 확정</button><p class="bt-selection" role="status"></p></section><div class="bt-note"><span>다음 공연이 시작됩니다.</span><br><button class="bt-return" hidden>메인 메뉴로</button></div>';
  document.body.appendChild(dialog);
  const shade=dialog.querySelector('.bt-shade'),canvas=dialog.querySelector('canvas'),title=dialog.querySelector('.bt-title'),next=dialog.querySelector('.bt-next'),note=dialog.querySelector('.bt-note span'),back=dialog.querySelector('.bt-return'),choice=dialog.querySelector('.bt-choice'),confirm=dialog.querySelector('.bt-confirm'),selection=dialog.querySelector('.bt-selection');
- const audio=createAudio(),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,STORAGE='oibung.clown.loadout';
+ const audio=createAudio(),reduced=false,STORAGE='oibung.clown.loadout';
  const muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch(e){return false;}};
  const unlock=()=>{if(!muted()&&!audio.enabled)audio.setEnabled(true);};addEventListener('pointerdown',unlock,{passive:true});
  const play=name=>{if(!muted())audio.play(name);};
