@@ -314,6 +314,11 @@ const definitions = [
   ['spotlightSweep', '스포트라이트 쇼', 4.4, 1.2, [1, 2]],
   ['fireHoop', '불의 고리', 4.3, 1.2, [1, 2]],
   ['humanCannon', '인간 대포', 5, 1.4, [2]],
+  // Ball-centred patterns: the phase-two clown rides a huge ball, so these use it as the weapon.
+  ['ballRain', '공 폭우', 4.8, 1.3, [2]],
+  ['bounceChain', '연쇄 공 튀기기', 5.6, 1.3, [2]],
+  ['ballSpin', '회전 공 휩쓸기', 4.9, 1.3, [2]],
+  ['ballCannon', '공 대포', 5.4, 1.5, [2]],
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
@@ -778,6 +783,106 @@ const RUN = {
       emit(g, 'clown-stomp');
     }
   },
+  // A volley of balls rains down around the player, alternating direct hits and a ring around them.
+  ballRain(g, c, a, t) {
+    once(c, 's', () => emit(g, 'clown-juggle'));
+    c.vis.juggle = t < 2.7 ? 1 : 0;
+    for (let i = 0; i < 7; i++)
+      if (cross(a, t, 0.2 + i * 0.32)) {
+        const p = target(g),
+          ang = c.seq * 1.7 + i * 2.4,
+          r = i % 2 ? 5.5 : 0,
+          q = {x: p.x + Math.sin(ang) * r, z: p.z + Math.cos(ang) * r};
+        confine(q, 21);
+        bombAt(g, q, 2.2, 24, 0.85, 'ball', 0.35);
+      }
+  },
+  // Three telegraphed hops of the whole ball toward the player; each landing crushes and sends out a ring.
+  bounceChain(g, c, a, t) {
+    const T = [0.5, 1.5, 2.5],
+      b = g.boss;
+    c.vis.crouch = 0;
+    c.vis.jump = 0;
+    for (let i = 0; i < 3; i++) {
+      if (cross(a, t, T[i])) {
+        const p = target(g),
+          d = Math.max(0.001, dist(p, b)),
+          reach = Math.min(d, 9),
+          land = {
+            x: b.x + ((p.x - b.x) / d) * reach,
+            z: b.z + ((p.z - b.z) / d) * reach,
+          };
+        confine(land, BALL_LIMIT);
+        c.f['hop' + i] = {from: {x: b.x, z: b.z}, land};
+        zone(g, {
+          shape: 'circle',
+          x: land.x,
+          z: land.z,
+          r: 4.4,
+          warn: 0.9,
+          damage: 30,
+          blast: true,
+          sound: 'bounce',
+        });
+      }
+      const h = c.f['hop' + i];
+      if (!h) continue;
+      if (t >= T[i] && t < T[i] + 0.45) c.vis.crouch = smooth((t - T[i]) / 0.45);
+      const k = clamp((t - (T[i] + 0.45)) / 0.45, 0, 1);
+      if (k > 0) {
+        const x = h.from.x + (h.land.x - h.from.x) * smooth(k),
+          z = h.from.z + (h.land.z - h.from.z) * smooth(k);
+        c.odo += Math.hypot(x - b.x, z - b.z);
+        b.x = x;
+        b.z = z;
+        if (k < 1) c.vis.jump = Math.sin(Math.PI * k);
+      }
+      if (cross(a, t, T[i] + 0.9)) {
+        emit(g, 'clown-bounce');
+        rosette(g, h.land, 6, 0.8, 10, 22, (c.seq + i) % 10);
+      }
+    }
+  },
+  // The clown spins on his ball and sweeps six lanes around himself one after another.
+  ballSpin(g, c, a, t) {
+    const b = g.boss,
+      base = once(c, 'aim', () => ({yaw: toward(b, g.player)})).yaw,
+      dir = c.seq % 2 ? 1 : -1;
+    c.vis.tilt = Math.sin(t * 6) * 0.5;
+    c.vis.stomp = Math.abs(Math.sin(t * 10));
+    for (let i = 0; i < 6; i++)
+      if (cross(a, t, 0.2 + i * 0.5)) {
+        const yaw = base + i * (Math.PI / 3) * dir;
+        c.yaw = yaw;
+        zone(g, {
+          shape: 'lane',
+          x: b.x,
+          z: b.z,
+          yaw,
+          len: fitLen(b, yaw, 20),
+          w: 3.4,
+          warn: 0.8,
+          damage: 28,
+          sound: 'dash',
+        });
+        emit(g, 'clown-stomp');
+      }
+  },
+  // A huge ball is fired at the player; when it lands it shatters into a ring of smaller blasts.
+  ballCannon(g, c, a, t) {
+    once(c, 's', () => emit(g, 'clown-inflate'));
+    c.vis.crouch = t < 1.2 ? smooth(t / 1.2) : 0;
+    c.vis.shake = t < 1.2 ? t / 1.2 : 0;
+    if (cross(a, t, 1.2)) {
+      const p = target(g);
+      c.f.land = p;
+      bombAt(g, p, 4.2, 40, 1.1, 'head', 0.5);
+    }
+    if (c.f.land && cross(a, t, 2.9)) {
+      emit(g, 'clown-bounce');
+      rosette(g, c.f.land, 7, 0.9, 10, 24, c.seq % 10);
+    }
+  },
 };
 export function choosePattern(g) {
   const c = g.clown,
@@ -799,6 +904,7 @@ export function choosePattern(g) {
       'inverseBow',
       'lastClap',
       'carousel',
+      'ballSpin',
     ]),
     prefer = list.filter((k) =>
       d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,

@@ -1,7 +1,8 @@
 import {ROLL} from './clown-pressure.mjs';
 export const sat=t=>Math.max(0,Math.min(1,t));
 const smooth=t=>{t=sat(t);return t*t*(3-2*t);};
-export const PHASE_TWO_VOLUME=2,PHASE_TWO_SCALE=Math.cbrt(PHASE_TWO_VOLUME);
+// Phase two: the clown rides his own head. It is twice the volume of the phase-one head, then grown another 1.5x in size.
+export const PHASE_TWO_VOLUME=2,MOUNT_GROWTH=1.5,PHASE_TWO_SCALE=Math.cbrt(PHASE_TWO_VOLUME)*MOUNT_GROWTH;
 const BODY_OFFSET=5.096*(PHASE_TWO_SCALE-1);
 export function mountPose(time,transition=false){
  const t=Number.isFinite(time)?Math.max(0,time):0;

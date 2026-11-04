@@ -1,4 +1,4 @@
-export const CARTOON_DURATIONS={laughBomb:5.1,dash:4.5,juggle:4.5,clap:3.4,bounce:3.6,shove:1.6,tripleBomb:6.65,rollingSmile:5,inverseBow:3.8,lastClap:5.35,confettiCurtain:4.6,hornFan:4.1,drumMarch:4.8,balloonBouquet:5,carousel:5.6,curtainCall:7.2,spotlightSweep:4.4,fireHoop:4.3,humanCannon:5};
+export const CARTOON_DURATIONS={laughBomb:5.1,dash:4.5,juggle:4.5,clap:3.4,bounce:3.6,shove:1.6,tripleBomb:6.65,rollingSmile:5,inverseBow:3.8,lastClap:5.35,confettiCurtain:4.6,hornFan:4.1,drumMarch:4.8,balloonBouquet:5,carousel:5.6,curtainCall:7.2,spotlightSweep:4.4,fireHoop:4.3,humanCannon:5,ballRain:4.8,bounceChain:5.6,ballSpin:4.9,ballCannon:5.4};
 const sat=t=>Math.max(0,Math.min(1,t));
 const pulse=(t,a,b)=>t<=a||t>=b?0:Math.sin(Math.PI*(t-a)/(b-a));
 export function cartoonPose(name,time=0,phase=1,active=true){
@@ -11,6 +11,10 @@ export function cartoonPose(name,time=0,phase=1,active=true){
   case 'laughBomb':case 'tripleBomb':{const p=pulse(t,0,1.65);inflate(p);a.arms+=p*.8;a.glove+=pulse(t,1.5,2.05)*1.6;a.lean=-pulse(t,1.65,2.25)*.5;break;}
   case 'dash':{const p=Math.max(pulse(t,.65,1.6),phase===2?pulse(t,2.45,3.4):0);a.bodyX-=p*.3;a.bodyY-=p*.25;a.bodyZ+=p*.9;a.arms+=p*1.7;a.shoe+=p*1.1;a.lean=p*.85;a.smear=p;break;}
   case 'juggle':case 'confettiCurtain':a.arms+=Math.abs(Math.sin(t*8))*1.6*pulse(t,0,3);a.glove+=pulse(t,0,3)*.6;a.bodyY+=pulse(t,0,3)*.3;a.twist=Math.sin(t*5)*.2*pulse(t,0,3);break;
+  case 'ballRain':a.arms+=Math.abs(Math.sin(t*9))*1.8*pulse(t,0,3);a.glove+=pulse(t,0,3)*.8;a.bodyY+=pulse(t,0,3)*.35;a.twist=Math.sin(t*6)*.25*pulse(t,0,3);break;
+  case 'bounceChain':{const hop=Math.max(pulse(t,.95,1.4),pulse(t,1.95,2.4),pulse(t,2.95,3.4));inflate(Math.max(pulse(t,.05,.5),pulse(t,1.05,1.5),pulse(t,2.05,2.5))*.5);a.lift=hop*3;a.bodyY+=hop*.5;a.bodyX-=hop*.2;a.arms+=hop*1.2;a.shoe+=hop*.8;break;}
+  case 'ballSpin':{const p=pulse(t,0,4);a.twist=Math.sin(t*10)*.7*p;a.arms+=p*1.8;a.glove+=p*.9;a.smear=pulse(t,.1,3.6)*.8;break;}
+  case 'ballCannon':{inflate(pulse(t,0,1.3));a.arms+=pulse(t,0,1.4)*1.5;a.glove+=pulse(t,.9,1.6)*1.8;a.lean=-pulse(t,1.2,1.9)*.45;a.lift=pulse(t,1.1,1.8)*1.2;break;}
   case 'clap':case 'lastClap':{const p=pulse(t,0,1.25);a.glove+=p*2.6;a.arms+=p*1.3;inflate(p*.65);a.lean=-pulse(t,.85,1.5)*.3;break;}
   case 'bounce':{inflate(pulse(t,0,.7));const up=pulse(t,.65,1.05);a.lift=up>0?3.8*Math.min(1,up*2.4):0;a.bodyY+=up*.7;a.bodyX-=up*.22;inflate(pulse(t,1.05,1.65));a.shoe+=pulse(t,1.05,1.65)*1.4;break;}
   case 'shove':inflate(pulse(t,0,.9));a.glove+=pulse(t,.2,1)*1.5;a.arms+=pulse(t,.2,1)*1.2;break;
