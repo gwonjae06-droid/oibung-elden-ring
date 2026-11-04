@@ -57,3 +57,38 @@
  .touch-actions{grid-template-columns:repeat(3,51px);gap:5px}
  .touch-actions button{height:49px;min-height:49px;font-size:11.5px}
 }
+
+/* ODENRING MINIMAL COMBAT HUD — retain meter ARIA and gameplay warnings.
+   The same selectors apply to the cloned clown/dice arenas in Shadow DOM. */
+#arena .hud{top:76px;width:min(250px,27vw);padding:5px 7px;background:#0b110e80;border:1px solid #c6b38425;border-radius:4px;backdrop-filter:none}
+#arena .hud .player-line{margin:0 0 4px;font-size:11px}
+#arena .hud .player-line strong{display:none}
+#arena .hud .stat{margin:2px 0;gap:6px}
+#arena .hud .stat>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#arena .hud .stat b{min-width:23px;text-align:right;font-size:10px}
+#arena .hud .meter{height:8px}
+#arena .hud #skill-hud{margin-top:4px;padding:3px 4px;background:#10171299}
+#arena .hud .skill-line>span:first-child,#arena .hud #skill-text,#arena .hud .flask-line>span,#arena .hud #lock-label{display:none}
+#arena .hud .skill-line{gap:4px;font-size:11px}
+#arena .hud .flask-line{margin-top:2px;font-size:11px;gap:5px}
+#arena .boss-hud{top:20px;bottom:auto;width:min(490px,47vw);padding:0;background:none}
+#arena .boss-hud .boss-line{margin-bottom:3px;align-items:center;justify-content:center}
+#arena .boss-hud .boss-line h2{font-size:clamp(12px,1.1vw,16px);margin:0}
+#arena .boss-hud #phase-label,#arena .boss-hud #boss-value{display:none}
+#arena .boss-hud .meter.boss{height:9px}
+#arena #controls{display:none!important}
+#arena .brand{opacity:.72}
+#arena #notice[data-critical].visible{display:block!important;font-weight:700;border-left:2px solid #c39b64;background:#111912bb}
+@media (pointer:coarse) and (orientation:landscape){
+ #arena .hud{top:max(64px,env(safe-area-inset-top) + 56px);left:max(10px,env(safe-area-inset-left));width:min(215px,32vw);padding:4px 6px}
+ #arena .hud .stat b{display:none}
+ #arena .hud .skill-line strong{font-size:11px}
+ #arena .boss-hud{top:max(10px,env(safe-area-inset-top));bottom:auto;width:min(270px,40vw)}
+ #arena .boss-hud .boss-line h2{font-size:11px}
+ #arena .top-actions button{font-size:11px}
+ #arena #giant-hud{padding:5px 8px!important;width:min(250px,33vw)!important;font-size:11px!important}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:340px){
+ #arena .hud{top:50px}
+ #arena .boss-hud{top:8px}
+}
