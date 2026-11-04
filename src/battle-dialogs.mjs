@@ -12,3 +12,11 @@ export function findOpenBattle(doc){
  return null;
 }
 export const battleRoots=doc=>BATTLE_DIALOGS.map(({id})=>doc?.getElementById?.(id)?.firstElementChild?.shadowRoot).filter(Boolean);
+// Which registered boss a game object belongs to (the first boss's plain arena game carries no marker).
+export function bossOfGame(game){
+ for(const id of PLAYABLE_BOSSES){
+  const key=BOSS_REGISTRY[id].gameKey;
+  if(key&&game?.[key])return BOSS_REGISTRY[id];
+ }
+ return BOSS_REGISTRY.kwon;
+}
