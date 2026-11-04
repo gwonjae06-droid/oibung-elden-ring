@@ -7,7 +7,7 @@ export const SAMPLE_FILES=['clown-laugh.mp3','clap.mp3','clown-jump.mp3','bomb-t
 export function bossSound(ev,g){
  const recorded=bossFoleySpec(ev,g);
  if(recorded)return recorded;
- if(g.dice)return null;
+ if(g.dice||g.blood)return null;
  if(!g.clown)return kwonSound(ev,g);
  const sample=(file,volume=.4)=>({file,rate:1,volume,f:260,to:90,cueDuration:.2,type:'triangle'});
  if(ev.type==='clown-impact'&&ev.key==='clap')return sample('clap.mp3',.45);
@@ -51,7 +51,7 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
  function update(dt,g){if(disposed)return;if(game!==g){reset();game=g;}if(!muted()&&!globalThis.document?.hidden){const id=bossOfGame(g).id,boss=BOSS_FOLEY_PRELOAD[id]?id:'kwon';for(const f of BOSS_FOLEY_PRELOAD[boss])prepare(f);for(const f of SAMPLE_FILES.filter(f=>g.clown?!f.startsWith('sword'):!g.dice&&f.startsWith('sword')))prepare(f);}if(!allowed()||dt<=0){reset();return;}for(const v of [...active]){if(!alive(v)||now()>=v.until||v.audio?.ended){stop(v);continue;}fade(v);}}
  function event(ev,g){
   if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&(ev.type==='player-hit'||ev.type==='player-crushed')&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
-  const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<(base.minGap??.09)||active.size>=maxVoices)return false;
+  const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<(base.minGap??.09)||active.size>=(g.blood?3:maxVoices))return false;
   const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed,fade:base.fade||0};if(!base.file)spec.duration=base.duration/j.speed;
   if(!spec.file)return false; // No chiptune-like waveform cues without an actual recording.
   const a=prepare(spec.file).find(a=>(a.readyState>=2||spec.file.startsWith('assets/sfx/'))&&!a.error&&![...active].some(v=>v.audio===a));if(!a)return false;

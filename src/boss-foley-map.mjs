@@ -1,5 +1,6 @@
 // Recorded SFX uploaded by the project owner. All assets except heal/dead belong
 // exclusively to boss events; never use these for player weapon attacks.
+import {BLOOD_FOLEY,bloodFoleySpec} from './blood-foley.mjs';
 const dir='assets/sfx/';
 export const BOSS_FOLEY_FILES=Object.freeze({
  sword: Object.freeze({
@@ -27,6 +28,7 @@ export const BOSS_FOLEY_FILES=Object.freeze({
  })
 });
 export const BOSS_FOLEY_PRELOAD=Object.freeze({
+ blood:Object.freeze(Object.values(BLOOD_FOLEY)),
  kwon:Object.freeze(Object.values(BOSS_FOLEY_FILES.sword)),
  clown:Object.freeze(Object.values(BOSS_FOLEY_FILES.clown)),
  dice:Object.freeze(Object.values(BOSS_FOLEY_FILES.dice))
@@ -37,7 +39,7 @@ const cue=(file,volume,duration,fade=.15,minGap=.12,rate=1)=>({
 });
 export function bossFoleySpec(ev,g){
  if(!ev||!g||!g.boss)return null;
- const type=ev.type;
+ const type=ev.type;if(g.blood)return bloodFoleySpec(ev,g);
  if(g.dice){
   const f=BOSS_FOLEY_FILES.dice;
   switch(type){

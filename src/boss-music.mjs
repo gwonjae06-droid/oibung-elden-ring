@@ -3,6 +3,7 @@ import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 import {createBossTracks} from './boss-tracks.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
 import {findOpenBattle} from './battle-dialogs.mjs';
+import {bloodTransformation} from './blood-transformation.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused)return null;
@@ -10,7 +11,7 @@ export function musicState(doc,focused=true){
  const selectedBoss=found?.boss||'kwon';
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const session=readBattleSession(root);
- if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:g.clown?'clown':selectedBoss,phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}
+ if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;const selection={boss:g.clown?'clown':selectedBoss,phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};if(selectedBoss==='blood'&&g.blood?.transitioned){selection.cinematic=true;if(g.boss.phase===2)selection.offset=1.8;}if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===1?c.musicGain:Math.min(1,(c.t-3.8)/.55);selection.cinematic=true;}return selection;}
  const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;

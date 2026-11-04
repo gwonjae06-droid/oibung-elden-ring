@@ -59,9 +59,10 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     }
     if(!current||current.key!==track.key){
       release(outgoing);outgoing=current;if(outgoing)outgoing.from=outgoing.audio.volume;
+      if(state.boss==='blood'&&state.cinematic&&track.key==='blood:2'){release(outgoing);outgoing=null;}
       try{
         const audio=new AudioClass(track.url);
-        audio.loop=true;audio.preload='auto';audio.volume=0;
+        audio.loop=true;audio.preload='auto';audio.volume=0;if(state.offset)audio.currentTime=state.offset;
         const entry={key:track.key,audio,started:time,alive:true,blocked:false,from:outgoing?.audio.volume??0};
         audio.onerror=()=>fail(entry);current=entry;
       }catch{if(outgoing){current=outgoing;outgoing=null;}return false;}
@@ -69,7 +70,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     for(const entry of entries())play(entry);
     if(!current)return false;
     const progress=Math.min(1,Math.max(0,(time-current.started)/Math.max(1,fadeMs)));
-    current.audio.volume=volume*audioChannelGain('music',win?.localStorage)*progress;
+    current.audio.volume=volume*audioChannelGain('music',win?.localStorage)*progress*Math.max(0,Math.min(1,state.gain??1));
     if(outgoing){
       outgoing.audio.volume=Math.min(1,outgoing.from??volume)* (1-progress);
       if(progress>=1){release(outgoing);outgoing=null;}
