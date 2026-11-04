@@ -42,7 +42,7 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
  }
  function update(dt,g){if(disposed)return;if(game!==g){reset();game=g;}if(!muted()&&!globalThis.document?.hidden){const boss=g.dice?'dice':g.clown?'clown':'kwon';for(const f of BOSS_FOLEY_PRELOAD[boss])prepare(f);for(const f of SAMPLE_FILES.filter(f=>g.clown?!f.startsWith('sword'):!g.dice&&f.startsWith('sword')))prepare(f);}if(!allowed()||dt<=0){reset();return;}for(const v of [...active]){if(!alive(v)||now()>=v.until||v.audio?.ended){stop(v);continue;}fade(v);}}
  function event(ev,g){
-  if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&ev.type==='player-hit'&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
+  if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&(ev.type==='player-hit'||ev.type==='player-crushed')&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
   const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<(base.minGap??.09)||active.size>=maxVoices)return false;
   const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed,fade:base.fade||0};if(!base.file)spec.duration=base.duration/j.speed;
   if(!spec.file){const ok=tone(spec);if(ok)last.set(key,time);return ok;}
