@@ -48,7 +48,9 @@ export function createSkillAudio(factory){
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
       master.gain.value=.5*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.04:opts.minGap;
-      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;if(sample.play(name,{...opts,onFailure:name==='skill-heal'?()=>{if(enabled&&ctx)fn(opts);}:undefined}))return true;fn(opts);return true;
+      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;
+      // Avoid all pitched synth fallback. Weapon skills are already recorded by player-weapon-sfx.
+      return name==='skill-heal'?sample.play(name,opts):false;
     }
   };
 }
