@@ -15,5 +15,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Install Three.js for 3D lifecycle regression tests
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Run Node tests
         run: npm test
+      - name: Smoke test browser phase-two transition
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/oibung-http.log 2>&1 &
+          sleep 2
+          node scripts/dice-phase2-smoke.mjs
