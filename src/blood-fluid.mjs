@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export function bloodQuality({coarse=false,storage}={}){
  let low=false;try{storage??=globalThis.localStorage;low=storage?.getItem('oibung.quality')==='low';}catch{}
- return {low,segments:low?8:coarse?12:20,drops:low?64:coarse?128:240,puddles:low?10:coarse?18:28,wingRibs:low?4:6};
+ return {low,segments:low?8:coarse?12:20,drops:low?96:coarse?192:360,puddles:low?14:coarse?28:44,ripples:low?8:coarse?16:28,wingRibs:low?4:6};
 }
 // A single shared wet dielectric material. The shader deforms the surface, never collision.
 export function createBloodFluid(quality){
@@ -11,10 +11,11 @@ export function createBloodFluid(quality){
  material.onBeforeCompile=shader=>{
   shader.uniforms.uBloodTime=uniforms.time;shader.uniforms.uBloodEnergy=uniforms.energy;
   shader.vertexShader='uniform float uBloodTime; uniform float uBloodEnergy; varying float vBloodThickness;\n'+shader.vertexShader;
+  // Slower, larger swell than before so the surface laps like thick liquid instead of buzzing.
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-   float flow=sin(position.y*3.1+position.x*2.3-uBloodTime*2.4)${quality.low?'':'*sin(position.z*2.7+uBloodTime*1.7)'};
-   float ripple=${quality.low?'0.0':'sin(position.x*7.0+position.y*4.0+uBloodTime*3.0)*0.025'};
-   transformed+=normal*(flow*(0.045+uBloodEnergy*0.025)+ripple);
+   float flow=sin(position.y*3.1+position.x*2.3-uBloodTime*1.5)${quality.low?'':'*sin(position.z*2.7+uBloodTime*1.1)'};
+   float ripple=${quality.low?'0.0':'sin(position.x*7.0+position.y*4.0+uBloodTime*2.0)*0.03'};
+   transformed+=normal*(flow*(0.06+uBloodEnergy*0.035)+ripple);
    vBloodThickness=flow*0.5+0.5;`);
   shader.fragmentShader='varying float vBloodThickness;\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n diffuseColor.rgb *= mix(vec3(0.50,0.33,0.40),vec3(1.25,0.85,0.70),vBloodThickness);');

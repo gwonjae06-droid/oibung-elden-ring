@@ -6,6 +6,7 @@ import {createBloodSpellFx} from './blood-spell-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
 import {bloodTransformation,smooth} from './blood-transformation.mjs';
+import {bloodStage} from './blood-stage.mjs';
 import {collectSceneResources} from './runtime/scene-resources.mjs';
 
 export function buildBloodView(scene,{coarse=false,reduced=false}={}){
@@ -38,7 +39,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  mesh(new THREE.CylinderGeometry(.08,.08,13,6),gold,0,28,-13);
  mesh(new THREE.BoxGeometry(10,2,4),stone,0,1,-32);
  const fxRoot=new THREE.Group();scene.add(fxRoot);
- const particles=createBloodParticles(fxRoot,fluid,quality),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
+ const particles=createBloodParticles(fxRoot,fluid,quality,{reduced}),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
  const root=new THREE.Group();scene.add(root);
  const actor=new THREE.Group();root.add(actor);
  const points=[];for(let i=0;i<=20;i++){const t=i/20;points.push(new THREE.Vector2(.55+Math.pow(1-t,1.2)*.9,t*3.6));}
@@ -61,7 +62,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const veins=[];for(let i=0;i<5;i++){const v=mesh(new THREE.TorusGeometry(.7+i*.09,.022,4,24,Math.PI*1.4),fluid.material,0,2.2+i*.4,0,actor);v.rotation.y=i*1.8;veins.push(v);}
  const birthWave=mesh(new THREE.TorusGeometry(1,.06,5,64),new THREE.MeshBasicMaterial({color:0xf04e65,transparent:true,opacity:.3,depthWrite:false}),0,.35,0,fxRoot);birthWave.rotation.x=Math.PI/2;birthWave.visible=false;
  const hazards=new Map(),shots=new Map(),shotGeo=new THREE.SphereGeometry(.15,6,6),shotMat=new THREE.MeshBasicMaterial({color:0xffdd95});
- let disposed=false,deathTime=0,lastHp=R.hp,lastBirth=0,shake=0,visualTime=0,dripTime=0;
+ let disposed=false,deathTime=0,lastHp=R.hp,lastBirth=0,shake=0,visualTime=0,dripTime=0,cast=0,energy=0;
  function releaseWarning(m){for(const edge of m.children){edge.geometry.dispose();edge.material.dispose();}scene.remove(m);m.geometry.dispose();m.material.dispose();}
  function warning(h,g){
   let m=hazards.get(h.id);if(!m){
@@ -82,12 +83,16 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   }else {m.scale.set(c.r,c.r,1);if(h.shape==='cone')m.rotation.z=h.yaw;}
  }
  function update(g,dt){
-  if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
-  fluid.update(g.time,b.state==='pattern'?1:0);
+  if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
+  // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
+  const energyGoal=({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0;energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade);
   actor.position.y=reduced?0:Math.sin(g.time*1.8)*.06;body.rotation.z=reduced?0:Math.sin(g.time*1.7)*.025;
   folds.forEach((f,i)=>{f.rotation.z=-Math.sin(i*Math.PI/5)*.13+(reduced?0:Math.sin(g.time*2-i*.6)*.025);});
-  for(const {arm,side}of arms){const cast=b.state==='pattern'?Math.sin(Math.min(1,s.t/.8)*Math.PI/2):0;arm.rotation.x=-cast*.9;arm.rotation.z=side*(.18+cast*.32);}
+  // Arms: raise while preparing, snap at the start, hold while running, lower when done, and ease back slowly while returning.
+  const castGoal=({ready:.25+.5*stage.progress,start:1.05,run:.9,done:.5,return:.5*(1-stage.progress)})[stage.id]??0;
+  cast+=(castGoal-cast)*(1-Math.exp(-dt*(({ready:5,start:18,run:6,done:4,return:2.2})[stage.id]||4)));actor.rotation.x=reduced?0:-cast*.05;
+  for(const {arm,side}of arms){arm.rotation.x=-cast*.9;arm.rotation.z=side*(.18+cast*.32);}
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
   veins.forEach((v,i)=>{v.visible=c.veins>0;v.scale.setScalar(Math.max(.01,c.veins));v.rotation.z=reduced?0:g.time*.2+i;});wings.update(g,c,dt);
@@ -101,13 +106,13 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   birthWave.visible=c.active&&c.wave>0&&c.wave<1;birthWave.position.set(b.x,.35,b.z);birthWave.scale.setScalar(.1+c.wave*28);birthWave.material.opacity=(1-c.wave)*.28;
   if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});actor.rotation.z=reduced?0:.055;}else actor.rotation.z*=Math.exp(-dt*13);lastHp=b.hp;
   const seen=new Set();for(const h of s.hazards){seen.add(h.id);warning(h,g);}for(const[id,m]of hazards)if(!seen.has(id)){releaseWarning(m);hazards.delete(id);}
-  spells.update(g);particles.update(dt,visualTime,{pull:c.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6});
+  spells.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   const live=new Set();for(const q of g.projectiles){live.add(q.id);let m=shots.get(q.id);if(!m){m=new THREE.Mesh(shotGeo,shotMat);shots.set(q.id,m);scene.add(m);}m.position.set(q.x,1.3+s.elevation,q.z);}for(const[id,m]of shots)if(!live.has(id)){scene.remove(m);shots.delete(id);}
   shake*=Math.exp(-dt*14);
  }
  const ray=new THREE.Raycaster(),from=new THREE.Vector3(),to=new THREE.Vector3(),direction=new THREE.Vector3();
  function occlude(camera,g){for(const m of scenery)m.visible=true;scene.updateMatrixWorld(true);from.copy(camera.position);for(const point of [{x:g.player.x,y:1,z:g.player.z},{x:g.boss.x,y:3+g.blood.elevation,z:g.boss.z}]){to.set(point.x,point.y,point.z);const distance=from.distanceTo(to);direction.subVectors(to,from).normalize();ray.set(from,direction);ray.far=Math.max(0,distance-1);for(const hit of ray.intersectObjects(scenery,false))hit.object.visible=false;}}
- function clear(){for(const m of hazards.values())releaseWarning(m);hazards.clear();for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();deathTime=lastBirth=shake=0;lastHp=R.hp;}
+ function clear(){for(const m of hazards.values())releaseWarning(m);hazards.clear();for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();deathTime=lastBirth=shake=cast=energy=0;lastHp=R.hp;}
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
   event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},

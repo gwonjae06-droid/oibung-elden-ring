@@ -20,7 +20,8 @@ test('particle and puddle caps hold after thousands of impacts, merge and drain 
  const scene=new THREE.Scene(),q=bloodQuality({storage:{getItem:()=> 'low'}}),fluid=createBloodFluid(q),fx=createBloodParticles(scene,fluid,q);
  for(let i=0;i<1000;i++){fx.burst(i%20,1,i%13,{count:30});fx.puddle(i%20,i%13,1);fx.update(.01,i*.01);assert.ok(fx.active<=q.drops);assert.ok(fx.puddles<=q.puddles);}
  const snapshot=fx.active;fx.update(0,10);assert.equal(fx.active,snapshot);
- for(let t=0;t<7;t+=.05)fx.update(.05,10+t);assert.equal(fx.active,0);assert.equal(fx.puddles,0);fx.clear();disposeScene(scene);
+ // Blood now runs on a slowed clock and puddles linger about six seconds, so allow twelve seconds to drain.
+ for(let t=0;t<12;t+=.05)fx.update(.05,10+t);assert.equal(fx.active,0);assert.equal(fx.puddles,0);fx.clear();disposeScene(scene);
 });
 test('all 14 spell pools settle to a fixed resource count across repeated fights and retry clears them',()=>{
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),g=createBloodGame();g.player.hp=1e6;const sizes=[];
