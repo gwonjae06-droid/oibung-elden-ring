@@ -68,13 +68,13 @@ export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createMe
   unlock(){
    if(disposed)return;
    unlocked=true;blocked=false;
-   if(failed){fallback.unlock();fallback.update(enabled,level);return;}
+   if(failed){fallback.unlock();fallback.update(enabled,level*audioChannelGain('music',win?.localStorage));return;}
    ensure();if(enabled)play();
   },
   update(on,volume=.55,{immediateStop=false}={}){
    if(disposed)return;
    enabled=Boolean(on);level=clamp(volume);
-   if(failed){fallback.update(enabled,level);return;}
+   if(failed){fallback.update(enabled,level*audioChannelGain('music',win?.localStorage));return;}
    if(!unlocked)return;
    ensure();if(failed)return;
    if(!audio)return;
