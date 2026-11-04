@@ -61,9 +61,11 @@ export function buildDiceGiant(scene){
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
   body.visible=s.state!=='transition'||s.t>=4.35;
-  body.position.set(posture.bodyX*rise,23-11*lean-23*(1-rise)-34*fall,-133+61*lean);
+  const weight=posture.weight||0;
+  body.position.set(posture.bodyX*rise,23-11*lean-weight*7-23*(1-rise)-34*fall,-133+61*lean+weight*7);
+  body.scale.set(1+weight*.025,1-weight*.055,1+weight*.07);
   const breath=feral?Math.sin(time*9)*.035:Math.sin(time*1.4)*.012;
-  body.rotation.x=1.05*lean+fall*.35+(feral?.1:0)+breath+rage*.14;
+  body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14;
   body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
   body.rotation.y=feral?Math.sin(time*17)*rage*.045:0;
   body.updateWorldMatrix(true,false);

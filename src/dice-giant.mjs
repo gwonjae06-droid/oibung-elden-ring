@@ -109,7 +109,9 @@ export function giantPosture(g){
    const drop=ease((age-drop0)/dropTime);
    const withdraw=ease((age-h.warn-h.active)/(rapid?.24:.62));
    const lean=(.40*wind+.60*drop)*(1-withdraw);
-   return {lean,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
+   // Weight transfer follows the existing head hitbox instead of adding damage.
+   const weight=(.32*wind*(1-drop)+.86*drop)*(1-withdraw);
+   return {lean,weight,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
   }
  }
  if(s.state==='attack'&&s.temperament==='controlled'){
@@ -205,6 +207,12 @@ export function stepGiant(g,dt,frozen=false){
   g.events.push({type:'dice-giant-warning',name:q.name});
  }
  if(q.state==='attack'){
+  // One authoritative beat at the warning-to-contact boundary, including misses.
+  for(const h of q.hazards||[]){
+   if(!h.headSlam||h.cancelled||h.impactAnnounced||q.t<h.start+h.warn)continue;
+   h.impactAnnounced=true;
+   g.events.push({type:'dice-giant-head-impact',x:h.x,z:h.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
+  }
   for(const h of giantHazards(g)){
    const original=q.hazards[h.id];
    if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;
