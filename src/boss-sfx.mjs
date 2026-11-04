@@ -14,9 +14,17 @@ export function bossSound(ev,g){
  if(ev.type==='clown-bounce'||ev.type==='clown-dash')return sample('clown-jump.mp3',.45);
  if(ev.type==='clown-inflate'||ev.type==='clown-phase2')return sample('clown-laugh.mp3',.32);
  if(ev.type==='clown-throw'){const b=g.clown.bombs?.at(-1);return {...sample('bomb-timer.mp3',.24),duration:Math.max(.1,Math.min(2.2,b?.warn||1))};}
- const synth={'clown-horn':{f:440,to:330,duration:.35,type:'sawtooth'},'clown-confetti':{f:1500,to:280,duration:.2,type:'triangle'},'clown-carousel':{f:220,to:660,duration:.4,type:'sawtooth'},'clown-finale':{f:100,to:40,duration:.65,type:'sine'},'clown-slam':{f:85,to:35,duration:.4,type:'sine'},'clown-roll':{f:140,to:70,duration:.45,type:'triangle'}};
- if(synth[ev.type])return {...synth[ev.type],volume:.09};
- if(ev.type==='clown-impact'&&ev.key==='drumMarch')return {f:125,to:42,duration:.25,type:'sine',volume:.15};return null;
+ // Recorded circus props replace the last synthetic horn, carousel and finale beeps.
+ const cues={
+  'clown-horn':['clown-jump.mp3',.16,.5],
+  'clown-confetti':['assets/sfx/freesound_community-glass-smash-6266.mp3',.19,.65],
+  'clown-carousel':['clown-laugh.mp3',.2,1.35],
+  'clown-finale':['assets/sfx/dragon-studio-window-smash-sfx-382708.mp3',.28,1],
+  'clown-slam':['assets/sfx/dragon-studio-hammer-smash-effect-382731.mp3',.28,1],
+  'clown-roll':['assets/sfx/freesound_community-tennis-smash-100733.mp3',.19,.58]
+ };
+ if(ev.type==='clown-impact'&&ev.key==='drumMarch')return {file:'assets/sfx/dragon-studio-hammer-smash-effect-382731.mp3',rate:1,volume:.24,duration:.5,fade:.12};
+ const clip=cues[ev.type];return clip?{file:clip[0],volume:clip[1],rate:1,duration:clip[2],fade:.12,minGap:.18}:null;
 }
 export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance.now()/1000,getContext,random=Math.random,muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch{return false;}},schedule=fn=>globalThis.setInterval(fn,80),cancel=id=>globalThis.clearInterval(id)}={}){
  const pools=new Map(),active=new Set(),last=new Map(),errors=[];let game=null,generation=0,timer=null,disposed=false,ownedContext=null,completion=null;
@@ -38,10 +46,8 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
  // Nested bosses (each in its own shadow-root dialog) are found through the boss registry, so a new boss needs no change here.
  function allowed(){if(disposed)return false;const doc=globalThis.document;if(muted()||doc?.hidden)return false;if(doc){const entry=bossOfGame(game),isNested=Boolean(entry.dialogId),modal=isNested?doc.getElementById(entry.dialogId):null,root=isNested?modal?.firstElementChild?.shadowRoot:doc;if(isNested&&!modal?.open)return false;if(root?.getElementById('pause-screen')?.hidden===false)return false;}return true;}
  function activate(v){if(disposed)return false;active.add(v);if(timer===null){timer=schedule(()=>{if(disposed)return;for(const q of [...active]){if(!allowed()||!alive(q)||now()>=q.until||q.audio?.ended){stop(q);continue;}fade(q);}});timer?.unref?.();}return true;}
- function tone(spec){
-  if(!allowed())return false;let node=null,gain=null,v=null;
-  try{const ctx=context();if(!ctx||disposed||ctx.state==='closed')return false;ctx.resume?.()?.catch(()=>{});if(ctx.state!=='running')return false;node=ctx.createOscillator();gain=ctx.createGain();const t=ctx.currentTime,d=spec.cueDuration||spec.duration||.25;node.type=spec.type||'triangle';node.frequency.setValueAtTime(spec.f||240,t);node.frequency.exponentialRampToValueAtTime(spec.to||80,t+d);gain.gain.setValueAtTime(.0001,t);gain.gain.linearRampToValueAtTime(Math.min(.12,spec.volume||.07),t+.008);gain.gain.exponentialRampToValueAtTime(.0001,t+d);node.connect(gain);gain.connect(ctx.destination);v={node,gain,until:now()+d+.05,ending:spec.ending};if(!activate(v)){stop(v);return false;}node.onended=()=>stop(v);node.start(t);node.stop(t+d+.02);return true;}catch{if(v)stop(v);else{if(node){try{node.stop();}catch{}safe(()=>node.disconnect());}if(gain)safe(()=>gain.disconnect());}return false;}
- }
+ // Missing/blocked recordings fail silently instead of playing 8-bit oscillator fallbacks.
+ function tone(){return false;}
  function update(dt,g){if(disposed)return;if(game!==g){reset();game=g;}if(!muted()&&!globalThis.document?.hidden){const id=bossOfGame(g).id,boss=BOSS_FOLEY_PRELOAD[id]?id:'kwon';for(const f of BOSS_FOLEY_PRELOAD[boss])prepare(f);for(const f of SAMPLE_FILES.filter(f=>g.clown?!f.startsWith('sword'):!g.dice&&f.startsWith('sword')))prepare(f);}if(!allowed()||dt<=0){reset();return;}for(const v of [...active]){if(!alive(v)||now()>=v.until||v.audio?.ended){stop(v);continue;}fade(v);}}
  function event(ev,g){
   if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&(ev.type==='player-hit'||ev.type==='player-crushed')&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
