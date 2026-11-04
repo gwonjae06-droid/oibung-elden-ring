@@ -1,3 +1,4 @@
+import {playerIncapacitated} from './boss-hit-traits.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createSkillState, consumeSkill, SKILLS} from './skills.mjs';
@@ -57,7 +58,7 @@ export function tickPlayerAction(
   {roll = () => {}, melee = () => {}, basicLifetime = 1.7} = {},
 ) {
   const action = game.player.action;
-  if (!action) return;
+  if (!action||playerIncapacitated(game.player)) return;
   action.t += dt;
   if (action.kind === 'roll') roll(action);
   else if (action.kind === 'heal') completePlayerHeal(game, action);
@@ -120,7 +121,7 @@ export function actPlayer(game, type) {
   const player = game.player,
     weapon = WEAPONS[game.weapon],
     skill = player.skill;
-  if(game.status!=='playing'||game.startGrace>0)return false;
+  if(game.status!=='playing'||game.startGrace>0||playerIncapacitated(player))return false;
   if(type==='charge-release'&&player.action?.kind==='charging'){const held=player.action.t;player.action=null;const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=weapon.cost+10*u;if(player.stamina<cost)return false;player.stamina-=cost;player.regen=.85;player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,done:false,hit:false,basic:true,mult:1+(2+.5*Math.max(0,evolutionCount(game,'charged-blade')-1))*u,charged:u>0};emit(game,'attack-start');return true;}
   if(type==='roll'&&player.action?.kind==='charging')player.action=null;
   if (

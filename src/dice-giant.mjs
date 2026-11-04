@@ -1,3 +1,4 @@
+import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:.275};
@@ -173,7 +174,7 @@ export function stepGiant(g,dt,frozen=false){
   const pattern=giantPattern(selected,g.player,s.temperament,g.boss.hp/g.boss.maxHp);Object.assign(s,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:s.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});g.events.push({type:'dice-giant-warning',name:s.name});}
  if(s.state==='attack'){
   for(const h of giantHazards(g)){const original=s.hazards[h.id];if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;original.hit=true;if(diceInvulnerable(g.player))continue;
-   const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;g.events.push({type:'player-hit',amount,source:'giant'});
+   const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});g.events.push({type:'player-hit',amount,source:'giant'});
    if(g.player.hp<=0){g.status='lost';s.hazards=[];g.events.push({type:'death'});return;}
   }
   if(s.t>=s.duration+.65){s.state='recovery';s.t=0;s.hazards=[];}

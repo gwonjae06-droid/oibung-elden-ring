@@ -113,3 +113,5 @@ GitHub Actions의 `Node regression tests` 워크플로도 같은 명령을 실�
 
 
 배서준의 유체 효과·입체 혈익·변신 카메라·실제 MP3 동기화 및 검증 결과: [혈익 시네마틱 고도화](docs/blood-cinematic-quality.md).
+
+보스별 피격 특성과 아이콘 표시·검증 범위: [보스 피격 특성](docs/boss-hit-traits.md).

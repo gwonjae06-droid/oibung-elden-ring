@@ -1,3 +1,4 @@
+import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {BLOOD_RULES as R,BLOOD_PATTERNS,bloodPool,hazardContains} from './blood-data.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -58,7 +59,7 @@ export function skipBloodTransition(g){if(g.boss.state!=='transition')return fal
 function hurt(g,h){
  const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
- h.hit=true;p.hp=Math.max(0,p.hp-h.damage);p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount:h.damage});
+ h.hit=true;const before=p.hp;p.hp=Math.max(0,p.hp-h.damage);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount:h.damage});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function tickBoss(g,dt){
@@ -95,7 +96,7 @@ export function stepBlood(g,dt,input={}){
  let left=Math.min(.05,dt);while(left>1e-9&&g.status==='playing'){
   const h=Math.min(1/120,left);g.time+=h;
   if(g.boss.state==='transition'){g.player.action=null;g.projectiles.length=0;tickBoss(g,h);}
-  else{tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
+  else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
   left-=h;
  }
 }

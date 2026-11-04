@@ -1,3 +1,4 @@
+import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {
   createGame,
   step as baseStep,
@@ -88,7 +89,7 @@ export function hurt(g, damage, src) {
   damage = Math.round(damage * PRESSURE.damage[g.boss.phase === 2 ? 1 : 0]);
   p.hp = Math.max(0, p.hp - damage);
   p.invuln = 0.32;
-  p.action = {kind: 'hurt', t: 0, total: 0.22};
+  applyBossHitTrait(g,damage,{boss:'clown'});
   g.hitstop = Math.max(g.hitstop || 0, 0.07);
   emit(g, 'player-hit', {amount: damage});
   if (!p.hp) {

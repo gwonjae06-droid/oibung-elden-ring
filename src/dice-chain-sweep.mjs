@@ -1,3 +1,4 @@
+import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {diceTempo} from './dice-pressure.mjs';
 import {applyDiceSlow} from './dice-slow.mjs';
@@ -34,7 +35,7 @@ export function stepChainSweep(g,dt,frozen=false,playerRadius=.42){
  if(!w.resolved&&circleRectHit(g.player,chainSweptRect(w.plan,u0,u1),playerRadius)){
    w.resolved=true;
    if(!diceInvulnerable(g.player)){
-     const amount=Math.min(g.player.hp,CHAIN_SWEEP.damage);g.player.hp-=amount;
+     const amount=Math.min(g.player.hp,CHAIN_SWEEP.damage);g.player.hp-=amount;applyBossHitTrait(g,amount,{boss:'dice'});
      applyDiceSlow(g.player);g.events.push({type:'player-hit',source:'dice-chain',amount});
      if(g.player.hp===0){g.status='lost';d.groundSpikes=null;d.telegraph=null;d.frenzyRemaining=0;g.player.slow=null;g.events.push({type:'death'});return;}
    }

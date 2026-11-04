@@ -17,8 +17,8 @@ test('all fourteen patterns have warnings, bounded shapes, a safe point and mele
   advance(g,.2);assert.equal(g.boss.state,'recovery',id);assert.equal(g.blood.elevation,0);assert.equal(g.blood.hazards.length,0);assert.ok(g.blood.recover>1.5);
  }
 });
-test('half health waits for current attack, freezes all damage, transitions once without healing',()=>{
- const g=createBloodGame();startBloodPattern(g,'wave');advance(g,.3);damageBlood(g,3400);const hp=g.boss.hp;assert.equal(g.boss.phase,1);assert.equal(g.boss.state,'pattern');advance(g,3.2);assert.equal(g.boss.state,'transition');assert.equal(g.boss.phase,2);assert.equal(damageBlood(g,99999),0);assert.equal(actBlood(g,'light'),false);assert.equal(g.blood.hazards.length,0);assert.equal(g.boss.hp,hp);assert.ok(skipBloodTransition(g));stepBlood(g,.01);assert.equal(g.boss.state,'recovery');assert.equal(g.blood.elevation,0);advance(g,.2);assert.equal(g.events.filter(e=>e.type==='phase').length,1);
+test('half health waits for current attack, freezes all damage, transitions once without transition healing',()=>{
+ const g=createBloodGame();startBloodPattern(g,'wave');advance(g,.3);damageBlood(g,3400);const before=g.boss.hp;assert.equal(g.boss.phase,1);assert.equal(g.boss.state,'pattern');advance(g,3.2);assert.equal(g.boss.state,'transition');assert.equal(g.boss.phase,2);assert.equal(damageBlood(g,99999),0);assert.equal(actBlood(g,'light'),false);assert.equal(g.blood.hazards.length,0);const hp=g.boss.hp;assert.equal(hp,before+g.events.filter(e=>e.type==='boss-drain').reduce((n,e)=>n+e.amount,0));advance(g,.4);assert.equal(g.boss.hp,hp);assert.ok(skipBloodTransition(g));stepBlood(g,.01);assert.equal(g.boss.state,'recovery');assert.equal(g.blood.elevation,0);advance(g,.2);assert.equal(g.events.filter(e=>e.type==='phase').length,1);
 });
 test('real attacks can damage and defeat the grounded core with every weapon',()=>{
  for(const weapon of ['sword','hammer','bow','cards']){

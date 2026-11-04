@@ -1,3 +1,4 @@
+import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
 import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
 import {
   actPlayer,
@@ -565,7 +566,7 @@ function landHit(g, amount, poise, a) {
     countStats: false,
   });
 }
-function hurtPlayer(g, damage) {
+function hurtPlayer(g, damage,cut=true) {
   const p = g.player;
   if (g.status !== 'playing' || p.invuln > 0 || g.boss.state === 'transition')
     return;
@@ -574,10 +575,10 @@ function hurtPlayer(g, damage) {
     emit(g, 'dodge');
     return;
   }
-  p.hp = Math.max(0, p.hp - damage);
+  const before=p.hp;p.hp = Math.max(0, p.hp - damage);
   p.invuln = 0.32;
   p.action = {kind: 'hurt', t: 0, total: 0.22};
-  emit(g, 'player-hit', {amount: damage});
+  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount: damage});
   freeze(g, 0.07);
   if (!p.hp) {
     g.status = 'lost';
@@ -612,12 +613,12 @@ export function step(g, dt, input = {}) {
     }
     return;
   }
-  tickPlayerResources(g, dt);
+  tickBossHitTraits(g,dt);if(g.status!=='playing')return;tickPlayerResources(g, dt);
   const mx = input.x || 0,
     mz = input.z || 0,
     mag = Math.hypot(mx, mz),
     speed = p.skill.blue > 0 ? 4.7 * SKILLS.cards.blueSpeed : 4.7;
-  if (!p.action && mag) {
+  if (!p.action && mag&&!playerIncapacitated(p)) {
     p.x += (mx / Math.max(1, mag)) * speed * dt;
     p.z += (mz / Math.max(1, mag)) * speed * dt;
   }
@@ -764,7 +765,7 @@ export function step(g, dt, input = {}) {
             confine(p);
             emit(g, 'shove');
           }
-        } else hurtPlayer(g, cfg.damage);
+        } else hurtPlayer(g, cfg.damage,b.pattern!=='stomp');
       }
     } else if (
       !b.hit &&
