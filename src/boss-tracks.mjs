@@ -82,6 +82,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     unlock(){for(const entry of entries())entry.blocked=false;if(suspendedAt===null)for(const entry of entries())play(entry);},
     dispose(){if(disposed)return;disposed=true;reset();},
     get playingKey(){return current?.key??null;},
+    get state(){return entries().map(e=>({key:e.key,volume:e.audio.volume,time:e.audio.currentTime,paused:e.audio.paused}));},
     get failedKeys(){return [...failed];}
   };
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createBloodGame,damageBlood,stepBlood,skipBloodTransition,startBloodPattern} from '../src/blood-combat.mjs';
 import {bloodTransformation} from '../src/blood-transformation.mjs';
 import {createBloodTransformationAudio} from '../src/blood-transformation-audio.mjs';
+import {createBossTracks} from '../src/boss-tracks.mjs';
 
 function fixture(){const clips=[];class Audio{constructor(src){Object.assign(this,{src,paused:true,ended:false,currentTime:0,plays:0});clips.push(this);}play(){this.paused=false;this.plays++;return Promise.resolve();}pause(){this.paused=true;}removeAttribute(){}load(){}}const control=createBloodTransformationAudio({AudioClass:Audio});return {clips,control};}
 test('transformation waits for the complete attack and occurs exactly once',()=>{
@@ -24,4 +25,13 @@ test('mute respects effects gain; retry permits a fresh single prayer',()=>{
 test('phase-one music is silent before the bell and phase-two begins at 3.8',()=>{
  const g=createBloodGame();g.boss.phase=2;g.boss.state='transition';g.blood.t=.6;assert.equal(bloodTransformation(g).musicGain,0);assert.equal(bloodTransformation(g).musicPhase,1);
  g.blood.t=3.8;assert.equal(bloodTransformation(g).musicPhase,2);assert.equal(bloodTransformation(g).wings,1);
+});
+test('cinematic music discards the silent phase one and starts the measured phase-two lead-in',()=>{
+ const clips=[];class Audio{constructor(){this.paused=true;this.currentTime=0;clips.push(this);}play(){this.paused=false;return Promise.resolve();}pause(){this.paused=true;}removeAttribute(){}load(){}}
+ let time=0;const tracks=createBossTracks({Audio},{now:()=>time,fadeMs:100});tracks.update({boss:'blood',phase:1});time=100;tracks.update({boss:'blood',phase:1,gain:0,cinematic:true});assert.equal(clips[0].volume,0);
+ tracks.update({boss:'blood',phase:2,offset:1.8,cinematic:true});assert.ok(clips[0].paused);assert.equal(clips[1].currentTime,1.8);assert.equal(tracks.state.length,1);tracks.dispose();
+});
+test('blocked recordings are attempted once per cutscene and zero effects volume is respected',async()=>{
+ const clips=[];class Audio{constructor(){this.paused=true;this.currentTime=0;this.plays=0;clips.push(this);}pause(){this.paused=true;}play(){this.plays++;return Promise.reject(Error('blocked'));}removeAttribute(){}load(){}}
+ const control=createBloodTransformationAudio({AudioClass:Audio,storage:{getItem:key=>key.endsWith('effects')?'0':'1'}}),g=createBloodGame();g.boss.state='transition';g.blood.t=1;control.update(g);await Promise.resolve();control.update(g);assert.equal(clips[0].plays,1);assert.equal(clips[0].volume,0);control.dispose();
 });

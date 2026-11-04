@@ -23,5 +23,5 @@ export function createBloodParticles(parent,fluid,quality){
   drops.count=n;pools.count=k;drops.instanceMatrix.needsUpdate=pools.instanceMatrix.needsUpdate=true;
  }
  function clear(){for(const p of particles)p.life=0;for(const p of puddles)p.life=0;drops.count=pools.count=0;}
- clear();return {burst,puddle,update,clear,get active(){return particles.filter(p=>p.life>0).length;},get puddles(){return puddles.filter(p=>p.life>0).length;}};
+ clear();return {burst,puddle,update,clear,dispose(){clear();drops.dispose();pools.dispose();},get active(){return particles.filter(p=>p.life>0).length;},get puddles(){return puddles.filter(p=>p.life>0).length;}};
 }

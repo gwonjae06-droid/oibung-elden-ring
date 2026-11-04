@@ -15,3 +15,5 @@ Boss music files in this directory (keep the exact filenames):
 The MP3 recordings for the four playable bosses are present in this folder. Keep the browser sound toggle enabled. Browser autoplay policy may require a user interaction before music can start.
 
 Prefer recordings you own or have permission to distribute.
+
+Blood transformation fades phase one to silence, plays the uploaded womanvoice/bell effects once, then starts bloodbgm2 at its 1.8-second lead-in at cinematic time 3.8 seconds. It releases phase one before starting phase two. See `docs/blood-cinematic-quality.md` for the measured cue sheet.
