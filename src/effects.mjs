@@ -20,7 +20,9 @@ export function createEffects(scene,sword,reduced=false){
  const zones={circle:[makeZone(rippleGeo),makeZone(rippleGeo)],cone:[makeZone(rippleGeo),makeZone(rippleGeo)]};
  function hideZones(){for(const pair of Object.values(zones))for(const m of pair)m.visible=false;}
  function updateZone(g){
-  hideZones();const z=attackZone(g.boss);
+  hideZones();const b=g.boss,base=attackZone(b);
+  const z=base||((b.state==='windup'&&['whirl','wave'].includes(b.pattern))
+   ?{x:b.x,z:b.z,progress:Math.max(0,Math.min(1,b.t/PATTERNS[b.pattern].wind)),active:false}:null);
   if(g.status!=='playing'||!kwonEnvironmentCue(z,g.boss.pattern))return;
   // Dust-and-stone tremors are deliberately smaller than the collision radius.
   // The boss's stomp/leap body motion remains the primary warning.

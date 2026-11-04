@@ -8,7 +8,6 @@ import {DICE_RULES as R,DICE_BOARD} from './dice-data.mjs';
 import {DICE_PHOTO_FACE,DICE_PHOTO_PATH,fitDicePhoto} from './dice-photo-data.mjs';
 import {DICE_HELL_STYLE as H,diceCrackPaths,diceTelegraphView} from './dice-visual-data.mjs';
 import {buildDiceDecorations} from './dice-decoration-renderer.mjs';
-import {squareDiscArgs} from './dice-square.mjs';
 import {frenzyShake} from './dice-frenzy-windup.mjs';
 import {buildDiceArmor,DICE_ARMOR_STYLE} from './dice-armor.mjs';
 import {diceMotion} from './dice-motion-data.mjs';

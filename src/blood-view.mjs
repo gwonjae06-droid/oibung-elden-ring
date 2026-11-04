@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {createBloodHead} from './blood-head.mjs';
-import {BLOOD_RULES as R,hazardPosition} from './blood-data.mjs';
+import {BLOOD_RULES as R} from './blood-data.mjs';
 import {bloodQuality,createBloodFluid} from './blood-fluid.mjs';
 import {createBloodParticles} from './blood-particles.mjs';
 import {createBloodSpellFx} from './blood-spell-fx.mjs';

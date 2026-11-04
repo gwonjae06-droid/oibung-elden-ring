@@ -11,11 +11,12 @@ import {createBloodGame,startBloodPattern} from '../src/blood-combat.mjs';
 
 test('common attacks draw no exact hitbox; special attacks use environment cues',()=>{
  for(const name of ['sweep','thrust','backsweep','rush','jab','shove'])assert.equal(kwonEnvironmentCue({active:false},name),null,name);
- for(const name of ['slam','leap','stomp'])assert.equal(kwonEnvironmentCue({active:false},name),'stone-tremor',name);
+ for(const name of ['slam','leap','stomp','whirl','wave'])assert.equal(kwonEnvironmentCue({active:false},name),'stone-tremor',name);
  assert.equal(kwonEnvironmentCue({active:true},'slam'),null);
  const z={state:'warn',visual:false,shape:'circle',blast:true};
  assert.equal(clownEnvironmentCue(z,'juggle'),null);
  assert.equal(clownEnvironmentCue(z,'fireHoop'),'stage-light');
+ assert.equal(clownEnvironmentCue(z,'carousel'),'stage-light');
  assert.equal(clownEnvironmentCue(z,'fireHoop',true),null);
  assert.equal(clownEnvironmentCue({...z,visual:true},'humanCannon'),null);
  assert.equal(clownEnvironmentCue({...z,state:'burst'},'fireHoop'),null);
