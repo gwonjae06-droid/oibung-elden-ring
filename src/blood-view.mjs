@@ -11,17 +11,23 @@ import {collectSceneResources} from './runtime/scene-resources.mjs';
 
 export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const quality=bloodQuality({coarse}),fluid=createBloodFluid(quality);
- const stone=new THREE.MeshStandardMaterial({color:0x24202b,roughness:.88});
- const gold=new THREE.MeshStandardMaterial({color:0xb18b4c,metalness:.65,roughness:.42});
+ const stone=new THREE.MeshStandardMaterial({color:0xeeeae1,roughness:.64}),marble=new THREE.MeshStandardMaterial({color:0xdcdcd5,roughness:.48}),basalt=new THREE.MeshStandardMaterial({color:0x24202b,roughness:.88});
+ const gold=new THREE.MeshStandardMaterial({color:0xc0a56b,metalness:.58,roughness:.4});
  const cloth=new THREE.MeshStandardMaterial({color:0x290e1d,roughness:.83});
- const glass=new THREE.MeshBasicMaterial({color:0xe94764,transparent:true,opacity:.5,side:THREE.DoubleSide});
+ const glass=new THREE.MeshBasicMaterial({color:0xc5dfed,transparent:true,opacity:.62,side:THREE.DoubleSide});
  const scenery=[],windows=[],falls=[],lights=[];
  const mesh=(geo,mat,x=0,y=0,z=0,parent=scene)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);if(parent===scene&&y>2)scenery.push(m);return m;};
- const floor=mesh(new THREE.CylinderGeometry(R.radius,R.radius,1,64),stone,0,-.55,0);floor.receiveShadow=true;
+ const floor=mesh(new THREE.CylinderGeometry(R.radius,R.radius,1,64),marble,0,-.55,0);floor.receiveShadow=true;
+ // Fine marble joints and restrained gilded inlays stay below combat warnings.
+ const joints=[];for(let x=-24;x<=24;x+=4){const span=Math.sqrt(R.radius*R.radius-x*x);joints.push(x,-.035,-span,x,-.035,span,-span,-.035,x,span,-.035,x);}
+ const jointGeo=new THREE.BufferGeometry();jointGeo.setAttribute('position',new THREE.Float32BufferAttribute(joints,3));scene.add(new THREE.LineSegments(jointGeo,new THREE.LineBasicMaterial({color:0xaaa99e,transparent:true,opacity:.38})));
+ for(const r of [5,13,23]){const inlay=mesh(new THREE.RingGeometry(r-.035,r+.035,96),gold,0,-.025);inlay.rotation.x=-Math.PI/2;}
  const border=mesh(new THREE.TorusGeometry(R.radius,.25,8,96),gold,0,.05);border.rotation.x=Math.PI/2;
  const canal=mesh(new THREE.RingGeometry(28.5,32,64),fluid.material,0,-.1);canal.rotation.x=-Math.PI/2;
  for(let i=0;i<12;i++){
   const a=i*Math.PI/6,x=Math.sin(a)*33,z=Math.cos(a)*33;
+  const wall=mesh(new THREE.CylinderGeometry(34.7,34.7,27,8,1,true,a+.035,Math.PI/6-.07),stone,0,13.5,0);wall.material.side=THREE.DoubleSide;
+  const cornice=mesh(new THREE.TorusGeometry(33.8,.22,5,8,Math.PI/6-.07),gold,0,23.5,0);cornice.rotation.set(Math.PI/2,0,-a-.035);
   mesh(new THREE.CylinderGeometry(.7,1,23,8),stone,x,11,z);
   mesh(new THREE.CylinderGeometry(1.2,1.2,.5,8),gold,x,.3,z);
   const arch=mesh(new THREE.TorusGeometry(8,.32,5,24,Math.PI),stone,x,20,z);arch.rotation.y=a;
@@ -30,7 +36,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
    for(let j=-1;j<=1;j++){const bar=mesh(new THREE.BoxGeometry(.1,7,.12),gold,x*.99+j*Math.cos(a),15,z*.99-j*Math.sin(a));bar.rotation.y=a;}
   }
   const flow=mesh(new THREE.PlaneGeometry(.6,16,2,12),fluid.material,x*1.03,8,z*1.03);flow.rotation.y=a;falls.push(flow);
-  if(!coarse&&!quality.low&&i%3===0){const light=new THREE.PointLight(0xff704d,16,22,2);light.position.set(x*.83,3,z*.83);scene.add(light);lights.push(light);}
+  if(!coarse&&!quality.low&&i%3===0){const light=new THREE.PointLight(0xffd4a0,16,22,2);light.position.set(x*.83,3,z*.83);scene.add(light);lights.push(light);}
   mesh(new THREE.CylinderGeometry(.15,.3,2,6),gold,x*.86,1,z*.86);
  }
  const heart=new THREE.Group();scene.add(heart);heart.position.set(0,21,-13);
@@ -47,7 +53,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const folds=[];
  for(let i=0;i<10;i++){const a=i*Math.PI/5,strip=mesh(new THREE.CylinderGeometry(.12,.25,3.5,5,7),i%3===0?fluid.material:cloth,Math.sin(a)*.88,1.85,Math.cos(a)*.88,actor);strip.rotation.set(Math.cos(a)*.13,0,-Math.sin(a)*.13);folds.push(strip);}
  mesh(new THREE.TorusGeometry(1.05,.08,6,24),gold,0,3.4,0,actor).rotation.x=Math.PI/2;
- const head=mesh(new THREE.SphereGeometry(.65,16,12),stone,0,4.6,0,actor);
+ const head=mesh(new THREE.SphereGeometry(.65,16,12),basalt,0,4.6,0,actor);
  const core=mesh(fluid.sphere,fluid.material,0,4.7,0,actor);core.visible=false;
  const crown=mesh(new THREE.TorusGeometry(.88,.06,6,32),gold,0,5.2,0,actor);crown.rotation.x=Math.PI/2;
  const arms=[];for(const side of [-1,1]){
@@ -68,11 +74,11 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   let m=hazards.get(h.id);if(!m){
    const geo=h.shape==='lane'?new THREE.PlaneGeometry(1,1):h.shape==='cone'?new THREE.CircleGeometry(1,48,-Math.PI/2-h.arc,h.arc*2):h.shape==='ring'?new THREE.RingGeometry(.94,1,64):new THREE.CircleGeometry(1,48);
    m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xffd6bd,side:THREE.DoubleSide,transparent:true,opacity:.35,depthWrite:false}));m.rotation.x=-Math.PI/2;m.userData.hazardId=h.id;m.renderOrder=4;hazards.set(h.id,m);scene.add(m);
-   // Radial lines and a pale outline make danger legible independently of red hue.
-   const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xffe3be,transparent:true,opacity:.85,depthWrite:false,depthTest:false}));edge.position.z=.018;edge.renderOrder=5;if(h.shape==='ring')edge.userData.ringBasis=edge.geometry.attributes.position.array.slice();m.add(edge);
+   // Radial lines and a dark wine outline make danger legible independently of red hue.
+   const edge=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x6f1930,transparent:true,opacity:.92,depthWrite:false,depthTest:false}));edge.position.z=.018;edge.renderOrder=5;if(h.shape==='ring')edge.userData.ringBasis=edge.geometry.attributes.position.array.slice();m.add(edge);
   }
   const c=hazardPosition(h),active=h.age>=h.warn;
-  m.position.set(c.x,.09+(h.id%4)*.008,c.z);m.material.color.setHex(active?0xdc1a48:0xffd6bd);m.material.opacity=active?.56:reduced?.26:.16+.23*h.age/h.warn;
+  m.position.set(c.x,.09+(h.id%4)*.008,c.z);m.material.color.setHex(active?0xdc1a48:0x98253e);m.material.opacity=active?.56:reduced?.26:.16+.23*h.age/h.warn;
   if(h.shape==='lane'){
    let length=h.length;m.rotation.z=h.yaw;if(!active){const travel=Math.hypot(h.vx||0,h.vz||0)*h.life;length+=travel;m.position.x+=Math.sin(h.yaw)*travel/2;m.position.z+=Math.cos(h.yaw)*travel/2;}m.scale.set(h.width*2,length,1);
   }else if(h.shape==='ring'){
@@ -96,9 +102,9 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
   veins.forEach((v,i)=>{v.visible=c.veins>0;v.scale.setScalar(Math.max(.01,c.veins));v.rotation.z=reduced?0:g.time*.2+i;});wings.update(g,c,dt);
-  const env=cathedral.update(g,c,dt);heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));glass.opacity=(b.phase===2?.8:.42)*(1-c.darkness*.85)*fade;
+  const env=cathedral.update(g,c,dt);heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));glass.color.setHex(b.phase===2?0xe98b99:0xc5dfed);glass.opacity=(b.phase===2?.68:.62)*(1-c.darkness*.7)*fade;
   lights.forEach((l,i)=>{l.intensity=16*env.light*(reduced?1:1+Math.sin(g.time*7+i)*.05);});
-  scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=.95*env.light+.18;if(o.isDirectionalLight)o.intensity=1.3*env.light+.25;});
+  scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight)o.intensity=1.45*env.light+.35;});
   falls.forEach((f,i)=>{f.scale.y=dead?fade:1+(reduced?0:Math.sin(g.time*2+i)*.05);f.scale.x=b.phase===2?1.7:1;});
   if(c.active&&c.t>=1.8&&lastBirth<1.8)particles.burst(b.x,4+s.elevation,b.z,{count:20,power:4});
   if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,4+s.elevation,b.z,{count:quality.low?28:64,power:10});
