@@ -34,6 +34,11 @@ test('loss and home discard the run while permanent kill records remain',async()
  await f.click('restart');assert.equal(f.game().status,'playing');await f.click('home');assert.doesNotMatch(f.dialog.html,/여정 이어가기/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run,null);
  await f.api.dispose();f.release();
 });
+test('the defeat tip comes from the boss registry',async()=>{
+ const f=rig();await f.click('new');await f.click('begin');f.game().status='lost';f.poll();
+ assert.ok(f.dialog.html.includes(BOSS_REGISTRY.kwon.hint(f.game())));
+ await f.api.dispose();f.release();
+});
 
 test('story and reward precede the chain pull and next boss cinematic',async()=>{
  const f=rig({holdClown:true});await f.click('new');await f.click('begin');const defeated=f.game();defeated.status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);await f.click('memory-next');assert.match(f.dialog.html,/진화를 두 가지/);assert.deepEqual(f.scenes,['kwon']);await f.click('relic',{relic:'blade-wave'});assert.equal(f.game(),defeated);const pending=f.click('next');assert.deepEqual(f.scenes,['kwon','pull']);await flush();assert.deepEqual(f.scenes,['kwon','pull','clown']);f.finishScene();await pending;assert.notEqual(f.game(),defeated);await f.api.dispose();f.release();
@@ -59,4 +64,4 @@ test('hidden title route launches selected boss and retries without journey rewa
  f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,[]);assert.deepEqual(saved.memories,[]);assert.equal(saved.clears,0);assert.equal(saved.run,null);f.release();
 });
 
-test('hidden possession entry keeps phase two on retry without affecting journey records',async()=>{const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/육체 강탈부터/);await f.click('secret-giant');assert.equal(f.lastLaunch().startPhase,2);f.game().status='lost';await f.poll();await f.click('secret-retry');assert.equal(f.lastLaunch().startPhase,2);await f.api.dispose();assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);f.release();});
+test('hidden shortcut starts a boss in a later phase, keeps it on retry and does not affect journey records',async()=>{const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/육체 강탈부터/);await f.click('secret-phase',{boss:'dice',phase:'2'});assert.equal(f.lastLaunch().startPhase,2);f.game().status='lost';await f.poll();await f.click('secret-retry');assert.equal(f.lastLaunch().startPhase,2);await f.api.dispose();assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);f.release();});
