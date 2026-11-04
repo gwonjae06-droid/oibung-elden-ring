@@ -1,5 +1,5 @@
-// Deterministic seven-second possession. Every beat derives from simulation time.
-export const POSSESSION=Object.freeze({still:0.6,spinEnd:3.6,launchEnd:3.85,possessEnd:4.5,riseEnd:5.8,end:7});
+// Deterministic in-place possession: swelling/tremor -> violent accelerating spin -> neck strike.
+export const POSSESSION=Object.freeze({still:.6,spinEnd:3.6,launchEnd:3.85,possessEnd:4.5,riseEnd:5.8,end:7});
 const sat=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
 const smooth=v=>{const t=sat(v);return t*t*(3-2*t);};
 const mix=(a,b,t)=>a+(b-a)*t;
@@ -14,14 +14,20 @@ export function cinematicBeat(t){
  if(t<POSSESSION.end)return 'reveal';
  return 'complete';
 }
+export function possessionScale(t){
+ // The die visibly grows in place during the three-second charge, before the impact.
+ if(t<=POSSESSION.still)return 1;
+ if(t<POSSESSION.spinEnd)return 1+.32*smooth((t-POSSESSION.still)/3);
+ return 1.32+.08*smooth((t-POSSESSION.spinEnd)/.9);
+}
 export function spinPose(from,t){
- const progress=sat((t-POSSESSION.still)/3);
- const angular=2*Math.PI*(1.8*progress+5*progress**3);
- const radius=35-13*progress;
- const orbit={x:Math.sin(angular)*radius,y:28+43*smooth(progress)+7*Math.sin(progress*Math.PI*3),z:-29+Math.cos(angular)*radius};
- const entrance=smooth(progress/.12);
- const turn=yawTurn(angular+progress*11*Math.PI);
- return {x:mix(from.x,orbit.x,entrance),y:mix(from.y,orbit.y,entrance),z:mix(from.z,orbit.z,entrance),rotation:unit(from.rotation.map((n,i)=>mix(n,turn[i],entrance)))};
+ const p=sat((t-POSSESSION.still)/3);
+ // The angle, not the path, accelerates sharply. Jitter grows with speed.
+ const angle=2*Math.PI*(1.2*p+8.4*p*p*p);
+ const amp=1.3*p*p;
+ const jitter=p>=1?0:amp;
+ const rotation=unit(yawTurn(angle));
+ return {x:from.x+jitter*Math.sin(p*133),y:from.y+8*smooth(p)+jitter*.55*Math.cos(p*109),z:from.z+jitter*Math.sin(p*107),rotation};
 }
 export function possessionPose(from,t){
  const rotation=yawTurn(-Math.PI/2);
@@ -33,4 +39,3 @@ export function possessionPose(from,t){
  }
  return {x:0,y:58,z:-106,rotation};
 }
-export function possessionScale(t){return 1+.4*smooth((t-4.05)/1.5);}
