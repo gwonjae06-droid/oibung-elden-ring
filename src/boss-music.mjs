@@ -1,6 +1,7 @@
 import {readBattleSession} from './battle-session.mjs';
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 import {createBossTracks} from './boss-tracks.mjs';
+import {audioChannelGain} from './audio-preferences.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused)return null;
@@ -19,7 +20,7 @@ export function musicState(doc,focused=true){
 }
 export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  let ctx=null,bus=null,noise=null,enabled=false,disposed=false,state=null,next=0,tick=0,laugh=null,loading=false,retryAt=0;const groups=new Set();
- function ensure(){if(disposed)return false;if(ctx)return true;try{ctx=factory();if(!ctx)return false;bus=ctx.createGain();bus.gain.value=.35;const comp=ctx.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=18;comp.ratio.value=5;bus.connect(comp);comp.connect(ctx.destination);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
+ function ensure(){if(disposed)return false;if(ctx)return true;try{ctx=factory();if(!ctx)return false;bus=ctx.createGain();bus.gain.value=.35*audioChannelGain('music');const comp=ctx.createDynamicsCompressor();comp.threshold.value=-24;comp.knee.value=18;comp.ratio.value=5;bus.connect(comp);comp.connect(ctx.destination);noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
  function release(g){if(g.done)return;g.done=true;groups.delete(g);for(const n of g.sources){n.onended=null;try{n.stop();}catch{}n.disconnect();}for(const n of g.fx)n.disconnect();}
  function stop(){for(const g of [...groups])release(g);next=0;}
  function voices(){let n=0;for(const g of groups)n+=g.sources.length;return n;}
@@ -44,7 +45,7 @@ export function createBossMusic(factory,{fetchAudio=globalThis.fetch}={}){
  return {
   unlock(){if(!ensure())return false;try{ctx.resume()?.catch(()=>{});}catch{}enabled=true;return true;},
   update(value,on=true){
-   if(!ctx||!enabled||disposed)return;for(const g of [...groups])if(ctx.currentTime>=g.end)release(g);
+   if(!ctx||!enabled||disposed)return;bus.gain.value=.35*audioChannelGain('music');for(const g of [...groups])if(ctx.currentTime>=g.end)release(g);
    if(!on||!value||ctx.state!=='running'){stop();return;}
    if(!state||state.boss!==value.boss||state.phase!==value.phase){stop();tick=0;state={boss:value.boss,phase:value.phase};}
    if(value.boss==='clown')loadLaugh();const interval=30/musicTempo(value.boss,value.phase);
