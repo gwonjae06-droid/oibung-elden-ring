@@ -45,7 +45,10 @@ export function createImpactAudio(factory){
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
       master.gain.value=.55*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.035:opts.minGap;
-      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;if(sample.play(name,opts))return true;fn(opts);return true;
+      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;
+      // Impact/weapon sample ownership belongs to the player or boss SFX controllers.
+      // Synthesized hit-flesh, chiptune critical-hit and blood partials are intentionally silent.
+      return false;
     }
   };
 }
