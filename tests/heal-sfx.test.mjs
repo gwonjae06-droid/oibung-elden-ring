@@ -5,13 +5,11 @@ import {createSampleSfx,PLAYER_CLIP_ENVELOPES,SOUND_SAMPLES} from '../src/sample
 import {createGame,act} from '../src/combat.mjs';
 import {completePlayerHeal} from '../src/player-tick.mjs';
 
-test('all three boss screens start recovery sound from heal-start, not a late healed event',()=>{
- for(const file of ['arena.mjs','clown-battle.mjs','dice-battle.mjs']){
+test('all four boss screens use native recovery samples without waiting for delayed healed events',()=>{
+ for(const file of ['arena.mjs','clown-battle.mjs','dice-battle.mjs','blood-battle.mjs']){
   const src=readFileSync(new URL('../src/'+file,import.meta.url),'utf8');
   assert.ok(src.includes('heal-start'),file+' lacks heal-start handler');
-  if(file==='arena.mjs')assert.match(src,/case 'heal-start':audio\.play\('healed'\)/);
-  if(file==='clown-battle.mjs')assert.match(src,/'heal-start':'healed'/);
-  if(file==='dice-battle.mjs')assert.match(src,/e\.type==='heal-start'\?'healed'/);
+  assert.ok(src.includes('recoverySfx.event('),file+' does not forward healing events');
  }
 });
 test('potion emits one immediate heal-start and a later completion event',()=>{
