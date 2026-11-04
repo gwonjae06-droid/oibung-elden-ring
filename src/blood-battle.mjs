@@ -40,7 +40,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
   const sound=()=>{audio.setEnabled(!muted());skillAudio.setEnabled(!muted());};
   function clearInput(){clearMovement(keys,stick);releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickPointer);dragPointer=stickPointer=null;$('thumb').style.transform='';if(g.player.action?.kind==='charging')g.player.action=null;}
   function setMode(value){mode=value;hud.mode(value);clearInput();}
-  function request(type){if(!ready||mode!=='playing')return;sound();if(type==='lock'){lock=!lock;return;}actBlood(g,type,input());}
+  function request(type){if(!ready||mode!=='playing')return;sound();if(type==='lock'){lock=!lock;return;}const accepted=actBlood(g,type,input());if(type==='heal'&&accepted)recoverySfx.event({type:'heal-start'});}
   const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();}});
   function reset(){recoverySfx.clear();damageFeedback.clear();g=createBloodGame(weapon);configure(g);ending=0;fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();}
   const close=createBattleCleanup(()=>[
