@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createBloodHead} from './blood-head.mjs';
 import {BLOOD_RULES as R,hazardPosition} from './blood-data.mjs';
 import {bloodQuality,createBloodFluid} from './blood-fluid.mjs';
 import {createBloodParticles} from './blood-particles.mjs';
@@ -53,7 +54,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const folds=[];
  for(let i=0;i<10;i++){const a=i*Math.PI/5,strip=mesh(new THREE.CylinderGeometry(.12,.25,3.5,5,7),i%3===0?fluid.material:cloth,Math.sin(a)*.88,1.85,Math.cos(a)*.88,actor);strip.rotation.set(Math.cos(a)*.13,0,-Math.sin(a)*.13);folds.push(strip);}
  mesh(new THREE.TorusGeometry(1.05,.08,6,24),gold,0,3.4,0,actor).rotation.x=Math.PI/2;
- const head=mesh(new THREE.SphereGeometry(.65,16,12),basalt,0,4.6,0,actor);
+ const portrait=createBloodHead(),head=portrait.group;head.position.set(0,4.6,0);actor.add(head);
  const core=mesh(fluid.sphere,fluid.material,0,4.7,0,actor);core.visible=false;
  const crown=mesh(new THREE.TorusGeometry(.88,.06,6,32),gold,0,5.2,0,actor);crown.rotation.x=Math.PI/2;
  const arms=[];for(const side of [-1,1]){
@@ -122,5 +123,5 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
   event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;clear();particles.dispose();cathedral.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
+  dispose(){if(disposed)return;disposed=true;clear();portrait.dispose();particles.dispose();cathedral.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
 }
