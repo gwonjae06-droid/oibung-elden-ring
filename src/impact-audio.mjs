@@ -1,3 +1,4 @@
+import {audioChannelGain} from './audio-preferences.mjs';
 export const IMPACT_SOUND_NAMES=['hit-slash','hit-blunt','hit-pierce','hit-crit','blood-splat','hit-flesh'];
 export function createImpactAudio(factory){
   const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
@@ -6,7 +7,7 @@ export function createImpactAudio(factory){
     if(disposed)return false;if(ctx)return true;
     try{ctx=make();}catch(e){ctx=null;}
     if(!ctx)return false;
-    const comp=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=.55;master.connect(comp);comp.connect(ctx.destination);
+    const comp=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=.55*audioChannelGain('effects');master.connect(comp);comp.connect(ctx.destination);
     const len=Math.floor(ctx.sampleRate*1.2);noiseBuf=ctx.createBuffer(1,len,ctx.sampleRate);
     const d=noiseBuf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return true;
   }
@@ -42,7 +43,7 @@ export function createImpactAudio(factory){
     },
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
-      const now=ctx.currentTime,gap=opts.minGap===undefined?.035:opts.minGap;
+      master.gain.value=.55*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.035:opts.minGap;
       if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;fn(opts);return true;
     }
   };
