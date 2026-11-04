@@ -1,4 +1,5 @@
 import {soundVariation} from './sound-variation.mjs';
+import {audioChannelGain} from './audio-preferences.mjs';
 import {playerSoundRecipe} from './player-presentation.mjs';
 export function createPlayerSound({getContext,getDestination=ctx=>ctx.destination,win=globalThis,doc=globalThis.document,listenForGestures=true,muted=()=>{try{return globalThis.localStorage?.getItem('oibung-muted')==='1';}catch{return false;}},random=Math.random}={}){
  let ctx=null,bus=null,noise=null,disposed=false,completion=null;const active=new Set(),last=new Map(),infrastructure=new Set(),removers=[],errors=[];
@@ -8,7 +9,7 @@ export function createPlayerSound({getContext,getDestination=ctx=>ctx.destinatio
  function ensure(){
   if(!allowed())return false;
   try{if(!ctx){if(getContext)ctx=getContext();else{const C=win.AudioContext||win.webkitAudioContext;if(!C)return false;ctx=new C();}}if(!ctx||disposed||ctx.state==='closed')return false;
-   if(!bus||!noise){dropInfrastructure();bus=ctx.createGain();infrastructure.add(bus);bus.gain.value=.8;const comp=ctx.createDynamicsCompressor();infrastructure.add(comp);bus.connect(comp);comp.connect(getDestination(ctx));noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}
+   if(!bus||!noise){dropInfrastructure();bus=ctx.createGain();infrastructure.add(bus);bus.gain.value=.8*audioChannelGain('effects');const comp=ctx.createDynamicsCompressor();infrastructure.add(comp);bus.connect(comp);comp.connect(getDestination(ctx));noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}
    ctx.resume?.()?.catch(()=>{});return !disposed&&ctx?.state==='running';
   }catch{dropInfrastructure();return false;}
  }
@@ -17,7 +18,7 @@ export function createPlayerSound({getContext,getDestination=ctx=>ctx.destinatio
  function clear(){if(!disposed)reset();}
  function update(){if(!disposed&&(muted()||doc?.hidden))reset();}
  function play(key,weapon){
-  if(!allowed()||!ensure()||active.size>12)return false;const t=ctx.currentTime;if(t-(last.get(key)??-Infinity)<.09)return false;last.set(key,t);const j=soundVariation(random);
+  if(!allowed()||!ensure()||active.size>12)return false;bus.gain.value=.8*audioChannelGain('effects');const t=ctx.currentTime;if(t-(last.get(key)??-Infinity)<.09)return false;last.set(key,t);const j=soundVariation(random);
   for(const [kind,f,to,dur,vol] of playerSoundRecipe(key,weapon)){
    if(disposed||active.size>=16)break;const q={s:null,g:null,f:null,done:false};
    try{q.s=kind==='n'?ctx.createBufferSource():ctx.createOscillator();q.g=ctx.createGain();const end=t+dur/j.speed;
