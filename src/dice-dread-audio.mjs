@@ -1,3 +1,4 @@
+import {audioChannelGain} from './audio-preferences.mjs';
 // Organic dread layer for the possessed casino: filtered air/rumble and slow breath-like pulses.
 // No synthesized pitched oscillator, external asset, or independent wall-clock game state.
 export function createDiceDread(factory){
@@ -25,7 +26,7 @@ export function createDiceDread(factory){
    const feral=giant?.temperament==='feral',t=Number.isFinite(g?.time)?g.time:0;
    const beat=active?Math.max(0,Math.sin(t*Math.PI*(feral?2.7:1.7)))**14:0;
    const target=active?(feral?.052:.027)+beat*(feral?.025:.011):0;
-   rumble?.gain?.setTargetAtTime(target,ctx.currentTime,.09);
+   rumble?.gain?.setTargetAtTime(target*audioChannelGain('ambient'),ctx.currentTime,.09);
    filter?.frequency?.setTargetAtTime(feral?170:110,ctx.currentTime,.2);
   },
   dispose(){
