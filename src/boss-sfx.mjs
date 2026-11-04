@@ -52,7 +52,7 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
  function event(ev,g){
   if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&(ev.type==='player-hit'||ev.type==='player-crushed')&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
   const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<(base.minGap??.09)||active.size>=(g.blood?3:maxVoices))return false;
-  const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed,fade:base.fade||0};if(!base.file)spec.duration=base.duration/j.speed;
+  const j=base.natural?{pitch:1,speed:1,gain:1}:soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed,fade:base.fade||0};if(!base.file)spec.duration=base.duration/j.speed;
   if(!spec.file)return false; // No chiptune-like waveform cues without an actual recording.
   const a=prepare(spec.file).find(a=>(a.readyState>=2||spec.file.startsWith('assets/sfx/'))&&!a.error&&![...active].some(v=>v.audio===a));if(!a)return false;
   if(disposed)return false;const rate=Math.max(.5,Math.min(1.8,spec.rate)),token=generation,v={audio:a,ending,until:time+(spec.duration||1),fade:spec.fade,volume:spec.volume};
