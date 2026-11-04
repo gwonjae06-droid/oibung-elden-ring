@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {POSSESSION,cinematicBeat,spinPose,possessionPose,possessionScale} from '../src/dice-giant-cinematic-data.mjs';
 import {createDicePlayerGame,stepDicePlayer} from '../src/dice-player.mjs';
 import {damageDice} from '../src/dice-combat.mjs';
-import {HAND_REST,giantHandPose,giantPattern,giantHeadPose,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
+import {HAND_REST,giantHandPose,giantPattern,giantHeadPose,giantHeadExposed,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
 import {giantImpact} from '../src/dice-giant-hit.mjs';
 
 const from={x:20,y:6,z:20,rotation:[0,0,0,1]};
@@ -66,4 +66,34 @@ test('casino scene has fleeing guests and reactive chips, coins, dice and chess 
  const view=readFileSync(new URL('../src/dice-giant-view.mjs',import.meta.url),'utf8');
  assert.match(room,/fleeStart/);assert.match(room,/chandeliers/);
  for(const kind of ['chip','coin','chess','dice'])assert.ok(view.includes(kind));
+});
+
+test('coin face alternates deterministically and chooses different readable attacks',()=>{
+ const heads=giantPattern(3,{x:0,z:0}),tails=giantPattern(10,{x:0,z:0});
+ assert.equal(heads.coinFace,'heads');assert.equal(tails.coinFace,'tails');
+ assert.match(heads.name,/앞면/);assert.match(tails.name,/뒷면/);
+ assert.notDeepEqual(heads.hazards.map(h=>h.shape),tails.hazards.map(h=>h.shape));
+});
+test('rook, bishop and knight chess patterns use distinct travel geometries',()=>{
+ const rook=giantPattern(4,{x:0,z:0}),bishop=giantPattern(11,{x:0,z:0}),knight=giantPattern(18,{x:0,z:0});
+ assert.equal(rook.chessPiece,'rook');assert.equal(bishop.chessPiece,'bishop');assert.equal(knight.chessPiece,'knight');
+ assert.ok(rook.hazards.every(h=>h.shape==='rect'));
+ assert.ok(bishop.hazards.every(h=>h.shape==='rotated-rect'));
+ assert.ok(knight.hazards.every(h=>h.shape==='circle'));
+ const h=bishop.hazards[0];
+ assert.equal(hazardContains(h,{x:h.x+20,z:h.z-20}),true);
+ assert.equal(hazardContains(h,{x:h.x+20,z:h.z+20}),false);
+});
+test('low-health feral dice head slams repeat up to three times and can be counterattacked',()=>{
+ const player={x:10,z:20};
+ assert.equal(giantPattern(2,player,'feral',.24).hazards.filter(h=>h.headSlam).length,1);
+ assert.equal(giantPattern(2,player,'feral',.17).hazards.filter(h=>h.headSlam).length,2);
+ assert.equal(giantPattern(2,player,'feral',.1).hazards.filter(h=>h.headSlam).length,3);
+ const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
+ const pattern=giantPattern(2,player,'feral',.24);
+ Object.assign(g.dice.giant,{state:'attack',temperament:'feral',slot:2,t:1.5,hazards:pattern.hazards,duration:pattern.duration});
+ g.dice.pose=giantHeadPose(g);
+ assert.equal(giantHeadExposed(g),true);
+ const hit=giantImpact(g,{x:player.x,y:1.2,z:player.z+17},{x:player.x,y:1.2,z:player.z+1});
+ assert.equal(hit?.part,'head');
 });

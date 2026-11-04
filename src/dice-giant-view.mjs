@@ -27,7 +27,7 @@ export function buildDiceGiant(scene){
  const chips=Array.from({length:8},()=>{const m=mesh(new T.CylinderGeometry(4,4,1,20),gold,root,[1,1,1]);m.visible=false;return m;});
  const landmark=mesh(new T.TorusGeometry(8,.3,6,48).rotateX(Math.PI/2),new T.MeshBasicMaterial({color:0xa3f6c2}),root,[1,1,1]);landmark.position.set(0,.18,-8);landmark.visible=false;
  // Shared prop geometry reacts to the authoritative hazard timeline.
- const propGeo={chip:new T.CylinderGeometry(3.4,3.4,.9,20),coin:new T.CylinderGeometry(4,4,.45,24),chess:new T.ConeGeometry(3.2,11,8),dice:new T.BoxGeometry(6,6,6)};
+ const propGeo={chip:new T.CylinderGeometry(3.4,3.4,.9,20),coin:new T.CylinderGeometry(4,4,.45,24),chess:new T.ConeGeometry(3.2,11,8),chessRook:new T.CylinderGeometry(3,3.6,9,8),chessKnight:new T.BoxGeometry(6,8,8),dice:new T.BoxGeometry(6,6,6)};
  const propMats={gold:new T.MeshStandardMaterial({color:0xe3b85e,metalness:.7,roughness:.3}),black:new T.MeshStandardMaterial({color:0x28202b,metalness:.35,roughness:.45})};
  const props=Array.from({length:20},(_,i)=>{const m=new T.Mesh(propGeo.chip,i%2?propMats.gold:propMats.black);m.castShadow=true;root.add(m);m.visible=false;return m;});
  const sat=v=>Math.max(0,Math.min(1,v));
@@ -47,14 +47,14 @@ export function buildDiceGiant(scene){
    fingers.forEach((finger,j)=>{finger.rotation.x=(feral?.18:.045)*Math.sin((g.time||0)*(feral?12:2)+j*.9+i*2);});
    anchor.set(i?22:-22,40-20*fall-20*lean,-126+25*lean);delta.copy(group.position).sub(anchor);arm.position.copy(anchor).addScaledVector(delta,.5);arm.scale.set(5,delta.length(),5);arm.quaternion.setFromUnitVectors(up,delta.normalize());});
   landmark.visible=s.state==='stagger';propMats.gold.emissive?.setHex?.(feral?0x4a1007:0x251008);
-  const hazards=giantHazards(g);warnings.forEach((m,i)=>{const h=hazards[i];m.visible=!!h;if(!h)return;m.material=h.live?activeMat:warnMat;m.position.set(h.x,.14,h.z);m.geometry=h.shape==='rect'?rect:h.shape==='ring'?ring:circle;
-   if(h.shape==='rect')m.scale.set(h.w,1,h.h);else if(h.shape==='ring'){const r=Math.max(.1,h.r);m.scale.set(r+3,1,r+3);/* matched annulus uses a per-frame inner radius */m.geometry=ring;const pos=ring.attributes.position;for(let k=0;k<pos.count;k++){const a=k%65/64*Math.PI*2,v=k<65?Math.max(0,r-3):r+3;pos.setXYZ(k,Math.cos(a)*v/(r+3),0,Math.sin(a)*v/(r+3));}pos.needsUpdate=true;}else m.scale.set(h.r,1,h.r);
+  const hazards=giantHazards(g);warnings.forEach((m,i)=>{const h=hazards[i];m.visible=!!h;if(!h)return;m.material=h.live?activeMat:warnMat;m.position.set(h.x,.14,h.z);m.geometry=['rect','rotated-rect'].includes(h.shape)?rect:h.shape==='ring'?ring:circle;m.rotation.y=h.yaw||0;
+   if(h.shape==='rect'||h.shape==='rotated-rect')m.scale.set(h.w,1,h.h);else if(h.shape==='ring'){const r=Math.max(.1,h.r);m.scale.set(r+3,1,r+3);/* matched annulus uses a per-frame inner radius */m.geometry=ring;const pos=ring.attributes.position;for(let k=0;k<pos.count;k++){const a=k%65/64*Math.PI*2,v=k<65?Math.max(0,r-3):r+3;pos.setXYZ(k,Math.cos(a)*v/(r+3),0,Math.sin(a)*v/(r+3));}pos.needsUpdate=true;}else m.scale.set(h.r,1,h.r);
   });
   const falling=hazards.filter(h=>(s.slot===2||s.slot===6&&h.start>=2.7&&h.start<5.1)&&h.shape==='circle');chips.forEach((m,i)=>{const h=falling[i];m.visible=!!h&&s.temperament==='controlled';if(!m.visible)return;m.position.set(h.x,h.live?.7:1+45*(1-sat(h.age/h.warn)),h.z);m.rotation.z=h.live?0:h.age*2;});
   props.forEach((m,i)=>{
    const h=hazards[i],type=feral?(s.slot===4?'chess':s.slot===1||s.slot===6?'chip':null):({1:'chip',2:'dice',3:'coin',4:'chess',6:'coin'})[s.slot];
    m.visible=Boolean(type&&h&&!h.live);if(!m.visible)return;
-   m.geometry=propGeo[type];m.material=i%2?propMats.gold:propMats.black;
+   m.geometry=type==='chess'?(s.chessPiece==='rook'?propGeo.chessRook:s.chessPiece==='knight'?propGeo.chessKnight:propGeo.chess):propGeo[type];m.material=i%2?propMats.gold:propMats.black;
    m.position.set(h.x,2+12*(1-sat(h.age/h.warn)),h.z);
    m.rotation.set(type==='coin'?Math.PI/2+h.age*9:0,h.age*2+i,feral?h.age*5:0);
   });
