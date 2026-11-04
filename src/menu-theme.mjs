@@ -1,4 +1,5 @@
-import {createMenuScore} from './menu-score.mjs';
+// Synthesized backup piano was deliberately retired (retro waveform removal).
+const createSilentFallback=()=>({unlock(){},update(){},dispose(){}});
 import {audioChannelGain} from './audio-preferences.mjs';
 
 // The filename is intentionally the exact name uploaded to assets/music.
@@ -6,10 +7,10 @@ export const MENU_THEME_URL=new URL('../assets/music/maintheme.mp3',import.meta.
 const clamp=v=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):.55;
 
 /**
- * Plays the uploaded menu MP3; the original generated piano is a fallback only.
+ * Plays the uploaded menu MP3. On load failure stay silent rather than play synthesized notes.
  * A browser gesture is required before constructing or playing an audio element.
  */
-export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createMenuScore,fadeMs=300,now=()=>win?.performance?.now?.()??Date.now()}={}){
+export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createSilentFallback,fadeMs=300,now=()=>win?.performance?.now?.()??Date.now()}={}){
  const fallback=makeFallback(win);
  let audio=null,failed=typeof AudioClass!=='function',unlocked=false,disposed=false,enabled=false;
  let level=.55,blocked=false,pending=false,timer=null,from=0,target=0,started=0;
