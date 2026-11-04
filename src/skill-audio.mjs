@@ -1,8 +1,9 @@
 import {audioChannelGain} from './audio-preferences.mjs';
+import {createSampleSfx} from './sample-sfx.mjs';
 export const SKILL_SOUND_NAMES=['skill-sword','skill-hammer','skill-bow','skill-blue','skill-red','skill-yellow','skill-stun','skill-heal','skill-ready','skill-pierce'];
 export function createSkillAudio(factory){
   const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
-  let ctx=null,master=null,noiseBuf=null,enabled=false,ends=[];const last={};
+  let ctx=null,master=null,noiseBuf=null,enabled=false,ends=[];const last={};const sample=createSampleSfx();
   function ensure(){
     if(ctx)return true;
     try{ctx=make();}catch(e){ctx=null;}
@@ -40,14 +41,14 @@ export function createSkillAudio(factory){
   return {
     get enabled(){return enabled;},names:Object.keys(SOUNDS),
     setEnabled(on){
-      if(!on){enabled=false;return false;}
+      if(!on){enabled=false;sample.setEnabled(false);return false;}
       if(!ensure()){enabled=false;return false;}
-      if(ctx.state==='suspended'&&ctx.resume)ctx.resume();enabled=true;return true;
+      if(ctx.state==='suspended'&&ctx.resume)ctx.resume();enabled=true;sample.setEnabled(true);return true;
     },
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
       master.gain.value=.5*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.04:opts.minGap;
-      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;fn(opts);return true;
+      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;if(sample.play(name,opts))return true;fn(opts);return true;
     }
   };
 }
