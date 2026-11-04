@@ -1,4 +1,5 @@
 import {INTRO_CARDS,introDuration,introFrame} from './boss-intro-data.mjs';
+import {playBossCue,stopBossCue} from './boss-cues.mjs';
 export function playBossIntro(doc,arena,bossId,{reduced=false,raf=cb=>globalThis.requestAnimationFrame(cb),caf=id=>globalThis.cancelAnimationFrame(id),now=()=>globalThis.performance.now()}={}){
  const card=INTRO_CARDS[bossId];
  if(!doc||!arena||!card)return {finished:Promise.resolve(false),skip(){}};
@@ -16,9 +17,9 @@ export function playBossIntro(doc,arena,bossId,{reduced=false,raf=cb=>globalThis
  box.appendChild(epithet);box.appendChild(name);box.appendChild(line);
  for(const c of [veil,top,bottom,box,skip])overlay.appendChild(c);
  arena.appendChild(overlay);
- let elapsed=0,last=null,handle=0,done=false,resolve;
+ let elapsed=0,last=null,handle=0,done=false,playedNameCue=false,resolve;
  const finished=new Promise(r=>resolve=r);
- function finish(ok){if(done)return;done=true;caf(handle);overlay.remove();resolve(ok);}
+ function finish(ok){if(done)return;done=true;caf(handle);stopBossCue('start');overlay.remove();resolve(ok);}
  function apply(f){
   veil.style.opacity=String(f.veil);
   if(reduced){top.style.opacity=bottom.style.opacity=String(f.bars);top.style.transform=bottom.style.transform='none';}
@@ -34,6 +35,7 @@ export function playBossIntro(doc,arena,bossId,{reduced=false,raf=cb=>globalThis
   if(!doc.hidden)elapsed+=dt;
   const f=introFrame(elapsed,reduced);
   if(f.done){finish(true);return;}
+  if(!playedNameCue&&f.name>.025){playedNameCue=true;playBossCue('start');}
   apply(f);handle=raf(frame);
  }
  skip.onclick=()=>finish(true);
