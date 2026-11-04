@@ -1,6 +1,7 @@
 import {soundVariation,kwonFight} from './sound-variation.mjs';
 import {createSampleSfx,SOUND_SAMPLES} from './sample-sfx.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
+import {NOISE_ONLY_SFX} from './natural-sfx-policy.mjs';
 const LIMIT=48;
 export function createAudio(factory){
  let ctx=null,master=null,ambientBus=null,noise=null,enabled=false,drone=null;const nodes=new Set(),ends=new Map(),last=new Map();
@@ -68,10 +69,17 @@ export function createAudio(factory){
   get enabled(){return enabled;},names:Object.keys(R),
   setEnabled(on){if(on){if(!ensure())return enabled=false;ctx.resume?.()?.catch(()=>{});enabled=true;samples.setEnabled(true);}else{enabled=false;samples.setEnabled(false);stopDrone();for(const s of [...nodes]){try{s.stop();}catch{}}nodes.clear();ends.clear();}return enabled;},
   play(name,opts={}){if(!enabled||!ctx||!R[name])return false;const t=ctx.currentTime;if(t-(last.get(name)??-Infinity)<(opts.minGap??.03))return false;last.set(name,t);// Never generate retro waveforms. Keep the physical air ambience via ambience().
-  // Healing/death recordings still play; events without a recorded asset are silent.
-  if(!Object.hasOwn(SOUND_SAMPLES,name))return false;
-  if(name.startsWith('boss-')&&!kwonFight())return false;
-  return samples.play(name,opts);},
+  // Recorded effects always take priority; unsampled hits and evades use
+  // brief filtered-noise foley with NO oscillators and NO melodic pitches.
+  if(Object.hasOwn(SOUND_SAMPLES,name)){
+   if(name.startsWith('boss-')&&!kwonFight())return false;
+   return samples.play(name,opts);
+  }
+  const noises=NOISE_ONLY_SFX[name];if(!noises)return false;
+  master.gain.value=.3*audioChannelGain('effects');
+  const variation=soundVariation();
+  for(const recipe of noises)emit(recipe,variation,name==='hit-player'?.8:.65);
+  return true;},
   ambience(on){
    if(!ctx)return;
    if(!on){stopDrone();return;}
