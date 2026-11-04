@@ -16,20 +16,20 @@ function fakeContext({reverb=true,brokenReverb=false}={}){
  return {ctx,log};
 }
 
-test('every sound works with a reverb bus and leaves no unmatched voices',()=>{
+test('retro recipes stay silent while reverb initialization remains safe',()=>{
  const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
  assert.equal(a.setEnabled(true),true);
  assert.equal(log.convolvers,1);
- for(const name of a.names){ctx.currentTime+=1;const before=log.starts;assert.equal(a.play(name,{amount:120}),true,name);assert.ok(log.starts>before,name);}
+ for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name,{amount:120}),false,name);}
+ assert.equal(log.starts,0);
  assert.deepEqual(log.errors,[]);
- assert.equal(log.starts,log.stops);
 });
 
-test('a failing reverb does not disable audio',()=>{
+test('failing reverb does not disable the recorded sample backend',()=>{
  const {ctx}=fakeContext({brokenReverb:true}),a=createAudio(()=>ctx);
  assert.equal(a.setEnabled(true),true);
- ctx.currentTime+=1;
- assert.equal(a.play('ui'),true);
+ assert.equal(a.enabled,true);
+ assert.equal(a.play('ui'),false);
 });
 
 test('filtered natural ambience uses one noise source and stops cleanly',()=>{
@@ -47,13 +47,11 @@ test('filtered natural ambience uses one noise source and stops cleanly',()=>{
  assert.deepEqual(log.errors,[]);
 });
 
-test('expired voices are reclaimed even when no ended event arrives',()=>{
+test('retired phase/UI cues never allocate expiring voices',()=>{
  const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
  a.setEnabled(true);
- for(let i=0;i<400;i++)a.play('phase',{minGap:0});
- assert.ok(log.starts<=48);
+ for(let i=0;i<400;i++)assert.equal(a.play('phase',{minGap:0}),false);
  ctx.currentTime+=10;
- const before=log.starts;
- assert.equal(a.play('ui',{minGap:0}),true);
- assert.ok(log.starts>before);
+ assert.equal(a.play('ui',{minGap:0}),false);
+ assert.equal(log.starts,0);
 });
