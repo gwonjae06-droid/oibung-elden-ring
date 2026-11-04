@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./skills.css">
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","./src/chapter-story.mjs":"./src/chapter-story.mjs?v=chapter-one-v3","./src/chapter-environment.mjs":"./src/chapter-environment.mjs?v=chapter-one-v3","./src/circus-environment.mjs":"./src/circus-environment.mjs?v=chapter-one-v3","./src/circus-stage.mjs":"./src/circus-stage.mjs?v=chapter-one-v3","./src/skill-fx.mjs":"./src/skill-fx.mjs?v=chapter-one-v3","./src/casino-room.mjs":"./src/casino-room.mjs?v=chapter-one-v3","./src/dice-actor.mjs":"./src/dice-actor.mjs?v=chapter-one-v3","./src/dice-battle.mjs":"./src/dice-battle.mjs?v=chapter-one-v3","./src/sanctuary.mjs":"./src/sanctuary.mjs?v=chapter-one-v3","./src/kwon-visuals.mjs":"./src/kwon-visuals.mjs?v=chapter-one-v3","./src/journey-state.mjs":"./src/journey-state.mjs?v=chapter-one-v3"}}</script>
-<link rel="stylesheet" href="./journey.css?art=chapter-one-v3">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","./src/chapter-story.mjs":"./src/chapter-story.mjs?v=chapter-one-v3","./src/chapter-environment.mjs":"./src/chapter-environment.mjs?v=chapter-one-v3","./src/circus-environment.mjs":"./src/circus-environment.mjs?v=chapter-one-v3","./src/circus-stage.mjs":"./src/circus-stage.mjs?v=chapter-one-v3","./src/skill-fx.mjs":"./src/skill-fx.mjs?v=chapter-one-v3","./src/casino-room.mjs":"./src/casino-room.mjs?v=chapter-one-v3","./src/dice-actor.mjs":"./src/dice-actor.mjs?v=chapter-one-v3","./src/dice-battle.mjs":"./src/dice-battle.mjs?v=chapter-one-v3","./src/sanctuary.mjs":"./src/sanctuary.mjs?v=chapter-one-v3","./src/kwon-visuals.mjs":"./src/kwon-visuals.mjs?v=chapter-one-v3","./src/journey-state.mjs":"./src/journey-state.mjs?v=boss-secret-v1"}}</script>
+<link rel="stylesheet" href="./journey.css?art=boss-secret-v1">
 </head>
 <body data-journey="1">
 <dialog id="journey" open aria-label="오든링 메인"><div class="j-shell"><main class="j-main"><div class="j-copy"><p class="j-kicker">THE GATE OPENS</p><h1 class="j-title">오든링</h1><p class="j-status" id="journey-loading">세 지배자의 문을 열고 있습니다…</p></div></main></div></dialog>
@@ -56,6 +56,6 @@
 import {installMobileLandscape} from './src/mobile-landscape.mjs';
 const mobileLandscape=installMobileLandscape();
 window.addEventListener('pagehide',event=>{if(!event.persisted)mobileLandscape?.dispose();});
-import('./src/bootstrap.mjs?art=chapter-one-v3').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
+import('./src/bootstrap.mjs?art=boss-secret-v1').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장을 불러오지 못했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='게임 초기화에 실패했습니다. 인터넷 연결과 WebGL 2 지원을 확인한 뒤 새로고침해 주세요.';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
 </script>
 </body></html>

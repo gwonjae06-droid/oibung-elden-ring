@@ -23,7 +23,7 @@ export function loadProfile(storage){try{
 // Active runs deliberately never survive reload or browser closure.
 export function saveProfile(storage,profile){try{storage.setItem(SAVE_KEY,JSON.stringify({...profile,run:null}));return true;}catch{return false;}}
 export function finishAttempt(profile,{won,time=0}){
- const r=profile.run;if(!r||r.pending)return null;r.elapsed+=Number.isFinite(time)?Math.max(0,time):0;
+ const r=profile.run;if(!r||r.pending)return null;if(r.secret)return won?'secret-won':'secret-lost';r.elapsed+=Number.isFinite(time)?Math.max(0,time):0;
  if(!won){r.deaths++;return 'lost';}
  profile.defeated??=[];if(!profile.defeated.includes(BOSSES[r.stage]))profile.defeated.push(BOSSES[r.stage]);
  r.splits.push(Math.max(0,time));rememberBoss(profile,BOSSES[r.stage]);r.memoryRead=false;

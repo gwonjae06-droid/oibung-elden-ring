@@ -38,3 +38,12 @@ test('story and reward precede the chain pull and next boss cinematic',async()=>
 });
 
 test('closing during the victory animation still preserves the defeated boss but never the active run',async()=>{const f=rig();await f.click('new');await f.click('begin');f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,['kwon']);assert.equal(saved.run,null);f.release();});
+
+test('hidden title route launches selected boss and retries without journey rewards or records',async()=>{
+ const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/봉인 밖의 문/);
+ await f.click('secret-weapon',{weapon:'bow'});await f.click('secret-enter',{boss:'dice'});assert.equal(f.game().boss.maxHp,5200);assert.deepEqual(f.game().evolutions,[]);
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/같은 보스 재도전/);assert.doesNotMatch(f.dialog.html,/진화를 두 가지/);
+ await f.click('secret-retry');assert.equal(f.game().boss.maxHp,5200);f.game().status='lost';await f.poll();assert.match(f.dialog.html,/다른 보스로 이동/);
+ await f.click('secret-menu');assert.match(f.dialog.html,/봉인 밖의 문/);await f.click('secret-enter',{boss:'clown'});assert.equal(f.game().boss.maxHp,3400);
+ f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,[]);assert.deepEqual(saved.memories,[]);assert.equal(saved.clears,0);assert.equal(saved.run,null);f.release();
+});
