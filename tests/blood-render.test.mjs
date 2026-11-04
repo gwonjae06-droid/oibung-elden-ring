@@ -6,8 +6,15 @@ import {createBloodGame,startBloodPattern,stepBlood,damageBlood} from '../src/bl
 import {BLOOD_PATTERNS} from '../src/blood-data.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
 import {hazardPosition,hazardContains} from '../src/blood-data.mjs';
-test('rotated lane and wing meshes point along the actual damage shape',()=>{
- for(const id of ['wing']){const scene=new THREE.Scene(),view=buildBloodView(scene),g=createBloodGame();g.player.x=12;g.player.z=7;g.boss.phase=id==='wing'?2:1;startBloodPattern(g,id);const h=g.blood.hazards[0];h.age=h.warn+.1;view.update(g,0);scene.updateMatrixWorld(true);const m=scene.children.find(o=>o.userData.hazardId===h.id),c=hazardPosition(h);const local=id==='wave'?new THREE.Vector3(0,.4,0):new THREE.Vector3(0,-.8,0),world=m.localToWorld(local);assert.ok(hazardContains(h,world));const dx=world.x-c.x,dz=world.z-c.z;assert.ok(Math.abs(dx*Math.cos(h.yaw)-dz*Math.sin(h.yaw))<1e-5);view.dispose();disposeScene(scene);}
+test('the wing strike shows its actual blade instead of a red ground cone',()=>{
+ const scene=new THREE.Scene(),view=buildBloodView(scene),g=createBloodGame();
+ g.player.x=12;g.player.z=7;g.boss.phase=2;startBloodPattern(g,'wing');
+ const h=g.blood.hazards[0];h.age=h.warn*.65;view.update(g,.01);
+ const groups=[];scene.traverse(o=>{if(o.userData?.spellForm==='blade')groups.push(o);});
+ assert.ok(groups.some(o=>o.visible),'the wing has a visible physical spell');
+ assert.equal(scene.children.some(o=>o.userData?.hazardId===h.id),false);
+ assert.ok(hazardContains(h,{x:h.x,z:h.z}),'authoritative collision remains in simulation');
+ view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
 test('real Three meshes cover every blood hazard and release transient geometry',()=>{
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),g=createBloodGame(),camera=new THREE.PerspectiveCamera(60,2,.1,160);camera.position.set(0,20,35);g.player.hp=1e6;
