@@ -20,6 +20,7 @@ import {createAudio} from './audio.mjs';
 import {createRecoverySfx} from './recovery-sfx.mjs';
 import {createPlayerHitFeedback} from './player-hit-feedback.mjs';
 import {createCombatImpact} from './combat-impact.mjs';
+import {clownEnvironmentCue} from './environmental-telegraphs.mjs';
 import {playBossCue} from './boss-cues.mjs';
 import {createPlayerWeaponSfx} from './player-weapon-sfx.mjs';
 import {bossFoleySpec} from './boss-foley-map.mjs';
@@ -90,10 +91,26 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   ['Clown dialog',()=>{d.close();d.remove();}],
   ['Clown close callback',()=>onClose({weapon,status:g.status,practice})]
  ]);
- function zoneMesh(z){const material=new THREE.MeshBasicMaterial({color:z.kind==='push'?0x4da6ff:z.visual?0xffc34a:0xff3929,transparent:true,opacity:.2,depthTest:false,depthWrite:false,side:THREE.DoubleSide});let geo;if(z.shape==='lane')geo=new THREE.BoxGeometry(z.w,.02,z.len).translate(0,0,z.len/2);else if(z.shape==='cone'){const s=new THREE.Shape();s.moveTo(0,0);for(let i=0;i<=40;i++){const a=-z.half+z.half*2*i/40;s.lineTo(Math.sin(a)*z.r,Math.cos(a)*z.r);}s.lineTo(0,0);geo=new THREE.ShapeGeometry(s).rotateX(Math.PI/2);}else geo=new THREE.CircleGeometry(z.r,48).rotateX(-Math.PI/2);const m=new THREE.Mesh(geo,material);m.renderOrder=100;scene.add(m);return m;}
+ function zoneMesh(z){
+  // Scattered theatre spotlights are not painted danger footprints.
+  const group=new THREE.Group(),rays=[],count=z.shape==='lane'?3:1;
+  const geo=new THREE.ConeGeometry(1.8,8,12,1,true).translate(0,4,0);
+  const mat=new THREE.MeshBasicMaterial({color:0xffca7a,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
+  for(let i=0;i<count;i++){const beam=new THREE.Mesh(geo,mat);beam.position.z=z.shape==='lane'?z.len*(i+.5)/count:0;group.add(beam);rays.push(beam);}
+  group.userData={rays,geo,mat};scene.add(group);return group;
+ }
+ function releaseZone(group){scene.remove(group);disposeScene(group);}
  function sync(dt){
   const b=g.boss,p=g.player,c=g.clown;actor.update(g,impact.frozen?0:dt);actor.root.scale.setScalar(CLOWN_SIZE);actor.root.position.y*=CLOWN_SIZE;actor.root.rotation.x=actor.root.rotation.z=0;impact.bossPose(actor.root);P.rig.position.set(p.x,0,p.z);P.rig.rotation.y=p.action?.yaw??p.yaw;const v=input(),walk=posePlayer(P,g.time*7,p.action?0:Math.hypot(v.x,v.z)*4.7);swayCape(P,g.time,0);P.body.position.y=1+walk.bob;P.body.rotation.x=0;P.pivot.rotation.x=0;const a=p.action;if(a&&(a.kind==='attack'||a.kind==='skill')){P.arms.R.rotation.x=0;P.pivot.rotation.x=-1.5+Math.sin(clamp(a.t/a.total,0,1)*Math.PI)*2.9;}else if(a?.kind==='charging'){P.pivot.rotation.x=-1.4;P.body.rotation.x=-.12;}else if(a?.kind==='roll')P.body.rotation.x=a.t/a.total*Math.PI*2;else if(a?.kind==='hurt')P.body.rotation.x=-.3;P.rig.rotation.x=P.rig.rotation.z=0;impact.playerPose(P.rig);mark.position.set(p.x,.06,p.z);
-  const live=new Set();for(const z of c.zones){live.add(z.id);let m=zones.get(z.id);if(!m){m=zoneMesh(z);zones.set(z.id,m);}m.position.set(z.x,.05,z.z);m.rotation.y=z.yaw||0;m.material.opacity=z.state==='burst'?.85:.16+.5*clamp(z.age/z.warn,0,1);}for(const[id,m]of zones)if(!live.has(id)){scene.remove(m);disposeScene(m);zones.delete(id);}
+  const live=new Set();for(const z of c.zones){
+    const visibleBomb=c.bombs.some(b=>b.zone===z.id);
+    if(!clownEnvironmentCue(z,c.name,visibleBomb))continue;
+    live.add(z.id);let m=zones.get(z.id);if(!m){m=zoneMesh(z);zones.set(z.id,m);}
+    const charge=clamp(z.age/Math.max(.01,z.warn),0,1);
+    m.position.set(z.x,.05,z.z);m.rotation.y=z.yaw||0;
+    m.userData.mat.opacity=(reduced?.09:.1)+charge*(reduced?.08:.12);
+    for(const beam of m.userData.rays)beam.scale.setScalar(.7+charge*.3);
+   }for(const[id,m]of zones)if(!live.has(id)){releaseZone(m);zones.delete(id);}
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:createClownHead();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){scene.remove(o.group);disposeScene(o.group);bombs.delete(id);}
   const si=new Set();for(const q of g.projectiles){si.add(q.id);let m=shots.get(q.id);if(!m){m=new THREE.Mesh(q.kind==='wave'?new THREE.TorusGeometry(.9,.065,6,20,Math.PI).rotateX(Math.PI/2):q.kind==='bow'?new THREE.CylinderGeometry(.05,.05,q.skill?2:1,6).rotateX(Math.PI/2):new THREE.BoxGeometry(.4,.03,.55),new THREE.MeshBasicMaterial({color:q.piercing?0x9dff80:0xf8e5bc}));if(q.piercing&&!q.skill)m.scale.set(1.8,1.8,1.6);scene.add(m);shots.set(q.id,m);}m.position.set(q.x,q.y,q.z);m.rotation.y=q.yaw;}for(const[id,m]of shots)if(!si.has(id)){scene.remove(m);disposeScene(m);shots.delete(id);}
   const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent=V.action;

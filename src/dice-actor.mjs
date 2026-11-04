@@ -54,12 +54,24 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  const mood={a:[1,.85,.4],b:[1,.35,.65],rise:.35,sway:.7,speed:1,alpha:.9};let lastT=null;
  function updateSparks(g){const t=Number.isFinite(g.time)?g.time:0,dt=lastT===null?0:t-lastT;lastT=t;stepAmbientField(field,dt,t,mood);for(let i=0;i<field.particles.length;i++){const q=field.particles[i];sPos[i*3]=q.x;sPos[i*3+1]=q.y+1;sPos[i*3+2]=q.z;for(let j=0;j<3;j++)sCol[i*3+j]=(mood.a[j]*(1-q.tint)+mood.b[j]*q.tint)*q.alpha;}sGeo.attributes.position.needsUpdate=true;sGeo.attributes.color.needsUpdate=true;}
  function updateNeon(g){const t=Number.isFinite(g.time)?g.time:0;ringMat.color.setScalar(.75+.25*Math.sin(t*2.2));lights.forEach((L,i)=>{L.color.setHex(g.dice.giant?0xc83732:C.neon[i%2]);L.intensity=L.userData.base*(g.status==='won'?.16:1)*(1+.12*Math.sin(t*3.1+i*1.7));});}
- const warning=new THREE.Mesh(new THREE.PlaneGeometry(R.tileWidth-.4,R.tileWidth-.4).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffdf75,transparent:true,opacity:.35,depthWrite:false}));warning.position.y=.07;root.add(warning);
- const dangerMaterial=new THREE.MeshBasicMaterial({color:0xff4018,transparent:true,opacity:.45,depthWrite:false}),lane=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),dangerMaterial),circle=new THREE.Mesh(new THREE.CircleGeometry(...squareDiscArgs(1)).rotateX(-Math.PI/2),dangerMaterial);lane.visible=circle.visible=false;root.add(lane,circle);
+ // A small projected body shadow replaces the full coloured target tile.
+  const warning=new THREE.Mesh(new THREE.CircleGeometry(2.5,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x171116,transparent:true,opacity:.26,depthWrite:false}));warning.position.y=.07;root.add(warning);
+ // Telegraph geometry remains available to the simulation, but never draws its hitbox.
+  const shadowMaterial=new THREE.MeshBasicMaterial({color:0x151019,transparent:true,opacity:.22,depthWrite:false});
+  const landingShadow=new THREE.Mesh(new THREE.CircleGeometry(2.8,36).rotateX(-Math.PI/2),shadowMaterial);
+  landingShadow.visible=false;root.add(landingShadow);
  const pipGeo=new THREE.PlaneGeometry(R.edge-.6,R.edge-.6).rotateX(-Math.PI/2),dotGeo=new THREE.CircleGeometry(1.6,20).rotateX(-Math.PI/2),pipTiles=[],pipDots=[];
  for(let i=0;i<6;i++){const m=new THREE.Mesh(pipGeo,new THREE.MeshBasicMaterial({color:0xff3b1d,transparent:true,opacity:0,depthWrite:false})),dot=new THREE.Mesh(dotGeo,new THREE.MeshBasicMaterial({color:0xfff0c0,transparent:true,opacity:0,depthWrite:false}));m.visible=dot.visible=false;root.add(m,dot);pipTiles.push(m);pipDots.push(dot);}
- function updatePips(g){const pp=g.dice.pips,time=Number.isFinite(g.time)?g.time:0;for(let i=0;i<6;i++){const m=pipTiles[i],dot=pipDots[i];if(!pp||i>=pp.tiles.length){m.visible=dot.visible=false;continue;}const t=DICE_BOARD[pp.tiles[i]],f=pp.flash>0?Math.min(1,pp.flash/.4):0,prog=g.dice.state==='pip-warning'?Math.min(1,g.dice.t/pp.warn):1;m.visible=dot.visible=true;m.position.set(t.x,.1,t.z);dot.position.set(t.x,.12,t.z);m.material.color.setHex(f>0?0xffd27a:0xff3b1d);m.material.opacity=f>0?.25+.65*f:.18+.4*prog+.08*Math.sin(time*18);dot.material.opacity=f>0?f:.55+.45*prog;dot.scale.setScalar(f>0?1+.6*(1-f):.8+.4*prog);}}
- return {root,update(g,dt){room.update(g.time,g,dt);if(rouletteWheel)rouletteWheel.rotation.y=g.dice.giant&&!reduced?Math.sin(g.time*6)*.003:0;chipMesh.rotation.z=g.dice.giant&&!reducedMotion()?Math.sin(g.time*9)*.008:0;updatePips(g);updateNeon(g);updateSparks(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.2+.35*Math.min(1,g.dice.t/R.warning);const v=diceTelegraphView(g,R.edge,R.playerRadius);lane.visible=v?.kind==='line';circle.visible=v?.kind==='circle';if(!v)return;dangerMaterial.opacity=v.opacity;if(lane.visible){lane.position.set(v.x,.09,v.z);lane.rotation.y=v.yaw;lane.scale.set(v.width,1,v.length);}if(circle.visible){circle.position.set(v.x,.09,v.z);circle.scale.set(v.radius,1,v.radius);}}};
+ function updatePips(g){const pp=g.dice.pips,time=Number.isFinite(g.time)?g.time:0;for(let i=0;i<6;i++){const m=pipTiles[i],dot=pipDots[i];if(!pp||i>=pp.tiles.length){m.visible=dot.visible=false;continue;}const t=DICE_BOARD[pp.tiles[i]],f=pp.flash>0?Math.min(1,pp.flash/.4):0,prog=g.dice.state==='pip-warning'?Math.min(1,g.dice.t/pp.warn):1;m.visible=false;dot.visible=true;dot.position.set(t.x,.12,t.z);
+   // Dice-pip glints (not the square's damaging footprint) are the floor omen.
+   dot.material.opacity=f>0?f:.28+.65*prog;dot.scale.setScalar(f>0?1+.6*(1-f):.7+.45*prog);}}
+ return {root,update(g,dt){room.update(g.time,g,dt);if(rouletteWheel)rouletteWheel.rotation.y=g.dice.giant&&!reduced?Math.sin(g.time*6)*.003:0;chipMesh.rotation.z=g.dice.giant&&!reducedMotion()?Math.sin(g.time*9)*.008:0;updatePips(g);updateNeon(g);updateSparks(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.08+.24*Math.min(1,g.dice.t/R.warning);
+  const v=diceTelegraphView(g,R.edge,R.playerRadius);
+  landingShadow.visible=v?.kind==='circle'&&g.dice.state==='jump-warning';
+  if(landingShadow.visible){landingShadow.position.set(v.x,.09,v.z);
+   const progress=Math.min(1,g.dice.t/Math.max(.1,g.dice.telegraph?.warn||1));
+   landingShadow.scale.setScalar(.65+.4*progress);shadowMaterial.opacity=.09+.2*progress;
+  }}};
 
  });
 }

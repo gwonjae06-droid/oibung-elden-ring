@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {SWORD,PATTERNS,swordSegment,attackZone} from './combat.mjs';
 import {createParticlePool,FX_LIMIT,impactDue,trailAllowed} from './effects-data.mjs';
 import {createFeel} from './feel.mjs';
+import {kwonEnvironmentCue} from './environmental-telegraphs.mjs';
 export function createEffects(scene,sword,reduced=false){
  return runThreeStartup(THREE,(THREE,own)=>{
 
@@ -14,10 +15,22 @@ export function createEffects(scene,sword,reduced=false){
  const rings=[],ringGeo=new THREE.RingGeometry(.92,1,64);for(let i=0;i<8;i++){const m=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xffcb7a,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.visible=false;root.add(m);rings.push({m,life:0,max:1,radius:1});}
  const trailGeo=new THREE.BufferGeometry(),trailPos=new Float32Array(18*18),trailColor=new Float32Array(18*18);trailGeo.setAttribute('position',new THREE.BufferAttribute(trailPos,3));trailGeo.setAttribute('color',new THREE.BufferAttribute(trailColor,3));trailGeo.setDrawRange(0,0);const ribbon=new THREE.Mesh(trailGeo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:.38,depthWrite:false,blending:THREE.AdditiveBlending}));ribbon.frustumCulled=false;root.add(ribbon);
  const history=[],a=new THREE.Vector3(),b=new THREE.Vector3();let impactId=-1,lastGame=null;const gold=[1,.65,.22],red=[1,.25,.14];
- const makeZone=geometry=>{const m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xff3929,transparent:true,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-3}));m.visible=false;m.renderOrder=2;root.add(m);return m;};
- const half=Math.PI-1.2,disc=new THREE.CircleGeometry(1,64).rotateX(-Math.PI/2),cone=new THREE.CircleGeometry(1,64,-half,half*2).rotateX(-Math.PI/2);const zones={circle:[makeZone(disc),makeZone(disc)],cone:[makeZone(cone),makeZone(cone)]};
+ const makeZone=geometry=>{const m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xa69273,transparent:true,opacity:.18,depthWrite:false,side:THREE.DoubleSide}));m.visible=false;m.renderOrder=2;root.add(m);return m;};
+ const rippleGeo=new THREE.RingGeometry(.74,1,44).rotateX(-Math.PI/2);
+ const zones={circle:[makeZone(rippleGeo),makeZone(rippleGeo)],cone:[makeZone(rippleGeo),makeZone(rippleGeo)]};
  function hideZones(){for(const pair of Object.values(zones))for(const m of pair)m.visible=false;}
- function updateZone(g){hideZones();const z=attackZone(g.boss);if(!z||g.status!=='playing')return;const pair=zones[z.shape],color=z.kind==='push'?0x4da6ff:0xff3929;for(let i=0;i<2;i++){const m=pair[i],r=z.r*(i?Math.max(.03,z.progress):1);m.visible=true;m.position.set(z.x,.06+i*.002,z.z);m.rotation.y=z.shape==='cone'?z.yaw-Math.PI/2:0;m.scale.set(r,1,r);m.material.color.setHex(color);m.material.opacity=i?(z.active?.75:.2+.35*z.progress):.15;}}
+ function updateZone(g){
+  hideZones();const z=attackZone(g.boss);
+  if(g.status!=='playing'||!kwonEnvironmentCue(z,g.boss.pattern))return;
+  // Dust-and-stone tremors are deliberately smaller than the collision radius.
+  // The boss's stomp/leap body motion remains the primary warning.
+  const pair=zones.circle,progress=Math.max(0,Math.min(1,z.progress));
+  for(let i=0;i<2;i++){const m=pair[i];m.visible=true;
+   m.position.set(z.x,.055+i*.025,z.z);m.rotation.y=(g.time||0)*.15+i*.8;
+   m.scale.setScalar((i?1.45:2.3)+progress*(i?1.3:1.5));
+   m.material.opacity=(i?.22:.14)*(.35+.65*progress);
+  }
+ }
  function ring(x,z,radius,color=0xffcb7a){const r=rings.find(q=>q.life<=0)||rings[0];r.life=r.max=.65;r.radius=radius;r.m.position.set(x,.035,z);r.m.material.color.setHex(color);r.m.visible=true;r.m.scale.setScalar(.12);}
  function clear(){if(disposed)return;pool.clear();feel.clear();hideZones();history.length=0;impactId=-1;geo.setDrawRange(0,0);trailGeo.setDrawRange(0,0);for(const r of rings){r.life=0;r.m.visible=false;}}
  function event(ev,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}feel.event(ev,g);const p=g.player,b=g.boss;if(ev.type==='boss-hit')pool.emit(b.x+(p.x-b.x)*.4,1.8,b.z+(p.z-b.z)*.4,reduced?10:28,gold);else if(ev.type==='player-hit')pool.emit(p.x,1.1,p.z,reduced?8:20,red);else if(ev.type==='phase'){ring(b.x,b.z,7,0xff5635);pool.emit(b.x,2,b.z,reduced?20:75,red,true);}else if(ev.type==='stagger'){ring(b.x,b.z,3);pool.emit(b.x,2,b.z,20,gold);}else if(ev.type==='healed'){ring(p.x,p.z,1.4,0x81e9a0);pool.emit(p.x,.7,p.z,18,[.3,1,.55]);}else if(ev.type==='dodge')pool.emit(p.x,1,p.z,8,[.45,.7,1]);else if(ev.type==='shove'){ring(b.x,b.z,4.8,0x4da6ff);pool.emit(p.x,.7,p.z,12,[.3,.6,1]);}else if(ev.type==='victory'){ring(b.x,b.z,8);pool.emit(b.x,2,b.z,reduced?20:90,gold,true);}}
