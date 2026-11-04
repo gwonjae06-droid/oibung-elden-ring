@@ -1,3 +1,4 @@
+import {reducedMotion} from './display-preferences.mjs';
 import {buildCasinoDiceAccents,buildRouletteTable} from './roulette-table.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
@@ -29,7 +30,7 @@ function sparkTexture(){const c=document.createElement('canvas');c.width=c.heigh
 export function buildDiceBoard(scene){
  return runThreeStartup(THREE,(THREE,own)=>{
 const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);const coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS;
- const room=buildCasinoRoom(THREE,root,{coarse,reduced:Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)});
+ const room=buildCasinoRoom(THREE,root,{coarse,reduced:reducedMotion()});
  if(scene.background&&scene.background.setHex)scene.background.setHex(C.sky);
  if(scene.fog){scene.fog.color.setHex(C.fog);scene.fog.near=170;scene.fog.far=460;}
  scene.traverse(o=>{if(o.isHemisphereLight){o.color.setHex(0xffe3c4);o.groundColor.setHex(0x2a0c18);o.intensity=1.5;}else if(o.isDirectionalLight)o.color.setHex(0xfff1da);});
