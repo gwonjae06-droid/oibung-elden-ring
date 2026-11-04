@@ -33,3 +33,17 @@ test('live battle session still selects sword BGM without any boss dialog',()=>{
   assert.deepEqual(musicState(doc),{boss:'kwon',phase:1,busy:false});
  } finally {release();}
 });
+
+test('live blood encounter chooses uploaded BGM by boss phase and stops while paused or defeated',()=>{
+ const host=fixture(),inner=fixture(),game={status:'playing',player:{hp:100},boss:{hp:6400,phase:1},blood:{state:'recovery'}};
+ host.els['blood-battle']={open:true,firstElementChild:{shadowRoot:inner.doc}};
+ let active=true;
+ const release=bindBattleSession(inner.doc,()=>({game,active}));
+ try{
+  assert.deepEqual(musicState(host.doc),{boss:'blood',phase:1,busy:false});
+  game.boss.phase=2;
+  assert.deepEqual(musicState(host.doc),{boss:'blood',phase:2,busy:false});
+  active=false;assert.equal(musicState(host.doc),null);
+  active=true;game.boss.hp=0;assert.equal(musicState(host.doc),null);
+ }finally{release();}
+});
