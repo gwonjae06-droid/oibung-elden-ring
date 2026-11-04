@@ -2,26 +2,22 @@ import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
 import {HAND_REST,GIANT,giantHandPose,giantHazards,giantPosture,giantPropType} from './dice-giant.mjs';
 import {POSSESSION} from './dice-giant-cinematic-data.mjs';
+import {buildGentlemanTorso,buildGentlemanHand} from './dice-giant-model.mjs';
 const sat=v=>Math.max(0,Math.min(1,v)),lerp=(a,b,t)=>a+(b-a)*t,ease=v=>{const t=sat(v);return t*t*(3-2*t);};
 // Geometry is decorative; all damage and warning bounds come from the simulation above.
 export function buildDiceGiant(scene){
  const root=new T.Group();root.name='sungwon-usurped-patron';scene.add(root);
- const suit=new T.MeshStandardMaterial({color:0x191522,roughness:.8}),skin=new T.MeshStandardMaterial({color:0x8e7466,roughness:.8}),ivory=new T.MeshStandardMaterial({color:0xdfd3b3,roughness:.8}),gold=new T.MeshStandardMaterial({color:0xc6a256,metalness:.7,roughness:.36});
- const sphere=new T.SphereGeometry(1,16,12),cylinder=new T.CylinderGeometry(1,1,1,12),box=new T.BoxGeometry(1,1,1);
+ const suit=new T.MeshStandardMaterial({color:0x191522,roughness:.75}),skin=new T.MeshStandardMaterial({color:0x8e7466,roughness:.7}),ivory=new T.MeshStandardMaterial({color:0xdfd3b3,roughness:.8}),gold=new T.MeshStandardMaterial({color:0xc6a256,metalness:.7,roughness:.36});
+ const shirt=new T.MeshStandardMaterial({color:0xf1ead8,roughness:.6}),satin=new T.MeshStandardMaterial({color:0x0d0a12,roughness:.3,metalness:.15,side:T.DoubleSide}),tie=new T.MeshStandardMaterial({color:0x7a1a2a,roughness:.4});
+ const sphere=new T.SphereGeometry(1,24,16),cylinder=new T.CylinderGeometry(1,1,1,24),armGeo=new T.CylinderGeometry(.82,1,1,24),neckGeo=new T.CylinderGeometry(1,1.12,1,24),box=new T.BoxGeometry(1,1,1);
  const mesh=(geo,mat,parent,scale)=>{const o=new T.Mesh(geo,mat);o.scale.set(...scale);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
- const body=new T.Group();root.add(body);const chest=mesh(sphere,suit,body,[25,29,15]);chest.position.set(0,23,-133);
- for(const side of [-1,1]){const lapel=mesh(box,ivory,body,[7,20,1]);lapel.position.set(side*7,34,-118);lapel.rotation.z=side*.3;}
- const tie=mesh(box,gold,body,[3,15,2]);tie.position.set(0,28,-116);
- body.children.forEach(child=>{child.position.y-=23;child.position.z+=133;});
- const neck=mesh(cylinder,skin,root,[6,10,6]),oldHead=mesh(sphere,skin,root,[10,12,9]);
- const hands=[0,1].map(i=>{const group=new T.Group();root.add(group);mesh(box,skin,group,[16,4,20]);
-  const fingers=[];for(let j=0;j<4;j++){const f=mesh(sphere,skin,group,[1.7,2,7]);f.position.set((j-1.5)*3.6,0,8);fingers.push(f);}
-  const thumb=mesh(sphere,skin,group,[3,2,6]);thumb.position.set(i?9:-9,0,0);thumb.rotation.y=i?.6:-.6;
-  const mark=mesh(new T.TorusGeometry(5,.18,6,24).rotateX(Math.PI/2),gold,group,[1,1,1]);mark.position.y=2.15;
-  const cuff=mesh(box,ivory,group,[18,5,4]);cuff.position.z=-9;
-  const upper=mesh(cylinder,suit.clone(),root,[5,1,5]),forearm=mesh(cylinder,suit.clone(),root,[4,1,4]);
-  for(const bone of [upper,forearm]){bone.material.transparent=true;bone.material.depthWrite=false;}
-  return {group,upper,forearm,fingers};});
+ const body=new T.Group();root.add(body);body.add(buildGentlemanTorso(T,{suit,satin,shirt,tie,gold,ivory}).group);
+ const neck=mesh(neckGeo,skin,root,[6,10,6]),oldHead=mesh(sphere,skin,root,[10,12,9]);
+ const hands=[0,1].map(i=>{
+  const model=buildGentlemanHand(T,{suit,skin,shirt,gold},i?1:-1),group=model.group;root.add(group);
+  const upper=mesh(armGeo,suit.clone(),root,[5,1,5]),forearm=mesh(armGeo,suit.clone(),root,[4,1,4]),joint=mesh(sphere,suit.clone(),root,[5.3,5.3,5.3]);
+  for(const bone of [upper,forearm,joint]){bone.material.transparent=true;bone.material.depthWrite=false;}
+  return {group,upper,forearm,joint,fingers:model.fingers,thumb:model.thumb};});
  // Hand-crumble shards: only the hand breaks apart, the arm stays attached to the body.
  const shards=[0,1].map(()=>Array.from({length:28},(_,j)=>{const m=mesh(box,j%3?skin:ivory,root,[1,1,1]);m.visible=false;const a=j*2.399963229728653,r=Math.sqrt((j+.5)/28);return {mesh:m,vx:Math.cos(a)*(5+14*r),vy:6+12*((j*13)%7)/7,vz:Math.sin(a)*(4+10*r)+4,size:.5+1.4*((j*37)%11)/11,spin:j+1};}));
  // Floating hand-health bars (billboarded in occlude()); they live above each hand and follow it.
@@ -36,7 +32,7 @@ export function buildDiceGiant(scene){
  const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3();
  const boneBetween=(part,a,b,r)=>{delta.copy(b).sub(a);part.position.copy(a).addScaledVector(delta,.5);part.scale.set(r,Math.max(.1,delta.length()),r);part.quaternion.setFromUnitVectors(up,delta.normalize());};
  const warnMat=new T.MeshBasicMaterial({color:0xf4bd65,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide}),activeMat=new T.MeshBasicMaterial({color:0xf13a3a,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide}),fillWarnMat=new T.MeshBasicMaterial({color:0xff7a2e,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
- const circle=new T.CircleGeometry(1,48).rotateX(-Math.PI/2),rect=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),ring=new T.RingGeometry(.9,1,64).rotateX(-Math.PI/2);
+ const circle=new T.CircleGeometry(1,48).rotateX(-Math.PI/2),rect=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2);
  const warnings=Array.from({length:20},()=>{const m=new T.Mesh(circle,warnMat);m.position.y=.14;m.renderOrder=5;m.visible=false;root.add(m);return m;});
  // Inner fill grows to the full telegraph size exactly when the hit lands, so the timing is readable.
  const fills=Array.from({length:20},()=>{const m=new T.Mesh(circle,fillWarnMat);m.position.y=.16;m.renderOrder=6;m.visible=false;root.add(m);return m;});
@@ -48,7 +44,7 @@ export function buildDiceGiant(scene){
  const sprayGeo=new T.SphereGeometry(1,6,5),sprayMat=new T.MeshStandardMaterial({color:0xf8f2e5,emissive:0xd8e2e8,emissiveIntensity:.18,transparent:true,opacity:.9,roughness:.26});
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
  let last=null,death=0,disposed=false;
- return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm} of hands)for(const bone of [upper,forearm])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,ring,warnMat,activeMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm,joint} of hands)for(const bone of [upper,forearm,joint])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,warnMat,activeMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -67,10 +63,10 @@ export function buildDiceGiant(scene){
   const direction=head.clone().sub(anchor),len=Math.min(18,Math.max(3,direction.length()));
   direction.normalize();neck.position.copy(head).addScaledVector(direction,-len*.5);neck.scale.set(5,len,5);neck.quaternion.setFromUnitVectors(up,direction);
   const armsVisible=s.state!=='transition'||s.t>=4.7;
-  hands.forEach(({group,upper,forearm,fingers},i)=>{
+  hands.forEach(({group,upper,forearm,joint,fingers,thumb},i)=>{
    const h=giantHandPose(g,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0;
    // The arm always stays; only the hand shakes, shrinks and bursts into shards.
-   upper.visible=forearm.visible=armsVisible;
+   upper.visible=forearm.visible=joint.visible=armsVisible;
    group.visible=armsVisible&&(!destroyed||crumble<.35);
    const live=armsVisible&&destroyed&&crumble<GIANT.crumble;
    shards[i].forEach(q=>{q.mesh.visible=live;if(!live)return;q.mesh.position.set(h.x+q.vx*crumble,Math.max(.4,h.y+2+q.vy*crumble-24*crumble*crumble),h.z+q.vz*crumble);q.mesh.rotation.set(crumble*q.spin*3,crumble*q.spin*2,0);q.mesh.scale.setScalar(Math.max(.001,q.size*(1-sat((crumble-.3)/.85))));});
@@ -79,10 +75,14 @@ export function buildDiceGiant(scene){
    group.position.set(h.x+shake,h.y-12*fall,h.z);
    group.scale.setScalar(destroyed?Math.max(.05,1-crumble/.35*.5):1);
    group.rotation.z=(i?1:-1)*fall*.6+(feral?Math.sin(time*11+i)*.07:Math.sin(time*1.5+i)*.016);
-   fingers.forEach((finger,j)=>{finger.rotation.x=(feral?.18:.045)*Math.sin(time*(feral?12:2)+j*.9+i*2);finger.scale.z=7*(1-.5*h.fist);finger.scale.y=2*(1+.4*h.fist);finger.position.z=8-3*h.fist;});
+   // Each finger bends joint by joint: a relaxed hand when polite, a clenched fist when enraged.
+   const curl=h.fist*1.15;
+   fingers.forEach((joints,j)=>joints.forEach((jt,k)=>{jt.rotation.x=curl*[1,1.15,.9][k]+(feral?.18:.05)*Math.sin(time*(feral?12:2)+j*.9+i*2)+(k===0?.12:.18)*(1-h.fist);}));
+   thumb.forEach((jt,k)=>{jt.rotation.x=h.fist*.55*(k+1)*.7;});
    shoulder.set(i?20:-20,18,7);body.localToWorld(shoulder);
    elbow.copy(shoulder).lerp(group.position,.53);
    elbow.x+=(i?1:-1)*9;elbow.y+=7;elbow.z-=6;
+   joint.position.copy(elbow);
    boneBetween(upper,shoulder,elbow,5.5);boneBetween(forearm,elbow,group.position,4.7);
   });
   bars.forEach((b,i)=>{
@@ -104,9 +104,9 @@ export function buildDiceGiant(scene){
   propMats.gold.emissive?.setHex?.(feral?0x4a1007:0x251008);
   warnMat.opacity=.22+.1*Math.sin(time*12);
   const hazards=giantHazards(g);
-  warnings.forEach((m,i)=>{const h=hazards[i],f=fills[i];m.visible=!!h;f.visible=!!h&&!h.live&&h.shape!=='ring';if(!h)return;m.material=h.live?activeMat:warnMat;m.position.set(h.x,.14,h.z);m.geometry=['rect','rotated-rect'].includes(h.shape)?rect:h.shape==='ring'?ring:circle;m.rotation.y=h.yaw||0;
-   if(h.shape==='rect'||h.shape==='rotated-rect')m.scale.set(h.w,1,h.h);else if(h.shape==='ring'){const r=Math.max(.1,h.r);m.scale.set(r+3,1,r+3);/* matched annulus uses a per-frame inner radius */m.geometry=ring;const pos=ring.attributes.position;for(let k=0;k<pos.count;k++){const a=k%65/64*Math.PI*2,v=k<65?Math.max(0,r-3):r+3;pos.setXYZ(k,Math.cos(a)*v/(r+3),0,Math.sin(a)*v/(r+3));}pos.needsUpdate=true;}else m.scale.set(h.r,1,h.r);
-   if(f.visible){const u=ease(h.age/h.warn),boxy=['rect','rotated-rect'].includes(h.shape);f.geometry=boxy?rect:circle;f.position.set(h.x,.16,h.z);f.rotation.y=h.yaw||0;if(boxy)f.scale.set(h.w*u,1,h.h*u);else f.scale.set(h.r*u,1,h.r*u);}
+  warnings.forEach((m,i)=>{const h=hazards[i],f=fills[i];m.visible=!!h;f.visible=!!h&&!h.live;if(!h)return;m.material=h.live?activeMat:warnMat;m.position.set(h.x,.14,h.z);const boxy=['rect','rotated-rect'].includes(h.shape);m.geometry=boxy?rect:circle;m.rotation.y=h.yaw||0;
+   if(boxy)m.scale.set(h.w,1,h.h);else m.scale.set(h.r,1,h.r);
+   if(f.visible){const u=ease(h.age/h.warn);f.geometry=boxy?rect:circle;f.position.set(h.x,.16,h.z);f.rotation.y=h.yaw||0;if(boxy)f.scale.set(h.w*u,1,h.h*u);else f.scale.set(h.r*u,1,h.r*u);}
   });
   const alive=[0,1].filter(k=>!s.destroyed?.[k]);
   props.forEach((m,i)=>{
