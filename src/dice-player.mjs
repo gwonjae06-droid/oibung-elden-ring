@@ -1,3 +1,5 @@
+import {giantAim,strikeGiantHand} from './dice-giant.mjs';
+import {giantImpact} from './dice-giant-hit.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {diceSegmentImpact, diceWeakHit} from './dice-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
@@ -28,15 +30,15 @@ export function createDicePlayerGame(weapon = 'sword') {
     state: 'dice',
     phase: 1,
   });
-  g.dice.stun = 0;
+  g.dice.stun = 0;g.dice.giantEnabled=true;
   return g;
 }
 
 export function actDice(g, type, input = {}) {
-  if (g.status !== 'playing') return false;
+  if (g.status !== 'playing'||g.dice.giant?.state==='transition') return false;
   const p = g.player;
   if (!p.action) {
-    p.yaw = Math.atan2(g.dice.pose.x - p.x, g.dice.pose.z - p.z);
+    p.yaw = Math.atan2(giantAim(g).x - p.x, giantAim(g).z - p.z);
     if (type === 'roll' && (input.x || input.z))
       p.yaw = Math.atan2(input.x || 0, input.z || 0);
   }
@@ -49,7 +51,8 @@ function hit(g, amount, action, impact) {
     g.events.push({type: 'dice-blocked', face: impact.face});
     return;
   }
-  const damage = damageDice(g, amount);
+  const dealt=g.dice.giant?(impact.part==='hand'?strikeGiantHand(g,impact.index,amount):amount*2.8):amount;
+  const damage = damageDice(g, dealt);
   if (!damage) return;
   g.stats.hits++;
   g.stats.damage += damage;
@@ -63,8 +66,8 @@ function hit(g, amount, action, impact) {
 
 function melee(g, weapon, action) {
   const p = g.player,
-    range = R.edge / 2 + (action.skill ? 4 : weapon.range);
-  const impact = diceSegmentImpact(
+    range = (g.dice.giant?0:R.edge / 2) + (action.skill ? 4 : weapon.range);
+  const impact = (g.dice.giant?(a,b)=>giantImpact(g,a,b):diceSegmentImpact)(
     {x: p.x, y: 1.2, z: p.z},
     {
       x: p.x + Math.sin(action.yaw) * range,
@@ -83,7 +86,7 @@ function projectiles(g, dt) {
   for (const projectile of g.projectiles) {
     const previous = advancePlayerProjectile(projectile, dt);
     if (projectile.hit || projectile.life <= 0) continue;
-    const impact = diceSegmentImpact(previous, projectile, g.dice.pose);
+    const impact = g.dice.giant?giantImpact(g,previous,projectile):diceSegmentImpact(previous, projectile, g.dice.pose);
     if (impact) {
       projectile.hit = true;
       hit(g, projectile.damage, projectile.source, impact);
@@ -101,6 +104,7 @@ export function stepDicePlayer(g, dt, input = {}) {
       p = g.player,
       weapon = WEAPONS[g.weapon];
     g.dice.blockFlash = Math.max(0, (g.dice.blockFlash || 0) - h);
+    if(g.dice.giant?.state==='transition'){p.action=null;g.projectiles.length=0;}
     tickPlayerResources(g, h);
     // Preserve the board encounter's two-second basic projectile lifetime.
     tickPlayerAction(g, h, weapon, {

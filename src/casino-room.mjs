@@ -1,7 +1,7 @@
 import {createChapterClock} from './chapter-environment.mjs';
 export function casinoRoomPlan(mobile=false){
  const count=mobile?4:8,radius=150;
- return Array.from({length:count},(_,i)=>{const a=(i+.5)/count*Math.PI*2,c=Math.cos(a),s=Math.sin(a);return {x:c*radius,z:s*radius,yaw:Math.atan2(-c,-s),seed:i*1.37};});
+ return Array.from({length:count},(_,i)=>{const a=i===0?-Math.PI/2:(i+.5)/count*Math.PI*2,c=Math.cos(a),s=Math.sin(a);return {x:c*radius,z:s*radius,yaw:Math.atan2(-c,-s),seed:i*1.37};});
 }
 export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  const root=new T.Group();root.name='giant-casino-lounge';parent.add(root);
@@ -29,7 +29,7 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
    for(let finger=0;finger<4;finger++)mesh(sphere,skin,[(finger-1.5)*2.7,-.4,7],[1.25,1.6,6],hand);
    mesh(cylinder,gold,[side*20,6,41],[5,2,5],guest);hands.push(hand);
   }
-  patrons.push({guest,torso,head,hands,seed:p.seed});
+  mesh(box,wood,[0,8,-18],[34,38,5],guest);patrons.push({guest,torso,head,hands,seed:p.seed,x:p.x,z:p.z});
  }
  const half=250;
  for(let side=0;side<4;side++){
@@ -42,5 +42,5 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  for(const x of [-75,75]){const ring=mesh(hoop,gold,[x,68,0],[1,1,1]);ring.rotation.x=Math.PI/2;for(let i=0;i<(coarse?8:16);i++){const a=i/(coarse?8:16)*Math.PI*2;mesh(crystal,glass,[x+Math.sin(a)*16,64-(i%3)*2,Math.cos(a)*16],[1,2,1]);}}
  root.userData.decorativeOnly=true;
  const clock=createChapterClock(),warm=new T.Color(0xe6b35e),alarm=new T.Color(0xc65639);
- return {root,update(time=0,game,dt){const mood=clock.update(time,game?.boss.phase||1,game?.status==='won',dt);neon.color.copy(mood.second?alarm:warm).multiplyScalar(1-mood.silence*.85);const t=Number.isFinite(time)?time:0;for(const p of patrons){p.torso.rotation.x=.2+(reduced||mood.dead?0:Math.sin(t*.35+p.seed)*.018);const target=game?.boss;const dx=(target?.x||0)-p.guest.position.x,dz=(target?.z||0)-p.guest.position.z;const relative=Math.atan2(dx,dz)-p.guest.rotation.y;p.head.rotation.y=Math.atan2(Math.sin(relative),Math.cos(relative))*.45+(reduced||mood.dead?0:Math.sin(t*.27+p.seed)*.04);p.head.rotation.x=.22+(mood.second?.08:0);p.hands.forEach((hand,i)=>hand.position.y=3+(reduced||mood.dead?0:Math.max(0,Math.sin(t*.65+p.seed+i*3))*(mood.second?1.4:.8)));}}};
+ return {root,update(time=0,game,dt){const mood=clock.update(time,game?.boss.phase||1,game?.status==='won',dt);neon.color.copy(mood.second?alarm:warm).multiplyScalar(1-mood.silence*.85);const t=Number.isFinite(time)?time:0;for(const [index,p] of patrons.entries()){p.guest.visible=!(index===0&&game?.dice.giant&&(game.dice.giant.state!=='transition'||game.dice.giant.t>=1.9));p.guest.position.x=p.x*(1+mood.collapse*.08);p.guest.position.z=p.z*(1+mood.collapse*.08);p.torso.rotation.x=.2+(reduced||mood.dead?0:Math.sin(t*.35+p.seed)*.018);const target=game?.boss;const dx=(target?.x||0)-p.guest.position.x,dz=(target?.z||0)-p.guest.position.z;const relative=Math.atan2(dx,dz)-p.guest.rotation.y;p.head.rotation.y=Math.atan2(Math.sin(relative),Math.cos(relative))*.45+(reduced||mood.dead?0:Math.sin(t*.27+p.seed)*.04);p.head.rotation.x=.22+(mood.second?.08:0);p.hands.forEach((hand,i)=>hand.position.y=3+(reduced||mood.dead?0:Math.max(0,Math.sin(t*.65+p.seed+i*3))*(mood.second?1.4:.8)));}}};
 }
