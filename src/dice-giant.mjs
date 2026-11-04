@@ -32,12 +32,11 @@ function feralPattern(index,player,healthRatio=1){
  if(slot===0)hazards=[circle(x-13,z,11,0,1.25,35),circle(x+13,z,11,.6,1.2,35),circle(x,z-8,12,1.2,1.2,40)];
  if(slot===1)hazards=Array.from({length:4},(_,i)=>rect(-42+i*28,z,28,24,i*.32,1.25));
  if(slot===2){
-  // Consecutive head slams: the more the boss is hurt, the more times he bangs his head into the table.
+  // Consecutive head slams. Only the slam itself hurts; the table ripple it causes is purely visual (see dice-ripple.mjs).
   const repeats=healthRatio<=.12?4:healthRatio<=.19?3:2;
   for(let i=0;i<repeats;i++){
    const shift=i===0?0:i%2?-12:12,start=i*2.4,headX=clamp(x+shift,-26,26),headZ=clamp(z,-51,-34);
    hazards.push({...circle(headX,headZ,15,start,1.2,42),headSlam:true});
-   hazards.push({...circle(headX,headZ,0,start+1.4,.65,24),shape:'ring',active:1.0,band:3});
   }
  }
  if(slot===3)hazards=[rect(-31,z,26,33,0,1.5),rect(31,z,26,33,.45,1.4)];
@@ -162,7 +161,7 @@ export function stepGiant(g,dt,frozen=false){
   const selected=alive===0?[2,4,2,2,4][ordinal%5]:alive===1?[2,0,1,2,3,4,5][ordinal%7]:ordinal;
   const pattern=giantPattern(selected,g.player,s.temperament,g.boss.hp/g.boss.maxHp);Object.assign(s,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:s.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});g.events.push({type:'dice-giant-warning',name:s.name});}
  if(s.state==='attack'){
-  for(const h of giantHazards(g)){const original=s.hazards[h.id];if(!h.live||original.hit||!hazardContains(h,g.player))continue;original.hit=true;if(diceInvulnerable(g.player))continue;
+  for(const h of giantHazards(g)){const original=s.hazards[h.id];if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;original.hit=true;if(diceInvulnerable(g.player))continue;
    const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;g.events.push({type:'player-hit',amount,source:'giant'});
    if(g.player.hp<=0){g.status='lost';s.hazards=[];g.events.push({type:'death'});return;}
   }

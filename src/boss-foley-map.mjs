@@ -41,8 +41,8 @@ export function bossFoleySpec(ev,g){
  if(g.dice){
   const f=BOSS_FOLEY_FILES.dice;
   switch(type){
-   case 'dice-warning':return cue(f.coin,.15,.62,.12,.32);
-   case 'dice-roll':return cue(f.roll,.34,.94,.14,.22);
+   case 'dice-warning':return cue(f.coin,.09,.62,.12,.32);
+   case 'dice-roll':return cue(f.roll,.17,.94,.14,.22);
    case 'dice-charge':return cue(f.longRoll,.28,1.6,.2,.25);
    case 'dice-jump':return cue(f.jump,.27,1,.16,.25);
    case 'dice-pip-warning':return cue(f.coinSecond,.16,.72,.1,.28);
