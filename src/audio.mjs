@@ -1,7 +1,10 @@
 import {soundVariation,kwonFight} from './sound-variation.mjs';
+import {createSampleSfx,SOUND_SAMPLES} from './sample-sfx.mjs';
+import {audioChannelGain} from './audio-preferences.mjs';
 const LIMIT=48;
 export function createAudio(factory){
  let ctx=null,master=null,noise=null,enabled=false,drone=null;const nodes=new Set(),ends=new Map(),last=new Map();
+ const samples=createSampleSfx();
  const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
  function addReverb(comp){
   if(typeof ctx.createConvolver!=='function')return;
@@ -11,7 +14,7 @@ export function createAudio(factory){
    const conv=ctx.createConvolver(),wet=ctx.createGain();conv.buffer=ir;wet.gain.value=.16;master.connect(conv);conv.connect(wet);wet.connect(comp);
   }catch{}
  }
- function ensure(){if(ctx)return true;try{ctx=make();if(!ctx)return false;master=ctx.createGain();master.gain.value=.44;const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);addReverb(comp);noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
+ function ensure(){if(ctx)return true;try{ctx=make();if(!ctx)return false;master=ctx.createGain();master.gain.value=.44*audioChannelGain('effects');const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);addReverb(comp);noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
  function prune(){const now=ctx.currentTime;for(const [s,e] of ends)if(e<=now){ends.delete(s);nodes.delete(s);}}
  function emit(q,j,power=1){
   prune();if(nodes.size>=LIMIT)return;const [kind,f,to,dur,vol,type='sine',delay=0,attack=.005]=q,t=ctx.currentTime+delay/j.speed,end=t+(dur+attack)/j.speed;
@@ -47,23 +50,19 @@ export function createAudio(factory){
  function stopDrone(){if(!drone)return;for(const n of drone.nodes){try{n.stop();}catch{}n.disconnect();}drone.gain.disconnect();drone=null;}
  return {
   get enabled(){return enabled;},names:Object.keys(R),
-  setEnabled(on){if(on){if(!ensure())return enabled=false;ctx.resume?.()?.catch(()=>{});enabled=true;}else{enabled=false;stopDrone();for(const s of [...nodes]){try{s.stop();}catch{}}nodes.clear();ends.clear();}return enabled;},
-  play(name,opts={}){if(!enabled||!ctx||!R[name])return false;const t=ctx.currentTime;if(t-(last.get(name)??-Infinity)<(opts.minGap??.03))return false;last.set(name,t);const j=soundVariation();let recipes=R[name];if(kwonFight()&&['boss-slash','boss-thrust','boss-slam','boss-whirl'].includes(name))recipes=[['n',name==='boss-thrust'?1900:1200,350,name==='boss-whirl'?.65:.28,.2,'bandpass']];const power=name==='hit-boss'?Math.min(2,Math.max(.4,(opts.amount||60)/80)):1;for(const q of recipes)emit(q,j,power);return true;},
+  setEnabled(on){if(on){if(!ensure())return enabled=false;ctx.resume?.()?.catch(()=>{});enabled=true;samples.setEnabled(true);}else{enabled=false;samples.setEnabled(false);stopDrone();for(const s of [...nodes]){try{s.stop();}catch{}}nodes.clear();ends.clear();}return enabled;},
+  play(name,opts={}){if(!enabled||!ctx||!R[name])return false;const t=ctx.currentTime;if(t-(last.get(name)??-Infinity)<(opts.minGap??.03))return false;last.set(name,t);if(Object.hasOwn(SOUND_SAMPLES,name)&&samples.play(name,opts))return true;
+  master.gain.value=.44*audioChannelGain(name==='ui'?'ui':'effects');const j=soundVariation();let recipes=R[name];if(kwonFight()&&['boss-slash','boss-thrust','boss-slam','boss-whirl'].includes(name))recipes=[['n',name==='boss-thrust'?1900:1200,350,name==='boss-whirl'?.65:.28,.2,'bandpass']];const power=name==='hit-boss'?Math.min(2,Math.max(.4,(opts.amount||60)/80)):1;for(const q of recipes)emit(q,j,power);return true;},
   ambience(on){
-   if(!ctx)return;if(!on){stopDrone();return;}if(!enabled||drone)return;
-   const gain=ctx.createGain();gain.gain.value=.034;gain.connect(master);
-   const a=ctx.createOscillator(),b=ctx.createOscillator(),sub=ctx.createOscillator(),lfo=ctx.createOscillator(),gust=ctx.createOscillator();
-   a.type=b.type='sawtooth';sub.type=lfo.type=gust.type='sine';a.frequency.value=55;b.frequency.value=55.7;sub.frequency.value=27.5;lfo.frequency.value=.07;gust.frequency.value=.11;
-   const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=170;a.connect(filter);b.connect(filter);filter.connect(gain);
-   const subGain=ctx.createGain();subGain.gain.value=.9;sub.connect(subGain);subGain.connect(gain);
-   const lfoGain=ctx.createGain();lfoGain.gain.value=55;lfo.connect(lfoGain);lfoGain.connect(filter.frequency);
-   const wind=ctx.createBufferSource();wind.buffer=noise;wind.loop=true;
-   const windFilter=ctx.createBiquadFilter();windFilter.type='bandpass';windFilter.frequency.value=420;windFilter.Q.value=.6;
-   const windGain=ctx.createGain();windGain.gain.value=.016;
-   const gustGain=ctx.createGain();gustGain.gain.value=.008;gust.connect(gustGain);gustGain.connect(windGain.gain);
-   wind.connect(windFilter);windFilter.connect(windGain);windGain.connect(master);
-   for(const s of [a,b,sub,lfo,gust,wind])s.start();
-   drone={gain,nodes:[a,b,sub,lfo,gust,wind,filter,subGain,lfoGain,windFilter,windGain,gustGain]};
+   if(!ctx)return;
+   if(!on){stopDrone();return;}
+   if(!enabled||drone)return;
+   // Unpitched, filtered air replaces the earlier five-oscillator electronic drone.
+   const gain=ctx.createGain();gain.gain.value=.035*audioChannelGain('ambient');gain.connect(master);
+   const wind=ctx.createBufferSource(),filter=ctx.createBiquadFilter();
+   wind.buffer=noise;wind.loop=true;filter.type='lowpass';filter.frequency.value=230;filter.Q.value=.45;
+   wind.connect(filter);filter.connect(gain);
+   wind.start();drone={gain,nodes:[wind,filter]};
   },
   get activeDrone(){return Boolean(drone);}
  };
