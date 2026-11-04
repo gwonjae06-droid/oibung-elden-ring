@@ -51,7 +51,7 @@ export function createAudio(factory){
  return {
   get enabled(){return enabled;},names:Object.keys(R),
   setEnabled(on){if(on){if(!ensure())return enabled=false;ctx.resume?.()?.catch(()=>{});enabled=true;samples.setEnabled(true);}else{enabled=false;samples.setEnabled(false);stopDrone();for(const s of [...nodes]){try{s.stop();}catch{}}nodes.clear();ends.clear();}return enabled;},
-  play(name,opts={}){if(!enabled||!ctx||!R[name])return false;const t=ctx.currentTime;if(t-(last.get(name)??-Infinity)<(opts.minGap??.03))return false;last.set(name,t);if(Object.hasOwn(SOUND_SAMPLES,name)&&(!name.startsWith('boss-')||kwonFight())&&samples.play(name,opts))return true;
+  play(name,opts={}){if(!enabled||!ctx||!R[name])return false;const t=ctx.currentTime;if(t-(last.get(name)??-Infinity)<(opts.minGap??.03))return false;last.set(name,t);if(Object.hasOwn(SOUND_SAMPLES,name)&&(!name.startsWith('boss-')||kwonFight())&&samples.play(name,{...opts,onFailure:name==='healed'?()=>{if(enabled&&ctx){const variation=soundVariation();for(const q of R.healed)emit(q,variation,.85);}}:undefined}))return true;
   master.gain.value=.44*audioChannelGain(name==='ui'?'ui':'effects');const j=soundVariation();let recipes=R[name];if(kwonFight()&&['boss-slash','boss-thrust','boss-slam','boss-whirl'].includes(name))recipes=[['n',name==='boss-thrust'?1900:1200,350,name==='boss-whirl'?.65:.28,.2,'bandpass']];const power=name==='hit-boss'?Math.min(2,Math.max(.4,(opts.amount||60)/80)):1;for(const q of recipes)emit(q,j,power);return true;},
   ambience(on){
    if(!ctx)return;
