@@ -9,7 +9,7 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,37 +17,29 @@ jobs:
           node-version: '20'
       - name: Install Three.js for 3D regression tests
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
-      - name: Baseline tests before changes
+      - name: Apply and verify patches group by group
         shell: bash
-        run: |
-          touch /tmp/apply.log
-          if npm test > /tmp/baseline.log 2>&1; then echo 'baseline: pass' | tee -a /tmp/apply.log; else echo 'baseline: FAIL' | tee -a /tmp/apply.log; tail -n 40 /tmp/baseline.log | tee -a /tmp/apply.log; fi
-      - name: Apply patch
-        shell: bash
-        run: python3 tools/apply_boss_rules.py 2>&1 | tee -a /tmp/apply.log
-      - name: Syntax check
-        shell: bash
-        run: |
-          for f in src/*.mjs tests/*.mjs; do node --check "$f" 2>&1 | tee -a /tmp/apply.log; done
-      - name: Regression tests after changes
-        shell: bash
-        run: npm test 2>&1 | tee -a /tmp/apply.log
-      - name: Commit tested changes
+        run: python3 tools/apply_boss_rules.py 2>&1 | tee /tmp/apply.log
+      - name: Commit verified changes
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -r -q tools
-          git add src tests scripts docs README.md
-          git commit -m 'refactor: enforce boss design rules, remove skip controls and low-quality/reduced-motion modes'
-          git pull --rebase origin main
-          git push origin HEAD:main
-      - name: Report failure
-        if: failure()
+          git rm -r -q tools || true
+          git add -A src tests scripts docs README.md
+          if git diff --cached --quiet; then
+            echo 'nothing to commit'
+          else
+            git commit -m 'refactor: boss rules, dice and blood HUD cleanup, sound balance (verified group by group)'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Post report
+        if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          touch /tmp/apply.log
-          { echo 'The one-shot boss-rules workflow failed. Last log lines:'; echo '```'; tail -n 150 /tmp/apply.log; echo '```'; } > /tmp/body.md
-          gh issue create --title 'apply-boss-rules failed' --body-file /tmp/body.md
+          touch /tmp/report.md /tmp/apply.log
+          if [ ! -s /tmp/report.md ]; then { echo 'No report was produced. Last log lines:'; echo '```'; tail -n 100 /tmp/apply.log; echo '```'; } > /tmp/report.md; fi
+          gh issue create --title 'apply-boss-rules v2 report' --body-file /tmp/report.md

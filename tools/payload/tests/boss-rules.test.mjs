@@ -39,3 +39,9 @@ test('E1: stored or system preferences cannot enable a reduced mode',()=>{
 test('B1: every blood pattern has a timed cast and a recovery window',()=>{
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS))assert.ok(spec.duration>0&&spec.recover>0,id);
 });
+test('F1: the dice and blood battle screens carry no explanatory or instructional text',()=>{
+ for(const name of['dice-ui.mjs','blood-ui.mjs'])assert.doesNotMatch(read(name),/지금 반격|빈틈|압사 주의|다음 칸으로 굴러|약점 노출|createBloodStageUi/,name);
+});
+test('C1: blood rectangle (lane) hazards get no ground warning mesh',()=>{
+ assert.match(read('blood-view.mjs'),/h\.shape==='lane'\)continue/);
+});
