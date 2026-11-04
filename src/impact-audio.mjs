@@ -14,11 +14,12 @@ export function createImpactAudio(factory){
   }
   const room=end=>{const now=ctx.currentTime;ends=ends.filter(e=>e>now);if(ends.length>=28)return false;ends.push(end);return true;};
   const env=(g,t,a,peak,d)=>{g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d);};
-  function tone({f,to,dur,type='sine',vol=.2,at=0,attack=.004}){
-    const t=ctx.currentTime+at;if(!room(t+attack+dur+.05))return;
-    const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);
-    if(to)o.frequency.exponentialRampToValueAtTime(to,t+attack+dur);
-    env(g,t,attack,vol,dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+attack+dur+.05);
+  // Unpitched impact transients replace retro pitched hit oscillators.
+  function tone({f,to,dur,vol=.2,at=0,attack=.004}){
+    noise({dur:Math.min(.25,dur),type:'lowpass',
+      f:Math.max(90,Math.min(820,f*.75)),
+      to:Math.max(65,Math.min(440,(to||f)*.6)),
+      q:.6,vol:Math.min(.18,vol*.44),at,attack});
   }
   function noise({dur,type='bandpass',f=1000,to,q=1,vol=.2,at=0,attack=.003}){
     const t=ctx.currentTime+at;if(!room(t+attack+dur+.05))return;
