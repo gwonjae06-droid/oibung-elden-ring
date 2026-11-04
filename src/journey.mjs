@@ -5,7 +5,7 @@ import {CHAPTER_MEMORIES} from './chapter-story.mjs';
 import {playJourneyTransition} from './journey-transition.mjs';
 import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,MODES,RELICS,newRun,loadProfile,saveProfile,finishAttempt,chooseRelic,configureJourney} from './journey-state.mjs';
-import {JOURNEY_ART} from './journey-art.mjs?art=dice-giant-v2';
+import {JOURNEY_ART} from './journey-art.mjs?art=dice-giant-v3-crashfix';
 import {createMenuTheme} from './menu-theme.mjs';
 import {AUDIO_CHANNELS,readAudioVolume,writeAudioVolume} from './audio-preferences.mjs';
 import {MOBILE_LANDSCAPE_GATE_HTML} from './mobile-landscape.mjs';
