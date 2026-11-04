@@ -2,7 +2,7 @@ import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:.275};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언'];
-export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인'];
+export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
 export const HAND_REST=Object.freeze([{x:-22,y:2,z:-64},{x:22,y:2,z:-64}]);
 const sat=v=>Math.max(0,Math.min(1,v));
@@ -28,21 +28,25 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
  return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...h,id:i,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
- const x=clamp(player.x,-45,45),z=clamp(player.z,-45,45),slot=index%7;let hazards=[];
+ const x=clamp(player.x,-45,45),z=clamp(player.z,-45,45),slot=index%8;let hazards=[];
  if(slot===0)hazards=[circle(x-13,z,11,0,1.25,35),circle(x+13,z,11,.6,1.2,35),circle(x,z-8,12,1.2,1.2,40)];
  if(slot===1)hazards=Array.from({length:4},(_,i)=>rect(-42+i*28,z,28,24,i*.32,1.25));
  if(slot===2){
   // Consecutive head slams. Only the slam itself hurts; the table ripple it causes is purely visual (see dice-ripple.mjs).
   const repeats=healthRatio<=.12?4:healthRatio<=.19?3:2;
   for(let i=0;i<repeats;i++){
-   const shift=i===0?0:i%2?-12:12,start=i*2.4,headX=clamp(x+shift,-26,26),headZ=clamp(z,-51,-34);
-   hazards.push({...circle(headX,headZ,15,start,1.2,42),headSlam:true});
+   const shift=i===0?0:i%2?-12:12,start=i*3.3,headX=clamp(x+shift,-26,26),headZ=clamp(z,-51,-34);
+   hazards.push({...circle(headX,headZ,15,start,1.2,42),headSlam:true,active:1.5,hold:1.5});
   }
  }
  if(slot===3)hazards=[rect(-31,z,26,33,0,1.5),rect(31,z,26,33,.45,1.4)];
  if(slot===4)hazards=[[0,0],[-25,-25],[25,25],[-25,25],[25,-25]].map(([a,b],i)=>circle(x+a,z+b,9,i*.27,1.1));
  if(slot===5)hazards=Array.from({length:5},(_,i)=>circle(x+(i%2?16:-16),z+(i-2)*7,9,i*.43,1.0,32));
  if(slot===6)hazards=[...feralPattern(1,player).hazards.slice(0,3),...feralPattern(0,player).hazards.map(h=>({...h,start:h.start+3})),...feralPattern(2,player,healthRatio).hazards.map(h=>({...h,start:h.start+6}))];
+ if(slot===7){
+  // First the head vibrates in place for a full second, then strikes five times in rapid succession.
+  hazards=Array.from({length:5},(_,i)=>({...circle(clamp(x+(i%2?8:-8),-26,26),clamp(z+(i%3-1)*5,-51,-34),13,1+i*.88,.46,35),headSlam:true,rapid:true,active:.2}));
+ }
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...h,id:i,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
@@ -75,12 +79,19 @@ export function giantPosture(g){
   return {lean:0,bodyX:0,head:{x:from.x+Math.sin(t*8)*7,y:6+(from.y-6)*(1-t)**2+Math.sin(t*Math.PI)*6,z:from.z+(-22-from.z)*t,rotation:q.map(v=>v/n)}};
  }
  if(s.state==='attack'&&s.temperament==='feral'){
-  // Pick the first slam that has not finished withdrawing, so consecutive slams chain without a pop.
-  const h=s.hazards?.find(h=>h.headSlam&&s.t>=h.start-.35&&s.t<=h.start+h.warn+h.active+.9);
+  if(s.slot===7&&s.t<1){
+   const tremor=ease(s.t/.65),shake=Math.sin(s.t*76)*.85*tremor;
+   return {lean:.13*tremor,bodyX:shake*.6,head:{...rest,x:shake*2,y:58+Math.sin(s.t*98)*1.25*tremor,z:-106+Math.cos(s.t*70)*1.2*tremor}};
+  }
+  // Keep the forehead pressed into the table for 1.5s on the heavy single/combo slam.
+  // The special five-hit barrage withdraws rapidly for each subsequent strike.
+  const h=s.hazards?.find(h=>h.headSlam&&s.t>=h.start-(h.rapid?.28:.35)&&s.t<=h.start+h.warn+h.active+(h.rapid?.25:.65));
   if(h){
-   const age=s.t-h.start,drop0=h.warn-.14;
-   // Slow wind-up (head rears over the table), then a violent 0.14s drop, then a heavy withdrawal.
-   const wind=ease(age/Math.max(.3,drop0)),drop=ease((age-drop0)/.14),withdraw=ease((age-h.warn-h.active-.1)/.8),lean=(.55*wind+.45*drop)*(1-withdraw);
+   const age=s.t-h.start,rapid=Boolean(h.rapid),dropTime=rapid?.10:.14;
+   const drop0=h.warn-dropTime,wind=ease((age+(rapid?.28:0))/Math.max(.25,drop0+(rapid?.28:0)));
+   const drop=ease((age-drop0)/dropTime);
+   const withdraw=ease((age-h.warn-h.active)/(rapid?.24:.62));
+   const lean=(.40*wind+.60*drop)*(1-withdraw);
    return {lean,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
   }
  }
@@ -158,7 +169,7 @@ export function stepGiant(g,dt,frozen=false){
  s.crumble=s.crumble||[0,0];s.destroyed?.forEach((lost,i)=>{if(lost)s.crumble[i]+=dt;});
  if(s.state==='recovery'&&s.t>=(s.temperament==='feral'?GIANT.feralRecovery:GIANT.recovery)){
   const alive=s.destroyed.filter(v=>!v).length,ordinal=s.ordinal++;
-  const selected=alive===0?[2,4,2,2,4][ordinal%5]:alive===1?[2,0,1,2,3,4,5][ordinal%7]:ordinal;
+  const selected=alive===0?[2,7,4,2,7][ordinal%5]:alive===1?[2,0,1,7,2,3,4,5][ordinal%8]:ordinal;
   const pattern=giantPattern(selected,g.player,s.temperament,g.boss.hp/g.boss.maxHp);Object.assign(s,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:s.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});g.events.push({type:'dice-giant-warning',name:s.name});}
  if(s.state==='attack'){
   for(const h of giantHazards(g)){const original=s.hazards[h.id];if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;original.hit=true;if(diceInvulnerable(g.player))continue;
