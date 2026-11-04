@@ -6,8 +6,8 @@ import {readBattleSession} from './battle-session.mjs';
 import {settleCleanup,combineCleanupReports} from './runtime/cleanup-completion.mjs';
 export const SECRET_BOSSES=Object.freeze([{id:'kwon',name:'긴턱의 이권재'},{id:'clown',name:'광대 오슬우'},{id:'dice',name:'거대 주사위 박성원'}].map(Object.freeze));
 export const CLEAN_UI_CSS=`
-#arena[data-clean-ui] #damage-layer,#arena[data-clean-ui] #boss-action,#arena[data-clean-ui] .brand>div>span,#arena[data-clean-ui] #load-status[data-ready-hidden]{display:none!important}
-#arena[data-clean-ui] #notice:not([data-phase-dialogue]){display:none!important}
+#arena[data-clean-ui] #damage-layer,#arena[data-clean-ui] #boss-action:not([data-critical]),#arena[data-clean-ui] .brand>div>span,#arena[data-clean-ui] #load-status[data-ready-hidden]{display:none!important}
+#arena[data-clean-ui] #notice:not([data-phase-dialogue]):not([data-critical]){display:none!important}
 #arena[data-clean-ui] .brand{z-index:50;pointer-events:auto;cursor:inherit}
 #arena[data-clean-ui] .brand:focus-visible{outline:1px solid currentColor;outline-offset:4px}
 .pause-settings{display:flex;gap:8px;margin:12px 0}.pause-settings>button{flex:1;min-width:0;width:auto;margin:0!important}
