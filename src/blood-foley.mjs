@@ -1,16 +1,54 @@
+// Dedicated, user-uploaded physical blood recordings for the Blood King.
+// All paths are real files under assets/sfx; no synthesized fallback.
 const dir='assets/sfx/';
 export const BLOOD_FOLEY=Object.freeze({
- wet:dir+'universfield-sword-blade-slicing-flesh-352708.mp3',
- impact:dir+'dragon-studio-hard-heavy-impact-515256.mp3',
- heavy:dir+'dragon-studio-heavy-impact-loud-515259.mp3',
- tear:dir+'freesound_community-sword-sound-2-36274.mp3'
+ hit:dir+'bloodhit.mp3',
+ hit2:dir+'bloodhit2.mp3',
+ hit3:dir+'bloodhit3.mp3',
+ hit4:dir+'bloodhit4.mp3',
+ hit5:dir+'bloodhit5.mp3',
+ splash:dir+'bloodsplash.mp3'
 });
-// Sparse physical recordings. No synthesized backup, no cue over the prayer/bell.
+
+// Keep sound choices aligned with the actual combat pattern IDs.
+// These are casting / terrain impacts, not player weapon-hit events.
+export const BLOOD_ATTACK_SOUNDS=Object.freeze({
+ wave:'splash',
+ fountain:'splash',
+ burst:'hit5',
+ orbs:'hit',
+ chain:'hit3',
+ orbit:'hit2',
+ vortex:'splash',
+ dive:'hit5',
+ eclipse:'hit4',
+ rain:'splash',
+ wing:'hit3',
+ pulse:'hit4',
+ pursuit:'hit2',
+ tide:'splash'
+});
+const WET_CHARGE=new Set(['wave','fountain','vortex','rain','tide']);
+const HEAVY=new Set(['burst','dive','eclipse','pursuit','tide']);
+const WET_HIT=new Set(['wave','fountain','vortex','rain','tide']);
+
+function cue(file,volume,duration,fade,minGap){
+ return {file,rate:1,volume,duration,fade,minGap,natural:true};
+}
+// Sparse, layered SFX: one subdued wet windup, the actual spell release,
+// and a short blood strike only when a wet attack really damages the player.
+// The standard hit.mp3 plays separately for every player damage event.
 export function bloodFoleySpec(ev,g){
- if(g.boss.state==='transition')return null;
- if(ev.type==='hurt')return {file:BLOOD_FOLEY.wet,volume:.26,rate:.9,duration:.6,fade:.2,minGap:.3};
- if(ev.type!=='blood-impact')return null;
- const id=g.blood.pattern,heavy=['burst','dive','tide'].includes(id),tear=['wing','chain','pursuit'].includes(id);
- return {file:heavy?(id==='dive'?BLOOD_FOLEY.heavy:BLOOD_FOLEY.impact):tear?BLOOD_FOLEY.tear:BLOOD_FOLEY.wet,
-  volume:heavy?.33:tear?.2:.17,rate:heavy?.86:tear?.94:.88,duration:heavy?.9:.52,fade:.18,minGap:heavy?.4:.22};
+ if(!ev||!g?.blood||g.boss?.state==='transition')return null;
+ const id=ev.pattern||g.blood.pattern,key=BLOOD_ATTACK_SOUNDS[id];
+ if(!key)return null;
+ if(ev.type==='blood-warning')
+  return WET_CHARGE.has(id)?cue(BLOOD_FOLEY.splash,.10,.46,.12,.34):null;
+ if(ev.type==='blood-impact'){
+  const heavy=HEAVY.has(id),wet=key==='splash';
+  return cue(BLOOD_FOLEY[key],heavy?.32:wet?.23:.26,wet?1.18:heavy?.97:.72,.18,wet?.36:heavy?.31:.25);
+ }
+ if(ev.type==='hurt'&&Number(ev.amount)>0&&WET_HIT.has(id))
+  return cue(BLOOD_FOLEY.hit,.13,.45,.12,.18);
+ return null;
 }
