@@ -8,7 +8,7 @@ export const SOUND_SAMPLES=Object.freeze({
  'boss-thrust':Object.freeze(['sword2.mp3','sword3.mp3']),
  'boss-whirl':Object.freeze(['sword1.mp3','sword3.mp3'])
 });
-export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now(),storage=globalThis.localStorage,coarse=()=>globalThis.matchMedia?.('(pointer: coarse)')?.matches||false,random=Math.random}={}){
+export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now(),storage,coarse=()=>globalThis.matchMedia?.('(pointer: coarse)')?.matches||false,random=Math.random}={}){
  let enabled=false,disposed=false;
  const pool=new Map(),last=new Map();
  const maxVoices=coarse()?5:9;
