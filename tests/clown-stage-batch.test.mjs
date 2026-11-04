@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {runStageVariant} from '../src/clown-stage-shows.mjs';
+import {largeClownTelegraph,applyClownTelegraphs} from '../src/clown-telegraph-policy.mjs';
+function fixture(){const g={boss:{phase:2},player:{x:3,z:12}},c={f:{},vis:{},stageCounts:{headReturn:1,runaway:1},seq:0},calls=[];let id=0;const api={once(c,k,fn){if(!Object.hasOwn(c.f,k))c.f[k]=fn()??true;return c.f[k];},head(){},emit(g,type,data){calls.push({type,...data});},zone(g,z){const q={id:id++,...z};calls.push({type:'zone',...q});return q;},bomb(g,q){calls.push({type:'bomb',...q});}};return {g,c,calls,api};}
+function advance(f,name,end){for(let a=0;a<end;){const t=Math.min(end,a+.01);runStageVariant(name,f.g,f.c,a,t,f.api);a=t;}}
+test('first original show is retained',()=>{const f=fixture();f.c.stageCounts={};assert.equal(runStageVariant('headReturn',f.g,f.c,0,.01,f.api),false);});
+test('photo captures fixed positions and marks only its large blast',()=>{const f=fixture();advance(f,'headReturn',3.5);const zones=f.calls.filter(e=>e.type==='zone');assert.equal(zones.length,2);assert.ok(zones.every(z=>z.r===6&&z.major&&z.warn===1.4&&z.x===3));});
+test('tilt sends two volleys through four of five lanes without floor telegraphs',()=>{const f=fixture();advance(f,'runaway',5);const rolls=f.calls.filter(e=>e.type==='bomb'&&e.kind==='roll');assert.equal(rolls.length,8);assert.equal(new Set(rolls.slice(0,4).map(q=>q.x)).size,4);assert.equal(f.calls.filter(e=>e.type==='zone').length,0);});
+test('ordinary circles and lanes are hidden but major attacks remain',()=>{assert.equal(largeClownTelegraph({shape:'circle',r:3}),false);assert.equal(largeClownTelegraph({shape:'lane',w:4.2,len:28}),false);assert.equal(largeClownTelegraph({shape:'circle',r:6}),true);assert.equal(largeClownTelegraph({major:false,shape:'circle',r:20}),false);});
+test('view filtering leaves damage data unchanged',()=>{const z={shape:'circle',r:3,x:0,z:0,state:'warn',damage:34},g={status:'playing',clown:{zones:[z]}},before=structuredClone(g);const mesh={renderOrder:100,material:{depthTest:false,color:{getHex:()=>0xff3929}},geometry:{type:'CircleGeometry',parameters:{radius:3}},position:{x:0,z:0},visible:true};applyClownTelegraphs({traverse:fn=>fn(mesh)},g);assert.equal(mesh.visible,false);assert.deepEqual(g,before);});
+test('actual wave meshes are not treated as floor warnings',()=>{const m={renderOrder:10,visible:true};applyClownTelegraphs({traverse:fn=>fn(m)},{clown:{zones:[]}});assert.equal(m.visible,true);});

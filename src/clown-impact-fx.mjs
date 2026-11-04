@@ -2,6 +2,7 @@ import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {blastTheme,blastParticles,writeWave} from './clown-impact-data.mjs';
 import {clownDebris,stepClownDebris} from './clown-debris-data.mjs';
+import {applyClownTelegraphs} from './clown-telegraph-policy.mjs';
 export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  return runThreeStartup(THREE,(THREE,own)=>{
  const root=new THREE.Group();root.name='clown-impact-effects';scene.add(root);const limit=reduced?70:mobile?160:360,pos=new Float32Array(limit*3),rgb=new Float32Array(limit*3),geo=new THREE.BufferGeometry(),color=new THREE.Color();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(rgb,3));geo.setDrawRange(0,0);
@@ -18,6 +19,7 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  function clear(){game=null;particles.length=fragments.length=0;geo.setDrawRange(0,0);paper.count=rubber.count=0;light.intensity=lightLife=trailTime=0;for(const w of[...decor,...live]){w.life=0;w.m.visible=false;}serial=0;}
  function event(e,g){
   if(!g.clown)return;game=g;if(['phase','victory','death'].includes(e.type)){clear();return;}
+  if(e.type==='clown-shutter'){wave(e.x,e.z,1.4,0xffffff);light.position.set(e.x,2,e.z);light.color.setHex(0xffffff);lightLife=.08;light.intensity=45;}
   if(e.type==='clown-blast'){
    const index=serial++,theme=blastTheme(index),r=e.r||3.2;burst(e.x,e.z,index);debris(e.x,e.z,index);wave(e.x,e.z,r,theme.colors[0],theme.jagged);if(!reduced){wave(e.x,e.z,r*.7,theme.colors[1],theme.jagged);wave(e.x,e.z,r*1.15,theme.colors[0],0);}
    light.position.set(e.x,2,e.z);light.color.setHex(theme.colors[0]);lightLife=.16;light.intensity=180;
@@ -36,6 +38,7 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
   trailTime+=h;if(h>0&&trailTime>=.05){trailTime=0;for(const q of game?.clown?.bombs||[])if(q.kind==='roll'&&q.t<q.travel&&Number.isFinite(q.px)&&Number.isFinite(q.pz)){for(const p of blastParticles(0,2)){if(particles.length>=limit)particles.shift();particles.push({...p,x:q.px,y:.12,z:q.pz,vx:p.vx*.12,vy:.35,vz:p.vz*.12,life:.24,max:.24,r:.7,g:.54,b:.3});}}}
   for(const w of decor){if(w.life<=0)continue;w.life=Math.max(0,w.life-h);const t=1-w.life/w.max;writeWave(w.a,Math.max(.05,w.r*t),Math.PI,0,w.x,w.z,.15,w.jagged);w.m.geometry.attributes.position.needsUpdate=true;w.m.material.opacity=(1-t)*(reduced?.35:.65);w.m.visible=w.life>0;}
   const waves=game?.clown?.waves||[];for(let j=0;j<live.length;j++){const s=live[j],w=waves[j];s.m.visible=Boolean(w);if(!w)continue;writeWave(s.a,w.r,w.half,w.yaw,w.x,w.z,.18,0,w.width);s.m.geometry.attributes.position.needsUpdate=true;s.m.material.color.setHex(w.kind==='clap'?0xffce59:0x65e5ff);s.m.material.opacity=.85-.25*w.r/w.range;}
+  applyClownTelegraphs(scene,game);
  }
  return {event,update,clear,root};
  });
