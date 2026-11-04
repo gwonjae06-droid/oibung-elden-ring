@@ -1,7 +1,7 @@
 import {audioChannelGain} from './audio-preferences.mjs';
 
-// The requested hit.mp3 has not been uploaded yet. The URL becomes active on
-// the next page load once it exists; a 404 never suppresses the visual hit cue.
+// The uploaded hit.mp3 plays for every accepted player damage event.
+// A small voice pool avoids cutting off consecutive impacts.
 export const PLAYER_HIT_MP3_URL=new URL('../assets/sfx/hit.mp3',import.meta.url).href;
 export function createPlayerHitFeedback(shell,{AudioClass=globalThis.Audio,muted=()=>{try{return globalThis.localStorage?.getItem('oibung-muted')==='1';}catch{return false;}},now=()=>Date.now()}={}){
  if(!shell?.ownerDocument||!shell.appendChild)return {hit(){return false;},clear(){},dispose(){}};
@@ -14,17 +14,29 @@ export function createPlayerHitFeedback(shell,{AudioClass=globalThis.Audio,muted
  `;
  cover.className='oden-hit-overlay';cover.setAttribute('aria-hidden','true');
  shell.append(style,cover);
- let disposed=false,last=0,hitAudio=null,missing=false;
+ let disposed=false,last=0,clips=[],missing=false,serial=0;
  function sound(){
   if(muted()||missing||typeof AudioClass!=='function')return;
   try{
-   if(!hitAudio){hitAudio=new AudioClass(PLAYER_HIT_MP3_URL);hitAudio.preload='auto';hitAudio.onerror=()=>{missing=true;hitAudio?.pause?.();};}
-   hitAudio.pause?.();hitAudio.currentTime=0;
-   hitAudio.volume=Math.min(.44,.30*audioChannelGain('effects'));
-   const p=hitAudio.play?.();p?.catch?.(()=>{missing=true;});
+   // Reuse finished clips first. Keep at most three simultaneous player hit voices.
+   let slot=clips.find(v=>v.audio.paused||v.audio.ended);
+   if(!slot&&clips.length<3){
+    const audio=new AudioClass(PLAYER_HIT_MP3_URL);audio.preload='auto';
+    slot={audio,serial:0};audio.onerror=()=>{missing=true;try{audio.pause();}catch{}};
+    clips.push(slot);
+   }
+   if(!slot)slot=clips.reduce((old,v)=>v.serial<old.serial?v:old);
+   const audio=slot.audio;slot.serial=++serial;
+   audio.pause?.();audio.currentTime=0;
+   audio.volume=Math.min(.48,.42*audioChannelGain('effects'));
+   const task=audio.play?.();
+   task?.catch?.(error=>{
+    // Do not permanently disable audio because one autoplay attempt was blocked.
+    if(error?.name!=='NotAllowedError'&&error?.name!=='AbortError')missing=true;
+   });
   }catch{missing=true;}
  }
- function clear(){cover.classList.remove('active');if(hitAudio)try{hitAudio.pause();hitAudio.currentTime=0;}catch{}}
+ function clear(){cover.classList.remove('active');for(const {audio} of clips)try{audio.pause();audio.currentTime=0;}catch{}}
  function hit(event){
   if(disposed||!event||!['player-hit','hurt','player-crushed'].includes(event.type))return false;
   if(event.type!=='player-crushed'&&!(Number(event.amount)>0))return false;
@@ -34,6 +46,6 @@ export function createPlayerHitFeedback(shell,{AudioClass=globalThis.Audio,muted
   cover.classList.add('active');last=now();
   sound();return true;
  }
- function dispose(){if(disposed)return;disposed=true;clear();if(hitAudio){hitAudio.onerror=null;hitAudio.removeAttribute?.('src');hitAudio.load?.();hitAudio=null;}style.remove();cover.remove();}
+ function dispose(){if(disposed)return;disposed=true;clear();for(const {audio} of clips){audio.onerror=null;audio.removeAttribute?.('src');audio.load?.();}clips=[];style.remove();cover.remove();}
  return {hit,clear,dispose,get lastHitAt(){return last;}};
 }
