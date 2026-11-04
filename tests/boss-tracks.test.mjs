@@ -10,6 +10,8 @@ test('uploaded MP3 filenames map to the correct boss and phase',()=>{
   assert.match(bossTrack({boss:'blood',phase:1}).url,/assets\/music\/bloodbgm1\.mp3$/);
   assert.match(bossTrack({boss:'blood',phase:2}).url,/assets\/music\/bloodbgm2\.mp3$/);
   assert.equal(bossTrack({boss:'dice',phase:2}).key,'dice:2');
+  assert.equal(bossTrack({boss:'dice',phase:3}).key,'dice:3');
+  assert.match(bossTrack({boss:'dice',phase:3}).url,/dicebgm2\.mp3$/);
   assert.match(bossTrack({boss:'kwon',phase:1}).url,/assets\/music\/swordbgm\.mp3$/);
   assert.equal(bossTrack({boss:'unknown',phase:1}),null);
 });

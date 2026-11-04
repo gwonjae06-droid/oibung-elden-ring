@@ -8,8 +8,10 @@ export const BOSS_TRACKS=Object.freeze({
 });
 export function bossTrack(state){
   if(!state||!Object.hasOwn(BOSS_TRACKS,state.boss))return null;
-  const phase=state.phase===2?2:1;
-  return {key:state.boss+':'+phase,url:new URL('../assets/music/'+BOSS_TRACKS[state.boss][phase-1],import.meta.url).href};
+  const phase=state.phase>=2?2:1;
+  // Phase three reuses the second dice MP3 at a faster tempo, never the phase-one track.
+  const keyPhase=state.boss==='dice'&&state.phase===3?3:phase;
+  return {key:state.boss+':'+keyPhase,url:new URL('../assets/music/'+BOSS_TRACKS[state.boss][phase-1],import.meta.url).href};
 }
 export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,now=()=>win?.performance?.now?.()??Date.now(),fadeMs=1200,volume=.5}={}){
   let current=null,outgoing=null,suspendedAt=null,disposed=false;
@@ -62,7 +64,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
       if(state.boss==='blood'&&state.cinematic&&track.key==='blood:2'){release(outgoing);outgoing=null;}
       try{
         const audio=new AudioClass(track.url);
-        audio.loop=true;audio.preload='auto';audio.volume=0;if(state.offset)audio.currentTime=state.offset;
+        audio.loop=true;audio.preload='auto';audio.volume=0;audio.playbackRate=state.boss==='dice'&&state.phase===3?1.12:1;if(state.offset)audio.currentTime=state.offset;
         const entry={key:track.key,audio,started:time,alive:true,blocked:false,from:outgoing?.audio.volume??0};
         audio.onerror=()=>fail(entry);current=entry;
       }catch{if(outgoing){current=outgoing;outgoing=null;}return false;}

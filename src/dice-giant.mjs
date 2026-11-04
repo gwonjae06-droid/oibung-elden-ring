@@ -14,7 +14,7 @@ const circle=(x,z,r,start=0,warn=1.15,damage=26)=>({shape:'circle',x:clamp(x),z:
 const rect=(x,z,w,h,start=0,warn=1.2)=>({shape:'rect',x,z,w,h,start,warn,active:.35,damage:32});
 export function giantPattern(index,player,temperament='controlled',healthRatio=1){
  if(temperament==='feral')return feralPattern(index,player,healthRatio);
- const x=clamp(player.x,-48,48),z=clamp(player.z,-48,48),slot=index%GIANT_NAMES.length;let hazards=[];const turn=Math.floor(index/7),coinFace=turn%2?'tails':'heads',chessPiece=['rook','bishop','knight'][turn%3];
+ const x=clamp(player.x,-48,48),z=clamp(player.z,-48,48),slot=index%GIANT_NAMES.length;let hazards=[];const turn=Math.floor(index/GIANT_NAMES.length),coinFace=turn%2?'tails':'heads',chessPiece=['rook','bishop','knight'][turn%3];
  if(slot===0)hazards=Array.from({length:5},(_,i)=>circle(x+(i-2)*10,z,6,i*.4,1.1));
  if(slot===1)hazards=Array.from({length:5},(_,i)=>rect(-48+i*24,z,24,22,i*.24,1.15));
  if(slot===2)hazards=[[0,0],[-24,0],[24,0],[0,-24],[0,24]].map(([a,b],i)=>circle(x+a,z+b,8,i*.18,1.4));

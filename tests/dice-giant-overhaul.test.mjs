@@ -32,12 +32,13 @@ test('the hands rest at playable board edges and the hitboxes share the visual p
  }
  assert.equal(HAND_REST.length,2);
 });
-test('rage begins once below 27.5% maximum HP without adding a third battle phase',()=>{
- const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
- damageDice(g,676);stepDicePlayer(g,.02);
- assert.equal(g.boss.phase,2);assert.equal(g.dice.giant.temperament,'feral');
+test('rage begins exactly at 1000 HP, turning the battle into phase three once',()=>{
+ const g=createDicePlayerGame();damageDice(g,1000);skipGiant(g);stepDicePlayer(g,.02);
+ damageDice(g,999);stepDicePlayer(g,.02);
+ assert.equal(g.boss.phase,2);assert.equal(g.dice.giant.temperament,'controlled');
+ damageDice(g,1);stepDicePlayer(g,.02);
+ assert.equal(g.boss.phase,3);assert.equal(g.dice.giant.temperament,'feral');
  assert.equal(g.dice.giant.rageTriggered,true);
- assert.equal(g.events.filter(x=>x.type==='dice-giant-feral').length,1);
  for(let i=0;i<30;i++)stepDicePlayer(g,.02);
  assert.equal(g.events.filter(x=>x.type==='dice-giant-feral').length,1);
 });
@@ -77,13 +78,13 @@ test('casino scene has fleeing guests and reactive chips, coins, dice and chess 
 });
 
 test('coin face alternates deterministically and chooses different readable attacks',()=>{
- const heads=giantPattern(3,{x:0,z:0}),tails=giantPattern(10,{x:0,z:0});
+ const heads=giantPattern(3,{x:0,z:0}),tails=giantPattern(3+9,{x:0,z:0});
  assert.equal(heads.coinFace,'heads');assert.equal(tails.coinFace,'tails');
  assert.match(heads.name,/앞면/);assert.match(tails.name,/뒷면/);
  assert.notDeepEqual(heads.hazards.map(h=>h.shape),tails.hazards.map(h=>h.shape));
 });
 test('rook, bishop and knight chess patterns use distinct travel geometries',()=>{
- const rook=giantPattern(4,{x:0,z:0}),bishop=giantPattern(11,{x:0,z:0}),knight=giantPattern(18,{x:0,z:0});
+ const rook=giantPattern(4,{x:0,z:0}),bishop=giantPattern(4+9,{x:0,z:0}),knight=giantPattern(4+18,{x:0,z:0});
  assert.equal(rook.chessPiece,'rook');assert.equal(bishop.chessPiece,'bishop');assert.equal(knight.chessPiece,'knight');
  assert.ok(rook.hazards.every(h=>h.shape==='rect'));
  assert.ok(bishop.hazards.every(h=>h.shape==='rotated-rect'));
@@ -123,39 +124,33 @@ test('torso accompanies the head during the slump instead of extending the neck'
  assert.ok(head.y<11&&head.z>-56&&head.z<-30,'head reaches reachable table edge');
  assert.ok(Math.abs(posture.bodyX-head.x)<12,'shoulders follow the head');
 });
-test('hand health never regenerates, destroying a hand never staggers the giant, and rage waits until both hands are gone',()=>{
- const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
- const s=g.dice.giant;
- const before=s.hands[0];const hit=giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60});
- assert.equal(hit?.part,'hand');
- const bossBefore=g.boss.hp;
- const returned=strikeGiantHand(g,0,before+20);
- assert.equal(returned,before);damageDice(g,returned);assert.equal(g.boss.hp,bossBefore-before);
+test('broken hands stop their own attacks for eight seconds without forcing the feral phase',()=>{
+ const g=createDicePlayerGame();damageDice(g,1000);skipGiant(g);stepDicePlayer(g,.02);
+ g.player.invuln=999;g.player.hp=g.player.maxHp=5000;
+ const s=g.dice.giant,before=s.hands[0],bossBefore=g.boss.hp;
+ assert.equal(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60})?.part,'hand');
+ const dealt=strikeGiantHand(g,0,before+20);damageDice(g,dealt);
+ assert.equal(dealt,before);assert.equal(g.boss.hp,bossBefore-before);
  assert.equal(s.hands[0],0);assert.equal(s.destroyed[0],true);
  assert.equal(s.state,'recovery','no stagger state');
  assert.equal(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60}),null);
- stepDicePlayer(g,.02);
- assert.equal(s.hands[0],0);assert.ok(s.crumble[0]>0,'the lost hand crumbles');assert.equal(s.temperament,'controlled');
- const second=giantImpact(g,{x:22,y:2,z:-51},{x:22,y:2,z:-60});
- assert.equal(second?.index,1);
- strikeGiantHand(g,1,s.hands[1]+10);
+ assert.equal(strikeGiantHand(g,0,100),0,'cannot hit a vanished hand');
+ strikeGiantHand(g,1,s.hands[1]);
  assert.deepEqual(s.destroyed,[true,true]);
  stepDicePlayer(g,.02);
- assert.equal(s.temperament,'feral');
- assert.equal(g.events.filter(e=>e.type==='dice-giant-hand-destroyed').length,2);
-
+ assert.equal(s.temperament,'controlled');assert.equal(g.boss.phase,2);
+ for(let i=0;i<970;i++)stepDicePlayer(g,1/120);
+ assert.deepEqual(s.destroyed,[false,false]);
+ assert.equal(s.hands[0],GIANT.handHp);
+ assert.equal(g.boss.phase,2,'hand recovery cannot heal the boss or skip a phase');
 });
-
-test('both lost hands force only head and prop based feral attacks',()=>{
- const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
- const s=g.dice.giant;s.hands=[0,0];s.destroyed=[true,true];s.temperament='feral';s.rageTriggered=true;
- s.state='recovery';s.t=GIANT.recovery-.002;
- for(let i=0;i<14;i++){
-  s.state='recovery';s.t=GIANT.recovery-.002;
-  stepDicePlayer(g,.01);
-  assert.ok([2,4,7].includes(s.slot),'no hand-based strikes without palms');
-  assert.ok(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60})?.part!=='hand');
- }
+test('disabled hands cannot produce warnings or hitboxes even if a pattern is in progress',()=>{
+ const g=createDicePlayerGame();damageDice(g,1000);skipGiant(g);stepDicePlayer(g,.02);
+ const s=g.dice.giant,p=giantPattern(7,{x:0,z:0});
+ s.hands=[0,0];s.destroyed=[true,true];s.disabledFor=[8,8];
+ Object.assign(s,{state:'attack',temperament:'controlled',slot:7,t:1.4,hazards:p.hazards,duration:p.duration});
+ assert.deepEqual(giantHazards(g),[]);
+ assert.equal(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60}),null);
 });
 test('controlled phase two flicks chips, dice, coins and chess pieces from hands held in front of the body',()=>{
  const kinds={1:'chip',2:'dice',3:'coin',4:'chess'};
