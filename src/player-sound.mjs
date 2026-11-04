@@ -18,14 +18,9 @@ export function createPlayerSound({getContext,getDestination=ctx=>ctx.destinatio
  function clear(){if(!disposed)reset();}
  function update(){if(!disposed&&(muted()||doc?.hidden))reset();}
  function play(key,weapon){
-  if(!allowed()||!ensure()||active.size>12)return false;bus.gain.value=.8*audioChannelGain('effects');const t=ctx.currentTime;if(t-(last.get(key)??-Infinity)<.09)return false;last.set(key,t);const j=soundVariation(random);
-  for(const [kind,f,to,dur,vol] of playerSoundRecipe(key,weapon)){
-   if(disposed||active.size>=16)break;const q={s:null,g:null,f:null,done:false};
-   try{q.s=kind==='n'?ctx.createBufferSource():ctx.createOscillator();q.g=ctx.createGain();const end=t+dur/j.speed;
-    if(kind==='n'){q.s.buffer=noise;q.f=ctx.createBiquadFilter();q.f.type='bandpass';q.f.frequency.setValueAtTime(f*j.pitch,t);q.f.frequency.exponentialRampToValueAtTime(to*j.pitch,end);q.s.connect(q.f);q.f.connect(q.g);}else{q.s.type='triangle';q.s.frequency.setValueAtTime(f*j.pitch,t);q.s.frequency.exponentialRampToValueAtTime(to*j.pitch,end);q.s.connect(q.g);}
-    q.g.gain.setValueAtTime(.0001,t);q.g.gain.linearRampToValueAtTime(vol*j.gain,t+.004);q.g.gain.exponentialRampToValueAtTime(.0001,end);q.g.connect(bus);if(disposed){release(q);break;}active.add(q);q.s.onended=()=>release(q);q.s.start(t);q.s.stop(end+.02);
-   }catch{release(q);}
-  }return !disposed;
+  // Steps and rolls currently have no authorized recorded foley.
+  // Do not synthesize the legacy triangle-wave, 8-bit sounding substitutes.
+  return false;
  }
  function dispose(){
   if(completion)return completion;let finish;completion=new Promise(resolve=>{finish=resolve;});disposed=true;for(const remove of removers.splice(0))safe(remove);reset();dropInfrastructure();const old=ctx;ctx=null;
