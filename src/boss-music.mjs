@@ -62,7 +62,9 @@ export function installBossMusic(doc=globalThis.document,win=globalThis.window,{
  const C=win.AudioContext||win.webkitAudioContext,music=makeMusic(()=>C?new C():null),tracks=createBossTracks(win);
  let focused=typeof doc.hasFocus==='function'?doc.hasFocus():true,muted=false,disposed=false,timer=null;
  const readMute=()=>{try{muted=win.localStorage.getItem('oibung-muted')==='1';}catch{}};
- function sync(){if(disposed)return;readMute();const selection=musicState(doc,focused);const external=tracks.update(selection,!muted);music.update(selection,!muted&&!external);}
+ function sync(){if(disposed)return;readMute();const selection=musicState(doc,focused);tracks.update(selection,!muted);
+  // MP3 tracks are the sole boss music source. Do not start generated chiptune backup score.
+  music.update(selection,false);}
  function gesture(e){if(disposed)return;const path=e.composedPath?.()||[];if(path.some(n=>['start','retry','change','quit'].includes(n?.id)||n?.classList?.contains('bt-confirm'))){music.reset();tracks.reset();}queueMicrotask(()=>{if(disposed)return;readMute();if(!muted){music.unlock();tracks.unlock();}sync();});}
  const blur=()=>{focused=false;sync();},focus=()=>{focused=true;sync();};
  function pagehide(e){if(e.persisted){music.reset();tracks.reset();}else control.dispose();}
