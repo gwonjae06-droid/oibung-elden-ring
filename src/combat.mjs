@@ -4,8 +4,8 @@ import {
   createPlayerState,
   tickPlayerAction,
   advancePlayerProjectile,
-  rewardPlayerHit,
 } from './player-combat.mjs';
+import {settlePlayerHit} from './player-hit.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -601,11 +601,13 @@ function bossDamage(g, amount, poise) {
 function landHit(g, amount, poise, a) {
   const actual = bossDamage(g, amount, poise),
     b = g.boss;
-  rewardPlayerHit(g, actual, a, {
+  // bossDamage already counted the hit (with poise and hit-stop), so only the rewards are settled here.
+  settlePlayerHit(g, actual, a, {
     canStun: b.hp > 0 && b.state !== 'transition',
     stun: (duration) => {
       b.stun = duration;
     },
+    countStats: false,
   });
 }
 function hurtPlayer(g, damage) {
