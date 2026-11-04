@@ -5,7 +5,6 @@ import {DICE_RULES as R,DICE_BOARD} from './dice-data.mjs';
 import {DICE_PHOTO_FACE,DICE_PHOTO_PATH,fitDicePhoto} from './dice-photo-data.mjs';
 import {DICE_HELL_STYLE as H,diceCrackPaths,diceTelegraphView} from './dice-visual-data.mjs';
 import {buildDiceDecorations} from './dice-decoration-renderer.mjs';
-import {buildGroundSpikeVisuals} from './dice-ground-spikes.mjs';
 import {squareDiscArgs} from './dice-square.mjs';
 import {frenzyShake} from './dice-frenzy-windup.mjs';
 import {buildDiceArmor,DICE_ARMOR_STYLE} from './dice-armor.mjs';
@@ -29,7 +28,7 @@ function carpetTexture(){const c=document.createElement('canvas');c.width=c.heig
 function sparkTexture(){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d'),gr=g.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#ffffffff');gr.addColorStop(.4,'#ffffffaa');gr.addColorStop(1,'#ffffff00');g.fillStyle=gr;g.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);}
 export function buildDiceBoard(scene){
  return runThreeStartup(THREE,(THREE,own)=>{
-const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);const groundSpikes=buildGroundSpikeVisuals(THREE,root),coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS;
+const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);const coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS;
  const room=buildCasinoRoom(THREE,root,{coarse,reduced:Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)});
  if(scene.background&&scene.background.setHex)scene.background.setHex(C.sky);
  if(scene.fog){scene.fog.color.setHex(C.fog);scene.fog.near=170;scene.fog.far=460;}
@@ -57,7 +56,7 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  const pipGeo=new THREE.PlaneGeometry(R.edge-.6,R.edge-.6).rotateX(-Math.PI/2),dotGeo=new THREE.CircleGeometry(1.6,20).rotateX(-Math.PI/2),pipTiles=[],pipDots=[];
  for(let i=0;i<6;i++){const m=new THREE.Mesh(pipGeo,new THREE.MeshBasicMaterial({color:0xff3b1d,transparent:true,opacity:0,depthWrite:false})),dot=new THREE.Mesh(dotGeo,new THREE.MeshBasicMaterial({color:0xfff0c0,transparent:true,opacity:0,depthWrite:false}));m.visible=dot.visible=false;root.add(m,dot);pipTiles.push(m);pipDots.push(dot);}
  function updatePips(g){const pp=g.dice.pips,time=Number.isFinite(g.time)?g.time:0;for(let i=0;i<6;i++){const m=pipTiles[i],dot=pipDots[i];if(!pp||i>=pp.tiles.length){m.visible=dot.visible=false;continue;}const t=DICE_BOARD[pp.tiles[i]],f=pp.flash>0?Math.min(1,pp.flash/.4):0,prog=g.dice.state==='pip-warning'?Math.min(1,g.dice.t/pp.warn):1;m.visible=dot.visible=true;m.position.set(t.x,.1,t.z);dot.position.set(t.x,.12,t.z);m.material.color.setHex(f>0?0xffd27a:0xff3b1d);m.material.opacity=f>0?.25+.65*f:.18+.4*prog+.08*Math.sin(time*18);dot.material.opacity=f>0?f:.55+.45*prog;dot.scale.setScalar(f>0?1+.6*(1-f):.8+.4*prog);}}
- return {root,update(g){room.update(g.time);groundSpikes.update(g);updatePips(g);updateNeon(g);updateSparks(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.2+.35*Math.min(1,g.dice.t/R.warning);const v=diceTelegraphView(g,R.edge,R.playerRadius);lane.visible=v?.kind==='line';circle.visible=v?.kind==='circle';if(!v)return;dangerMaterial.opacity=v.opacity;if(lane.visible){lane.position.set(v.x,.09,v.z);lane.rotation.y=v.yaw;lane.scale.set(v.width,1,v.length);}if(circle.visible){circle.position.set(v.x,.09,v.z);circle.scale.set(v.radius,1,v.radius);}}};
+ return {root,update(g){room.update(g.time);updatePips(g);updateNeon(g);updateSparks(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.2+.35*Math.min(1,g.dice.t/R.warning);const v=diceTelegraphView(g,R.edge,R.playerRadius);lane.visible=v?.kind==='line';circle.visible=v?.kind==='circle';if(!v)return;dangerMaterial.opacity=v.opacity;if(lane.visible){lane.position.set(v.x,.09,v.z);lane.rotation.y=v.yaw;lane.scale.set(v.width,1,v.length);}if(circle.visible){circle.position.set(v.x,.09,v.z);circle.scale.set(v.radius,1,v.radius);}}};
 
  });
 }

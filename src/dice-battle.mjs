@@ -7,7 +7,7 @@ import {createBattlePause,clearMovement,releaseCapturedPointer} from './battle-p
 import {createBattleLoop} from './runtime/battle-loop.mjs';
 import * as THREE from 'three';
 import {createDiceActor,buildDiceBoard} from './dice-actor.mjs';
-import {DICE_RULES as R,diceEntrancePose,diceEntranceRoll} from './dice-data.mjs';
+import {DICE_RULES as R} from './dice-data.mjs';
 import {createDicePlayerGame,actDice,stepDicePlayer} from './dice-player.mjs';
 import {WEAPONS,skillView} from './combat.mjs';
 import {buildPlayer,posePlayer,swayCape} from './models.mjs';
@@ -20,16 +20,6 @@ import {createDiceUi} from './dice-ui.mjs';
 import {bindBattleSession} from './battle-session.mjs';
 import {cameraMovement} from './battle-input.mjs';
 import {createBattleCleanup} from './runtime/battle-cleanup.mjs';
-export function playDiceEntrance(root,shell,{impact=()=>{}}={}){
- const doc=shell.ownerDocument,old=shell.getAttribute('style'),layer=doc.createElement('div');layer.style.cssText='position:fixed;inset:0;z-index:20000;overflow:hidden;pointer-events:auto';const canvas=doc.createElement('canvas');canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%';const label=doc.createElement('p');label.style.cssText='position:absolute;top:10%;width:100%;max-width:none;text-align:center;color:#f6d59b;font-size:clamp(22px,4vw,42px);text-shadow:0 3px 12px #000';const skip=doc.createElement('button');skip.textContent='연출 건너뛰기';skip.style.cssText='position:absolute;right:20px;bottom:20px';layer.append(canvas,label,skip);root.appendChild(layer);
- let renderer;try{renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});}catch(error){layer.remove();throw error;}renderer.setPixelRatio(qualityPixelRatio(1.5));const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-18,18,14,-14,.1,200),actor=createDiceActor();scene.add(actor.root,new THREE.HemisphereLight(0xffe9c8,0x2d1824,2));const light=new THREE.DirectionalLight(0xffcc8e,3);light.position.set(12,20,25);scene.add(light);camera.position.set(10,10,32);camera.lookAt(0,7,0);
- const calm=reducedMotion();
- shell.style.transformOrigin='50% 100%';let elapsed=0,last=null,raf=0,done=false,lastTurn=-1,w=0,h=0,shakeUntil=0,resolve;const finished=new Promise(r=>resolve=r);
- function end(go){if(done)return;done=true;cancelAnimationFrame(raf);if(old===null)shell.removeAttribute('style');else shell.setAttribute('style',old);scene.remove(actor.root);actor.dispose();disposeScene(scene);renderer.dispose();layer.remove();resolve(go);}
- skip.onclick=()=>end(true);
- function frame(now){if(done)return;if(!shell.isConnected){end(false);return;}const dt=last===null?0:Math.max(0,Math.min(.05,(now-last)/1000));last=now;if(!doc.hidden)elapsed+=dt;const p=diceEntrancePose(elapsed),{k,pose}=diceEntranceRoll(p.travel);actor.update({dice:{pose}});if(k!==lastTurn){if(lastTurn>=0&&!doc.hidden){impact();shakeUntil=elapsed+.35;}lastTurn=k;}const sk=Math.max(0,shakeUntil-elapsed)/.35,sx=calm?0:(Math.random()-.5)*26*sk*sk,sy=calm?0:(Math.random()-.5)*18*sk*sk;shell.style.transform='translate('+sx+'px,'+sy+'px) scaleY('+p.screenScaleY+')';shell.style.filter='brightness('+(1-p.press*.65)+')';layer.style.background='rgba('+Math.round(18+sk*90)+','+Math.round(6+sk*10)+',3,'+Math.max(p.press*.9,sk*.4)+')';label.textContent=elapsed<1.6?'광대 오슬우가 토벌되었다':R.name;const width=canvas.clientWidth||innerWidth,height=canvas.clientHeight||innerHeight;if(width!==w||height!==h){w=width;h=height;renderer.setSize(w,h,false);camera.left=-14*w/h;camera.right=14*w/h;camera.updateProjectionMatrix();}renderer.render(scene,camera);if(p.ready){end(true);return;}raf=requestAnimationFrame(frame);}
- raf=requestAnimationFrame(frame);return {finished,dispose:()=>end(false)};
-}
 export function launchDiceBattle({weapon='sword',configure=()=>{},onClose=()=>{}}={}){
  return runBattleStartup(startup=>{
  if(document.getElementById('dice-battle'))return null;const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion(),hud=createDiceUi({coarse});startup.own('Dice HUD',()=>hud.dispose());const {d,root:ui,$,canvas}=hud;const renderer=new THREE.WebGLRenderer({canvas,antialias:true});startup.own('Dice renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=!coarse;d.showModal();

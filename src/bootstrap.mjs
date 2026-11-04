@@ -21,11 +21,12 @@ export function bootstrapGame({doc=globalThis.document,win=globalThis.window,loa
  const api={get arena(){return arena;},get entry(){return entry;},get transition(){return transition;},get features(){return features;},get unmanagedFeatures(){return features.filter(f=>f.ready&&typeof f.control?.dispose!=='function'&&typeof f.control?.close!=='function').map(f=>f.name);},dispose:disposeFeatures,disposeFeatures,get featuresDisposed(){return disposed;},get whenDisposed(){return completion;}};
  const promise=Promise.resolve().then(async()=>{
   try{
-   check();const [entryModule,transitionModule]=await Promise.all([load('./clown-entry-controller.mjs'),load('./boss-transition.mjs')]);check();
-   entry=entryModule.installClownEntry(doc,win);if(disposed)release(entry);check();
+   check();const legacy=!doc.body?.dataset?.journey;let entryModule=null,transitionModule=null;
+   // The journey owns progression: do not install the retired direct-boss flow.
+   if(legacy){[entryModule,transitionModule]=await Promise.all([load('./clown-entry-controller.mjs'),load('./boss-transition.mjs')]);check();entry=entryModule.installClownEntry(doc,win);if(disposed)release(entry);check();}
    const arenaModule=await load('./arena.mjs');arena=arenaModule.arenaRuntime||null;if(disposed)release(arena);check();
-   transition=transitionModule.installBossTransition();if(disposed)release(transition);check();
-   const descriptors=[['./game-ui.mjs','installGameUi','Game UI'],['./boss-music.mjs','installBossMusic','Boss music'],['./dice-chain.mjs','installDiceChain','Dice chain'],['./coop-menu.mjs','installCoopMenu','Coop menu']];features=descriptors.map(([, ,name])=>({name,ready:false}));
+   if(legacy){transition=transitionModule.installBossTransition();if(disposed)release(transition);check();}
+   const descriptors=[['./game-ui.mjs','installGameUi','Game UI'],['./boss-music.mjs','installBossMusic','Boss music'],...(legacy?[['./dice-chain.mjs','installDiceChain','Dice chain'],['./coop-menu.mjs','installCoopMenu','Coop menu']]:[])];features=descriptors.map(([, ,name])=>({name,ready:false}));
    await Promise.all(descriptors.map(async([path,method],i)=>{const feature=features[i];try{const module=await load(path);if(disposed){feature.cancelled=true;return;}const control=module[method](doc,win);if(disposed){release(control);feature.cancelled=true;return;}feature.control=control;feature.ready=true;}catch(error){feature.error=error;if(!disposed)warn(feature.name,error);}}));check();if(doc.getElementById?.('journey')){const module=await load('./journey.mjs?art=kwon-visual-v1');check();const control=module.installJourney(doc,win);features.push({name:'Journey',ready:true,control});if(disposed)release(control);check();}return api;
   }catch(error){disposeFeatures();throw error;}
  });
