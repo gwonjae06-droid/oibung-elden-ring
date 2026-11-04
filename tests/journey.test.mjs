@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshProfile,newRun,finishAttempt,chooseRelic,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
+import {freshProfile,newRun,finishAttempt,chooseRelic,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
 import {createDicePlayerGame} from '../src/dice-player.mjs';
-test('three victories record individual kills and one complete run without resuming after reload',()=>{
- const p=freshProfile();p.run=newRun();assert.equal(finishAttempt(p,{won:true,time:32}),'reward');assert.equal(finishAttempt(p,{won:true,time:999}),null);chooseRelic(p.run,'blade-wave');finishAttempt(p,{won:true,time:45});chooseRelic(p.run,'charged-blade');assert.equal(finishAttempt(p,{won:true,time:60}),'complete');assert.deepEqual(p.defeated,['kwon','clown','dice']);assert.equal(p.records[0].time,137);assert.equal(p.run,null);assert.equal(finishAttempt(p,{won:true,time:1}),null);
+test('four victories record individual kills and one complete run without resuming after reload',()=>{
+ const p=freshProfile();p.run=newRun();assert.equal(finishAttempt(p,{won:true,time:32}),'reward');assert.equal(finishAttempt(p,{won:true,time:999}),null);chooseRelic(p.run,'blade-wave');finishAttempt(p,{won:true,time:45});chooseRelic(p.run,'charged-blade');assert.equal(finishAttempt(p,{won:true,time:60}),'advance');assert.throws(()=>chooseRelic(p.run,'blade-wave'));advanceJourney(p.run);assert.equal(p.run.relics.length,2);assert.equal(finishAttempt(p,{won:true,time:70}),'complete');assert.deepEqual(p.defeated,['kwon','clown','dice','blood']);assert.equal(p.records[0].time,207);assert.equal(p.run,null);assert.equal(finishAttempt(p,{won:true,time:1}),null);
 });
 test('active runs are never written; v1 checkpoint evidence migrates into permanent lights only',()=>{
  const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},p=freshProfile();p.run=newRun();finishAttempt(p,{won:true,time:10});saveProfile(storage,p);assert.equal(JSON.parse(data.get(SAVE_KEY)).run,null);const restored=loadProfile(storage);assert.equal(restored.run,null);assert.deepEqual(restored.defeated,['kwon']);

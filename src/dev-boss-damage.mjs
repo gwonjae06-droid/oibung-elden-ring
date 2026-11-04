@@ -21,6 +21,7 @@ function damageStandard(g) {
   }
 }
 function applyDamage(g) {
+  if (g.blood) {import('./blood-combat.mjs').then(m=>m.damageBlood(g,AMOUNT)).catch(error=>console.error('Dev damage failed',error));return;}
   if (g.dice) {
     import('./dice-combat.mjs').then(m => m.damageDice(g, AMOUNT)).catch(error => console.error('Dev damage failed', error));
     return;
@@ -37,7 +38,7 @@ export function installDevBossDamage(root, read) {
     const host = root.host;
     if (host) {
       if (!host.closest?.('dialog')?.open) return;
-    } else if (doc.querySelector?.('dialog#clown-battle[open], dialog#dice-battle[open]')) return;
+    } else if (doc.querySelector?.('dialog#clown-battle[open], dialog#dice-battle[open], dialog#blood-battle[open]')) return;
     const state = read(), g = state?.game;
     if (!state?.active || g?.status !== 'playing' || !g.boss) return;
     event.preventDefault();

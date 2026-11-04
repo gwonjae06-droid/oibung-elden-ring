@@ -1,0 +1,73 @@
+import * as THREE from 'three';
+import {createBloodGame,actBlood,stepBlood,skipBloodTransition} from './blood-combat.mjs';
+import {BLOOD_RULES as R} from './blood-data.mjs';
+import {createBloodUi} from './blood-ui.mjs';
+import {buildBloodView} from './blood-view.mjs';
+import {WEAPONS,skillView} from './combat.mjs';
+import {buildPlayer,posePlayer,swayCape} from './models.mjs';
+import {createAudio} from './audio.mjs';
+import {createSkillAudio} from './skill-audio.mjs';
+import {createPlayerWeaponSfx} from './player-weapon-sfx.mjs';
+import {createPlayerPolish} from './player-polish.mjs';
+import {bindBattleSession} from './battle-session.mjs';
+import {cameraMovement} from './battle-input.mjs';
+import {createBattlePause,clearMovement,releaseCapturedPointer} from './battle-pause.mjs';
+import {consumeBattleGrace,installChargeInput} from './weapon-evolution.mjs';
+import {actPlayer} from './player-combat.mjs';
+import {qualityPixelRatio,reducedMotion} from './display-preferences.mjs';
+import {playBossIntro} from './boss-intro.mjs';
+import {runBattleStartup} from './runtime/battle-startup.mjs';
+import {createBattleCleanup} from './runtime/battle-cleanup.mjs';
+import {createBattleLoop} from './runtime/battle-loop.mjs';
+import {createEventScope} from './runtime/event-scope.mjs';
+import {disposeScene} from './runtime/scene-resources.mjs';
+
+export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{}}={}){
+ return runBattleStartup(startup=>{
+  if(document.getElementById('blood-battle'))return null;
+  const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion(),hud=createBloodUi({coarse}),{d,root,shell,$,canvas}=hud;startup.own('Blood HUD',()=>hud.dispose());
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});startup.own('Blood renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=!coarse;d.showModal();
+  const scope=createEventScope(window);startup.own('Blood callbacks',()=>scope.dispose());const scene=new THREE.Scene();startup.own('Blood scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x140a16);scene.fog=new THREE.Fog(0x1d0d20,35,92);
+  scene.add(new THREE.HemisphereLight(0xffd9cd,0x29233a,2));const sun=new THREE.DirectionalLight(0xffb8a0,2.5);sun.position.set(15,30,20);scene.add(sun);
+  const chapel=buildBloodView(scene,{coarse,reduced});startup.own('Blood view',()=>chapel.dispose());const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);const camera=new THREE.PerspectiveCamera(62,1,.1,160);
+  const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const ctx=new C();contexts.push(ctx);if(startup.pending)startup.own('Blood audio context',()=>ctx.close?.());return ctx;};
+  const audio=createAudio(makeAudio),skillAudio=createSkillAudio(makeAudio),weaponSfx=createPlayerWeaponSfx(),fx=createPlayerPolish(scene,{mobile:coarse,reduced});startup.own('Blood effects',()=>fx.dispose());startup.own('Blood weapon sounds',()=>weaponSfx.dispose());startup.own('Blood sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);});
+  let g=createBloodGame(weapon),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=.48,lock=true,zoom=0,dragPointer=null,stickPointer=null,intro=null,w=0,h=0;
+  const keys=new Set(),stick={x:0,z:0},desired=new THREE.Vector3(),target=new THREE.Vector3();configure(g);camera.position.set(0,17,32);startup.own('Invalidate blood battle',()=>{closed=true;intro?.skip();});
+  const input=()=>cameraMovement(keys,stick,yaw,lock),muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch{return false;}};
+  const sound=()=>{audio.setEnabled(!muted());skillAudio.setEnabled(!muted());};
+  function clearInput(){clearMovement(keys,stick);releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickPointer);dragPointer=stickPointer=null;$('thumb').style.transform='';if(g.player.action?.kind==='charging')g.player.action=null;}
+  function setMode(value){mode=value;hud.mode(value);clearInput();}
+  function request(type){if(!ready||mode!=='playing')return;sound();if(type==='lock'){lock=!lock;return;}actBlood(g,type,input());}
+  const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();}});
+  function reset(){g=createBloodGame(weapon);configure(g);ending=0;fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();}
+  const close=createBattleCleanup(()=>[
+   ['Stop blood battle',()=>{closed=true;intro?.skip();loop.dispose();unbind();}],['Blood callbacks',()=>scope.dispose()],['Blood input',clearInput],['Blood effects',()=>fx.dispose()],['Blood sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.dispose();}],
+   ...contexts.map((ctx,i)=>['Blood audio context '+i,()=>ctx.close?.()]),['Blood view',()=>chapel.dispose()],['Blood scene',()=>disposeScene(scene)],['Blood renderer',()=>renderer.dispose()],['Blood HUD',()=>hud.dispose()],['Blood close callback',()=>onClose({weapon:g.weapon,status:g.status})]
+  ]);
+  scope.listen(window,'blur',()=>pause.pause());scope.listen(document,'visibilitychange',()=>{if(document.hidden)pause.pause();});scope.listen(window,'pagehide',e=>{if(!e.persisted)close();});
+  scope.listen(d,'cancel',e=>{e.preventDefault();if(mode==='playing'||mode==='paused')pause.toggle();else close();});
+  scope.listen(d,'keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();pause.toggle();return;}if(e.composedPath().some(n=>['BUTTON','SELECT','INPUT'].includes(n.tagName)))return;if(mode!=='playing')return;const type={KeyJ:'light',KeyL:'skill',Space:'roll',KeyE:'heal',KeyQ:'lock'}[e.code];if(type){e.preventDefault();if(!e.repeat)request(type);}else{if(e.code.startsWith('Arrow'))e.preventDefault();keys.add(e.code);}});
+  scope.listen(d,'keyup',e=>{e.stopPropagation();keys.delete(e.code);});
+  canvas.oncontextmenu=e=>e.preventDefault();canvas.onpointerdown=e=>{if(e.pointerType!=='mouse')return;if(e.button===0)request('light');if(e.button===2)request('skill');if(e.button===1){e.preventDefault();dragPointer=e.pointerId;canvas.setPointerCapture(e.pointerId);}};canvas.onpointermove=e=>{if(dragPointer!==e.pointerId)return;if(!lock)yaw-=e.movementX*.005;pitch=Math.max(.2,Math.min(.9,pitch+e.movementY*.004));};canvas.onpointerup=canvas.onpointercancel=()=>{releaseCapturedPointer(canvas,dragPointer);dragPointer=null;};canvas.onwheel=e=>{zoom=Math.max(-5,Math.min(12,zoom+Math.sign(e.deltaY)));};
+  for(const b of shell.querySelectorAll('[data-act]'))b.onpointerdown=e=>{e.preventDefault();request(b.dataset.act);};$('pause').onclick=$('resume').onclick=()=>pause.toggle();$('retry').onclick=reset;$('change').onclick=$('quit').onclick=close;
+  const home=shell.querySelector('.brand');home.setAttribute('role','button');home.setAttribute('tabindex','0');home.setAttribute('aria-label','메인으로');home.onclick=()=>close();scope.listen(home,'keydown',e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();e.stopPropagation();close();}});
+  $('sound').onclick=()=>{document.getElementById('sound')?.click();sound();};$('theme').onclick=()=>document.getElementById('theme')?.click();hud.skip.onclick=()=>{if(mode==='playing'){skipBloodTransition(g);canvas.focus();}};
+  function move(e){const r=$('stick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,z=r.top+r.height/2-e.clientY;const n=Math.max(1,Math.hypot(x,z)/40);x/=n;z/=n;stick.x=x/40;stick.z=z/40;$('thumb').style.transform=`translate(${x}px,${-z}px)`;}
+  $('stick').onpointerdown=e=>{e.preventDefault();stickPointer=e.pointerId;$('stick').setPointerCapture(stickPointer);move(e);};$('stick').onpointermove=e=>{if(e.pointerId===stickPointer)move(e);};$('stick').onpointerup=$('stick').onpointercancel=()=>{releaseCapturedPointer($('stick'),stickPointer);stickPointer=null;stick.x=stick.z=0;$('thumb').style.transform='';};
+  installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&mode==='playing',listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
+  hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';intro=playBossIntro(document,shell,'blood',{reduced});await intro.finished;if(closed)return;ready=true;sound();canvas.focus();if(document.hidden||!document.hasFocus())pause.pause();}).catch(error=>{console.error('Blood intro failed',error);close();});
+  function frame(now,dt){
+   // Keep the modal's containing block in sync with browser viewport resizes.
+   if(d.style.width!==innerWidth+'px')d.style.width=innerWidth+'px';if(d.style.height!==innerHeight+'px')d.style.height=innerHeight+'px';
+   const visualDt=ready&&!document.hidden&&mode!=='paused'?dt:0;
+   if(ready&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepBlood(g,dt,input());if(g.status!=='playing')setMode('ending');}
+   if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?3.2:1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'배서준 토벌':'피의 서약에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'죽음을 거부한 자는 끝내 살아 있었지만, 살아 있는 자신은 어디에도 없었다.':'밝은 예고에서 벗어나고, 공중 공격 뒤 착지한 구체에 반격하세요.';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}
+   for(const e of g.events){fx.event(e,g);weaponSfx.event(e,g);if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal')skillAudio.play('skill-heal');else{const cue={ 'blood-warning':'tele-slam','blood-impact':'boss-slam','boss-hit':'hit-boss',hurt:'hit-player','heal-start':'healed',phase:'phase',death:'death',victory:'victory'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;
+   chapel.update(g,visualDt);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;fx.update(visualDt,g);
+   const width=canvas.clientWidth||innerWidth,height=canvas.clientHeight||innerHeight;if(w!==width||h!==height){w=width;h=height;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+   const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const dist=24+zoom+Math.max(0,1/camera.aspect-1)*8;desired.set(p.x-Math.sin(yaw)*Math.cos(pitch)*dist,5+Math.sin(pitch)*dist,p.z-Math.cos(yaw)*Math.cos(pitch)*dist);camera.position.lerp(desired,1-Math.exp(-6*dt));target.set(p.x+(lock?Math.max(-7,Math.min(7,dx*.3)):Math.sin(yaw)*3),3+(lock?g.blood.elevation*.35:0),p.z+(lock?Math.max(-7,Math.min(7,dz*.3)):Math.cos(yaw)*3));camera.lookAt(target);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);chapel.occlude(camera,g);renderer.render(scene,camera);
+  }
+  const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Blood frame failed',error);close();}});startup.own('Blood loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&mode==='playing',pause:()=>pause.pause(),resume:()=>pause.resume(),close}));startup.own('Blood session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
+ });
+}

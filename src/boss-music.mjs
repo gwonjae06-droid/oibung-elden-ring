@@ -5,10 +5,10 @@ import {audioChannelGain} from './audio-preferences.mjs';
 export {score} from './boss-score.mjs';
 export function musicState(doc,focused=true){
  if(doc.hidden||!focused)return null;
- const dice=doc.getElementById('dice-battle'),clown=doc.getElementById('clown-battle');
- const diceOpen=Boolean(dice?.open),clownOpen=Boolean(clown?.open)&&!diceOpen;
- const modal=diceOpen?dice:clownOpen?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
- const selectedBoss=diceOpen?'dice':clownOpen?'clown':'kwon';
+ const blood=doc.getElementById('blood-battle'),dice=doc.getElementById('dice-battle'),clown=doc.getElementById('clown-battle');
+ const bloodOpen=Boolean(blood?.open),diceOpen=Boolean(dice?.open)&&!bloodOpen,clownOpen=Boolean(clown?.open)&&!diceOpen&&!bloodOpen;
+ const modal=bloodOpen?blood:diceOpen?dice:clownOpen?clown:null,root=modal?modal.firstElementChild?.shadowRoot:doc;
+ const selectedBoss=bloodOpen?'blood':diceOpen?'dice':clownOpen?'clown':'kwon';
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const session=readBattleSession(root);
  if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;return {boss:g.clown?'clown':selectedBoss,phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};}

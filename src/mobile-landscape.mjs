@@ -34,7 +34,7 @@ export function installMobileLandscape(doc=globalThis.document,win=globalThis.wi
  insert(journey);
  let autoPaused=null,disposed=false;
  const currentRoot=()=>{
-  for(const id of ['dice-battle','clown-battle']){
+  for(const id of ['blood-battle','dice-battle','clown-battle']){
    const dialog=doc.getElementById(id);
    if(dialog?.open){
     const root=dialog.firstElementChild?.shadowRoot;
@@ -61,7 +61,7 @@ export function installMobileLandscape(doc=globalThis.document,win=globalThis.wi
  }
  function message(text){
   // Shadow DOM encounters clone the gate, so target all visible copies.
-  const roots=[doc,doc.getElementById('clown-battle')?.firstElementChild?.shadowRoot,doc.getElementById('dice-battle')?.firstElementChild?.shadowRoot];
+  const roots=[doc,doc.getElementById('blood-battle')?.firstElementChild?.shadowRoot,doc.getElementById('clown-battle')?.firstElementChild?.shadowRoot,doc.getElementById('dice-battle')?.firstElementChild?.shadowRoot];
   for(const root of roots){
    if(!root?.querySelectorAll)continue;
    for(const element of root.querySelectorAll('.mobile-landscape-status'))element.textContent=text;

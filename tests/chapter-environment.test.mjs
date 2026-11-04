@@ -26,6 +26,6 @@ test('all three victories grant unique permanent memories before rewards or comp
  assert.ok(Object.values(CHAPTER_MEMORIES).every(m=>m.last&&m.oath&&m.text));
 });
 test('memory migration removes duplicates and malformed dates without losing valid old memories',()=>{
- const p=freshProfile();p.memories=[{id:'kwon',firstClear:null},{id:'clown',firstClear:'2026-11-04T00:00:00Z'},{id:'kwon',firstClear:null},{id:'dice',firstClear:'invalid'},{id:'blood',firstClear:null}];
+ const p=freshProfile();p.memories=[{id:'kwon',firstClear:null},{id:'clown',firstClear:'2026-11-04T00:00:00Z'},{id:'kwon',firstClear:null},{id:'dice',firstClear:'invalid'},{id:'mirror',firstClear:null}];
  const result=loadProfile({getItem:()=>JSON.stringify(p)});assert.deepEqual(result.memories,p.memories.slice(0,2));
 });

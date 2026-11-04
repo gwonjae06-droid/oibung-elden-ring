@@ -4,9 +4,9 @@ import {INTRO_CARDS,INTRO_DURATION,INTRO_DURATION_REDUCED,introDuration,introFra
 import {playBossIntro} from '../src/boss-intro.mjs';
 
 test('there is one card per boss with distinct names and accents',()=>{
- assert.deepEqual(Object.keys(INTRO_CARDS),['kwon','clown','dice']);
- assert.equal(new Set(Object.values(INTRO_CARDS).map(c=>c.name)).size,3);
- assert.equal(new Set(Object.values(INTRO_CARDS).map(c=>c.accent)).size,3);
+ assert.deepEqual(Object.keys(INTRO_CARDS),['kwon','clown','dice','blood']);
+ assert.equal(new Set(Object.values(INTRO_CARDS).map(c=>c.name)).size,4);
+ assert.equal(new Set(Object.values(INTRO_CARDS).map(c=>c.accent)).size,4);
  assert.equal(INTRO_CARDS.dice.name,'거대 주사위 박성원');
  assert.ok(Object.isFrozen(INTRO_CARDS)&&Object.isFrozen(INTRO_CARDS.kwon));
 });

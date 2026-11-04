@@ -106,3 +106,6 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey details.j-memory-record[open]>summary:before{content:'−'}
 #journey details.j-memory-record>section{display:flex;gap:22px;align-items:flex-start;padding:12px 0}
 @media(max-width:650px){#journey details.j-memory-record>section{display:block}}
+
+
+.j-memory-art[data-memory="blood"]{background:radial-gradient(circle,#8a1237 0,#270b1b 55%,transparent 70%);color:#ed8b9f}.j-memory-art[data-memory="blood"]::before{content:"♥";font-size:100px;text-shadow:0 0 30px #ca315e}

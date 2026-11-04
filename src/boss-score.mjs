@@ -1,7 +1,15 @@
 export const MUSIC_LOOP=128;
-export function musicTempo(boss,phase=1){return boss==='clown'?(phase===2?138:116):(phase===2?108:84);}
+export function musicTempo(boss,phase=1){return boss==='blood'?(phase===2?116:72):boss==='clown'?(phase===2?138:116):(phase===2?108:84);}
 const hz=n=>440*2**((n-69)/12);
 export function score(boss,phase,tick){
+ if(boss==='blood'&&Number.isFinite(tick)){
+  const step=((Math.floor(tick)%128)+128)%128,beat=step%8,root=[45,41,48,40][Math.floor(step/16)%4],unit=30/musicTempo(boss,phase),notes=[];
+  const add=(voice,n,dur,vol)=>notes.push({voice,f:hz(n),dur:dur*unit,vol,at:0});
+  if(beat===0){add('voice',root,7,.065);add('voice',root+7,7,.04);add('violin',root+15,6,.035);add('kick',33,.8,.06);}
+  if(phase===2||beat%2===0)add('piano',root+[0,7,12,15,19,15,12,7][beat],1.6,.045);
+  if(phase===2&&beat===4){add('voice',root+24,3,.055);add('tom',38,1,.06);}
+  return notes;
+ }
  if(!['kwon','clown'].includes(boss)||!Number.isFinite(tick))return [];
  const b=((Math.floor(tick)%MUSIC_LOOP)+MUSIC_LOOP)%MUSIC_LOOP,bar=Math.floor(b/8),s=b%8,p=phase===2?2:1,u=30/musicTempo(boss,p),notes=[];
  const add=(voice,n,length,vol,at=0)=>notes.push({voice,f:hz(n),dur:length*u,vol,at:at*u});

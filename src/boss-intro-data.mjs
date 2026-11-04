@@ -1,7 +1,8 @@
 export const INTRO_CARDS=Object.freeze({
  kwon:Object.freeze({epithet:'첫 번째 시련',name:'긴턱의 이권재',line:'여덟 다리, 두 자루의 턱.',accent:'#c5b281'}),
  clown:Object.freeze({epithet:'두 번째 시련',name:'광대 오슬우',line:'즐거운 공연이 시작됩니다.',accent:'#e5b64d'}),
- dice:Object.freeze({epithet:'세 번째 시련',name:'거대 주사위 박성원',line:'운명은 굴러간다. 눈금을 읽어라.',accent:'#ff2d95'})
+ dice:Object.freeze({epithet:'세 번째 시련',name:'거대 주사위 박성원',line:'운명은 굴러간다. 눈금을 읽어라.',accent:'#ff2d95'}),
+ blood:Object.freeze({epithet:'네 번째 시련 · 성혈 대성당',name:'영원한 혈왕 배서준',line:'내 피가 흐르는 한, 죽음은 나를 찾지 못한다.',accent:'#ee7791'})
 });
 export const INTRO_DURATION=3.4;
 export const INTRO_DURATION_REDUCED=1.8;
