@@ -1,0 +1,106 @@
+name: Remove cinematic skip controls (one shot)
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/remove-cinematic-skips.yml]
+permissions:
+  contents: write
+jobs:
+  remove-skips:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Remove player-facing skip controls and update regression checks
+        shell: python
+        run: |
+          from pathlib import Path
+          def edit(path, old, new, count=1):
+              p=Path(path); s=p.read_text()
+              assert s.count(old)==count, (path, old, s.count(old))
+              p.write_text(s.replace(old,new))
+          def drop_line(path, prefix):
+              p=Path(path); lines=p.read_text().splitlines(True)
+              assert sum(x.lstrip().startswith(prefix) for x in lines)==1, (path,prefix)
+              p.write_text(''.join(x for x in lines if not x.lstrip().startswith(prefix)))
+          p='src/boss-intro.mjs'
+          drop_line(p,"const skip=el('button'")
+          edit(p,'[veil,top,bottom,box,skip]','[veil,top,bottom,box]')
+          edit(p,' skip.onclick=()=>finish(true);\n','')
+          edit(p,' skip.focus({preventScroll:true});'," overlay.setAttribute('tabindex','-1');overlay.focus({preventScroll:true});")
+          p='src/journey-transition.mjs'
+          drop_line(p,"const skip=doc.createElement('button')")
+          edit(p," let done=false,raf=0", " doc.body.appendChild(d);\n let done=false,raf=0")
+          edit(p,"skip.onclick=()=>end(true);d.addEventListener('cancel',e=>{e.preventDefault();end(true);});", "d.addEventListener('cancel',e=>e.preventDefault());")
+          edit(p,'d.showModal();skip.focus();',"d.setAttribute('tabindex','-1');d.showModal();d.focus({preventScroll:true});")
+          p='src/dice-entrance-view.mjs'
+          drop_line(p,"const skip=make('button'")
+          edit(p,'dialog.appendChild(skip);','')
+          edit(p,"skip.onclick=()=>end(true);dialog.addEventListener('cancel',e=>{e.preventDefault();end(true);});", "dialog.addEventListener('cancel',e=>e.preventDefault());")
+          edit(p,'dialog.showModal();skip.focus({preventScroll:true});',"dialog.setAttribute('tabindex','-1');dialog.showModal();dialog.focus({preventScroll:true});")
+          p='src/dice-ui.mjs'
+          drop_line(p,"const skip=doc.createElement('button')")
+          edit(p,"skip.hidden=giant?.state!=='transition';",'')
+          p='src/dice-battle.mjs'
+          edit(p,"import {skipGiant} from './dice-giant.mjs';\n",'')
+          edit(p,"$('skip-giant').onclick=()=>{if(mode==='playing'){skipGiant(g);canvas.focus();}};",'')
+          edit(p,"$('skip-giant').disabled=mode!=='playing';",'')
+          p='src/blood-ui.mjs'
+          drop_line(p,"const skip=doc.createElement('button')")
+          edit(p,"skip.hidden=b.state!=='transition';",'')
+          edit(p,'return {d,root,shell,$,skip,canvas:', 'return {d,root,shell,$,canvas:')
+          p='src/blood-battle.mjs'
+          edit(p,'createBloodGame,actBlood,stepBlood,skipBloodTransition','createBloodGame,actBlood,stepBlood')
+          edit(p,"hud.skip.onclick=()=>{if(mode==='playing'){skipBloodTransition(g);canvas.focus();}};",'')
+          p='tests/boss-intro.test.mjs'
+          edit(p,"assert.equal(overlay.children.at(-1).focused,true);", "assert.equal(overlay.focused,true);assert.equal(overlay.children.length,4);")
+          edit(p,"test('the skip button and the skip method end it at once',async()=>{\n const a=rig(),va=playBossIntro(a.doc,a.arena,'clown',a.options);\n a.arena.children[0].children.at(-1).onclick();\n assert.equal(await va.finished,true);assert.equal(a.arena.children.length,0);", "test('no skip control is rendered; internal cleanup remains idempotent',async()=>{\n const a=rig(),va=playBossIntro(a.doc,a.arena,'clown',a.options);\n assert.equal(a.arena.children[0].children.length,4);\n for(let i=0;i<130&&a.arena.children.length;i++)a.step(50);\n assert.equal(await va.finished,true);assert.equal(a.arena.children.length,0);")
+          p='scripts/blood-browser-smoke.cjs'
+          edit(p,"await page.getByRole('button',{name:'건너뛰기',exact:true}).click();", "await page.waitForFunction(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const r=document.querySelector('#blood-battle')?.firstElementChild.shadowRoot;return r&&readBattleSession(r)?.active;});",2)
+          edit(p,"await page.locator('#blood-battle').getByRole('button',{name:'혈익 변신 건너뛰기'}).click();", "await page.waitForFunction(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const r=document.querySelector('#blood-battle').firstElementChild.shadowRoot;return readBattleSession(r).game.boss.state!=='transition';});")
+          edit('README.md','네 보스의 소개 컷씬이 나오고 건너뛰기·재개가 정상인지','네 보스의 소개 컷씬에 건너뛰기 버튼이 없고, 끝까지 재생한 뒤 전투가 시작되는지')
+          edit('docs/dice-possession.md','컷씬 건너뛰기는 동일한 최종 상태로 이동합니다.','플레이어용 컷씬 건너뛰기는 제공하지 않으며, 연출이 끝나면 다음 상태로 이동합니다.')
+          edit('docs/dice-possession.md','컷씬 건너뛰기/일시정지/다시 시작','컷씬 전체 재생/일시정지/다시 시작')
+          edit('docs/design-implementation-status.md','건너뛰기, 머리 구체·혈익 변화','전체 재생, 머리 구체·혈익 변화')
+          Path('tests/no-cinematic-skip.test.mjs').write_text('''import test from 'node:test';
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          const source=p=>readFileSync(new URL('../src/'+p,import.meta.url),'utf8');
+          test('cinematic views expose no player skip controls',()=>{
+           for(const p of ['boss-intro.mjs','journey-transition.mjs','dice-entrance-view.mjs','dice-ui.mjs','blood-ui.mjs']){
+            const s=source(p);assert.doesNotMatch(s,/건너뛰기|skip\.onclick|skip\.hidden|appendChild\(skip\)/,p);
+           }
+           assert.doesNotMatch(source('dice-battle.mjs'),/skip-giant|skipGiant/);
+           assert.doesNotMatch(source('blood-battle.mjs'),/hud\.skip|skipBloodTransition/);
+          });
+          test('Escape cancellation cannot complete transition cinematics',()=>{
+           for(const [p,node] of [['journey-transition.mjs','d'],['dice-entrance-view.mjs','dialog']]){
+            assert.ok(source(p).includes(node+".addEventListener('cancel',e=>e.preventDefault());"),p);
+           }
+          });
+          test('natural completion and lifecycle cleanup remain available',()=>{
+           assert.match(source('boss-intro.mjs'),/if\(f\.done\)\{finish\(true\);return;\}/);
+           assert.match(source('boss-intro.mjs'),/skip:\(\)=>finish\(true\)/);
+           for(const p of ['journey-transition.mjs','dice-entrance-view.mjs'])assert.ok(source(p).includes('dispose:()=>end(false)'),p);
+          });
+          ''')
+      - name: Check JavaScript syntax
+        run: |
+          for f in src/boss-intro.mjs src/journey-transition.mjs src/dice-entrance-view.mjs src/dice-ui.mjs src/dice-battle.mjs src/blood-ui.mjs src/blood-battle.mjs tests/boss-intro.test.mjs tests/no-cinematic-skip.test.mjs scripts/blood-browser-smoke.cjs; do
+            node --check "$f" || exit 1
+          done
+      - name: Run regression suite
+        run: npm test
+      - name: Commit tested changes and remove this one-shot workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/boss-intro.mjs src/journey-transition.mjs src/dice-entrance-view.mjs src/dice-ui.mjs src/dice-battle.mjs src/blood-ui.mjs src/blood-battle.mjs tests/boss-intro.test.mjs tests/no-cinematic-skip.test.mjs scripts/blood-browser-smoke.cjs README.md docs/dice-possession.md docs/design-implementation-status.md
+          git rm .github/workflows/remove-cinematic-skips.yml
+          git commit -m 'fix: remove all player-facing cinematic skip controls'
+          git push origin HEAD:main
