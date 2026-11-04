@@ -3,7 +3,8 @@ import {audioChannelGain} from './audio-preferences.mjs';
 export const BOSS_TRACKS=Object.freeze({
   kwon:Object.freeze(['swordbgm.mp3','swordbgm2.mp3']),
   clown:Object.freeze(['clown1.mp3','clown2.mp3']),
-  dice:Object.freeze(['dicebgm.mp3','dicebgm2.mp3'])
+  dice:Object.freeze(['dicebgm.mp3','dicebgm2.mp3']),
+  blood:Object.freeze(['bloodbgm1.mp3','bloodbgm2.mp3'])
 });
 export function bossTrack(state){
   if(!state||!Object.hasOwn(BOSS_TRACKS,state.boss))return null;
