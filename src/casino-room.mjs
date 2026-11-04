@@ -41,19 +41,22 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  const hoop=new T.TorusGeometry(16,.65,6,coarse?20:40),crystal=new T.OctahedronGeometry(1.8),glass=new T.MeshStandardMaterial({color:0xeadcc0,metalness:.25,roughness:.2}),chandeliers=[];
  for(const x of [-75,75]){const ring=mesh(hoop,gold,[x,68,0],[1,1,1]);chandeliers.push(ring);ring.rotation.x=Math.PI/2;for(let i=0;i<(coarse?8:16);i++){const a=i/(coarse?8:16)*Math.PI*2;mesh(crystal,glass,[x+Math.sin(a)*16,64-(i%3)*2,Math.cos(a)*16],[1,2,1]);}}
  root.userData.decorativeOnly=true;
- const clock=createChapterClock(),warm=new T.Color(0xe6b35e),alarm=new T.Color(0xc65639);
+ const clock=createChapterClock(),warm=new T.Color(0xe6b35e),alarm=new T.Color(0x682333),darkGold=new T.Color(0x90613a);
  return {root,update(time=0,game,dt){
   const mood=clock.update(time,game?.boss.phase||1,game?.status==='won',dt),t=Number.isFinite(time)?time:0;
   const giant=game?.dice?.giant,cinematicTime=giant?.state==='transition'?giant.t:giant?7:0;
   const alarmMix=Math.max(0,Math.min(1,(cinematicTime-3.85)/2.3));
   const feral=giant?.temperament==='feral',rage=giant?.rageBeat||0;
   const impact=giant?.state==='attack'&&giant.hazards?.some(h=>giant.t>=h.start+h.warn&&giant.t<h.start+h.warn+.18)?1:0;
-  neon.color.copy(warm).lerp(alarm,alarmMix).multiplyScalar((1-mood.silence*.85)*(1+(feral?.16:0)+impact*.17));
+  const flicker=giant&&!reduced?(Math.sin(t*17.7)*.10+Math.sin(t*29.3)*.08):0;
+  neon.color.copy(warm).lerp(alarm,alarmMix).multiplyScalar((1-mood.silence*.85)*(1-.35*alarmMix)*(1+flicker+impact*.17));
+  gold.color.copy(darkGold).lerp(warm,1-alarmMix*.5);
   chandeliers.forEach((ring,i)=>{ring.rotation.z=reduced?0:Math.sin(t*(feral?2.6:1.25)+i)*(.02+.05*alarmMix)+impact*.035;});
   for(const [index,p] of patrons.entries()){
    const fleeStart=3.9+index*.12,escape=giant&&index!==0?Math.max(0,Math.min(1,(cinematicTime-fleeStart)/1.9)):0;
    const flee=escape*escape*(3-2*escape);
-   p.guest.visible=!(index===0&&giant&&cinematicTime>=4.35)&&flee<.98;
+   p.guest.visible=!(index===0&&giant&&cinematicTime>=4.5)&&flee<.98;
+   if(index===0)p.head.visible=!(giant&&cinematicTime>=3.85);
    p.guest.position.x=p.x*(1+mood.collapse*.04+flee*.62);
    p.guest.position.z=p.z*(1+mood.collapse*.04+flee*.62);
    p.guest.rotation.y=p.yaw+(index%2?1:-1)*flee*1.65;
