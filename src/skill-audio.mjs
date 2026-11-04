@@ -14,11 +14,13 @@ export function createSkillAudio(factory){
   }
   const room=end=>{const now=ctx.currentTime;ends=ends.filter(e=>e>now);if(ends.length>=32)return false;ends.push(end);return true;};
   const env=(g,t,a,peak,d)=>{g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d);};
-  function tone({f,to,dur,type='sine',vol=.15,at=0,attack=.01,detune=0}){
-    const t=ctx.currentTime+at;if(!room(t+attack+dur+.05))return;
-    const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);
-    if(to)o.frequency.exponentialRampToValueAtTime(to,t+attack+dur);if(detune)o.detune.setValueAtTime(detune,t);
-    env(g,t,attack,vol,dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+attack+dur+.05);
+  // The old pitched sine/square/triangle skill cues sounded like 8-bit games.
+  // Keep the same events, but render only subdued, non-pitched air/impact bursts.
+  function tone({f,to,dur,vol=.15,at=0,attack=.01}){
+    noise({dur:Math.min(.24,dur),type:f<280?'lowpass':'bandpass',
+      f:f<280?Math.max(90,f*2):Math.min(1600,f*.72),
+      to:to?Math.min(900,Math.max(95,to*.5)):undefined,
+      q:.55,vol:Math.min(.085,vol*.4),at,attack});
   }
   function noise({dur,type='bandpass',f=1000,to,q=1,vol=.15,at=0,attack=.01}){
     const t=ctx.currentTime+at;if(!room(t+attack+dur+.05))return;
