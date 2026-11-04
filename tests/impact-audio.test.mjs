@@ -16,14 +16,20 @@ test('impact backend closes once and cannot be reactivated after terminal dispos
   assert.equal(audio.dispose(),completion);assert.equal(audio.enabled,false);assert.equal(audio.setEnabled(true),false);assert.equal(audio.play('hit-slash'),false);
   assert.deepEqual(await completion,{errors:[]});assert.equal(closes,1);
 });
-test('every impact sound is valid, balanced and listed',()=>{
-  const {ctx,log}=fake(),a=createImpactAudio(()=>ctx);assert.equal(a.setEnabled(true),true);assert.deepEqual([...a.names].sort(),[...IMPACT_SOUND_NAMES].sort());
-  for(const n of a.names){ctx.currentTime+=1;const before=log.starts;assert.equal(a.play(n),true,n);assert.ok(log.starts>before,n);}
-  assert.deepEqual(log.errors,[]);assert.equal(log.starts,log.stops);
+test('all legacy retro-impact names remain valid but make no oscillator sound',()=>{
+ const {ctx,log}=fake(),a=createImpactAudio(()=>ctx);
+ assert.equal(a.setEnabled(true),true);
+ assert.deepEqual([...a.names].sort(),[...IMPACT_SOUND_NAMES].sort());
+ for(const n of a.names){ctx.currentTime+=1;assert.equal(a.play(n),false,n);}
+ assert.deepEqual(log.errors,[]);assert.equal(log.starts,0);
 });
-test('impact audio is silent when disabled or unsupported and capped under floods',()=>{
-  let made=0;const a=createImpactAudio(()=>{made++;return fake().ctx;});assert.equal(a.play('hit-slash'),false);assert.equal(made,0);
-  assert.equal(createImpactAudio(()=>null).setEnabled(true),false);
-  const {ctx,log}=fake(),b=createImpactAudio(()=>ctx);b.setEnabled(true);assert.equal(b.play('x'),false);assert.equal(b.play('hit-blunt'),true);assert.equal(b.play('hit-blunt'),false);
-  for(let i=0;i<300;i++)b.play('hit-crit',{minGap:0});assert.ok(log.starts<=40,String(log.starts));
+
+test('disabled and unsupported impact audio is silent even under floods',()=>{
+ let made=0;const a=createImpactAudio(()=>{made++;return fake().ctx;});
+ assert.equal(a.play('hit-slash'),false);assert.equal(made,0);
+ assert.equal(createImpactAudio(()=>null).setEnabled(true),false);
+ const {ctx,log}=fake(),b=createImpactAudio(()=>ctx);b.setEnabled(true);
+ assert.equal(b.play('x'),false);assert.equal(b.play('hit-blunt'),false);
+ for(let i=0;i<300;i++)b.play('hit-crit',{minGap:0});
+ assert.equal(log.starts,0);
 });
