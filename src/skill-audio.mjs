@@ -1,3 +1,4 @@
+import {audioChannelGain} from './audio-preferences.mjs';
 export const SKILL_SOUND_NAMES=['skill-sword','skill-hammer','skill-bow','skill-blue','skill-red','skill-yellow','skill-stun','skill-heal','skill-ready','skill-pierce'];
 export function createSkillAudio(factory){
   const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
@@ -6,7 +7,7 @@ export function createSkillAudio(factory){
     if(ctx)return true;
     try{ctx=make();}catch(e){ctx=null;}
     if(!ctx)return false;
-    const comp=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=.5;master.connect(comp);comp.connect(ctx.destination);
+    const comp=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=.5*audioChannelGain('effects');master.connect(comp);comp.connect(ctx.destination);
     const len=Math.floor(ctx.sampleRate*1.5);noiseBuf=ctx.createBuffer(1,len,ctx.sampleRate);
     const d=noiseBuf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return true;
   }
@@ -45,7 +46,7 @@ export function createSkillAudio(factory){
     },
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
-      const now=ctx.currentTime,gap=opts.minGap===undefined?.04:opts.minGap;
+      master.gain.value=.5*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.04:opts.minGap;
       if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;fn(opts);return true;
     }
   };
