@@ -1,3 +1,4 @@
+import {battleDialogSelector} from './battle-dialogs.mjs';
 // TEMP DEV EASTER EGG: remove this module and its battle-session wiring before release.
 const AMOUNT = 500;
 const TEXT_INPUT = /^(INPUT|TEXTAREA|SELECT)$/;
@@ -38,7 +39,7 @@ export function installDevBossDamage(root, read) {
     const host = root.host;
     if (host) {
       if (!host.closest?.('dialog')?.open) return;
-    } else if (doc.querySelector?.('dialog#clown-battle[open], dialog#dice-battle[open], dialog#blood-battle[open]')) return;
+    } else if (doc.querySelector?.(battleDialogSelector())) return;
     const state = read(), g = state?.game;
     if (!state?.active || g?.status !== 'playing' || !g.boss) return;
     event.preventDefault();

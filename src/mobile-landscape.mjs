@@ -1,4 +1,5 @@
 import {readBattleSession} from './battle-session.mjs';
+import {findOpenBattle,battleRoots} from './battle-dialogs.mjs';
 
 // The arena is cloned into each boss's shadow-root dialog. Keeping this gate
 // inside the shared arena makes portrait blocking work in all encounters.
@@ -33,16 +34,7 @@ export function installMobileLandscape(doc=globalThis.document,win=globalThis.wi
  // This starter gate is replaced when Journey renders its first screen.
  insert(journey);
  let autoPaused=null,disposed=false;
- const currentRoot=()=>{
-  for(const id of ['blood-battle','dice-battle','clown-battle']){
-   const dialog=doc.getElementById(id);
-   if(dialog?.open){
-    const root=dialog.firstElementChild?.shadowRoot;
-    if(root)return root;
-   }
-  }
-  return doc;
- };
+ const currentRoot=()=>findOpenBattle(doc)?.root||doc;
  function sync(){
   if(disposed)return;
   if(isMobilePortrait(win)){
@@ -61,7 +53,7 @@ export function installMobileLandscape(doc=globalThis.document,win=globalThis.wi
  }
  function message(text){
   // Shadow DOM encounters clone the gate, so target all visible copies.
-  const roots=[doc,doc.getElementById('blood-battle')?.firstElementChild?.shadowRoot,doc.getElementById('clown-battle')?.firstElementChild?.shadowRoot,doc.getElementById('dice-battle')?.firstElementChild?.shadowRoot];
+  const roots=[doc,...battleRoots(doc)];
   for(const root of roots){
    if(!root?.querySelectorAll)continue;
    for(const element of root.querySelectorAll('.mobile-landscape-status'))element.textContent=text;

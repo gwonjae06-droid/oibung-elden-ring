@@ -1,12 +1,13 @@
 import {hpRatio,lowHealthLevel,heartbeat,healGain,healFade} from './screen-fx-data.mjs';
 import {createFrameLoop} from './runtime/frame-loop.mjs';
 import {readBattleSession} from './battle-session.mjs';
+import {BATTLE_DIALOGS} from './battle-dialogs.mjs';
 const installed=new WeakMap();
 export function installScreenFx(doc=globalThis.document,win=globalThis.window,{raf=cb=>win.requestAnimationFrame(cb),caf=id=>win.cancelAnimationFrame(id),now=()=>win.performance.now()}={}){
  if(!doc||!win)return null;if(installed.has(doc))return installed.get(doc);
  const states=new WeakMap(),owned=new Set();let last=null,clock=0,disposed=false;
  function clear(vig){delete vig.dataset.fx;for(const key of ['--lowhp','--beat','--heal'])vig.style.removeProperty(key);}
- function roots(){for(const id of ['dice-battle','clown-battle']){const m=doc.getElementById(id);if(m?.open&&m.firstElementChild?.shadowRoot)return [m.firstElementChild.shadowRoot];}if(doc.getElementById('boss-transition')?.open)return [];return [doc];}
+ function roots(){for(const {id} of BATTLE_DIALOGS){const m=doc.getElementById(id);if(m?.open&&m.firstElementChild?.shadowRoot)return [m.firstElementChild.shadowRoot];}if(doc.getElementById('boss-transition')?.open)return [];return [doc];}
  function active(root){if(root.getElementById('boss-hud')?.hidden===true)return false;return ['menu','pause-screen','result'].every(id=>root.getElementById(id)?.hidden!==false);}
  function frame(){
   const stamp=now(),dt=last===null?0:Math.max(0,stamp-last);last=stamp;if(doc.hidden)return;clock+=dt;
