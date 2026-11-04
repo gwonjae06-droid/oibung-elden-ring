@@ -25,13 +25,13 @@ function fakeContext() {
   return {ctx, log};
 }
 
-test('legacy retro recipe names are all silenced rather than generating oscillators', () => {
+test('pitched retro cues are silenced while player hits/evades use only filtered noise', () => {
  const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
  assert.equal(a.setEnabled(true),true);
  assert.ok(a.names.length>=20);
- for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name),false,name);}
+ for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name),['hit-player','roll','dodge'].includes(name),name);}
  assert.equal(log.osc,0);
- assert.equal(log.starts,0);
+ assert.equal(log.sources,4);
  assert.deepEqual(log.errors,[]);
 });
 
