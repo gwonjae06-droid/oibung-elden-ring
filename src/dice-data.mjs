@@ -1,5 +1,6 @@
 export const DICE_RULES=Object.freeze({name:'거대 주사위 박성원',edge:12,tileWidth:15,side:11,hp:3000,warning:.9,rollTime:.7,recovery:1.2,playerSpeed:8,playerRadius:.42,playerHeight:1.8});
 const sat=v=>Number.isFinite(v)?Math.max(0,Math.min(1,v)):0;
+const smooth=v=>{const t=sat(v);return t*t*(3-2*t);};
 export function diceBoard(){const n=DICE_RULES.side,e=DICE_RULES.edge,h=(n-1)*e/2,tiles=[];for(let row=0;row<n;row++)for(let col=0;col<n;col++){const x=-h+col*e,z=-h+row*e;tiles.push(Object.freeze({index:tiles.length,x,z,corner:Math.abs(x)===h&&Math.abs(z)===h,color:(row+col)%4}));}return Object.freeze(tiles);}
 export const DICE_BOARD=diceBoard();
 export function onDiceBoard(p,r=DICE_RULES.playerRadius){const half=(DICE_RULES.side-1)*DICE_RULES.edge/2+DICE_RULES.tileWidth/2-r;return Number.isFinite(p.x)&&Number.isFinite(p.z)&&Number.isFinite(r)&&r>=0&&half>=0&&Math.abs(p.x)<=half&&Math.abs(p.z)<=half;}
@@ -10,3 +11,4 @@ export function diceRollPose(from,to,progress,base=[0,0,0,1]){const e=DICE_RULES
 export function diceTouches(p,pose){const r=DICE_RULES.playerRadius,h=DICE_RULES.playerHeight/2,a=(p.x-pose.x)*pose.dx+(p.z-pose.z)*pose.dz,b=(p.x-pose.x)*pose.dz-(p.z-pose.z)*pose.dx,y=h-pose.y,half=DICE_RULES.edge/2,c=Math.abs(Math.cos(pose.angle)),s=Math.abs(Math.sin(pose.angle));return Math.abs(b)<=half+r&&Math.abs(a)<=half*(c+s)+r&&Math.abs(y)<=half*(c+s)+h&&Math.abs(a*c-y*s)<=half+r*c+h*s&&Math.abs(a*s+y*c)<=half+r*s+h*c;}
 export function dicePressure(p,pose){const c=Math.cos(pose.angle),s=Math.sin(pose.angle),half=DICE_RULES.edge/2,a=(p.x-pose.x)*pose.dx+(p.z-pose.z)*pose.dz,along=a-half*(c-s),across=(p.x-pose.x)*pose.dz-(p.z-pose.z)*pose.dx;return {along,across,reach:DICE_RULES.edge*s,height:s>1e-6?along*c/s:DICE_RULES.edge+DICE_RULES.playerHeight};}
 export function diceCrushes(p,pose){if(pose.angle<=1e-6||pose.angle>Math.PI/2+1e-6)return false;const q=dicePressure(p,pose),r=DICE_RULES.playerRadius;return Math.abs(q.across)<DICE_RULES.edge/2-r&&q.along>r&&q.along<q.reach-r&&q.height>=-1e-6&&q.height<=DICE_RULES.playerHeight*.85&&diceTouches(p,pose);}
+export function diceEntrancePose(time){const t=Number.isFinite(time)?Math.max(0,time):0,press=smooth((t-1.6)/1.2);return {press,screenScaleY:1-.96*press,travel:smooth((t-.8)/3),ready:t>=4.6};}

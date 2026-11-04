@@ -6,7 +6,7 @@ The public page `spider-combat.html` uses `data-journey="1"` and the three-boss 
 
 - `bootstrap.mjs` skips the old direct-boss entry controller, boss-transition UI installer, dice-chain observer, and legacy co-op chooser for the current journey. The non-journey compatibility path remains.
 - `clown-entrance.mjs` owns the live clown entrance renderer. `journey-transition.mjs` imports it directly, while the old transition module re-exports it for compatibility.
-- The old `playDiceEntrance` extra-WebGL cutscene and its obsolete `diceEntrancePose` / `diceEntranceRoll` helpers and corresponding legacy tests were removed. Current CSS 3D `dice-entrance-view.mjs` is unchanged.
+- The old `playDiceEntrance` extra-WebGL cutscene and its obsolete `diceEntranceRoll` helper and corresponding legacy tests were removed. Current CSS 3D `dice-entrance-view.mjs` is unchanged.
 - `dice-actor.mjs` no longer allocates unused portrait-card and chain-sweep visual objects on a live dice board (`faceAttacks` is false by default).
 - The old dialog stylesheet is no longer requested by the current public page.
 - Removed an unused one-byte `src/sound` file.
