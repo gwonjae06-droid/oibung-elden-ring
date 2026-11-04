@@ -16,12 +16,12 @@ function fakeContext({reverb=true,brokenReverb=false}={}){
  return {ctx,log};
 }
 
-test('retro recipes stay silent while reverb initialization remains safe',()=>{
+test('retro tones stay silent while physical noise and reverb remain safe',()=>{
  const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
  assert.equal(a.setEnabled(true),true);
  assert.equal(log.convolvers,1);
- for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name,{amount:120}),false,name);}
- assert.equal(log.starts,0);
+ for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name,{amount:120}),['hit-player','roll','dodge'].includes(name),name);}
+ assert.equal(log.starts,4);
  assert.deepEqual(log.errors,[]);
 });
 
