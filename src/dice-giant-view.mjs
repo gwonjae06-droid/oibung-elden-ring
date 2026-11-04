@@ -17,7 +17,8 @@ export function buildDiceGiant(scene){
   const thumb=mesh(sphere,skin,group,[3,2,6]);thumb.position.set(i?9:-9,0,0);thumb.rotation.y=i?.6:-.6;
   const mark=mesh(new T.TorusGeometry(5,.18,6,24).rotateX(Math.PI/2),gold,group,[1,1,1]);mark.position.y=2.15;
   const cuff=mesh(box,ivory,group,[18,5,4]);cuff.position.z=-9;
-  const arm=mesh(cylinder,suit,root,[5,1,5]);return {group,arm};});
+  const arm=mesh(cylinder,suit.clone(),root,[5,1,5]);arm.material.transparent=true;arm.material.depthWrite=false;return {group,arm};});
+ const ray=new T.Raycaster(),focus=new T.Vector3(),sight=new T.Vector3();
  const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3();
  const warnMat=new T.MeshBasicMaterial({color:0xf4bd65,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide}),activeMat=new T.MeshBasicMaterial({color:0xf13a3a,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide});
  const circle=new T.CircleGeometry(1,48).rotateX(-Math.PI/2),rect=new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),ring=new T.RingGeometry(.9,1,64).rotateX(-Math.PI/2);
@@ -25,7 +26,7 @@ export function buildDiceGiant(scene){
  const chips=Array.from({length:8},()=>{const m=mesh(new T.CylinderGeometry(4,4,1,20),gold,root,[1,1,1]);m.visible=false;return m;});
  const landmark=mesh(new T.TorusGeometry(8,.3,6,48).rotateX(Math.PI/2),new T.MeshBasicMaterial({color:0xa3f6c2}),root,[1,1,1]);landmark.position.set(0,.18,-8);landmark.visible=false;
  let last=null,death=0,disposed=false;
- return {root,dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,ring,warnMat,activeMat]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ return {root,occlude(camera,player){if(!root.visible)return;root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {arm} of hands)arm.material.opacity=ray.intersectObject(arm,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,ring,warnMat,activeMat]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const rise=s.state==='transition'?Math.max(0,Math.min(1,(s.t-1.9)/2)):1,fall=s.state==='dead'?Math.min(1,death/2):0;
   const lean=s.state==='stagger'?Math.min(1,s.t/.8):s.state==='recovery'&&s.lifting?1-Math.min(1,s.t/.8):0;
