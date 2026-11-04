@@ -1,4 +1,5 @@
 import {kwonSound} from './kwon-sounds.mjs';
+import {audioChannelGain} from './audio-preferences.mjs';
 import {soundVariation} from './sound-variation.mjs';
 export const SAMPLE_FILES=['clown-laugh.mp3','clap.mp3','clown-jump.mp3','bomb-timer.mp3','sword1.mp3','sword2.mp3','sword3.mp3'];
 export function bossSound(ev,g){
@@ -37,7 +38,7 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
  function event(ev,g){
   if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&ev.type==='player-hit'&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase'){reset();return false;}
   const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<.09||active.size>=10)return false;
-  const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain,f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed};if(!base.file)spec.duration=base.duration/j.speed;
+  const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed};if(!base.file)spec.duration=base.duration/j.speed;
   if(!spec.file){const ok=tone(spec);if(ok)last.set(key,time);return ok;}
   const a=prepare(spec.file).find(a=>a.readyState>=2&&!a.error&&![...active].some(v=>v.audio===a));if(!a){const ok=tone(spec);if(ok)last.set(key,time);return ok;}
   if(disposed)return false;const rate=Math.max(.5,Math.min(1.8,spec.rate)),token=generation,v={audio:a,ending,until:time+(spec.duration||1)};
