@@ -58,7 +58,7 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
   if(disposed)return false;const rate=Math.max(.5,Math.min(1.8,spec.rate)),token=generation,v={audio:a,ending,until:time+(spec.duration||1),fade:spec.fade,volume:spec.volume};
   try{a.volume=spec.volume;a.playbackRate=rate;a.preservesPitch=false;a.currentTime=0;if(!activate(v)){stop(v);return false;}last.set(key,time);a.onended=()=>stop(v);
    const started=()=>{if(disposed||token!==generation||!active.has(v)||!allowed()||game!==g||!alive(v)){stop(v);return;}const length=Number.isFinite(a.duration)&&a.duration>0?Math.min(8,a.duration/rate):4;v.until=spec.duration?time+spec.duration:now()+Math.min(ending?1.5:8,length)+.05;};
-   const p=a.play();if(p?.then)p.then(started).catch(()=>{const valid=!disposed&&token===generation&&active.has(v)&&allowed()&&game===g&&alive(v);stop(v);// Missing/unplayable recording stays silent; never fall back to oscillator tones.});else started();return true;
+   const p=a.play();if(p?.then)p.then(started).catch(()=>{const valid=!disposed&&token===generation&&active.has(v)&&allowed()&&game===g&&alive(v);stop(v);/* Missing/unplayable recording stays silent; never fall back to oscillator tones. */});else started();return true;
   }catch{stop(v);return false;}
  }
  function releaseClip(a){silence(a);safe(()=>{for(const source of a.querySelectorAll?.('source')||[])source.remove();});safe(()=>{if(a.removeAttribute)a.removeAttribute('src');else a.src='';});safe(()=>a.load());}
