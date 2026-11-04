@@ -1,6 +1,7 @@
 import {BLOOD_RULES as R,BLOOD_PATTERNS,bloodPool,hazardContains} from './blood-data.mjs';
 import {WEAPONS} from './weapon-data.mjs';
-import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile,rewardPlayerHit} from './player-combat.mjs';
+import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
+import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 
 const emit=(g,type,data={})=>g.events.push({type,...data});
@@ -27,8 +28,8 @@ export function damageBlood(g,amount){
 function hit(g,amount,source){
  const s=g.blood;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
  const damage=damageBlood(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1));
- if(!damage)return;g.stats.hits++;g.stats.damage+=damage;
- rewardPlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
+ if(!damage)return;
+ settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.35,age:0,damage:24,hit:false,...opts};g.blood.hazards.push(h);return h;}
 export function startBloodPattern(g,id){
