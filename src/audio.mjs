@@ -3,7 +3,7 @@ import {createSampleSfx,SOUND_SAMPLES} from './sample-sfx.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
 const LIMIT=48;
 export function createAudio(factory){
- let ctx=null,master=null,noise=null,enabled=false,drone=null;const nodes=new Set(),ends=new Map(),last=new Map();
+ let ctx=null,master=null,ambientBus=null,noise=null,enabled=false,drone=null;const nodes=new Set(),ends=new Map(),last=new Map();
  const samples=createSampleSfx();
  const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
  function addReverb(comp){
@@ -14,7 +14,7 @@ export function createAudio(factory){
    const conv=ctx.createConvolver(),wet=ctx.createGain();conv.buffer=ir;wet.gain.value=.16;master.connect(conv);conv.connect(wet);wet.connect(comp);
   }catch{}
  }
- function ensure(){if(ctx)return true;try{ctx=make();if(!ctx)return false;master=ctx.createGain();master.gain.value=.44*audioChannelGain('effects');const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);addReverb(comp);noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
+ function ensure(){if(ctx)return true;try{ctx=make();if(!ctx)return false;master=ctx.createGain();master.gain.value=.44*audioChannelGain('effects');const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);ambientBus=ctx.createGain();ambientBus.gain.value=audioChannelGain('ambient');ambientBus.connect(comp);addReverb(comp);noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
  function prune(){const now=ctx.currentTime;for(const [s,e] of ends)if(e<=now){ends.delete(s);nodes.delete(s);}}
  function emit(q,j,power=1){
   prune();if(nodes.size>=LIMIT)return;const [kind,f,to,dur,vol,type='sine',delay=0,attack=.005]=q,t=ctx.currentTime+delay/j.speed,end=t+(dur+attack)/j.speed;
@@ -58,7 +58,7 @@ export function createAudio(factory){
    if(!on){stopDrone();return;}
    if(!enabled||drone)return;
    // Unpitched, filtered air replaces the earlier five-oscillator electronic drone.
-   const gain=ctx.createGain();gain.gain.value=.035*audioChannelGain('ambient');gain.connect(master);
+   ambientBus.gain.value=audioChannelGain('ambient');const gain=ctx.createGain();gain.gain.value=.035;gain.connect(ambientBus);
    const wind=ctx.createBufferSource(),filter=ctx.createBiquadFilter();
    wind.buffer=noise;wind.loop=true;filter.type='lowpass';filter.frequency.value=230;filter.Q.value=.45;
    wind.connect(filter);filter.connect(gain);
