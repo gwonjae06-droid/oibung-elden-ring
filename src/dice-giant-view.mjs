@@ -42,9 +42,14 @@ export function buildDiceGiant(scene){
  const props=Array.from({length:20},(_,i)=>{const m=new T.Mesh(propGeo.chip,i%2?propMats.gold:propMats.black);m.castShadow=true;root.add(m);m.visible=false;return m;});
  // Cream-white fantasy fluid burst sprays behind the struck patron's head.
  const sprayGeo=new T.SphereGeometry(1,6,5),sprayMat=new T.MeshStandardMaterial({color:0xf8f2e5,emissive:0xd8e2e8,emissiveIntensity:.18,transparent:true,opacity:.9,roughness:.26});
+ // Small pooled meshes make the rage transformation readable without allocations per frame.
+ const rageGeo=new T.SphereGeometry(.75,7,5),rageMat=new T.MeshBasicMaterial({color:0xf45243,transparent:true,opacity:.75,depthWrite:false});
+ const rageSparks=Array.from({length:20},(_,i)=>{const m=mesh(rageGeo,rageMat,root,[1,1,1]);m.visible=false;return {mesh:m,angle:i*2.399963229728653};});
+ const ringGeo=new T.RingGeometry(.86,1,48).rotateX(-Math.PI/2),ringMat=new T.MeshBasicMaterial({color:0xff7045,transparent:true,opacity:.65,depthWrite:false,side:T.DoubleSide});
+ const impactRings=Array.from({length:8},()=>{const m=mesh(ringGeo,ringMat.clone(),root,[1,1,1]);m.visible=false;m.renderOrder=7;return m;});
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
  let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0];
- return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm,joint} of hands)for(const bone of [upper,forearm,joint])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,warnMat,activeMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm,joint} of hands)for(const bone of [upper,forearm,joint])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,rect,warnMat,activeMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -64,7 +69,7 @@ export function buildDiceGiant(scene){
   direction.normalize();neck.position.copy(head).addScaledVector(direction,-len*.5);neck.scale.set(5,len,5);neck.quaternion.setFromUnitVectors(up,direction);
   const armsVisible=s.state!=='transition'||s.t>=4.7;
   hands.forEach(({group,upper,forearm,joint,fingers,thumb},i)=>{
-   const h=giantHandPose(g,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0;
+   const h=giantHandPose(g,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
    const hp=Math.max(0,Number(s.hands?.[i])||0);if(hp<handPrev[i])handPulse[i]=1;handPrev[i]=hp;handPulse[i]=Math.max(0,handPulse[i]-Math.max(0,dt)*5);
    // The arm always stays; only the hand shakes, shrinks and bursts into shards.
    upper.visible=forearm.visible=joint.visible=armsVisible;
@@ -74,7 +79,7 @@ export function buildDiceGiant(scene){
    if(!armsVisible)return;
    const shake=destroyed&&crumble<.35?Math.sin(crumble*90)*.6:0;
    group.position.set(h.x+shake+(i?1:-1)*handPulse[i]*.8,h.y-12*fall-handPulse[i]*.28,h.z+handPulse[i]*.5);
-   group.scale.setScalar(destroyed?Math.max(.05,1-crumble/.35*.5):1);
+   group.scale.setScalar(destroyed?Math.max(.05,1-crumble/.35*.5):revive>0?.3+.7*(1-revive/GIANT.handRecover):1);
    group.rotation.z=(i?1:-1)*(fall*.6+handPulse[i]*.22)+(feral?Math.sin(time*11+i)*.07:Math.sin(time*1.5+i)*.016);
    // Each finger bends joint by joint: a relaxed hand when polite, a clenched fist when enraged.
    const curl=h.fist*1.15;
@@ -89,9 +94,9 @@ export function buildDiceGiant(scene){
   bars.forEach((b,i)=>{
    const hp=s.hands[i],lost=s.destroyed?.[i];
    if(hp<b.prev)b.flash=.18;b.prev=hp;b.flash=Math.max(0,b.flash-Math.max(0,dt));
-   const show=!lost&&s.state!=='dead'&&(s.state!=='transition'||s.t>=5.7);b.group.visible=show;if(!show)return;
-   const ratio=sat(hp/GIANT.handHp),pose=giantHandPose(g,i);
-   b.fill.scale.x=Math.max(.001,16.4*ratio);b.fillMat.color.setHex(b.flash>0?0xffffff:ratio<.3?0xe0453a:0xd0ad65);
+   const show=s.state!=='dead'&&(s.state!=='transition'||s.t>=5.7);b.group.visible=show;if(!show)return;
+   const ratio=lost?1-sat((s.disabledFor?.[i]||0)/(feral?5:GIANT.handDisable)):sat(hp/GIANT.handHp),pose=giantHandPose(g,i);
+   b.fill.scale.x=Math.max(.001,16.4*ratio);b.fillMat.color.setHex(lost?0xff7060:b.flash>0?0xffffff:ratio<.3?0xe0453a:0xd0ad65);
    b.group.position.set(pose.x,pose.y+11,pose.z);
   });
   const sprayAge=s.state==='transition'?s.t-POSSESSION.launchEnd:-1;
@@ -103,17 +108,30 @@ export function buildDiceGiant(scene){
    const scale=q.size*(.7+.7*sat(t/.2))*(1-.65*sat((t-.65)/.6));q.mesh.scale.setScalar(scale);
   }
   propMats.gold.emissive?.setHex?.(feral?0x4a1007:0x251008);
+   suit.emissive.setHex(feral?0x220408:0x000000);suit.emissiveIntensity=feral?.32+.3*Math.sin(time*8)**2:0;
+   skin.emissive.setHex(feral?0x230509:0x000000);skin.emissiveIntensity=feral?.3:0;
+   const raging=feral&&(rage>.001||s.state==='attack'&&s.hazards.some(h=>h.headSlam));
+   rageMat.opacity=.5+.3*Math.sin(time*12)**2;
+   rageSparks.forEach((q,i)=>{q.mesh.visible=raging;if(!raging)return;
+    const a=q.angle+time*(1.7+i%3*.27),r=6+i%5*2.4,head=g.dice.pose;
+    q.mesh.position.set(head.x+Math.cos(a)*r,head.y+Math.sin(time*3+i)*7,head.z+Math.sin(a)*r);
+    q.mesh.scale.setScalar(.5+.8*Math.sin(time*6+i)**2);
+   });
   warnMat.opacity=.22+.1*Math.sin(time*12);
   const hazards=giantHazards(g);
+  const slams=hazards.filter(h=>h.headSlam&&h.live);
+  impactRings.forEach((ring,i)=>{const h=slams[i];ring.visible=!!h;if(!h)return;
+   const u=sat((h.age-h.warn)/Math.max(.1,h.active));ring.position.set(h.x,.21,h.z);
+   ring.scale.setScalar(Math.max(.01,h.r*(.35+.75*u)));ring.material.opacity=.58*(1-u);
+  });
   warnings.forEach((m,i)=>{const h=hazards[i],f=fills[i];m.visible=!!h;f.visible=!!h&&!h.live;if(!h)return;m.material=h.live?activeMat:warnMat;m.position.set(h.x,.14,h.z);const boxy=['rect','rotated-rect'].includes(h.shape);m.geometry=boxy?rect:circle;m.rotation.y=h.yaw||0;
    if(boxy)m.scale.set(h.w,1,h.h);else m.scale.set(h.r,1,h.r);
    if(f.visible){const u=ease(h.age/h.warn);f.geometry=boxy?rect:circle;f.position.set(h.x,.16,h.z);f.rotation.y=h.yaw||0;if(boxy)f.scale.set(h.w*u,1,h.h*u);else f.scale.set(h.r*u,1,h.r*u);}
   });
-  const alive=[0,1].filter(k=>!s.destroyed?.[k]);
   props.forEach((m,i)=>{
    const h=hazards[i],type=h?giantPropType(s,h):null;
    m.visible=Boolean(type&&!h.live);if(!m.visible)return;
-   const hand=HAND_REST[alive.length===1?alive[0]:h.id%2],u=sat(h.age/h.warn);
+   const hand=HAND_REST[h.handIndex??h.id%2],u=sat(h.age/h.warn);
    m.geometry=type==='chess'?(s.chessPiece==='rook'?propGeo.chessRook:s.chessPiece==='knight'?propGeo.chessKnight:propGeo.chess):propGeo[type];
    m.material=i%2?propMats.gold:propMats.black;m.scale.setScalar(1.6);
    // Each object has its own motion: chips slide and spin, coins flip, dice tumble, chess pieces are set down.

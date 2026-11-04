@@ -13,7 +13,7 @@ export function createDiceUi({coarse=false,doc=globalThis.document}={}){
  function render(g,sv,weaponName,lock){
   const giant=g.dice.giant;panel.hidden=true;cue.textContent='';
   $('boss-hud').querySelector('h2').textContent=!giant||giant.state==='transition'&&giant.t<4.5?R.name:giant.temperament==='feral'?'이성을 잃은 박성원':'운명의 찬탈자 박성원';
-  $('phase-label').textContent=g.boss.phase===2?(giant?.temperament==='feral'?'세 번째 단계 · 광기 붕괴':'두 번째 단계 · 육체 강탈'):'첫 번째 단계 · 거대 주사위';
+  $('phase-label').textContent=g.boss.phase===3?'세 번째 단계 · 광기 붕괴':g.boss.phase===2?'두 번째 단계 · 육체 강탈':'첫 번째 단계 · 거대 주사위';
   renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});
   $('boss-action').textContent=giant?'':g.status==='won'?'박성원이 토벌되었다':g.status==='lost'?'주사위에 깔렸습니다':g.dice.stun>0?'기절':g.dice.state==='warning'?'다음 칸으로 굴러옵니다':g.dice.state==='rolling'?'압사 주의':'빈틈 — 지금 반격하세요';
   $('boss-action').toggleAttribute('data-critical',!giant&&/압사|즉사|약점|경직/.test($('boss-action').textContent));
