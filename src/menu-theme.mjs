@@ -1,4 +1,5 @@
 import {createMenuScore} from './menu-score.mjs';
+import {audioChannelGain} from './audio-preferences.mjs';
 
 // The filename is intentionally the exact name uploaded to assets/music.
 export const MENU_THEME_URL=new URL('../assets/music/maintheme.mp3',import.meta.url).href;
@@ -18,7 +19,7 @@ export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createMe
   failed=true;clearTimer();
   if(audio){audio.onerror=null;try{audio.pause();}catch{}audio=null;}
   if(unlocked)fallback.unlock();
-  fallback.update(enabled,level);
+  fallback.update(enabled,level*audioChannelGain('music',win?.localStorage));
  }
  function ensure(){
   if(audio||failed||disposed||!unlocked)return;
@@ -81,7 +82,7 @@ export function createMenuTheme(win,{AudioClass=win?.Audio,makeFallback=createMe
     clearTimer();from=target=0;audio.volume=0;audio.pause();return;
    }
    if(enabled)play();
-   setTarget(enabled?level:0);
+   setTarget(enabled?level*audioChannelGain('music',win?.localStorage):0);
   },
   async dispose(){
    if(disposed)return;
