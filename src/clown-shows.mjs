@@ -1,0 +1,55 @@
+export const CLOWN_SHOWS = Object.freeze({
+  headReturn: Object.freeze({name:'머리 좀 받아줘!',dur:4.8,recover:1.4,phases:[1,2]}),
+  offbeatClap: Object.freeze({name:'박수는 끝까지 치셔야죠',dur:6.5,recover:1.3,phases:[1,2]}),
+  runaway: Object.freeze({name:'야, 멈춰! 멈추라고!',dur:5.8,recover:2,phases:[2]})
+});
+const cross=(a,t,v)=>a<v&&t>=v;
+const clamp=v=>Math.max(0,Math.min(1,v));
+// Adapter contract: once, zone, cone, bomb, head, emit, fitLen, dashPart.
+// No registration side effects: the encounter must explicitly connect this module.
+export function runClownShow(name,g,c,a,t,api){
+ if(!CLOWN_SHOWS[name])throw new Error('Unknown clown show');
+ if(name==='headReturn'){
+  const path=api.once(c,'show-path',()=>{
+   const from={x:g.boss.x,z:g.boss.z},yaw=Math.atan2(g.player.x-from.x,g.player.z-from.z),len=api.fitLen(from,yaw,30);
+   const to={x:from.x+Math.sin(yaw)*len,z:from.z+Math.cos(yaw)*len};
+   c.yaw=yaw;api.emit(g,'clown-inflate');
+   api.zone(g,{shape:'lane',...from,yaw,len,w:4.2,warn:.8,visual:true});
+   return {from,to,yaw,len};
+  });
+  if(t<.65)api.head(c,'inflate',t/.65);
+  else if(t<.8){api.head(c,'hold',1);if(cross(a,t,.65))api.emit(g,'clown-silence');}
+  else {api.head(c,'regrow',clamp((t-.8)/3.8),'small');c.vis.throwK=clamp((t-.8)/.25);}
+  if(cross(a,t,.8)){
+   api.bomb(g,{kind:'roll',from:{...path.from,y:2.1},x:path.to.x,z:path.to.z,px:path.from.x,pz:path.from.z,fly:0,travel:.6,warn:.6,r:2.1});
+   api.emit(g,'clown-roll');
+  }
+  if(cross(a,t,1.4)){
+   api.zone(g,{shape:'lane',...path.to,yaw:path.yaw+Math.PI,len:path.len,w:4.2,warn:.55,visual:true});
+   api.zone(g,{shape:'circle',...path.from,r:4,warn:1.5,damage:34,blast:true});
+   api.emit(g,'clown-bounce');
+  }
+  if(cross(a,t,1.95)){
+   api.bomb(g,{kind:'roll',from:{...path.to,y:2.1},x:path.from.x,z:path.from.z,px:path.to.x,pz:path.to.z,fly:0,travel:.6,warn:.6,r:2.1});
+   api.emit(g,'clown-roll');
+  }
+  if(t>=2.55){c.vis.tilt=Math.sin(t*15)*.4;c.vis.crouch=.65;}
+  return;
+ }
+ if(name==='offbeatClap'){
+  api.once(c,'show-clap',()=>{c.yaw=Math.atan2(g.player.x-g.boss.x,g.player.z-g.boss.z);api.cone(g,c.yaw,.8,20,.6,26,'clap');});
+  if(cross(a,t,.8))api.cone(g,c.yaw,.8,20,.6,26,'clap');
+  if(cross(a,t,2)){
+   c.f.showFinalYaw=Math.atan2(g.player.x-g.boss.x,g.player.z-g.boss.z);
+   api.cone(g,c.f.showFinalYaw+Math.PI/2,.8,8,1.25,24,'carousel');
+  }
+  if(cross(a,t,3.3))api.cone(g,c.f.showFinalYaw,.8,23,.9,34,'clap');
+  c.vis.glove=t<1.6?.5+.5*Math.abs(Math.sin(t*Math.PI/.8)):t<3.3?1:1-clamp((t-4.1)/.5);
+  c.vis.tilt=t>=2&&t<2.8?-.5:t>=4.1?.4*(1-clamp((t-4.1)/1)):0;
+  return;
+ }
+ // Each dash takes a fresh snapshot through the existing dashPart adapter.
+ api.dashPart(g,c,a,t,0,'show-run-first');
+ api.dashPart(g,c,a,t,1.9,'show-run-second');
+ if(t>=3.3){c.noSeparate=false;c.vis.crouch=1-clamp((t-4.8)/1);c.vis.tilt=Math.sin(t*13)*.3*(1-clamp((t-3.3)/1.8));}
+}
