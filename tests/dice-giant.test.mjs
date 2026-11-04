@@ -13,7 +13,7 @@ test('the public player engine starts possession at half health exactly once and
  skipGiant(g);advance(g,.02);assert.equal(g.dice.giant.state,'recovery');assert.equal(g.events.filter(e=>e.type==='dice-possession').length,1);assert.equal(g.boss.phase2PendingDesign,false);
 });
 for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' can stagger a reachable hand and damage the lowered photo face through real attacks',()=>{
- const g=ready(weapon);g.player.x=-24;g.player.z=24.5;g.dice.stun=60;let tries=0;
+ const g=ready(weapon);g.player.x=-60;g.player.z=22;g.dice.stun=60;let tries=0;
  while(g.dice.giant.state!=='stagger'&&tries++<20){g.player.stamina=100;actDice(g,'light');advance(g,1.3);}
  assert.equal(g.dice.giant.state,'stagger');assert.equal(g.dice.giant.hands[0],0);g.dice.stun=0;advance(g,.9);
  g.player.x=0;g.player.z=.5;g.player.stamina=100;const hp=g.boss.hp;actDice(g,'light');advance(g,1.3);assert.ok(g.boss.hp<hp,'photo face receives real weapon damage');
