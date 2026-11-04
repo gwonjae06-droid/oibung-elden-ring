@@ -6,6 +6,7 @@ import {
   advancePlayerProjectile,
 } from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
+import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -551,52 +552,6 @@ export function bladeHits(p, {a, b}, width = SWORD.width) {
   }
   const at = (t) => ({x: mix(a.x, b.x, t), z: mix(a.z, b.z, t)});
   return segmentDistance(p, at(lo), at(hi)) < width;
-}
-function bossDamage(g, amount, poise) {
-  const b = g.boss;
-  if (b.hp <= 0 || b.state === 'transition') return 0;
-  const damage = Math.min(b.hp, amount * (b.state === 'stagger' ? 1.25 : 1)),
-    big = damage >= 150;
-  b.hp -= damage;
-  g.stats.damage += damage;
-  g.stats.hits++;
-  b.poise += poise;
-  emit(g, 'boss-hit', {amount: Math.round(damage), big});
-  freeze(g, big ? 0.09 : 0.035);
-  if (b.hp <= 0) {
-    b.hp = 0;
-    b.state = 'dead';
-    b.queue = [];
-    g.status = 'won';
-    g.projectiles = [];
-    g.bossShots = [];
-    emit(g, 'victory');
-    return damage;
-  }
-  if (b.phase === 1 && b.hp <= b.maxHp * 0.5) {
-    b.phase = 2;
-    b.state = 'transition';
-    b.t = 0;
-    b.queue = [];
-    b.poise = 0;
-    b.stun = 0;
-    b.punishable = false;
-    g.projectiles = [];
-    g.bossShots = [];
-    g.player.action = null;
-    emit(g, 'phase');
-  } else if (
-    b.poise >= (b.phase === 2 ? 280 : 180) &&
-    !['transition', 'stagger'].includes(b.state)
-  ) {
-    b.poise = 0;
-    b.state = 'stagger';
-    b.t = 0;
-    b.queue = [];
-    b.punishable = false;
-    emit(g, 'stagger');
-  }
-  return damage;
 }
 function landHit(g, amount, poise, a) {
   const actual = bossDamage(g, amount, poise),
