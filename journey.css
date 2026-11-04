@@ -98,3 +98,11 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 .j-memory-art[data-memory='kwon']{background-image:url('./assets/art/seal-spider-v1.jpg')}.j-memory-art[data-memory='clown']{background-image:url('./assets/art/seal-clown-v1.jpg')}.j-memory-art[data-memory='dice']{background-image:url('./assets/art/seal-dice-v1.jpg')}
 .j-memory-record{display:flex;gap:22px;align-items:center;border-top:1px solid #b49b5f44;padding:20px 0}.j-memory-record .j-memory-art{flex:0 0 96px;height:96px}.j-memory-record h2{font-size:20px;color:#dfc68f}
 @media(max-width:650px){.j-memory-record{display:block}.j-memory-art{width:96px;height:96px}}
+
+/* MEMORY ARCHIVE COLLAPSE — story text is preserved, displayed on demand. */
+#journey details.j-memory-record{display:block;align-items:unset;gap:0}
+#journey details.j-memory-record>summary{cursor:pointer;font:600 16px/1.8 'Noto Serif KR',serif;color:#e4cfab;min-height:44px;align-items:center}
+#journey details.j-memory-record>summary:before{content:'+';margin-right:10px;color:#d2b270}
+#journey details.j-memory-record[open]>summary:before{content:'−'}
+#journey details.j-memory-record>section{display:flex;gap:22px;align-items:flex-start;padding:12px 0}
+@media(max-width:650px){#journey details.j-memory-record>section{display:block}}
