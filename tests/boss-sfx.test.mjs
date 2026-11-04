@@ -19,9 +19,31 @@ test('variation is bounded and deterministic with an injected random source',()=
 test('sample volume is reduced and subsequent hits vary playback rate',async()=>{let r=0;const f=fixture({random:()=>r}),g=game();f.s.event({type:'player-hit',amount:20},g);await Promise.resolve();const a=f.clips.find(a=>a.plays),rate=a.playbackRate;assert.ok(a.volume<.4);f.advance(.2);r=1;f.s.event({type:'player-hit',amount:20},g);await Promise.resolve();const b=f.clips.find(a=>a!==f.clips[0]&&a.plays);assert.ok(b.playbackRate>rate);f.s.clear();});
 test('oneshot clap and laugh no longer stop at the old cutoff',async()=>{for(const ev of [{type:'clown-impact',key:'clap'},{type:'clown-inflate'}]){const f=fixture(),g=game(true);f.s.event(ev,g);await Promise.resolve();f.advance(1.5);f.s.update(.016,g);assert.equal(f.s.activeCount,1);f.s.clear();}});
 test('250ms start delay is tolerated but reset invalidates pending playback',async()=>{const f=fixture({pending:true}),g=game();f.s.event({type:'player-hit',amount:20},g);f.advance(.25);f.resolvers[0]();await Promise.resolve();assert.equal(f.s.activeCount,1);f.s.clear();assert.equal(f.s.activeCount,0);});
-test('legacy cold MP3 still has an immediate fallback if its buffer is not ready',()=>{const f=fixture({ready:0});assert.ok(f.s.event({type:'clown-impact',key:'clap'},game(true)));assert.equal(f.tones,1);f.s.clear();});
-test('seek failure is contained and falls back',()=>{const f=fixture({failSeek:true});assert.doesNotThrow(()=>f.s.event({type:'player-hit',amount:20},game()));assert.equal(f.tones,1);f.s.clear();});
+test('cold legacy MP3 never creates an electronic fallback',()=>{
+ const f=fixture({ready:0});
+ assert.equal(f.s.event({type:'clown-impact',key:'clap'},game(true)),false);
+ assert.equal(f.tones,0);f.s.clear();
+});
+
+test('seek failure is contained without playing a chiptune replacement',()=>{
+ const f=fixture({failSeek:true});
+ assert.doesNotThrow(()=>f.s.event({type:'player-hit',amount:20},game()));
+ assert.equal(f.tones,0);f.s.clear();
+});
+
 test('bomb timer retains gameplay deadline despite random speed',async()=>{const f=fixture({random:()=>1}),g=game(true);f.s.event({type:'clown-throw'},g);await Promise.resolve();f.advance(1.5);f.s.update(.016,g);assert.equal(f.s.activeCount,0);f.s.clear();});
 test('pause and mute stop voices',async()=>{const f=fixture(),g=game();f.s.event({type:'player-hit',amount:20},g);await Promise.resolve();f.s.update(0,g);assert.equal(f.s.activeCount,0);f.mute();assert.equal(f.s.event({type:'player-hit',amount:20},g),false);f.s.clear();});
 test('fatal actual hit can sound briefly on the defeat screen',async()=>{const f=fixture(),g=game();g.status='lost';assert.ok(f.s.event({type:'player-hit',amount:20},g));await Promise.resolve();f.s.update(.016,g);assert.equal(f.s.activeCount,1);f.advance(2);f.s.update(.016,g);assert.equal(f.s.activeCount,0);f.s.clear();});
-test('first boss swing uses noise only and base master gain is lower',()=>{const previous=globalThis.document;globalThis.document={getElementById:id=>id==='boss-hud'?{hidden:false}:null};let tones=0,noises=0;const gains=[],param=()=>({value:1,setValueAtTime(){},exponentialRampToValueAtTime(){},linearRampToValueAtTime(){}}),node=()=>({connect(){},disconnect(){},stop(){}});const ctx={state:'running',currentTime:0,sampleRate:8000,destination:{},resume:()=>Promise.resolve(),createGain(){const g={...node(),gain:param()};gains.push(g);return g;},createDynamicsCompressor:node,createBuffer:(a,n)=>({getChannelData:()=>new Float32Array(n)}),createBiquadFilter:()=>({...node(),Q:param(),frequency:param()}),createOscillator:()=>({...node(),frequency:param(),start(){tones++;}}),createBufferSource:()=>({...node(),start(){noises++;}})};try{const audio=createAudio(()=>ctx);assert.ok(audio.setEnabled(true));assert.equal(gains[0].gain.value,.44);assert.ok(audio.play('boss-slam'));assert.equal(tones,0);assert.equal(noises,1);audio.setEnabled(false);}finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}});
+test('legacy boss noise/oscillator synth does not play after foley-only switch',()=>{
+ const previous=globalThis.document;
+ globalThis.document={getElementById:id=>id==='boss-hud'?{hidden:false}:null};
+ let tones=0,noises=0;
+ const gains=[],param=()=>({value:1,setValueAtTime(){},exponentialRampToValueAtTime(){},linearRampToValueAtTime(){}}),node=()=>({connect(){},disconnect(){},stop(){}});
+ const ctx={state:'running',currentTime:0,sampleRate:8000,destination:{},resume:()=>Promise.resolve(),createGain(){const g={...node(),gain:param()};gains.push(g);return g;},createDynamicsCompressor:node,createBuffer:(a,n)=>({getChannelData:()=>new Float32Array(n)}),createBiquadFilter:()=>({...node(),Q:param(),frequency:param()}),createOscillator:()=>({...node(),frequency:param(),start(){tones++;}}),createBufferSource:()=>({...node(),start(){noises++;}})};
+ try{
+  const audio=createAudio(()=>ctx);assert.ok(audio.setEnabled(true));
+  assert.equal(audio.play('boss-slam'),false);
+  assert.equal(tones,0);assert.equal(noises,0);
+  audio.setEnabled(false);
+ }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
+});
