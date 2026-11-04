@@ -72,7 +72,7 @@ test('damage feedback is visual immediately and hit.mp3 remains optional until u
   const classes=new Set();
   return {style:{},className:'',classList:{add:v=>classes.add(v),remove:v=>classes.delete(v),contains:v=>classes.has(v)},setAttribute(){},remove(){this.removed=true;},append(){},get offsetWidth(){return 20;}};
  }
- const root={ownerDocument:{createElement:()=>layer()},append(...els){layers.push(...els);}};
+ const root={ownerDocument:{createElement:()=>layer()},append(...els){layers.push(...els);},appendChild(el){layers.push(el);return el;}};
  const fx=createPlayerHitFeedback(root,{AudioClass:null});
  assert.equal(fx.hit({type:'player-hit',amount:0}),false);
  assert.equal(fx.hit({type:'player-hit',amount:32}),true);
