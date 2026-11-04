@@ -1,3 +1,4 @@
+import {audioChannelGain} from './audio-preferences.mjs';
 // External MP3 boss tracks. Sound effects keep using their own audio buses.
 export const BOSS_TRACKS=Object.freeze({
   kwon:Object.freeze(['swordbgm.mp3','swordbgm2.mp3']),
@@ -67,7 +68,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     for(const entry of entries())play(entry);
     if(!current)return false;
     const progress=Math.min(1,Math.max(0,(time-current.started)/Math.max(1,fadeMs)));
-    current.audio.volume=volume*progress;
+    current.audio.volume=volume*audioChannelGain('music',win?.localStorage)*progress;
     if(outgoing){
       outgoing.audio.volume=Math.min(1,outgoing.from??volume)* (1-progress);
       if(progress>=1){release(outgoing);outgoing=null;}
