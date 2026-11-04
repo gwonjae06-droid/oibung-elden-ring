@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {POSSESSION,cinematicBeat,spinPose,possessionPose,possessionScale} from '../src/dice-giant-cinematic-data.mjs';
 import {createDicePlayerGame,stepDicePlayer} from '../src/dice-player.mjs';
 import {damageDice} from '../src/dice-combat.mjs';
-import {HAND_REST,GIANT,strikeGiantHand,giantHandPose,giantPattern,giantHeadPose,giantPosture,giantHeadExposed,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
+import {HAND_REST,GIANT,strikeGiantHand,giantHandPose,giantPattern,giantPropType,giantHeadPose,giantPosture,giantHeadExposed,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
 import {giantImpact} from '../src/dice-giant-hit.mjs';
 
 const from={x:20,y:6,z:20,rotation:[0,0,0,1]};
@@ -49,6 +49,14 @@ test('feral head slam physically lowers the same dice model used for combat',()=
  assert.ok(down.y<up.y-20);assert.ok(Math.abs(down.x-10)<1);
  assert.ok(giantHazards(g).some(h=>h.live&&hazardContains(h,{x:p.hazards[0].x,z:p.hazards[0].z})));
 });
+test('feral head slam rears up slowly and then drops within a fifth of a second',()=>{
+ const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
+ const p=giantPattern(2,{x:10,z:20},'feral',.24),s=g.dice.giant,h=p.hazards[0];
+ Object.assign(s,{state:'attack',temperament:'feral',slot:2,t:0,hazards:p.hazards,duration:p.duration});
+ s.t=h.warn-.2;const raised=giantHeadPose(g);s.t=h.warn+.02;const slammed=giantHeadPose(g);
+ assert.ok(raised.y>20,'head is still raised 0.2s before impact');
+ assert.ok(slammed.y<8,'head is on the table right after impact');
+});
 test('all seven feral patterns have a readable safe location during each damage beat',()=>{
  for(let slot=0;slot<7;slot++){
   const p=giantPattern(slot,{x:10,z:15},'feral'),g=createDicePlayerGame();
@@ -84,11 +92,11 @@ test('rook, bishop and knight chess patterns use distinct travel geometries',()=
  assert.equal(hazardContains(h,{x:h.x+20,z:h.z-20}),true);
  assert.equal(hazardContains(h,{x:h.x+20,z:h.z+20}),false);
 });
-test('low-health feral dice head slams repeat up to three times and can be counterattacked',()=>{
+test('feral head slams chain two to four times by health and can be counterattacked',()=>{
  const player={x:10,z:20};
- assert.equal(giantPattern(2,player,'feral',.24).hazards.filter(h=>h.headSlam).length,1);
- assert.equal(giantPattern(2,player,'feral',.17).hazards.filter(h=>h.headSlam).length,2);
- assert.equal(giantPattern(2,player,'feral',.1).hazards.filter(h=>h.headSlam).length,3);
+ assert.equal(giantPattern(2,player,'feral',.24).hazards.filter(h=>h.headSlam).length,2);
+ assert.equal(giantPattern(2,player,'feral',.17).hazards.filter(h=>h.headSlam).length,3);
+ assert.equal(giantPattern(2,player,'feral',.1).hazards.filter(h=>h.headSlam).length,4);
  const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
  const pattern=giantPattern(2,player,'feral',.24);
  Object.assign(g.dice.giant,{state:'attack',temperament:'feral',slot:2,t:1.5,hazards:pattern.hazards,duration:pattern.duration});
@@ -115,17 +123,19 @@ test('torso accompanies the head during the slump instead of extending the neck'
  assert.ok(head.y<11&&head.z>-56&&head.z<-30,'head reaches reachable table edge');
  assert.ok(Math.abs(posture.bodyX-head.x)<12,'shoulders follow the head');
 });
-test('hand mini-boss health never regenerates and destroyed hands cannot be hit again',()=>{
+test('hand health never regenerates, destroying a hand never staggers the giant, and rage waits until both hands are gone',()=>{
  const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
  const s=g.dice.giant;
  const before=s.hands[0];const hit=giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60});
  assert.equal(hit?.part,'hand');
- strikeGiantHand(g,0,before+20);
+ const bossBefore=g.boss.hp;
+ const returned=strikeGiantHand(g,0,before+20);
+ assert.equal(returned,before);damageDice(g,returned);assert.equal(g.boss.hp,bossBefore-before);
  assert.equal(s.hands[0],0);assert.equal(s.destroyed[0],true);
- assert.equal(s.state,'wounded');
+ assert.equal(s.state,'recovery','no stagger state');
  assert.equal(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60}),null);
- s.t=GIANT.wound+.1;stepDicePlayer(g,.02);
- assert.equal(s.hands[0],0);
+ stepDicePlayer(g,.02);
+ assert.equal(s.hands[0],0);assert.ok(s.crumble[0]>0,'the lost hand crumbles');assert.equal(s.temperament,'controlled');
  const second=giantImpact(g,{x:22,y:2,z:-51},{x:22,y:2,z:-60});
  assert.equal(second?.index,1);
  strikeGiantHand(g,1,s.hands[1]+10);
@@ -146,6 +156,26 @@ test('both lost hands force only head and prop based feral attacks',()=>{
   assert.ok([2,4].includes(s.slot),'no hand-based strikes without palms');
   assert.ok(giantImpact(g,{x:-22,y:2,z:-51},{x:-22,y:2,z:-60})?.part!=='hand');
  }
+});
+test('controlled phase two flicks chips, dice, coins and chess pieces from hands held in front of the body',()=>{
+ const kinds={1:'chip',2:'dice',3:'coin',4:'chess'};
+ for(const [slot,kind] of Object.entries(kinds)){
+  const g=createDicePlayerGame();damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);g.player.hp=g.player.maxHp=9999;
+  const s=g.dice.giant,p=giantPattern(Number(slot),{x:0,z:0});
+  Object.assign(s,{state:'attack',temperament:'controlled',slot:Number(slot),t:0,hazards:p.hazards,duration:p.duration});
+  assert.ok(p.hazards.every(h=>giantPropType(s,h)===kind),'prop type for slot '+slot);
+  for(let n=0;n<Math.ceil(p.duration*60)&&s.state==='attack';n++){
+   stepDicePlayer(g,1/60);
+   for(const i of [0,1]){const h=giantHandPose(g,i);assert.ok(Math.abs(h.x)<36&&h.z<-52,'hand stays in front of the body during slot '+slot);}
+  }
+ }
+});
+test('hand health bars float above the hands, there is no stagger state, and only the hand crumbles',()=>{
+ const view=readFileSync(new URL('../src/dice-giant-view.mjs',import.meta.url),'utf8');
+ const sim=readFileSync(new URL('../src/dice-giant.mjs',import.meta.url),'utf8');
+ const ui=readFileSync(new URL('../src/dice-ui.mjs',import.meta.url),'utf8');
+ assert.match(view,/bars\.forEach/);assert.match(view,/pose\.y\+11/);assert.match(view,/crumble/);
+ assert.doesNotMatch(sim,/wounded/);assert.doesNotMatch(ui,/wounded/);assert.doesNotMatch(ui,/giant-poise/);
 });
 test('cinematic includes missing patron head and white spray while phase two remains dark',()=>{
  const room=readFileSync(new URL('../src/casino-room.mjs',import.meta.url),'utf8');
