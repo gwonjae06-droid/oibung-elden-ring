@@ -5,6 +5,11 @@ const CSS = `
 #arena .boss-hud #phase-label,#arena .boss-hud #boss-value{display:block;font-size:13px;line-height:1.5;color:#eee4cc}
 #arena .boss-hud #boss-value{white-space:nowrap;font-variant-numeric:tabular-nums}
 #arena .boss-hud .meter.boss{height:20px;border:1px solid #d8bc795c;box-shadow:0 2px 10px #0009}
+#arena .brand{opacity:1!important;z-index:60;cursor:pointer;pointer-events:auto;padding:8px 16px 8px 12px;background:#0b110ecc;border:1px solid #c6b38477;border-radius:6px}
+#arena .brand:hover{background:#1b261fe6;border-color:#e6d49c}
+#arena .brand strong{font-size:0!important;line-height:0}
+#arena .brand strong::after{content:'← 메인으로';font-size:16px;line-height:1.4;font-family:var(--font-body);color:#f4e8c8}
+#arena #quit,#arena #change{display:none!important}
 @media(min-width:900px) and (pointer:fine){
  #arena .hud{top:100px;left:28px;width:clamp(320px,28vw,440px);padding:12px 16px;background:#0b110eb3}
  #arena .hud .player-line{font-size:16px;margin-bottom:8px}
@@ -22,7 +27,7 @@ const CSS = `
  #arena .hud .flask-line>span{font-size:12px}
  #arena .top-actions{top:24px;right:28px;gap:10px}
  #arena .top-actions button,#arena .pause-settings button{min-height:48px;font-size:15px;padding:10px 18px}
- #arena .brand strong{font-size:24px}
+ #arena .brand{top:24px;left:28px}
  #arena .brand svg{width:40px;height:40px}
  #arena .menu-panel{width:min(600px,100%);padding:36px}
  #arena .small-panel{width:min(540px,100%);padding:36px}
@@ -37,6 +42,8 @@ const CSS = `
  #arena .boss-hud .meter.boss{height:12px}
  #arena .boss-hud .boss-line h2{font-size:16px}
  #arena .boss-hud #phase-label,#arena .boss-hud #boss-value{font-size:10px}
+ #arena .brand{padding:4px 10px 4px 8px}
+ #arena .brand strong::after{font-size:13px}
 }
 @media(pointer:coarse) and (orientation:landscape){
  #arena .boss-hud{bottom:max(8px,env(safe-area-inset-bottom))!important;width:min(620px,48vw)!important;padding:4px 8px}
@@ -54,14 +61,24 @@ const CSS = `
  #arena #controls:not([hidden]){bottom:8px;font-size:11px}
 }
 `;
+function hideExtraHomeButtons(root){
+ const hidden=[];
+ for(const button of root.querySelectorAll?.('button')||[]){
+  if(button.textContent.trim()!=='광대전 결과로')continue;
+  button.style.setProperty('display','none','important');
+  hidden.push(button);
+ }
+ return ()=>{for(const button of hidden)button.style.removeProperty('display');};
+}
 export function installHudLayout(root){
- const doc=root.ownerDocument||root;
- const target=root.head||root;
- if(!doc.createElement||typeof target?.appendChild!=='function')return ()=>{};
- const style=doc.createElement('style');
- if(style.dataset)style.dataset.odenringHudLayout='1';
- else style.setAttribute?.('data-odenring-hud-layout','1');
- style.textContent=CSS;
- target.appendChild(style);
- return ()=>style.remove();
+ try{
+  const doc=root.ownerDocument||root;
+  if(!doc.createElement)return ()=>{};
+  const style=doc.createElement('style');
+  style.dataset.odenringHudLayout='1';
+  style.textContent=CSS;
+  (root.head||root).appendChild(style);
+  const restore=hideExtraHomeButtons(root);
+  return ()=>{restore();style.remove();};
+ }catch{return ()=>{};}
 }
