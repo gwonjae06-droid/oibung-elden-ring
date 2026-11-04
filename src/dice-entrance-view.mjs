@@ -1,4 +1,5 @@
 import {diceEntrancePose} from './dice-data.mjs';
+import {playBossCue,stopBossCue} from './boss-cues.mjs';
 const DOTS={1:[[50,50]],2:[[27,27],[73,73]],3:[[27,27],[50,50],[73,73]],4:[[27,27],[73,27],[27,73],[73,73]],5:[[27,27],[73,27],[50,50],[27,73],[73,73]],6:[[27,27],[27,50],[27,73],[73,27],[73,50],[73,73]]};
 export function playDiceCrushEntrance(doc,shell,{impact=()=>{},win=doc.defaultView}={}){
  const dialog=doc.createElement('dialog');dialog.setAttribute('aria-label','박성원 주사위 화면 압착 연출');dialog.style.cssText='position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:hidden;background:transparent;color:#ffe7ad';
@@ -11,15 +12,16 @@ export function playDiceCrushEntrance(doc,shell,{impact=()=>{},win=doc.defaultVi
  const skip=make('button','position:absolute;bottom:24px;right:24px;padding:12px 20px;border:1px solid #d5b375;background:#130a14;color:#fff1cf;border-radius:5px','건너뛰기');
  stage.appendChild(cube);dialog.appendChild(stage);dialog.appendChild(title);dialog.appendChild(skip);doc.body.appendChild(dialog);
  const saved={transform:shell.style.transform,transformOrigin:shell.style.transformOrigin,filter:shell.style.filter};
- let done=false,frameId=0,last=null,elapsed=0,turn=0,resolve;const finished=new Promise(r=>resolve=r);
+ let done=false,playedCue=false,frameId=0,last=null,elapsed=0,turn=0,resolve;const finished=new Promise(r=>resolve=r);
  const reduced=Boolean(win.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
- function end(ok){if(done)return;done=true;win.cancelAnimationFrame(frameId);Object.assign(shell.style,saved);try{dialog.close();}catch{}dialog.remove();resolve(ok);}
+ function end(ok){if(done)return;done=true;win.cancelAnimationFrame(frameId);stopBossCue('start');Object.assign(shell.style,saved);try{dialog.close();}catch{}dialog.remove();resolve(ok);}
  skip.onclick=()=>end(true);dialog.addEventListener('cancel',e=>{e.preventDefault();end(true);});dialog.addEventListener('keydown',e=>e.stopPropagation());
  function frame(now){
   if(done)return;
   try{
    if(!shell.isConnected){end(false);return;}
    const dt=last===null?0:Math.max(0,Math.min(.05,(now-last)/1000));last=now;if(!doc.hidden)elapsed+=dt;
+   if(!playedCue&&elapsed>=.15){playedCue=true;playBossCue('start');}
    const p=diceEntrancePose(elapsed),k=Math.floor(p.travel*6),x=-60+p.travel*220;
    cube.style.left=x+'%';cube.style.transform='translate(-50%,-50%) rotateX(-18deg) rotateY(-22deg) rotateZ('+(reduced?0:p.travel*540)+'deg)';
    if(k!==turn){turn=k;try{impact();}catch(error){console.warn('Dice entrance audio failed',error);}}
