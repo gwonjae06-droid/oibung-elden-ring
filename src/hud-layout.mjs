@@ -56,10 +56,12 @@ const CSS = `
 `;
 export function installHudLayout(root){
  const doc=root.ownerDocument||root;
- if(!doc.createElement)return ()=>{};
+ const target=root.head||root;
+ if(!doc.createElement||typeof target?.appendChild!=='function')return ()=>{};
  const style=doc.createElement('style');
- style.dataset.odenringHudLayout='1';
+ if(style.dataset)style.dataset.odenringHudLayout='1';
+ else style.setAttribute?.('data-odenring-hud-layout','1');
  style.textContent=CSS;
- (root.head||root).appendChild(style);
+ target.appendChild(style);
  return ()=>style.remove();
 }
