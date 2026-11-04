@@ -207,11 +207,14 @@ export function stepGiant(g,dt,frozen=false){
   g.events.push({type:'dice-giant-warning',name:q.name});
  }
  if(q.state==='attack'){
-  // One authoritative beat at the warning-to-contact boundary, including misses.
+  // A unique visual beat for each real strike; damage remains owned by giantHazards().
   for(const h of q.hazards||[]){
-   if(!h.headSlam||h.cancelled||h.impactAnnounced||q.t<h.start+h.warn)continue;
+   if(h.cancelled||h.impactAnnounced||q.t<h.start+h.warn)continue;
+   if(h.handIndex!=null&&!handCanAttack(q,h.handIndex))continue;
    h.impactAnnounced=true;
-   g.events.push({type:'dice-giant-head-impact',x:h.x,z:h.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
+   if(h.headSlam)g.events.push({type:'dice-giant-head-impact',x:h.x,z:h.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
+   else g.events.push({type:giantPropType(q,h)?'dice-giant-prop-impact':'dice-giant-palm-impact',
+    x:h.x,z:h.z,handIndex:h.handIndex,slot:q.slot});
   }
   for(const h of giantHazards(g)){
    const original=q.hazards[h.id];

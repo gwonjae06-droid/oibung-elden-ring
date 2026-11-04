@@ -28,6 +28,8 @@ export function diceBossFxCue(event,game){
    return {kind:event.type==='dice-giant-hand-hit'?'hand-hit':event.type==='dice-giant-hand-destroyed'?'hand-break':'hand-reform',
     phase,...position(hand.x,hand.z,Math.max(1,hand.y+1)),power:event.type==='dice-giant-hand-destroyed'?1.9:.65};
   }
+  case 'dice-giant-palm-impact':return {kind:'palm-slam',phase,...position(event.x,event.z,.8),power:phase===3?1.3:1};
+  case 'dice-giant-prop-impact':return {kind:'prop-slam',phase,...position(event.x,event.z,.7),power:phase===3?1.1:.8};
   case 'dice-giant-head-impact':return {kind:'head-slam',phase:3,...position(event.x,event.z,1.1),power:event.rapid?.83:1.6};
   case 'dice-giant-feral':return {kind:'feral',phase:3,...position(p.x,p.z,Math.max(5,p.y-3)),power:2.2};
   case 'boss-hit':return {kind:'boss-hit',phase,...position(p.x,p.z,Math.max(2,p.y)),power:.45};
@@ -143,6 +145,12 @@ export function createDiceBossFx(scene,{coarse=false,reduced=false}={}){
    case 'possessed':
     burst(x,y,z,2,coarse?30:55,power,'aura');
     flash(x,y,z,2,1.6);break;
+   case 'palm-slam':
+    burst(x,y,z,phase,coarse?24:46,power,'shatter');
+    wave(x,z,phase,9,.58);wave(x,z,phase,15,.78);flash(x,y,z,phase,1.4);break;
+   case 'prop-slam':
+    burst(x,y,z,phase,coarse?19:32,power,'shatter');
+    wave(x,z,phase,7,.55);flash(x,y,z,phase,1);break;
    case 'hand-hit':
     burst(x,y,z,phase,9,power,'shatter');flash(x,y,z,phase,.3);break;
    case 'hand-break':

@@ -24,6 +24,8 @@ test('phase-specific effects are driven by simulation events, not pre-damage dan
  assert.equal(diceBossFxCue({type:'dice-giant-hand-destroyed',index:1},b).kind,'hand-break');
  assert.equal(diceBossFxCue({type:'dice-giant-hand-recovered',index:0},b).phase,2);
  assert.equal(diceBossFxCue({type:'dice-giant-hand-hit',index:99},b),null);
+ assert.equal(diceBossFxCue({type:'dice-giant-palm-impact',x:3,z:-42},b).kind,'palm-slam');
+ assert.equal(diceBossFxCue({type:'dice-giant-prop-impact',x:3,z:-42},b).kind,'prop-slam');
  const c=phaseThree();
  assert.equal(diceBossFxCue({type:'dice-giant-feral'},c).phase,3);
  assert.deepEqual(diceBossFxCue({type:'dice-giant-head-impact',x:12,z:-40,rapid:true},c),
@@ -36,7 +38,9 @@ test('real Three.js pool survives all phases, keeps a fixed capacity and dispose
   for(let i=0;i<120;i++)fx.event({type:'dice-impact',x:(i%12)*2,z:-10},g);
   fx.update(1/60,g);
   assert.ok(fx.stats().particles>0);assert.ok(fx.stats().particles<=fx.stats().capacity);
-  const a=phaseTwo();fx.event({type:'dice-giant-hand-destroyed',index:0},a);
+  const a=phaseTwo();fx.event({type:'dice-giant-palm-impact',x:8,z:-41},a);
+  fx.event({type:'dice-giant-prop-impact',x:15,z:-40},a);
+  fx.event({type:'dice-giant-hand-destroyed',index:0},a);
   fx.update(1/60,a);assert.ok(fx.stats().particles>0);
   const b=phaseThree();fx.event({type:'dice-giant-feral'},b);
   fx.event({type:'dice-giant-head-impact',x:4,z:-43},b);
