@@ -94,3 +94,7 @@ body[data-quality='low'] #journey .j-haze,body[data-quality='low'] #journey .j-a
 body[data-motion='reduced'] #journey[data-screen='home'] *,body[data-motion='reduced'] #journey[data-screen='home'] *:before,body[data-motion='reduced'] #journey[data-screen='home'] *:after{animation:none!important}
 body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced'] #journey .j-haze,body[data-motion='reduced'] #journey .j-ash,body[data-motion='reduced'] #journey .j-relief-sheen,body[data-motion='reduced'] #journey .j-primary:after{display:none}
 @media(prefers-reduced-motion:reduce){#journey[data-screen='home'] *,#journey[data-screen='home'] *:before,#journey[data-screen='home'] *:after{animation:none!important}#journey .j-light-shafts,#journey .j-haze,#journey .j-ash,#journey .j-relief-sheen,#journey .j-primary:after{display:none}}
+.j-memory-art{width:132px;height:132px;margin:12px 0;border-radius:50%;background:center/cover;box-shadow:0 0 26px #b4934033}
+.j-memory-art[data-memory='kwon']{background-image:url('./assets/art/seal-spider-v1.jpg')}.j-memory-art[data-memory='clown']{background-image:url('./assets/art/seal-clown-v1.jpg')}.j-memory-art[data-memory='dice']{background-image:url('./assets/art/seal-dice-v1.jpg')}
+.j-memory-record{display:flex;gap:22px;align-items:center;border-top:1px solid #b49b5f44;padding:20px 0}.j-memory-record .j-memory-art{flex:0 0 96px;height:96px}.j-memory-record h2{font-size:20px;color:#dfc68f}
+@media(max-width:650px){.j-memory-record{display:block}.j-memory-art{width:96px;height:96px}}

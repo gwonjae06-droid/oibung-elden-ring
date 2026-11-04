@@ -21,9 +21,9 @@ export function installKwonVisuals({scene,renderer,ground,boss,sun,sanctuary,run
   const get=(suffix,color=false)=>loadSurfaceTexture(THREE,runtime,{url:new URL('../assets/materials/kwon/'+id+'_'+suffix+'_1k.jpg',import.meta.url).href,repeat,color,anisotropy});
   return {map:get('diff',true),normalMap:get('nor_gl'),roughnessMap:get('rough')};
  };
- const paving=surface('cobblestone_floor_03',9),stone=surface('castle_brick_broken_06',2);
+ const paving=surface('marble_01',4.5),stone=surface('castle_brick_broken_06',2);
  if(ground.material.map)runtime.own(ground.material.map);
- Object.assign(ground.material,paving,{roughness:.92});ground.material.color.setHex(0xaab3ba);
+ Object.assign(ground.material,paving,{roughness:.92});ground.material.color.setHex(0x929ea9);
  ground.material.normalScale.set(.75,.75);ground.material.needsUpdate=true;
  const materials=new Set();
  sanctuary?.traverse(n=>{if(!n.isMesh)return;for(const m of Array.isArray(n.material)?n.material:[n.material]){
@@ -66,5 +66,6 @@ export function installKwonVisuals({scene,renderer,ground,boss,sun,sanctuary,run
  positions.set(base);const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
  const motes=new THREE.Points(geometry,new THREE.PointsMaterial({color:0xb6c7d8,size:.045,transparent:true,opacity:.32,depthWrite:false}));
  motes.name='kwon-moonlit-dust';const reduced=reducedMotion();
- motes.onBeforeRender=()=>{if(reduced)return;const t=performance.now()*.00015;for(let i=0;i<count;i++){positions[i*3]=base[i*3]+Math.sin(t+i)*.35;positions[i*3+1]=base[i*3+1]+Math.sin(t*.8+i)*.25;}geometry.attributes.position.needsUpdate=true;};scene.add(motes);
+ let dustTime=0,silenced=false;sanctuary.userData.updateVisualMood=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)dustTime=0;if(game.status==='playing')dustTime+=Math.max(0,dt);silenced=game.status==='won';motes.material.opacity=silenced?.06:.32;};
+ motes.onBeforeRender=()=>{if(reduced||silenced)return;const t=dustTime*.15;for(let i=0;i<count;i++){positions[i*3]=base[i*3]+Math.sin(t+i)*.35;positions[i*3+1]=base[i*3+1]+Math.sin(t*.8+i)*.25;}geometry.attributes.position.needsUpdate=true;};scene.add(motes);
 }

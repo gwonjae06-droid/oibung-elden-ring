@@ -1,3 +1,4 @@
+import {reducedMotion} from './display-preferences.mjs';
 import {buildSanctuary} from './sanctuary.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
@@ -66,7 +67,7 @@ export function buildEnvironment(scene,ground){
 
   if(scene.getObjectByName('ruined-courtyard'))return;
   const plan=environmentPlan(),root=new THREE.Group();root.name='ruined-courtyard';
-  const coarse=media('(pointer:coarse)'),reduced=media('(prefers-reduced-motion: reduce)'),flames=[],lights=[],banners=[];
+  const coarse=media('(pointer:coarse)'),reduced=reducedMotion(),flames=[],lights=[],banners=[];
   const stone=new THREE.MeshStandardMaterial({color:0x62645b,roughness:.98});
   const dark=new THREE.MeshStandardMaterial({color:0x3e443b,roughness:1});
   const vegetation=new THREE.MeshStandardMaterial({color:0x4b5540,roughness:1,side:THREE.DoubleSide});
@@ -126,17 +127,17 @@ export function buildEnvironment(scene,ground){
   const mistA=new THREE.Mesh(mistGeo,new THREE.MeshBasicMaterial({map:mistTex,transparent:true,opacity:coarse?.16:.22,depthWrite:false}));mistA.position.y=.35;
   const mistB=new THREE.Mesh(mistGeo,new THREE.MeshBasicMaterial({map:mistTex,transparent:true,opacity:coarse?.1:.15,depthWrite:false}));mistB.position.y=1;mistB.rotation.y=1.7;
   for(const m of [mistA,mistB]){m.frustumCulled=false;m.renderOrder=2;root.add(m);}
-  let lastT=-1,silenced=false;
+  let lastT=-1,silenced=false,visualTime=0;
   mistA.onBeforeRender=()=>{
-    const t=performance.now()/1000;if(t===lastT)return;lastT=t;
-    mistA.rotation.y=t*.012;mistB.rotation.y=1.7-t*.008;
+    const t=visualTime;if(t===lastT)return;lastT=t;
+    if(!silenced){mistA.rotation.y=t*.012;mistB.rotation.y=1.7-t*.008;}
     const amp=reduced?.03:.14;
     lights.forEach((L,i)=>{L.intensity=L.userData.base*(silenced?.12:1)*(1+(silenced?0:amp)*(Math.sin(t*9.1+i*1.7)*.5+Math.sin(t*15.3+i*3.1)*.3+Math.sin(t*23+i)*.2));});
     if(!reduced&&!silenced)flames.forEach((F,i)=>{F.scale.set(1,1+.18*Math.sin(t*11+i*2.3)+.1*Math.sin(t*19+i),1);});
     banners.forEach((B,i)=>{B.rotation.z=Math.sin(t*.9+i)*(silenced?0:reduced?.01:.05);});
   };
   const map=pavingTexture();ground.material.map=map;ground.material.color.setHex(0xffffff);ground.material.needsUpdate=true;
-  const sanctuary=buildSanctuary(THREE,root);root.userData.updateSanctuary=(game,dt)=>{const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;};
+  const sanctuary=buildSanctuary(THREE,root);root.userData.updateSanctuary=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)visualTime=0;visualTime+=Math.max(0,dt);const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;};
   grass.visible=false;root.userData.decorativeOnly=true;scene.add(root);
   return root;
 

@@ -22,8 +22,8 @@ test('controller traverses all real result stages, saves choices, records final 
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);await f.click('memory-next');assert.match(f.dialog.html,/진화를 두 가지/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run,null);
  f.poll();assert.deepEqual(JSON.parse(f.data.get(SAVE_KEY)).defeated,['kwon']);
  await f.click('relic',{relic:'blade-wave'});assert.match(f.dialog.html,/다음 도전/);assert.equal(f.dialog.open,true);await f.click('next');assert.deepEqual(f.game().evolutions,['blade-wave']);assert.equal(f.dialog.open,false);
- f.game().status='won';await f.poll();await f.click('relic',{relic:'charged-blade'});await f.click('next');assert.deepEqual(f.game().evolutions,['blade-wave','charged-blade']);
- f.game().status='won';await f.poll();assert.match(f.dialog.html,/세 지배자를 넘어섰다/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,1);assert.deepEqual(f.scenes,['kwon','pull','clown','pull','dice','complete']);
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/영원한 마지막 공연/);await f.click('memory-next');await f.click('relic',{relic:'charged-blade'});await f.click('next');assert.deepEqual(f.game().evolutions,['blade-wave','charged-blade']);
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/운명의 마지막 판돈/);await f.click('memory-next');assert.match(f.dialog.html,/세 지배자를 넘어섰다/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,1);assert.deepEqual(JSON.parse(f.data.get(SAVE_KEY)).memories.map(m=>m.id),['kwon','clown','dice']);assert.deepEqual(f.scenes,['kwon','pull','clown','pull','dice','complete']);
  await f.click('challenges');assert.doesNotMatch(f.dialog.html,/ disabled/);await f.click('challenge',{mode:'noheal'});await f.click('begin');assert.equal(f.game().player.potions,0);
  await f.api.dispose();f.release();
 });

@@ -46,5 +46,29 @@
     "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/castle_brick_broken_06/castle_brick_broken_06_rough_1k.jpg",
     "md5": "c93f161c0f356e2588563135ee6ad477",
     "license": "CC0"
+  },
+  {
+    "asset": "marble_01",
+    "map": "Diffuse",
+    "file": "marble_01_diff_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_diff_1k.jpg",
+    "md5": "04325ced5018eb8a2e598a4ef69cb176",
+    "license": "CC0"
+  },
+  {
+    "asset": "marble_01",
+    "map": "nor_gl",
+    "file": "marble_01_nor_gl_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_nor_gl_1k.jpg",
+    "md5": "fa073d722cde733c1bd6cc6e8897c8e3",
+    "license": "CC0"
+  },
+  {
+    "asset": "marble_01",
+    "map": "rough",
+    "file": "marble_01_rough_1k.jpg",
+    "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/marble_01/marble_01_rough_1k.jpg",
+    "md5": "59cef1be1b7376c9d0dcc7a64adf7882",
+    "license": "CC0"
   }
 ]

@@ -1,4 +1,4 @@
-import {rememberKwon} from './chapter-story.mjs';
+import {rememberBoss} from './chapter-story.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 export const BOSSES=['kwon','clown','dice'];
 export const BOSS_NAMES=['긴턱의 이권재','광대 오슬우','거대 주사위 박성원'];
@@ -13,11 +13,11 @@ export function newRun(weapon='sword',mode='story'){
 export function loadProfile(storage){try{
  const p=JSON.parse(storage.getItem(SAVE_KEY));if(![1,2].includes(p?.version))return freshProfile();const validTime=n=>Number.isFinite(n)&&n>=0&&n<1e8;
  const records=Array.isArray(p.records)?p.records.filter(r=>validTime(r.time)&&Object.hasOwn(MODES,r.mode)&&Object.hasOwn(EVOLUTIONS,r.weapon)&&Number.isInteger(r.deaths)&&r.deaths>=0).slice(-40):[];
- const memories=Array.isArray(p.memories)?p.memories.filter(m=>m?.id==='kwon'&&(typeof m.firstClear==='string'||m.firstClear===null)).slice(0,1):[];
+ const memories=Array.isArray(p.memories)?p.memories.filter(m=>BOSSES.includes(m?.id)&&(m.firstClear===null||typeof m.firstClear==='string'&&Number.isFinite(Date.parse(m.firstClear)))).filter((m,i,a)=>a.findIndex(n=>n.id===m.id)===i).slice(0,3):[];
  const known=new Set((p.defeated||[]).filter?.(x=>BOSSES.includes(x))||[]);
  if(p.clears>0||records.length)BOSSES.forEach(x=>known.add(x));
  if(p.version===1&&Number.isInteger(p.run?.stage))BOSSES.slice(0,Math.min(3,p.run.stage+(p.run.pending?1:0))).forEach(x=>known.add(x));
- if(memories.length)known.add('kwon');
+ memories.forEach(m=>known.add(m.id));
  return {version:2,clears:Number.isInteger(p.clears)&&p.clears>=0?p.clears:0,records,memories,defeated:[...known],run:null};
  }catch{return freshProfile();}}
 // Active runs deliberately never survive reload or browser closure.
@@ -26,7 +26,7 @@ export function finishAttempt(profile,{won,time=0}){
  const r=profile.run;if(!r||r.pending)return null;r.elapsed+=Number.isFinite(time)?Math.max(0,time):0;
  if(!won){r.deaths++;return 'lost';}
  profile.defeated??=[];if(!profile.defeated.includes(BOSSES[r.stage]))profile.defeated.push(BOSSES[r.stage]);
- r.splits.push(Math.max(0,time));if(r.stage===0){rememberKwon(profile);r.memoryRead=false;}
+ r.splits.push(Math.max(0,time));rememberBoss(profile,BOSSES[r.stage]);r.memoryRead=false;
  if(r.stage<2){r.pending=true;return 'reward';}
  profile.clears++;profile.records.push({weapon:r.weapon,mode:r.mode,time:r.elapsed,deaths:r.deaths,date:new Date().toISOString()});profile.records=profile.records.slice(-40);profile.run=null;return 'complete';
 }
