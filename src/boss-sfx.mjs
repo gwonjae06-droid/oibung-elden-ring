@@ -47,13 +47,13 @@ export function createBossSfx({makeAudio=url=>new Audio(url),now=()=>performance
   if(disposed)return false;if(game!==g){reset();game=g;}const ending=!g.clown&&(ev.type==='player-hit'||ev.type==='player-crushed')&&g.status==='lost';if(!allowed()||(g.status!=='playing'&&!ending))return false;if(ev.type==='phase')reset();
   const base=bossSound(ev,g);if(!base)return false;const key=base.file||ev.type+':'+(ev.key||''),time=now();if(time-(last.get(key)??-Infinity)<(base.minGap??.09)||active.size>=maxVoices)return false;
   const j=soundVariation(random),spec={...base,ending,rate:(base.rate||1)*j.pitch*j.speed,volume:base.volume*.8*j.gain*audioChannelGain('effects'),f:(base.f||240)*j.pitch,to:(base.to||80)*j.pitch,cueDuration:(base.cueDuration||base.duration||.25)/j.speed,fade:base.fade||0};if(!base.file)spec.duration=base.duration/j.speed;
-  if(!spec.file){const ok=tone(spec);if(ok)last.set(key,time);return ok;}
-  const a=prepare(spec.file).find(a=>(a.readyState>=2||spec.file.startsWith('assets/sfx/'))&&!a.error&&![...active].some(v=>v.audio===a));if(!a){const ok=tone(spec);if(ok)last.set(key,time);return ok;}
+  if(!spec.file)return false; // No chiptune-like waveform cues without an actual recording.
+  const a=prepare(spec.file).find(a=>(a.readyState>=2||spec.file.startsWith('assets/sfx/'))&&!a.error&&![...active].some(v=>v.audio===a));if(!a)return false;
   if(disposed)return false;const rate=Math.max(.5,Math.min(1.8,spec.rate)),token=generation,v={audio:a,ending,until:time+(spec.duration||1),fade:spec.fade,volume:spec.volume};
   try{a.volume=spec.volume;a.playbackRate=rate;a.preservesPitch=false;a.currentTime=0;if(!activate(v)){stop(v);return false;}last.set(key,time);a.onended=()=>stop(v);
    const started=()=>{if(disposed||token!==generation||!active.has(v)||!allowed()||game!==g||!alive(v)){stop(v);return;}const length=Number.isFinite(a.duration)&&a.duration>0?Math.min(8,a.duration/rate):4;v.until=spec.duration?time+spec.duration:now()+Math.min(ending?1.5:8,length)+.05;};
-   const p=a.play();if(p?.then)p.then(started).catch(()=>{const valid=!disposed&&token===generation&&active.has(v)&&allowed()&&game===g&&alive(v);stop(v);if(valid&&now()-time<.15)tone(spec);});else started();return true;
-  }catch{stop(v);return disposed?false:tone(spec);}
+   const p=a.play();if(p?.then)p.then(started).catch(()=>{const valid=!disposed&&token===generation&&active.has(v)&&allowed()&&game===g&&alive(v);stop(v);// Missing/unplayable recording stays silent; never fall back to oscillator tones.});else started();return true;
+  }catch{stop(v);return false;}
  }
  function releaseClip(a){silence(a);safe(()=>{for(const source of a.querySelectorAll?.('source')||[])source.remove();});safe(()=>{if(a.removeAttribute)a.removeAttribute('src');else a.src='';});safe(()=>a.load());}
  function dispose(){
