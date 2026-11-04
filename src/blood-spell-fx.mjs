@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {hazardPosition} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
+import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
 
 export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide'});
 // Visual-only settle time after a hazard stops dealing damage: blood sinks and spreads instead of vanishing.
@@ -17,7 +18,9 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
   if(!item){
    const group=new THREE.Group();group.userData.spellForm=BLOOD_SPELL_FORMS[pattern];parent.add(group);const parts=[];
    const forms={wave:['sheet','sheet','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['sheet','sheet','torus']}[pattern];
-   for(const form of forms)parts.push(mesh(fluid[form],group));item={group,parts,pattern,stamp:0};
+   for(const form of forms)parts.push(mesh(fluid[form],group));
+    const omens=Array.from({length:3},()=>mesh(fluid.tendril,group));
+    item={group,parts,omens,pattern,stamp:0};
   }
   item.group.visible=true;item.fired=false;item.h=null;item.post=0;item.nextReady=item.nextRise=item.nextRun=0;item.runIndex=0;return item;
  }
@@ -32,6 +35,15 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
   const span=reach(h,c),life=Math.max(.2,h.life),surge=active?easeOut(t/(onsetTime(h)+.25)):0,p=active?.45+.55*surge:smooth(charge)*.45,tail=clamp01(post/TAIL);
   group.position.set(c.x,.12,c.z);group.rotation.set(0,h.yaw||0,0);group.scale.set(1+tail*.1,Math.max(.001,1-smooth(tail)),1+tail*.1);
   for(const m of parts){m.position.set(0,0,0);m.rotation.set(0,0,0);m.scale.set(1,1,1);}
+   // Three-dimensional blood veins draw toward the impact point, but never trace the radius.
+   item.omens.forEach((m,i)=>{
+    m.visible=Boolean(bloodEnvironmentCue(pattern))&&!active&&charge>.08;
+    if(!m.visible)return;
+    const a=i*Math.PI*2/3+(reduced?0:clock*.6),spread=Math.min(3.2,Math.max(1.1,span*.28));
+    m.position.set(Math.cos(a)*spread,.4+.8*charge,Math.sin(a)*spread);
+    m.rotation.set(Math.sin(a)*.3,a,-Math.cos(a)*.35);
+    m.scale.set(.18+charge*.16,.35+charge*2.5,.18+charge*.16);
+   });
   const swirl=reduced?0:g.time*2.4;
   switch(pattern){
    case 'wave':case 'tide':{
