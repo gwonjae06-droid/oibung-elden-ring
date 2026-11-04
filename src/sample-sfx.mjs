@@ -12,10 +12,12 @@ export const SOUND_SAMPLES=Object.freeze({
  'hit-pierce':Object.freeze(['sword2.mp3']),
  // The only new assets allowed for the player; all other assets/sfx clips are boss-only.
  healed:Object.freeze(['assets/sfx/heal.mp3']),
+ 'skill-heal':Object.freeze(['assets/sfx/heal.mp3']),
  death:Object.freeze(['assets/sfx/dead.mp3'])
 });
 export const PLAYER_CLIP_ENVELOPES=Object.freeze({
  healed:Object.freeze({gain:.72,seconds:1.75,fade:.28,minGap:.25}),
+ 'skill-heal':Object.freeze({gain:.58,seconds:1.12,fade:.23,minGap:.25}),
  death:Object.freeze({gain:.9,seconds:2.65,fade:.45,minGap:.5})
 });
 export function createSampleSfx({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now(),storage,coarse=()=>globalThis.matchMedia?.('(pointer: coarse)')?.matches||false,random=Math.random,schedule=fn=>globalThis.setInterval(fn,40),cancel=id=>globalThis.clearInterval(id)}={}){
