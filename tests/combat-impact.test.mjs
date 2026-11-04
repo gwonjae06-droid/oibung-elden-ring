@@ -44,6 +44,14 @@ test('impact timers pause safely and hitstop durations are presentation-only',()
  fx.dispose();
  assert.equal(fx.event({type:'boss-hit',amount:25},g),false);
 });
+test('casino giant hand impacts shake the boss without changing the main boss HP trail',()=>{
+ const g=game(),fx=createCombatImpact({boss:'dice'});
+ assert.equal(fx.event({type:'dice-giant-hand-hit',index:0,amount:100},g),true);
+ assert.equal(fx.trails.boss.value,null);
+ fx.update(.016);const mesh=model();fx.bossPose(mesh);
+ assert.ok(mesh.position.z<0);
+ fx.dispose();
+});
 class Clip{
  static all=[];
  constructor(src){this.src=src;this.paused=true;this.currentTime=0;this.volume=0;Clip.all.push(this);}
