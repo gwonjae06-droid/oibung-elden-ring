@@ -1,8 +1,9 @@
 import {audioChannelGain} from './audio-preferences.mjs';
+import {createSampleSfx} from './sample-sfx.mjs';
 export const IMPACT_SOUND_NAMES=['hit-slash','hit-blunt','hit-pierce','hit-crit','blood-splat','hit-flesh'];
 export function createImpactAudio(factory){
   const make=factory||(()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;return C?new C():null;});
-  let ctx=null,master=null,noiseBuf=null,enabled=false,ends=[],disposed=false,completion=null;const last={};
+  let ctx=null,master=null,noiseBuf=null,enabled=false,ends=[],disposed=false,completion=null;const last={};const sample=createSampleSfx();
   function ensure(){
     if(disposed)return false;if(ctx)return true;
     try{ctx=make();}catch(e){ctx=null;}
@@ -34,17 +35,17 @@ export function createImpactAudio(factory){
     'hit-flesh':()=>{tone({f:130,to:45,dur:.3,type:'sawtooth',vol:.26});noise({dur:.3,type:'lowpass',f:950,to:150,vol:.34});noise({dur:.16,f:420,q:1.5,vol:.2,at:.05});}
   };
   return {
-    dispose(){if(completion)return completion;disposed=true;enabled=false;const owned=ctx;ctx=master=noiseBuf=null;ends=[];completion=Promise.resolve().then(()=>owned?.close?.()).then(()=>({errors:[]}),error=>({errors:[error]}));return completion;},
+    dispose(){if(completion)return completion;disposed=true;enabled=false;sample.dispose();const owned=ctx;ctx=master=noiseBuf=null;ends=[];completion=Promise.resolve().then(()=>owned?.close?.()).then(()=>({errors:[]}),error=>({errors:[error]}));return completion;},
     get enabled(){return enabled;},names:Object.keys(SOUNDS),
     setEnabled(on){
-      if(!on){enabled=false;return false;}
+      if(!on){enabled=false;sample.setEnabled(false);return false;}
       if(!ensure()){enabled=false;return false;}
-      if(ctx.state==='suspended'&&ctx.resume)ctx.resume();enabled=true;return true;
+      if(ctx.state==='suspended'&&ctx.resume)ctx.resume();enabled=true;sample.setEnabled(true);return true;
     },
     play(name,opts={}){
       if(!enabled||!ctx)return false;const fn=SOUNDS[name];if(!fn)return false;
       master.gain.value=.55*audioChannelGain('effects');const now=ctx.currentTime,gap=opts.minGap===undefined?.035:opts.minGap;
-      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;fn(opts);return true;
+      if(last[name]!==undefined&&now-last[name]<gap)return false;last[name]=now;if(sample.play(name,opts))return true;fn(opts);return true;
     }
   };
 }
