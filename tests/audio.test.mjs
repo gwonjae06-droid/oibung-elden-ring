@@ -25,19 +25,14 @@ function fakeContext() {
   return {ctx, log};
 }
 
-test('every sound plays without invalid audio parameters', () => {
-  const {ctx, log} = fakeContext();
-  const a = createAudio(() => ctx);
-  assert.equal(a.setEnabled(true), true);
-  assert.ok(a.names.length >= 20);
-  for (const name of a.names) {
-    ctx.currentTime += 1;
-    const before = log.starts;
-    assert.equal(a.play(name, {amount: 120}), true, name);
-    assert.ok(log.starts > before, name + ' scheduled nothing');
-  }
-  assert.deepEqual(log.errors, []);
-  assert.equal(log.starts, log.stops);
+test('legacy retro recipe names are all silenced rather than generating oscillators', () => {
+ const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
+ assert.equal(a.setEnabled(true),true);
+ assert.ok(a.names.length>=20);
+ for(const name of a.names){ctx.currentTime+=1;assert.equal(a.play(name),false,name);}
+ assert.equal(log.osc,0);
+ assert.equal(log.starts,0);
+ assert.deepEqual(log.errors,[]);
 });
 
 test('disabled audio is silent and never creates a context', () => {
@@ -58,17 +53,14 @@ test('missing Web Audio support leaves audio off instead of throwing', () => {
   assert.equal(b.setEnabled(true), false);
 });
 
-test('unknown sound names are ignored and rapid repeats are throttled', () => {
-  const {ctx, log} = fakeContext();
-  const a = createAudio(() => ctx);
-  a.setEnabled(true);
-  assert.equal(a.play('does-not-exist'), false);
-  assert.equal(a.play('ui'), true);
-  const starts = log.starts;
-  assert.equal(a.play('ui'), false);
-  assert.equal(log.starts, starts);
-  ctx.currentTime += .1;
-  assert.equal(a.play('ui'), true);
+test('UI beeps and unknown audio cues stay silent', () => {
+ const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
+ a.setEnabled(true);
+ assert.equal(a.play('does-not-exist'),false);
+ assert.equal(a.play('ui'),false);
+ ctx.currentTime+=.1;
+ assert.equal(a.play('ui'),false);
+ assert.equal(log.osc,0);
 });
 
 test('suspended contexts are resumed when audio is enabled', () => {
@@ -97,14 +89,12 @@ test('ambience starts once, stops cleanly, and stops when audio is disabled', ()
   assert.deepEqual(log.errors, []);
 });
 
-test('a flood of sounds is capped, then recovers once they have finished', () => {
-  const {ctx, log} = fakeContext();
-  const a = createAudio(() => ctx);
-  a.setEnabled(true);
-  for (let i = 0; i < 400; i++) a.play('phase', {minGap: 0});
-  assert.ok(log.starts <= 60, 'too many voices: ' + log.starts);
-  ctx.currentTime += 10;
-  const before = log.starts;
-  assert.equal(a.play('ui', {minGap: 0}), true);
-  assert.ok(log.starts > before);
+test('a flood of retired retro phase cues never creates audible voices', () => {
+ const {ctx,log}=fakeContext(),a=createAudio(()=>ctx);
+ a.setEnabled(true);
+ for(let i=0;i<400;i++)a.play('phase',{minGap:0});
+ ctx.currentTime+=10;
+ assert.equal(a.play('ui',{minGap:0}),false);
+ assert.equal(log.osc,0);
+ assert.equal(log.starts,0);
 });
