@@ -6,9 +6,9 @@ import {GIANT,giantPattern,giantHazards,hazardContains,skipGiant,giantHandPose,g
 import {giantImpact} from '../src/dice-giant-hit.mjs';
 const advance=(g,t)=>{for(let n=0;n<Math.ceil(t*120);n++)stepDicePlayer(g,1/120);};
 function ready(weapon='sword'){const g=createDicePlayerGame(weapon);damageDice(g,g.boss.maxHp*.51);skipGiant(g);advance(g,.02);g.player.hp=g.player.maxHp=999;return g;}
-test('the public player engine starts possession at half health exactly once and protects the cutscene',()=>{
+test('the public player engine starts possession at two-thirds health exactly once and protects the cutscene',()=>{
  const g=createDicePlayerGame();g.projectiles.push({});g.player.action={kind:'attack'};
- damageDice(g,1499);assert.equal(g.boss.phase,1);damageDice(g,1);assert.equal(g.dice.giant.state,'transition');assert.equal(g.boss.hp,1500);assert.equal(g.projectiles.length,0);assert.equal(g.player.action,null);
+ damageDice(g,999);assert.equal(g.boss.phase,1);damageDice(g,1);assert.equal(g.dice.giant.state,'transition');assert.equal(g.boss.hp,2000);assert.equal(g.projectiles.length,0);assert.equal(g.player.action,null);
  assert.equal(damageDice(g,999),0);assert.equal(actDice(g,'light'),false);const hp=g.player.hp;advance(g,4);assert.equal(g.player.hp,hp);assert.equal(g.dice.giant.state,'transition');
  skipGiant(g);advance(g,.02);assert.equal(g.dice.giant.state,'recovery');assert.equal(g.events.filter(e=>e.type==='dice-possession').length,1);assert.equal(g.boss.phase2PendingDesign,false);
 });

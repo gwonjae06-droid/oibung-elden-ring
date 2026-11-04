@@ -1,9 +1,9 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
-export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:.275};
-export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언'];
-export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기'];
+export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
+export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장'];
+export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
 export const HAND_REST=Object.freeze([{x:-22,y:2,z:-64},{x:22,y:2,z:-64}]);
 const sat=v=>Math.max(0,Math.min(1,v));
@@ -14,7 +14,7 @@ const circle=(x,z,r,start=0,warn=1.15,damage=26)=>({shape:'circle',x:clamp(x),z:
 const rect=(x,z,w,h,start=0,warn=1.2)=>({shape:'rect',x,z,w,h,start,warn,active:.35,damage:32});
 export function giantPattern(index,player,temperament='controlled',healthRatio=1){
  if(temperament==='feral')return feralPattern(index,player,healthRatio);
- const x=clamp(player.x,-48,48),z=clamp(player.z,-48,48),slot=index%7;let hazards=[];const turn=Math.floor(index/7),coinFace=turn%2?'tails':'heads',chessPiece=['rook','bishop','knight'][turn%3];
+ const x=clamp(player.x,-48,48),z=clamp(player.z,-48,48),slot=index%GIANT_NAMES.length;let hazards=[];const turn=Math.floor(index/7),coinFace=turn%2?'tails':'heads',chessPiece=['rook','bishop','knight'][turn%3];
  if(slot===0)hazards=Array.from({length:5},(_,i)=>circle(x+(i-2)*10,z,6,i*.4,1.1));
  if(slot===1)hazards=Array.from({length:5},(_,i)=>rect(-48+i*24,z,24,22,i*.24,1.15));
  if(slot===2)hazards=[[0,0],[-24,0],[24,0],[0,-24],[0,24]].map(([a,b],i)=>circle(x+a,z+b,8,i*.18,1.4));
@@ -26,10 +26,13 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
  }
  if(slot===5)hazards=[rect(-15,z,18,26,0,1.6),rect(15,z,18,26,0,1.6)];
  if(slot===6){hazards=[...giantPattern(0,player).hazards.slice(0,3),...giantPattern(2,player).hazards.map(h=>({...h,start:h.start+2.7})),...giantPattern(1,player).hazards.map(h=>({...h,start:h.start+5.1}))];}
- return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...h,id:i,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
+ if(slot===7)hazards=[{...rect(-28,z,23,38,0,1),handIndex:0},{...rect(28,z,23,38,.6,1),handIndex:1},
+  {...circle(x-12,z,10,1.4,.95,36),handIndex:0},{...circle(x+12,z,10,2.0,.95,36),handIndex:1}];
+ if(slot===8)hazards=Array.from({length:6},(_,i)=>({...circle(clamp(x+(i%2?17:-17)),clamp(z+(i%3-1)*8),9,i*.46,.85,30),handIndex:i%2,active:.27}));
+ return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...h,id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
- const x=clamp(player.x,-45,45),z=clamp(player.z,-45,45),slot=index%8;let hazards=[];
+ const x=clamp(player.x,-45,45),z=clamp(player.z,-45,45),slot=index%FERAL_NAMES.length;let hazards=[];
  if(slot===0)hazards=[circle(x-13,z,11,0,1.25,35),circle(x+13,z,11,.6,1.2,35),circle(x,z-8,12,1.2,1.2,40)];
  if(slot===1)hazards=Array.from({length:4},(_,i)=>rect(-42+i*28,z,28,24,i*.32,1.25));
  if(slot===2){
@@ -48,7 +51,9 @@ function feralPattern(index,player,healthRatio=1){
   // First the head vibrates in place for a full second, then strikes five times in rapid succession.
   hazards=Array.from({length:5},(_,i)=>({...circle(clamp(x+(i%2?8:-8),-26,26),clamp(z+(i%3-1)*5,-51,-34),13,1+i*.88,.46,35),headSlam:true,rapid:true,active:.2}));
  }
- return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...h,id:i,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
+ if(slot===8)hazards=Array.from({length:6},(_,i)=>({...rect(-42+i*17,z+(i%2?9:-9),16,38,i*.3,.8),handIndex:i%2,active:.23,damage:34}));
+ if(slot===9)hazards=Array.from({length:3},(_,i)=>({...circle(clamp(x+(i-1)*13,-26,26),clamp(z+(i%2?5:-5),-51,-34),14,.75+i*1.85,.72,42),headSlam:true,rapid:true,active:.34}));
+ return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...h,id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
 export function giantPropType(s,h){
@@ -60,14 +65,25 @@ export function giantPropType(s,h){
 // 'throw' = polite flick/lowering of a hand in front of the body, 'reach' = the hand goes to the target and slams.
 function handKind(s,h){
  if(h.headSlam||h.shape==='ring')return null;
- if(s.temperament==='feral')return [0,1,3,4,5,6].includes(s.slot)?'reach':null;
+ if(s.temperament==='feral')return [0,1,3,4,5,6,8].includes(s.slot)?'reach':null;
  if(giantPropType(s,h))return 'throw';
- return [0,5,6].includes(s.slot)?'reach':null;
+ return [0,5,6,7,8].includes(s.slot)?'reach':null;
 }
+export const handCanAttack=(s,i)=>Boolean(s&&!s.destroyed?.[i]&&!(s.revive?.[i]>0));
 export function beginGiant(g){
- g.boss.name='운명의 찬탈자 박성원';const d=g.dice;d.giant={state:'transition',t:0,ordinal:0,temperament:'controlled',rageTriggered:false,rageBeat:0,cinematicBeat:'still',hands:[GIANT.handHp,GIANT.handHp],destroyed:[false,false],crumble:[0,0],smooth:HAND_REST.map(h=>({...h})),hazards:[],from:{...d.pose,rotation:[...d.pose.rotation]}};
+ g.boss.name='운명의 찬탈자 박성원';const d=g.dice;d.giant={state:'transition',t:0,ordinal:0,temperament:'controlled',rageTriggered:false,rageBeat:0,cinematicBeat:'still',hands:[GIANT.handHp,GIANT.handHp],destroyed:[false,false],disabledFor:[0,0],revive:[0,0],crumble:[0,0],smooth:HAND_REST.map(h=>({...h})),hazards:[],from:{...d.pose,rotation:[...d.pose.rotation]}};
  d.state='giant';d.telegraph=d.pips=d.groundSpikes=null;d.frenzyRemaining=d.chainCharges=0;d.stun=0;
  g.player.action=null;if(g.projectiles)g.projectiles.length=0;g.boss.phase2PendingDesign=false;g.events.push({type:'dice-possession',duration:GIANT.transition});
+}
+export function beginFeral(g){
+ const q=g.dice.giant;
+ if(!q||q.rageTriggered||q.state==='dead')return false;
+ if(q.state==='transition'){q.pendingFeral=true;return true;}
+ q.pendingFeral=false;q.rageTriggered=true;q.temperament='feral';q.rageBeat=GIANT.rageBeat;
+ q.state='recovery';q.t=-GIANT.rageBeat;q.hazards=[];
+ q.hands=[GIANT.handHp,GIANT.handHp];q.destroyed=[false,false];q.disabledFor=[0,0];q.revive=[GIANT.handRecover,GIANT.handRecover];q.crumble=[0,0];
+ g.player.action=null;if(g.projectiles)g.projectiles.length=0;
+ g.events.push({type:'dice-giant-feral',duration:GIANT.rageBeat});return true;
 }
 export function skipGiant(g){const s=g.dice.giant;if(s?.state!=='transition')return false;s.t=GIANT.transition;return true;}
 // Shared skeletal posture: chest and head pitch/fall together, never lengthening the neck.
@@ -96,10 +112,16 @@ export function giantPosture(g){
    return {lean,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
   }
  }
+ if(s.state==='attack'&&s.temperament==='controlled'){
+  const h=s.hazards?.find(h=>h.handIndex!=null&&!h.cancelled&&handCanAttack(s,h.handIndex)&&s.t>=h.start-.5&&s.t<=h.start+h.warn+h.active+.2);
+  if(h){const bend=.2*ease((s.t-h.start+.5)/Math.max(.4,h.warn+.5));
+   return {lean:bend,bodyX:h.x*bend*.35,head:{...rest,x:h.x*bend*.3,y:58-8*bend,z:-106+12*bend}};
+  }
+ }
  return {lean:0,bodyX:0,head:rest};
 }
 export function giantHeadPose(g){return giantPosture(g).head;}
-export function giantHazards(g){const s=g.dice.giant;if(s?.state!=='attack')return [];return s.hazards.filter(h=>s.t>=h.start&&s.t<h.start+h.warn+h.active).map(h=>({...h,age:s.t-h.start,live:s.t>=h.start+h.warn,r:h.shape==='ring'?Math.max(0,(s.t-h.start-h.warn)/h.active)*62:h.r}));}
+export function giantHazards(g){const s=g.dice.giant;if(s?.state!=='attack')return [];return s.hazards.filter(h=>!h.cancelled&&(h.handIndex==null||handCanAttack(s,h.handIndex))&&s.t>=h.start&&s.t<h.start+h.warn+h.active).map(h=>({...h,age:s.t-h.start,live:s.t>=h.start+h.warn,r:h.shape==='ring'?Math.max(0,(s.t-h.start-h.warn)/h.active)*62:h.r}));}
 export function hazardContains(h,p,pad=.42){
  if(h.shape==='rect'||h.shape==='rotated-rect'){
   const x=p.x-h.x,z=p.z-h.z,a=h.shape==='rotated-rect'?h.yaw:0;
@@ -114,14 +136,13 @@ const THROW={chip:[5,4,2],dice:[9,5,4],coin:[11,4,3],chess:[6,0,5]};
 function handTarget(g,index){
  const s=g.dice.giant,rest=HAND_REST[index];
  if(!s)return {...rest,fist:0};
- if(s.destroyed?.[index])return {...rest,y:.6,fist:0};
+ if(!handCanAttack(s,index))return {...rest,y:s.destroyed?.[index]?.6:2,fist:0};
  if(s.state==='transition')return {...rest,y:2+25*(1-ease((s.t-4.7)/1.0)),fist:0};
  if(s.state==='dead')return {...rest,y:.8,fist:0};
  const feral=s.temperament==='feral',time=g.time||0;
  let x=rest.x,z=rest.z,y=rest.y+(feral?.42*Math.sin(time*7+index*2):.16*Math.sin(time*1.8+index*2)),fist=feral?.85:0;
  if(s.state!=='attack')return {x,y,z,fist};
- const alive=[0,1].filter(i=>!s.destroyed?.[i]);
- const mine=(s.hazards||[]).filter(h=>handKind(s,h)&&(alive.length===1||h.id%2===index)).sort((a,b)=>a.start-b.start);
+ const mine=(s.hazards||[]).filter(h=>!h.cancelled&&handKind(s,h)&&h.handIndex===index).sort((a,b)=>a.start-b.start);
  let reach=null;
  for(const h of mine){
   const age=s.t-h.start;
@@ -148,50 +169,63 @@ function moveHands(g,dt){
 }
 export function giantHandPose(g,index){
  const s=g.dice.giant,t=handTarget(g,index);
- if(!s||['transition','dead'].includes(s.state)||s.destroyed?.[index])return t;
+ if(!s||['transition','dead'].includes(s.state)||!handCanAttack(s,index))return t;
  const p=s.smooth?.[index];return p?{x:p.x,y:p.y,z:p.z,fist:t.fist}:t;
 }
 export function giantHeadExposed(g){
  const s=g.dice.giant;
  return Boolean(s?.state==='attack'&&s.temperament==='feral'&&s.hazards?.some(h=>h.headSlam&&s.t>=h.start+h.warn&&s.t<=h.start+h.warn+h.active+.85));
 }
-export function giantAim(g){const s=g.dice.giant;if(!s)return g.dice.pose;if(giantHeadExposed(g))return giantHeadPose(g);const hands=[0,1].filter(i=>!s.destroyed?.[i]).map(i=>giantHandPose(g,i));if(!hands.length)return giantHeadPose(g);return hands.sort((a,b)=>Math.hypot(a.x-g.player.x,a.z-g.player.z)-Math.hypot(b.x-g.player.x,b.z-g.player.z))[0];}
+export function giantAim(g){const s=g.dice.giant;if(!s)return g.dice.pose;if(giantHeadExposed(g))return giantHeadPose(g);const hands=[0,1].filter(i=>handCanAttack(s,i)).map(i=>giantHandPose(g,i));if(!hands.length)return giantHeadPose(g);return hands.sort((a,b)=>Math.hypot(a.x-g.player.x,a.z-g.player.z)-Math.hypot(b.x-g.player.x,b.z-g.player.z))[0];}
 export function stepGiant(g,dt,frozen=false){
- const s=g.dice.giant;if(!s||s.state==='dead')return;
- if(s.state==='transition'){const before=s.t;s.t=Math.min(GIANT.transition,s.t+dt);if(before<POSSESSION.launchEnd&&s.t>=POSSESSION.launchEnd)g.events.push({type:'dice-giant-neck-impact'});s.cinematicBeat=cinematicBeat(s.t);if(s.t>=GIANT.transition){s.state='recovery';s.t=0;g.events.push({type:'dice-possessed'});}g.dice.pose=giantHeadPose(g);return;}
+ const q=g.dice.giant;if(!q||q.state==='dead')return;
+ if(q.state==='transition'){
+  const before=q.t;q.t=Math.min(GIANT.transition,q.t+dt);
+  if(before<POSSESSION.launchEnd&&q.t>=POSSESSION.launchEnd)g.events.push({type:'dice-giant-neck-impact'});
+  q.cinematicBeat=cinematicBeat(q.t);
+  if(q.t>=GIANT.transition){q.state='recovery';q.t=0;g.events.push({type:'dice-possessed'});if(q.pendingFeral)beginFeral(g);}
+  g.dice.pose=giantHeadPose(g);return;
+ }
  if(frozen)return;
- // Phase three: the polite gambler loses his mind once both hands are gone or his health runs low.
- // The change waits for the current pattern to finish so nothing is cut off mid-telegraph.
- if(!s.rageTriggered&&s.state==='recovery'&&s.t>=0&&(g.boss.hp/g.boss.maxHp<=GIANT.rageHp||s.destroyed?.every(Boolean))){
-  s.rageTriggered=true;s.temperament='feral';s.rageBeat=GIANT.rageBeat;s.hazards=[];s.t=-GIANT.rageBeat;
-  g.events.push({type:'dice-giant-feral',duration:GIANT.rageBeat});
+ if(g.boss.phase===3&&!q.rageTriggered)beginFeral(g);
+ q.rageBeat=Math.max(0,(q.rageBeat||0)-dt);q.t+=dt;
+ q.crumble=q.crumble||[0,0];q.revive=q.revive||[0,0];q.disabledFor=q.disabledFor||[0,0];
+ for(const i of [0,1]){
+  if(q.destroyed[i]){
+   q.crumble[i]+=dt;q.disabledFor[i]=Math.max(0,q.disabledFor[i]-dt);
+   if(q.disabledFor[i]<=0){
+    q.destroyed[i]=false;q.hands[i]=GIANT.handHp;q.crumble[i]=0;q.revive[i]=GIANT.handRecover;
+    g.events.push({type:'dice-giant-hand-recovered',index:i});
+   }
+  }else q.revive[i]=Math.max(0,q.revive[i]-dt);
  }
- s.rageBeat=Math.max(0,s.rageBeat-dt);s.t+=dt;
- s.crumble=s.crumble||[0,0];s.destroyed?.forEach((lost,i)=>{if(lost)s.crumble[i]+=dt;});
- if(s.state==='recovery'&&s.t>=(s.temperament==='feral'?GIANT.feralRecovery:GIANT.recovery)){
-  const alive=s.destroyed.filter(v=>!v).length,ordinal=s.ordinal++;
-  const selected=alive===0?[2,7,4,2,7][ordinal%5]:alive===1?[2,0,1,7,2,3,4,5][ordinal%8]:ordinal;
-  const pattern=giantPattern(selected,g.player,s.temperament,g.boss.hp/g.boss.maxHp);Object.assign(s,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:s.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});g.events.push({type:'dice-giant-warning',name:s.name});}
- if(s.state==='attack'){
-  for(const h of giantHazards(g)){const original=s.hazards[h.id];if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;original.hit=true;if(diceInvulnerable(g.player))continue;
+ if(q.state==='recovery'&&q.t>=(q.temperament==='feral'?GIANT.feralRecovery:GIANT.recovery)){
+  const ordinal=q.ordinal++,pattern=giantPattern(ordinal,g.player,q.temperament,g.boss.hp/g.boss.maxHp);
+  Object.assign(q,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:q.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});
+  g.events.push({type:'dice-giant-warning',name:q.name});
+ }
+ if(q.state==='attack'){
+  for(const h of giantHazards(g)){
+   const original=q.hazards[h.id];
+   if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;
+   original.hit=true;if(diceInvulnerable(g.player))continue;
    const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});g.events.push({type:'player-hit',amount,source:'giant'});
-   if(g.player.hp<=0){g.status='lost';s.hazards=[];g.events.push({type:'death'});return;}
+   if(g.player.hp<=0){g.status='lost';q.hazards=[];g.events.push({type:'death'});return;}
   }
-  if(s.t>=s.duration+.65){s.state='recovery';s.t=0;s.hazards=[];}
+  if(q.t>=q.duration+.65){q.state='recovery';q.t=0;q.hazards=[];}
  }
- moveHands(g,dt);
- g.dice.pose=giantHeadPose(g);
+ moveHands(g,dt);g.dice.pose=giantHeadPose(g);
 }
-// Each hand is a persistent mini-boss HP pool; destroyed palms do not recover and never stagger the giant.
-// The damage dealt to a hand drains the boss one-to-one, so phase two progresses through the hands.
+// Shattered palms cannot move or attack until their independent timer expires.
 export function strikeGiantHand(g,index,amount){
- const s=g.dice.giant;if(!s||!Number.isFinite(amount)||amount<=0||index!==0&&index!==1||s.destroyed[index]||['transition','dead'].includes(s.state))return 0;
- const dealt=Math.min(s.hands[index],amount);
- s.hands[index]-=dealt;
+ const q=g.dice.giant;
+ if(!q||!Number.isFinite(amount)||amount<=0||(index!==0&&index!==1)||!handCanAttack(q,index)||['transition','dead'].includes(q.state))return 0;
+ const dealt=Math.min(q.hands[index],amount);q.hands[index]-=dealt;
  g.events.push({type:'dice-giant-hand-hit',index,amount:dealt});
- if(s.hands[index]<=0){
-  s.hands[index]=0;s.destroyed[index]=true;s.crumble=s.crumble||[0,0];s.crumble[index]=0;
-  g.events.push({type:'dice-giant-hand-destroyed',index,remaining:s.destroyed.filter(v=>!v).length});
+ if(q.hands[index]<=0){
+  q.hands[index]=0;q.destroyed[index]=true;q.disabledFor[index]=q.temperament==='feral'?5:GIANT.handDisable;q.revive[index]=0;q.crumble[index]=0;
+  for(const h of q.hazards||[])if(h.handIndex===index)h.cancelled=true;
+  g.events.push({type:'dice-giant-hand-destroyed',index,remaining:q.destroyed.filter(v=>!v).length,duration:q.disabledFor[index]});
  }
- return Math.max(.01,dealt);
+ return dealt;
 }
