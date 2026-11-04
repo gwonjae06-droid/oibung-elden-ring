@@ -29,10 +29,9 @@ export function createCrowdScream(makeAudio){
  return {
   setEnabled(value){on=Boolean(value)&&ensure();if(on)ctx.resume?.()?.catch?.(()=>{});return on;},
   scream(){
-   if(!on||!ctx)return false;
-   for(let i=0;i<12;i++)voice(Math.random()*1.4,430+Math.random()*520,1.1+Math.random()*1.4,.12+Math.random()*.1,Math.random()*1.8-.9);
-   for(let i=0;i<6;i++)crash(Math.random()*1.6,.2);
-   return true;
+   // Old sawtooth glissandos sounded like arcade 8-bit alarms.
+   // Keep the visual crowd panic; add a licensed crowd recording later.
+   return false;
   }
  };
 }
