@@ -16,12 +16,28 @@ export function createAudio(factory){
  }
  function ensure(){if(ctx)return true;try{ctx=make();if(!ctx)return false;master=ctx.createGain();master.gain.value=.44*audioChannelGain('effects');const comp=ctx.createDynamicsCompressor();master.connect(comp);comp.connect(ctx.destination);ambientBus=ctx.createGain();ambientBus.gain.value=audioChannelGain('ambient');ambientBus.connect(comp);addReverb(comp);noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*2),ctx.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return true;}catch{ctx=null;return false;}}
  function prune(){const now=ctx.currentTime;for(const [s,e] of ends)if(e<=now){ends.delete(s);nodes.delete(s);}}
+ // No pitched oscillators in gameplay SFX: short filtered noise conveys motion,
+ // blunt hits and warnings without retro 8-bit beeps.
  function emit(q,j,power=1){
-  prune();if(nodes.size>=LIMIT)return;const [kind,f,to,dur,vol,type='sine',delay=0,attack=.005]=q,t=ctx.currentTime+delay/j.speed,end=t+(dur+attack)/j.speed;
-  const s=kind==='n'?ctx.createBufferSource():ctx.createOscillator(),g=ctx.createGain();let filter=null;
-  if(kind==='n'){s.buffer=noise;s.loop=true;filter=ctx.createBiquadFilter();filter.type=type==='sine'?'bandpass':type;filter.Q.value=1.1;filter.frequency.setValueAtTime(f*j.pitch,t);if(to)filter.frequency.exponentialRampToValueAtTime(to*j.pitch,end);s.connect(filter);filter.connect(g);}
-  else{s.type=type;s.frequency.setValueAtTime(f*j.pitch,t);if(to)s.frequency.exponentialRampToValueAtTime(to*j.pitch,end);s.connect(g);}
-  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*j.gain*power,t+attack/j.speed);g.gain.exponentialRampToValueAtTime(.0001,end);g.connect(master);nodes.add(s);ends.set(s,end+.05);s.onended=()=>{nodes.delete(s);ends.delete(s);s.disconnect();filter?.disconnect();g.disconnect();};s.start(t);s.stop(end+.03);
+  prune();if(nodes.size>=LIMIT)return;
+  const [kind,f,to,dur,vol,type='bandpass',delay=0,attack=.005]=q;
+  const t=ctx.currentTime+delay/j.speed,end=t+(Math.min(dur,.52)+attack)/j.speed;
+  const s=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),g=ctx.createGain();
+  s.buffer=noise;s.loop=true;
+  filter.type=kind==='t'||type==='sine'||type==='square'||type==='sawtooth'||type==='triangle'?'lowpass':type;
+  filter.Q.value=.6;
+  const first=kind==='t'?Math.max(90,Math.min(900,f*.65)):Math.max(100,Math.min(3000,f));
+  const last=kind==='t'?Math.max(65,Math.min(500,(to||f)*.6)):Math.max(100,Math.min(2600,to||f));
+  filter.frequency.setValueAtTime(first*j.pitch,t);
+  filter.frequency.exponentialRampToValueAtTime(Math.max(50,last*j.pitch),end);
+  s.connect(filter);filter.connect(g);
+  const peak=Math.min(.2,vol*(kind==='t'?.52:.7)*j.gain*power);
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.linearRampToValueAtTime(Math.max(.0002,peak),t+attack/j.speed);
+  g.gain.exponentialRampToValueAtTime(.0001,end);g.connect(master);
+  nodes.add(s);ends.set(s,end+.05);
+  s.onended=()=>{nodes.delete(s);ends.delete(s);s.disconnect();filter.disconnect();g.disconnect();};
+  s.start(t);s.stop(end+.03);
  }
  const R={
  'swing-sword':[['n',900,3200,.18,.2],['t',2400,3600,.1,.04,'triangle',.02]],
