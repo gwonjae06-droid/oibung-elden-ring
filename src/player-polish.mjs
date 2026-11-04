@@ -26,10 +26,10 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
  function event(e,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}const p=g.player,c=rgb(PLAYER_COLORS[g.weapon]||0xffffff),n=k=>reduced?Math.ceil(k/3):k;
   if(e.type==='phase'){clear();lastGame=g;return;}
   if(e.type==='roll'){sound.play('roll',g.weapon);emit?.(p.x,.1,p.z,n(14),[.5,.47,.4],true);ring?.(p.x,p.z,.9,0x93c8d5,.3);}
-  if(e.type==='swing'&&['sword','hammer'].includes(g.weapon)){sound.play('swing',g.weapon);emit?.(p.x+Math.sin(p.yaw),1,p.z+Math.cos(p.yaw),n(7),c);}
-  if(e.type==='shot'){sound.play('shot',g.weapon);emit?.(p.x+Math.sin(p.yaw)*2,1.2,p.z+Math.cos(p.yaw)*2,n(12),c);}
-  if(e.type==='boss-hit'){sound.play('hit',g.weapon);const b=g.boss,d=Math.max(.01,Math.hypot(p.x-b.x,p.z-b.z));emit?.(b.x+(p.x-b.x)/d*1.2,1.8,b.z+(p.z-b.z)/d*1.2,n(g.weapon==='hammer'?28:16),c,g.weapon==='hammer');}
-  if(e.type==='healed'){sound.play('heal',g.weapon);emit?.(p.x,.7,p.z,n(18),[.5,.95,.65]);ring?.(p.x,p.z,1.4,0x9becad,.6);}
+  if(e.type==='swing'&&['sword','hammer'].includes(g.weapon)){emit?.(p.x+Math.sin(p.yaw),1,p.z+Math.cos(p.yaw),n(7),c);}
+  if(e.type==='shot'){emit?.(p.x+Math.sin(p.yaw)*2,1.2,p.z+Math.cos(p.yaw)*2,n(12),c);}
+  if(e.type==='boss-hit'){const b=g.boss,d=Math.max(.01,Math.hypot(p.x-b.x,p.z-b.z));emit?.(b.x+(p.x-b.x)/d*1.2,1.8,b.z+(p.z-b.z)/d*1.2,n(g.weapon==='hammer'?28:16),c,g.weapon==='hammer');}
+  if(e.type==='healed'){emit?.(p.x,.7,p.z,n(18),[.5,.95,.65]);ring?.(p.x,p.z,1.4,0x9becad,.6);}
  }
  function update(dt,g){
   if(disposed)return;if(lastGame!==g){clear();lastGame=g;}sound.update();if(dt<=0)sound.clear();if(!decorate())return;
