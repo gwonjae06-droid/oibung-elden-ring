@@ -45,8 +45,10 @@ export function actDice(g, type, input = {}) {
   return actPlayer(g, type);
 }
 
+export function diceFaceDamageable(g,impact){return Boolean(impact)&&(g?.dice?.giant?.temperament==='feral'||diceWeakHit(impact));}
+
 function hit(g, amount, action, impact) {
-  if (!diceWeakHit(impact) && g.dice.giant?.temperament!=='feral') {
+  if (!diceFaceDamageable(g,impact)) {
     g.dice.blockFlash = 0.12;
     g.events.push({type: 'dice-blocked', face: impact.face});
     return;
@@ -88,7 +90,7 @@ function projectiles(g, dt) {
     if (impact) {
       projectile.hit = true;
       hit(g, projectile.damage, projectile.source, impact);
-      if (!projectile.piercing || (!diceWeakHit(impact)&&g.dice.giant?.temperament!=='feral')) projectile.life = 0;
+      if (!projectile.piercing || !diceFaceDamageable(g,impact)) projectile.life = 0;
     }
   }
   g.projectiles = g.projectiles.filter((projectile) => projectile.life > 0);
