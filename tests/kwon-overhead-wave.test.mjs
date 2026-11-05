@@ -49,7 +49,10 @@ test('the single wave deals only one hit across its visible collision width',()=
  const before=g.player.hp;step(g,1/30);
  assert.equal(before-g.player.hp,cfg.damage);
  assert.equal(g.bossShots.length,0,'projectile consumed on impact');
+ // Bleed is a separate Kwon status effect; isolate projectile damage here.
+ if(g.player.traits)g.player.traits.bleed=0;
  g.player.invuln=0;tick(g,30);
+ assert.equal(g.events.filter(e=>e.type==='player-hit').length,1,'only one projectile contact');
  assert.equal(g.player.hp,before-cfg.damage,'the strike cannot deal three overlapping hits');
 });
 test('wave does not hit players outside its half-width',()=>{
