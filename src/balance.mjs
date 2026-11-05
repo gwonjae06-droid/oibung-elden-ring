@@ -9,3 +9,9 @@ export const playerStaminaCost=base=>Math.round(base*PLAYER_STAMINA_COST_MULTIPL
 export const BASE_BOSS_HP=3800;
 export const BOSS_HP_SCALE=Object.freeze([1,1.06,1.12,1.18,1.24]);
 export const bossMaxHp=order=>Math.round(BASE_BOSS_HP*BOSS_HP_SCALE[order]/10)*10;
+// Boss-specific punish windows. Journey HP is the authoritative campaign
+// balance; avoid changing independent encounter constructors here.
+export const BOSS_WEAKPOINT_MULTIPLIERS=Object.freeze({
+ diceExposedHead:1.5,
+ bloodGroundedRecovery:1.3
+});
