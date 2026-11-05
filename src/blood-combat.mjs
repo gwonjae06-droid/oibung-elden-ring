@@ -15,7 +15,7 @@ export function bloodBossAirborne(g){
  return (g?.blood?.elevation||0)>BLOOD_AIRBORNE_HEIGHT;
 }
 export function bloodProjectileGroundHeight(projectile){
- return projectile?.kind==='wave'?.25:BLOOD_PROJECTILE_GROUND_HEIGHT;
+ return projectile?.kind==='wave' ? .25 : BLOOD_PROJECTILE_GROUND_HEIGHT;
 }
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
