@@ -85,11 +85,38 @@ export function giantThrowGesture(state,h){
  const flick=ease((state.t-t.release+.11)/.11);
  const opened=ease((state.t-t.release)/.09);
  const recoil=ease((state.t-t.release)/.32);
+ const settle=1-ease((state.t-t.release)/Math.max(.18,t.impact-t.release));
  const side=h.handIndex===1?-1:1,force=state.temperament==='feral'?1.2:1;
- return {anticipation:wind*(1-flick),impact:flick*(1-recoil),followThrough:recoil*(1-ease((state.t-t.release-.36)/.28)),
-  curl:clamp01((.87*pickup+.16*wind)*(1-opened)),release:opened,
-  wristPitch:force*(-.40*wind+.79*flick*(1-recoil)),
-  wristYaw:side*force*(.23*wind-.30*flick*(1-recoil)),
-  wristRoll:side*force*(.22*wind+.17*flick*(1-recoil)),
-  elbowLift:force*(2.5*wind+1.7*flick*(1-recoil)),elbowOut:force*(1.5+2.4*wind)};
+ return {anticipation:wind*settle*(1-flick),impact:flick*(1-recoil),followThrough:recoil*settle,
+  curl:clamp01((.87*pickup+.16*wind)*(1-opened))*settle,release:opened,
+  wristPitch:force*(-.40*wind*settle+.79*flick*(1-recoil)),
+  wristYaw:side*force*(.23*wind*settle-.30*flick*(1-recoil)),
+  wristRoll:side*force*(.22*wind*settle+.17*flick*(1-recoil)),
+  elbowLift:force*(2.5*wind*settle+1.7*flick*(1-recoil)),elbowOut:force*(1.5*settle+2.4*wind*settle)};
+}
+
+export function giantFeralHeadMotion(state){
+ if(!state||state.state!=='attack'||state.temperament!=='feral')return null;
+ let lean=0,weight=0,x=0,z=-106,bodyX=0;
+ for(const h of state.hazards||[]){
+  if(!h.headSlam||h.cancelled)continue;
+  const age=state.t-h.start,rapid=Boolean(h.rapid),lead=rapid?.28:.35,tail=rapid?.25:.65;
+  if(age< -lead||age>h.warn+h.active+tail)continue;
+  const dropTime=rapid?.10:.14,drop0=h.warn-dropTime;
+  const wind=ease((age+(rapid?.28:0))/Math.max(.25,drop0+(rapid?.28:0)));
+  const drop=ease((age-drop0)/dropTime);
+  const withdraw=ease((age-h.warn-h.active)/(rapid?.24:.62));
+  const k=(.40*wind+.60*drop)*(1-withdraw);
+  const mass=(.32*wind*(1-drop)+.86*drop)*(1-withdraw);
+  lean+=k;weight+=mass;x+=h.x*k;z+=(h.z+106)*k;bodyX+=h.x*.65*k;
+ }
+ // The 5-hit sequence's initial trembling smoothly gives way to the first wind-up.
+ const tremor=state.slot===7?ease(state.t/.65)*(1-ease((state.t-.72)/.55)):0;
+ if(lean<.00001&&tremor<.00001)return null;
+ const shake=Math.sin(state.t*76)*.85*tremor,poseLean=clamp01(lean);
+ return {lean:poseLean+.13*tremor*(1-poseLean),weight:clamp01(weight),
+  bodyX:Math.max(-27,Math.min(27,bodyX+shake*.6)),
+  x:Math.max(-28,Math.min(28,x+shake*2)),
+  y:58-51*poseLean+Math.sin(state.t*98)*1.25*tremor,
+  z:Math.max(-106,Math.min(-30,z+Math.cos(state.t*70)*1.2*tremor))};
 }

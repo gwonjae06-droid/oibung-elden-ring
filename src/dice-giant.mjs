@@ -1,7 +1,7 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
-import {giantThrowTimeline,giantSpringStep} from './dice-giant-motion.mjs';
+import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-giant-motion.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기'];
@@ -98,32 +98,22 @@ export function giantPosture(g){
   return {lean:0,bodyX:0,head:{x:from.x+Math.sin(t*8)*7,y:6+(from.y-6)*(1-t)**2+Math.sin(t*Math.PI)*6,z:from.z+(-22-from.z)*t,rotation:q.map(v=>v/n)}};
  }
  if(s.state==='attack'&&s.temperament==='feral'){
-  if(s.slot===7&&s.t<1){
-   const tremor=ease(s.t/.65),shake=Math.sin(s.t*76)*.85*tremor;
-   return {lean:.13*tremor,bodyX:shake*.6,head:{...rest,x:shake*2,y:58+Math.sin(s.t*98)*1.25*tremor,z:-106+Math.cos(s.t*70)*1.2*tremor}};
-  }
-  // Keep the forehead pressed into the table for 1.5s on the heavy single/combo slam.
-  // The special five-hit barrage withdraws rapidly for each subsequent strike.
-  const h=s.hazards?.find(h=>h.headSlam&&s.t>=h.start-(h.rapid?.28:.35)&&s.t<=h.start+h.warn+h.active+(h.rapid?.25:.65));
-  if(h){
-   const age=s.t-h.start,rapid=Boolean(h.rapid),dropTime=rapid?.10:.14;
-   const drop0=h.warn-dropTime,wind=ease((age+(rapid?.28:0))/Math.max(.25,drop0+(rapid?.28:0)));
-   const drop=ease((age-drop0)/dropTime);
-   const withdraw=ease((age-h.warn-h.active)/(rapid?.24:.62));
-   const lean=(.40*wind+.60*drop)*(1-withdraw);
-   // Weight transfer follows the existing head hitbox instead of adding damage.
-   const weight=(.32*wind*(1-drop)+.86*drop)*(1-withdraw);
-   return {lean,weight,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
-  }
+  // Combine outgoing and incoming head-slam poses; never hard-switch a 5-hit barrage.
+  const m=giantFeralHeadMotion(s);
+  if(m)return {lean:m.lean,weight:m.weight,bodyX:m.bodyX,head:{x:m.x,y:m.y,z:m.z,rotation}};
  }
  if(s.state==='attack'){
-  const thrown=s.hazards?.find(h=>{
-   if(!giantPropType(s,h)||h.cancelled||!handCanAttack(s,h.handIndex))return false;
-   const t=giantThrowTimeline(s,h);return t&&s.t>=t.ready&&s.t<t.release+.34;
-  });
-  if(thrown){
-   const t=giantThrowTimeline(s,thrown),wind=ease((s.t-t.pickupEnd)/Math.max(.1,t.release-t.pickupEnd)),
-    recoil=ease((s.t-t.release)/.42),k=wind*(1-.72*recoil),side=thrown.handIndex===1?-1:1;
+  let strength=0,lateral=0;
+  for(const h of s.hazards||[]){
+   if(!giantPropType(s,h)||h.cancelled||!handCanAttack(s,h.handIndex))continue;
+   const t=giantThrowTimeline(s,h);
+   if(!t||s.t<t.ready||s.t>=t.release+.42)continue;
+   const wind=ease((s.t-t.pickupEnd)/Math.max(.1,t.release-t.pickupEnd));
+   const recover=1-ease((s.t-t.release)/.42),k=wind*recover;
+   strength+=k;lateral+=(h.handIndex===1?-1:1)*k;
+  }
+  if(strength>0){
+   const k=sat(strength),side=sat(Math.abs(lateral))*(lateral<0?-1:1);
    const lean=(s.temperament==='feral'?.14:.085)*k;
    return {lean,weight:0,throwTwist:side*k*(s.temperament==='feral'?.13:.085),
     bodyX:side*3.4*k,head:{...rest,x:side*2*k,y:58-2*lean,z:-106+9*lean}};
