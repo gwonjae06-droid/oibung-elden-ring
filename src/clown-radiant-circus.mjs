@@ -226,7 +226,28 @@ function makeLights(root,coarse){
    cone.renderOrder=1;shafts.push({cone,light});
   }
  }
- return {left,right,shafts};
+ // Extra broad roof lamps light the entire ring, not attack warnings.
+ const fill=[],settings=[
+  {pos:[-16,28,12],aim:[-8,.12,7],color:0xffefd0},
+  {pos:[16,28,12],aim:[8,.12,7],color:0xffe4ba},
+  {pos:[0,29,-17],aim:[0,.12,-11],color:0xffe9c9}
+ ];
+ for(const i of (coarse?[0,2]:[0,1,2])){
+  const a=settings[i],light=new THREE.SpotLight(a.color,coarse?96:128,85,.60,.85,1.35);
+  light.name='circus-wide-floor-spot-'+i;light.castShadow=false;light.position.set(...a.pos);
+  light.target.position.set(...a.aim);root.add(light,light.target);
+  const fixture=new THREE.Group();fixture.name='circus-wide-spotlight-fixture';fixture.position.copy(light.position);root.add(fixture);
+  const shell=new THREE.Mesh(new THREE.CylinderGeometry(.42,.54,.68,12),new THREE.MeshStandardMaterial({color:0x3c3140,metalness:.64,roughness:.48}));
+  shell.position.y=.34;fixture.add(shell);
+  const lens=new THREE.Mesh(new THREE.CircleGeometry(.38,14).rotateX(Math.PI/2),new THREE.MeshBasicMaterial({color:a.color,side:THREE.DoubleSide}));
+  lens.position.y=.005;fixture.add(lens);
+  let beam=null;
+  if(!coarse){beam=new THREE.Mesh(new THREE.ConeGeometry(1,1,16,1,true).translate(0,-.5,0),
+    new THREE.MeshBasicMaterial({color:a.color,transparent:true,opacity:.009,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));
+    beam.name='circus-wide-soft-spotlight-cone';beam.renderOrder=1;root.add(beam);}
+  fill.push({light,fixture,lens,beam,color:a.color,base:coarse?96:128});
+ }
+ return {left,right,shafts,fill,down:new THREE.Vector3(0,-1,0)};
 }
 const WARM=[0xffe4a9,0xffcf7f,0xffd49a];
 const FRENZY=[0xf5cb80,0xf389b8,0x8bd8d3,0xb08ff2,0xffe4a9];
@@ -279,6 +300,15 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
   lights.right.target.position.lerp(tmp,clamp(h*3,0,1));
   lights.left.intensity=(coarse?72:100)*(live?1:.78)*(1+pulse*.32);
   lights.right.intensity=coarse?0:(phase===2?98:75)*(live?1:.7)*(1+pulse*.2);
+  for(const {light,fixture,lens,beam,color,base}of lights.fill){
+   light.color.setHex(phase===2?0xffd1ce:color);
+   light.intensity=base*(live?1:.78)*(1+Math.min(.22,pulse*.10));
+   tmp.copy(light.target.position).sub(light.position);
+   const length=tmp.length();tmp.normalize();fixture.quaternion.setFromUnitVectors(lights.down,tmp);
+   lens.material.color.copy(light.color);
+   if(beam){beam.position.copy(light.position);beam.scale.set(Math.tan(light.angle)*length,length,Math.tan(light.angle)*length);
+    beam.quaternion.copy(fixture.quaternion);beam.material.color.copy(light.color);beam.material.opacity=live?.009:.006;}
+  }
   if(!reduced){scenery.haloMat.opacity=(coarse?.2:.28)+(phase===2?.07:0)+pulse*.09;}
   for(const {cone,light}of lights.shafts){
    box.copy(light.position).add(light.target.position).multiplyScalar(.5);
@@ -304,6 +334,6 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  }
  reset();
  return {root,event,update,reset,dispose,lights,tent,
-  stats:()=>({bulbs:scenery.bulbCount,columns:scenery.columns,realSpotlights:2,collidableProps:0,playableRadius:CIRCUS_LAYOUT.playableRadius}),
+  stats:()=>({bulbs:scenery.bulbCount,columns:scenery.columns,realSpotlights:2+lights.fill.length,wideSpotlights:lights.fill.length,collidableProps:0,playableRadius:CIRCUS_LAYOUT.playableRadius}),
   get phase(){return phase;},get disposed(){return disposed;}};
 }
