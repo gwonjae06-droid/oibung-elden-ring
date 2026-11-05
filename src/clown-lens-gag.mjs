@@ -1,5 +1,4 @@
-import {updateClownCurtains} from './clown-curtain-gag.mjs';
-const saved=new WeakMap();
+import {updateClownCurtains,restoreClownCurtains} from './clown-curtain-gag.mjs';
 export function clownLensCue(g){
  const c=g?.clown,t=c?.pt;
  if(g?.status!=='playing'||g?.boss?.state==='transition'||c?.state!=='pattern'||!Number.isFinite(t)||t<0)return {roll:0,scale:1,active:false};
@@ -9,12 +8,6 @@ export function clownLensCue(g){
  if((!photo&&!tilt)||t>=duration)return {roll:0,scale:1,active:false};
  const k=Math.sin(Math.PI*t/duration);return {roll:(photo?1.4:-2)*k,scale:1+.06*k,active:k>0};
 }
-export function restoreClownLens(canvas){const old=canvas&&saved.get(canvas);if(!old)return;canvas.style.transform=old.transform;canvas.style.transformOrigin=old.origin;saved.delete(canvas);}
-export function updateClownLens(g,doc=globalThis.document){
- const canvas=doc?.getElementById?.('clown-battle')?.firstElementChild?.shadowRoot?.getElementById?.('world');if(!canvas?.style)return;
- updateClownCurtains(g,canvas);
- let old=saved.get(canvas);if(old&&old.game!==g){restoreClownLens(canvas);old=null;}
- const cue=clownLensCue(g);if(!cue.active){restoreClownLens(canvas);return;}
- if(!old){old={game:g,transform:canvas.style.transform,origin:canvas.style.transformOrigin};saved.set(canvas,old);}
- canvas.style.transformOrigin='50% 50%';canvas.style.transform=(old.transform?old.transform+' ':'')+'rotate('+cue.roll.toFixed(4)+'deg) scale('+cue.scale.toFixed(5)+')';
-}
+// Kept as a cleanup entry point; camera orientation now belongs to the 3D rig.
+export function restoreClownLens(canvas){restoreClownCurtains(canvas);}
+export function updateClownLens(g,doc=globalThis.document){const canvas=doc?.getElementById?.('clown-battle')?.firstElementChild?.shadowRoot?.getElementById?.('world');if(canvas?.style)updateClownCurtains(g,canvas);}
