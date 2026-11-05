@@ -108,6 +108,24 @@ function angel(root,side,z,ivory,gold,coarse){
  }
  return a;
 }
+function chandelier(root,z,gold,ivory,coarse){
+ const fixture=new THREE.Group();fixture.position.set(0,30,z);fixture.name='cathedral-hanging-chandelier';root.add(fixture);
+ rib(fixture,[[0,11,0],[0,4,0],[0,0,0]],.075,gold,12,'cathedral-chandelier-chain');
+ const ring=mesh(fixture,new THREE.TorusGeometry(2.25,.16,8,coarse?24:48),gold,[0,-.8,0],'cathedral-chandelier-crown');ring.rotation.x=Math.PI/2;
+ const inner=mesh(fixture,new THREE.TorusGeometry(1.42,.09,7,coarse?20:36),gold,[0,-.4,0]);inner.rotation.x=Math.PI/2;
+ const rods=[],candles=[],flames=[];
+ for(let i=0;i<10;i++){
+  const a=i*TAU/10,x=Math.cos(a)*2.22,zp=Math.sin(a)*2.22;
+  rods.push({p:[x,-.5,zp]});
+  candles.push({p:[x,-.48,zp]});
+  flames.push({p:[x,-.12,zp]});
+ }
+ batch(fixture,new THREE.CylinderGeometry(.038,.055,.8,6),gold,rods,'cathedral-chandelier-branches');
+ batch(fixture,new THREE.CylinderGeometry(.13,.15,.42,8),ivory,candles,'cathedral-chandelier-candles');
+ const flameMat=new THREE.MeshBasicMaterial({color:0xffefcc,toneMapped:false});
+ batch(fixture,new THREE.SphereGeometry(.13,8,6),flameMat,flames,'cathedral-chandelier-lamps');
+ return fixture;
+}
 function sunbeam(parent,side,z,material){
  const x0=side*39.4,x1=side*11;
  const pos=new Float32Array([
@@ -208,6 +226,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
  for(const side of [-1,1])
   mesh(parent,new THREE.BoxGeometry(31,24,1.7),limestone,[side*28,23,-48],'cathedral-sanctuary-side-wall');
  coloredRose(parent,coarse,ivory,gold);
+ chandelier(parent,-22,gold,ivory,coarse);chandelier(parent,14,gold,ivory,coarse);
  buildCrucifix(parent,ivory,marble,gold,coarse);
  for(const side of [-1,1])for(const z of [-21,21])angel(parent,side,z,ivory,gold,coarse);
  // Projected sunbeams are a few translucent wedges: no expensive full-screen
