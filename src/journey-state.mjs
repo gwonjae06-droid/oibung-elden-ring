@@ -24,15 +24,21 @@ export function latestUnlockedStage(profile){
  while(stage<BOSSES.length-1&&profile?.defeated?.includes(BOSSES[stage]))stage++;
  return stage;
 }
-export function newFlameRun(profile,weapon='sword'){
- const stage=latestUnlockedStage(profile);
- if(stage===0||flameBalance(profile)<1)return null;
+// Any consecutively unlocked boss AFTER the first can be a flame starting
+// point. The ordinary first-boss route is free and uses newRun instead.
+export function canFlameSkipTo(profile,stage){
+ return Number.isInteger(stage)&&stage>0&&stage<BOSSES.length&&
+  stage<=latestUnlockedStage(profile)&&flameBalance(profile)>=1;
+}
+export function newFlameRun(profile,weapon='sword',stage=latestUnlockedStage(profile)){
+ if(!canFlameSkipTo(profile,stage))return null;
  return {...newRun(weapon),stage,startStage:stage,skipFlamePending:true};
 }
 // Selection reserves nothing. Charge once only after a battle session opens;
 // failed loading, cancelling, and reloading the menu never consume a flame.
 export function consumeFlameSkip(profile,run){
- if(!run?.skipFlamePending||run.secret||run.stage!==run.startStage||run.stage!==latestUnlockedStage(profile)||run.stage<=0||flameBalance(profile)<1)return false;
+ if(!run?.skipFlamePending||run.secret||run.stage!==run.startStage||
+  !canFlameSkipTo(profile,run.stage))return false;
  profile.flames=flameBalance(profile)-1;
  delete run.skipFlamePending;
  return true;
