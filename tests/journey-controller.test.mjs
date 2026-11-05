@@ -142,6 +142,40 @@ test('flame shortcut cannot bypass the first locked gate or spend an empty balan
  await f.click('skip-toggle');await f.click('new');await f.click('begin');
  assert.equal(f.game().boss.maxHp,3572);await f.api.dispose();f.release();
 });
+test('flame chooser can select an earlier unlocked boss across home and weapon menu',async()=>{
+ const profile=freshProfile();profile.flames=3;profile.defeated=['kwon','clown','dice'];
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('skip-toggle');
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="1"/);
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="2"/);
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="3"/);
+ await f.click('skip-target',{stage:'1'});
+ assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ await f.click('new');assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ await f.click('weapon',{weapon:'bow'});assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ assert.equal(saved().flames,3,'changing destination and weapon is free');
+ await f.click('begin');assert.equal(f.game().boss.maxHp,3760,'chosen clown loads instead of blood');
+ assert.equal(f.game().weapon,'bow');assert.equal(saved().flames,2);
+ f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
+ assert.match(f.dialog.html,/다음 도전/,'journey continues normally after chosen boss');
+ await f.api.dispose();f.release();
+});
+
+test('locked bosses stay disabled, and choosing the first boss cancels flame spending',async()=>{
+ const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('skip-toggle');
+ assert.match(f.dialog.html,/data-stage="3"[^>]*disabled/,'unearned boss remains locked');
+ await f.click('skip-target',{stage:'3'});
+ assert.match(f.dialog.html,/광대 오슬우부터 시작/,'synthetic locked click is rejected');
+ await f.click('skip-target',{stage:'0'});
+ assert.doesNotMatch(f.dialog.html,/선택됨/);
+ await f.click('new');await f.click('begin');
+ assert.equal(f.game().boss.maxHp,3572);
+ assert.equal(saved().flames,2,'the first boss costs no flame');
+ await f.api.dispose();f.release();
+});
+
 test('a failed shortcut load does not spend a flame; retry spends exactly once',async()=>{
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
  const f=rig({savedProfile:profile,failLoadOnce:true}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
