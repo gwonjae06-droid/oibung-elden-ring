@@ -109,3 +109,22 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 
 
 .j-memory-art[data-memory="blood"]{background:radial-gradient(circle,#8a1237 0,#270b1b 55%,transparent 70%);color:#ed8b9f}.j-memory-art[data-memory="blood"]::before{content:"♥";font-size:100px;text-shadow:0 0 30px #ca315e}
+
+
+/* Flame shortcut: a quiet, responsive boss destination chooser. */
+#journey .j-skip-offer{width:100%;margin:14px 0 16px;padding:12px 14px;border:1px solid #a88a534f;border-radius:9px;background:#0c1018c9;text-align:left}
+#journey .j-skip-head{display:flex;gap:14px;align-items:center;justify-content:space-between}
+#journey .j-skip-head>div{min-width:0;flex:1}
+#journey .j-skip-head strong{font-size:14px;color:#e6cc94;letter-spacing:.05em}
+#journey .j-skip-head p{margin:5px 0 3px;font:12px/1.6 system-ui;color:#d0c2a5}
+#journey .j-skip-head small,#journey .j-skip-footnote{display:block;font:10px/1.5 system-ui;color:#a4a4a1}
+#journey .j-skip-toggle{flex:0 0 auto;min-height:40px;padding:10px 13px;font:12px system-ui;white-space:nowrap;text-align:center}
+#journey .j-skip-targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:14px}
+#journey button.j-skip-target{display:flex;flex-direction:column;min-width:0;min-height:68px;justify-content:center;gap:2px;padding:8px 11px;border-radius:5px;background:#111721e3}
+#journey button.j-skip-target.selected{border-color:#e9c986;background:#55422d9c;box-shadow:inset 3px 0 #d6b36b}
+#journey button.j-skip-target:disabled{opacity:.38}
+#journey .j-skip-target .j-skip-number{font:10px system-ui;color:#b99a60}
+#journey .j-skip-target b{display:block;font:600 12px/1.45 'Noto Serif KR',serif;color:#e7dcc4;white-space:normal}
+#journey .j-skip-target small{display:block;margin:0;font:10px/1.4 system-ui;color:#b6ae9e}
+#journey .j-skip-footnote{margin:9px 0 0}
+@media(max-width:430px){#journey .j-skip-offer{padding:10px}#journey .j-skip-head{gap:8px}#journey .j-skip-toggle{padding:9px;font-size:11px}#journey .j-skip-targets{gap:6px}}
