@@ -130,6 +130,9 @@ export function buildDiceGiant(scene){
    shoulder.set(i?20:-20,18,7);body.localToWorld(shoulder);
    elbow.copy(shoulder).lerp(group.position,.53);
    elbow.x+=(i?1:-1)*(9+gesture.elbowOut);elbow.y+=7+gesture.elbowLift;elbow.z-=6+gesture.anticipation*2;
+   // The elbow braces before impact and recoils behind the wrist; the palm
+   // itself stays on the authoritative world-space hurtbox anchor.
+   elbow.y+=wristSprings.step('elbow:muscle:'+i,gesture.anticipation*1.35-handPulse[i]*1.4,dt,13);
    // Simulated palm/hit geometry stays authoritative; joint inertia
    // only changes the two limb segments attached to that same palm.
    const softened=elbowFollow[i].step([elbow.x,elbow.y,elbow.z],dt);
