@@ -1,0 +1,22 @@
+name: Blood fluid dynamics and combat isolation
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hydrodynamics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install test dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Check viscous motion, GPU resource caps, hazards and healing effects
+        run: |
+          node --test tests/blood-hydrodynamics.test.mjs tests/blood-fluid.test.mjs tests/blood-cathedral-sea.test.mjs tests/blood-siphon.test.mjs tests/blood-render.test.mjs tests/blood-spectacle.test.mjs tests/blood-motion-followthrough.test.mjs
