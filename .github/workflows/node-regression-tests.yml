@@ -21,6 +21,8 @@ jobs:
         run: node --test tests/blood-attack-animation.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-regalia.test.mjs tests/blood-head.test.mjs tests/blood-render.test.mjs
       - name: Sacred cathedral geometry and battle-render regression tests
         run: node --test tests/blood-white-cathedral.test.mjs tests/blood-render.test.mjs tests/blood-cinematic.test.mjs
+      - name: Focused shared stamina-balance regression tests
+        run: node --test tests/stamina-cost-relief.test.mjs tests/player-combat.test.mjs tests/weapon-evolution.test.mjs
       - name: Run Node tests
         run: npm test
       - name: Smoke test sacred white cathedral in WebGL
