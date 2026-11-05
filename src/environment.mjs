@@ -137,7 +137,7 @@ export function buildEnvironment(scene,ground){
     banners.forEach((B,i)=>{B.rotation.z=Math.sin(t*.9+i)*(silenced?0:reduced?.01:.05);});
   };
   const map=pavingTexture();ground.material.map=map;ground.material.color.setHex(0xffffff);ground.material.needsUpdate=true;
-  const sanctuary=buildSanctuary(THREE,root);root.userData.updateSanctuary=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)visualTime=0;visualTime+=Math.max(0,dt);const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;};
+  const sanctuary=buildSanctuary(THREE,root,{coarse,reduced});root.userData.updateSanctuary=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)visualTime=0;visualTime+=Math.max(0,dt);const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;sigil.material.color.setHex(game.boss.phase===2?0xff6681:0xd9b76c);if(scene.fog?.color)scene.fog.color.lerp(new THREE.Color(game.boss.phase===2?0x33212e:0x15202a),Math.min(1,Math.max(0,dt)*1.4));};
   grass.visible=false;root.userData.decorativeOnly=true;scene.add(root);
   return root;
 
