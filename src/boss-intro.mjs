@@ -1,6 +1,6 @@
 import {INTRO_CARDS,introDuration,introFrame} from './boss-intro-data.mjs';
 import {playBossCue,stopBossCue} from './boss-cues.mjs';
-export function playBossIntro(doc,arena,bossId,{raf=cb=>globalThis.requestAnimationFrame(cb),caf=id=>globalThis.cancelAnimationFrame(id),now=()=>globalThis.performance.now()}={}){
+export function playBossIntro(doc,arena,bossId,{raf=cb=>globalThis.requestAnimationFrame(cb),caf=id=>globalThis.cancelAnimationFrame(id),now=()=>globalThis.performance.now(),reduced=false}={}){
  const card=INTRO_CARDS[bossId];
  if(!doc||!arena||!card)return {finished:Promise.resolve(false),skip(){}};
  const el=(tag,css,text)=>{const e=doc.createElement(tag);e.style.cssText=css;if(text!==undefined)e.textContent=text;return e;};
@@ -12,7 +12,7 @@ export function playBossIntro(doc,arena,bossId,{raf=cb=>globalThis.requestAnimat
  const box=el('div','position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 5vw');
  const epithet=el('p','margin:0 0 .6rem;font-size:clamp(.9rem,2vw,1.25rem);letter-spacing:.35em;opacity:0;color:'+card.accent,card.epithet);
  const name=el('h2','margin:0;font-size:clamp(2rem,7vw,4.5rem);font-weight:600;opacity:0;text-shadow:0 0 28px '+card.accent+'66,0 4px 14px #000',card.name);
- const line=el('p','margin:1rem 0 0;font-size:clamp(.95rem,2.2vw,1.35rem);opacity:0;color:#e7dcc2',card.line);
+ const line=el('p','max-width:42rem;margin:1rem auto 0;font-size:clamp(.95rem,2.2vw,1.3rem);line-height:1.55;opacity:0;color:#e7dcc2;text-wrap:balance',card.line);
  box.appendChild(epithet);box.appendChild(name);box.appendChild(line);
  for(const c of [veil,top,bottom,box])overlay.appendChild(c);
  arena.appendChild(overlay);
@@ -32,14 +32,14 @@ export function playBossIntro(doc,arena,bossId,{raf=cb=>globalThis.requestAnimat
   if(!arena.isConnected){finish(false);return;}
   const t=now(),dt=last===null?0:Math.min(.1,Math.max(0,(t-last)/1000));last=t;
   if(!doc.hidden)elapsed+=dt;
-  const f=introFrame(elapsed);
+  const f=introFrame(elapsed,reduced);
   if(f.done){finish(true);return;}
   if(!playedNameCue&&f.name>.025){playedNameCue=true;playBossCue('start');}
   apply(f);handle=raf(frame);
  }
  
- apply(introFrame(0));
+ apply(introFrame(0,reduced));
  overlay.setAttribute('tabindex','-1');overlay.focus({preventScroll:true});
  handle=raf(frame);
- return {finished,skip:()=>finish(true),duration:introDuration(false)};
+ return {finished,skip:()=>finish(true),duration:introDuration(reduced)};
 }
