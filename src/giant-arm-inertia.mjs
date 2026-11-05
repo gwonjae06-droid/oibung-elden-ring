@@ -30,9 +30,13 @@ export function constrainGiantElbow(shoulder,palm,proposal){
  const travel=palm.map((x,i)=>x-shoulder[i]),lengthSq=travel.reduce((a,x)=>a+x*x,0);
  if(lengthSq<1e-10)return [...shoulder];
  const delta=proposal.map((x,i)=>x-shoulder[i]),
-  ratio=Math.max(.2,Math.min(.8,delta.reduce((n,x,i)=>n+x*travel[i],0)/lengthSq)),
+  projectedRatio=delta.reduce((n,x,i)=>n+x*travel[i],0)/lengthSq,
+  ratio=Math.max(.2,Math.min(.8,projectedRatio)),
   center=shoulder.map((x,i)=>x+travel[i]*ratio),
-  off=proposal.map((x,i)=>x-center[i]),size=Math.hypot(...off),
+  // Remove the ORIGINAL longitudinal displacement, not just the clamped
+  // portion: otherwise the residual can still pull the elbow past the wrist.
+  originalProjection=shoulder.map((x,i)=>x+travel[i]*projectedRatio),
+  off=proposal.map((x,i)=>x-originalProjection[i]),size=Math.hypot(...off),
   radialLimit=Math.sqrt(lengthSq)*.6,scale=size>radialLimit?radialLimit/size:1;
  return center.map((x,i)=>x+off[i]*scale);
 }
