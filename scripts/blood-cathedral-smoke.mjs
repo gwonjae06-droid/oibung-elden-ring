@@ -18,7 +18,7 @@ try{
  page.on('pageerror',error=>errors.push(error.stack||String(error)));
  page.on('console',m=>{if(m.type()==='error'&&!/404|Failed to load resource/.test(m.text()))errors.push(m.text());});
  // Use the same pinned Three.js source without relying on a CDN connection.
- await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/**',route=>route.fulfill({path:'node_modules/three/build/three.module.js',contentType:'text/javascript'}));
+ await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/**',route=>{const filename=new URL(route.request().url()).pathname.split('/').at(-1);return route.fulfill({path:'node_modules/three/build/'+filename,contentType:'text/javascript'});});
  await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:30000});
  await page.waitForSelector('#arena',{timeout:20000});
  const opened=await page.evaluate(async()=>{
