@@ -36,25 +36,40 @@ function ellipseDistance(shape,p,radius=0){
  return Math.hypot(d.x/rx,d.z/rz);
 }
 function nearestSurface(shape,p){
- const d=localDelta(shape,p),u=Math.hypot(d.x/shape.rx,d.z/shape.rz);
- // Return the nearest point on the visible silhouette along the incoming ray.
- const factor=u>RAD?1/u:0;
- const x=d.x*factor,z=d.z*factor,yaw=Number.isFinite(shape.yaw)?shape.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
+ const d=localDelta(shape,p),rx=shape.rx,rz=shape.rz,u=Math.hypot(d.x/rx,d.z/rz);
+ let x=rx,z=0;
+ if(u>RAD&&u<=1){
+  // Inside the volume, report a meaningful outward contact for hit effects.
+  x=d.x/u;z=d.z/u;
+ }else if(u>1){
+  // Exact closest point on an ellipse, found by bounded Lagrange multiplier
+  // search. This avoids 'phantom' melee hits at the broad diagonal corners.
+  const xx=rx*rx,zz=rz*rz,
+   fn=t=>xx*d.x*d.x/(t+xx)**2+zz*d.z*d.z/(t+zz)**2-1;
+  let lo=0,hi=1;
+  while(fn(hi)>0)hi*=2;
+  for(let i=0;i<23;i++){
+   const mid=(lo+hi)*.5;
+   if(fn(mid)>0)lo=mid;else hi=mid;
+  }
+  const t=(lo+hi)*.5;x=xx*d.x/(t+xx);z=zz*d.z/(t+zz);
+ }
+ const yaw=Number.isFinite(shape.yaw)?shape.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
  return {x:shape.x+x*c+z*s,y:shape.y,z:shape.z+z*c-x*s};
 }
 export function kwonHurtContact(shapes,p,{reach=0,yaw=null}={}){
  let best=null,score=Infinity;
  for(const shape of shapes){
-  const metric=ellipseDistance(shape,p,reach);
-  if(metric>1+MARGIN/Math.max(shape.rx,shape.rz))continue;
+  const inside=ellipseDistance(shape,p)<=1;
+  const contact=nearestSurface(shape,p);
+  const actualDistance=inside?0:distance(contact,p);
+  if(actualDistance>reach+MARGIN)continue;
   // Attacks have a facing requirement; this is evaluated against the actual
   // silhouette, not the locomotion pivot far behind the chest.
   const heading=Math.atan2(shape.x-p.x,shape.z-p.z);
   const aiming=yaw===null||Math.abs(Math.atan2(Math.sin(heading-yaw),Math.cos(heading-yaw)))<1.25;
   if(!aiming)continue;
-  const contact=nearestSurface(shape,p);
-  const d=distance(contact,p);
-  if(d<score){score=d;best={...contact,part:shape.id};}
+  if(actualDistance<score){score=actualDistance;best={...contact,part:shape.id};}
  }
  return best;
 }
