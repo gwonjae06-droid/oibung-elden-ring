@@ -9,6 +9,7 @@ import {
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
+import {kwonHurtShapes,kwonHurtContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -149,7 +150,7 @@ export const PHASE_ONE = {
   skewer: ['jab', 'sweep'],
 };
 export const SWORD = {x: 0, y: 2.3, z: 2.8, length: 8.55, width: 0.78};
-// Match the broad visible torso rather than relying on a small, arbitrary point hitbox.
+// Legacy bounding-radius helper. Precise damage uses the transformed anatomy below.
 export const kwonBodyHitRadius=b=>b?.phase===2?3.45:3.05;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z),
   toward = (a, b) => Math.atan2(b.x - a.x, b.z - a.z),
@@ -195,6 +196,10 @@ export function bodyPose(b) {
         ? Math.sin((Math.PI * b.t) / (PATTERNS.leap.active * 0.7)) * 2.6
         : 0;
   return {standing: s, angle: -0.9 * s, pivotY: 1.5, pivotZ: -1.5, lift: air};
+}
+export function kwonVisibleHurtShapes(b){
+ const pose=bodyPose(b),cinema=cinematicPose(b);
+ return kwonHurtShapes(b,{point:p=>bodyPoint(b,p),angle:pose.angle,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
 }
 export function bodyPoint(b, p) {
   const q = bodyPose(b),
@@ -561,8 +566,8 @@ export function bladeHits(p, {a, b}, width = SWORD.width) {
   const at = (t) => ({x: mix(a.x, b.x, t), z: mix(a.z, b.z, t)});
   return segmentDistance(p, at(lo), at(hi)) < width;
 }
-function landHit(g, amount, poise, a) {
-  const actual = bossDamage(g, amount, poise),
+function landHit(g, amount, poise, a,point=null) {
+  const actual = bossDamage(g, amount, poise,{point}),
     b = g.boss;
   // bossDamage already counted the hit (with poise and hit-stop), so only the rewards are settled here.
   settlePlayerHit(g, actual, a, {
@@ -648,13 +653,11 @@ export function step(g, dt, input = {}) {
       p.z += Math.cos(a.yaw) * 10 * dt;
     },
     melee: (a) => {
-      const range = a.skill ? Math.max(6.8,w.range+kwonBodyHitRadius(b)) : w.range + kwonBodyHitRadius(b);
-      if (
-        dist(p, b) <= range &&
-        Math.abs(angleDelta(a.yaw, toward(p, b))) < 1.25
-      ) {
-        a.hit = true;
-        landHit(g, w.damage * a.mult, w.poise * (a.skill ? 2.5 : 1), a);
+      const shapes=kwonVisibleHurtShapes(b),reach=a.skill?Math.max(6.8,w.range):w.range;
+      const hit=kwonHurtContact(shapes,p,{reach,yaw:a.yaw});
+      if(hit){
+        a.hit=true;
+        landHit(g,w.damage*a.mult,w.poise*(a.skill?2.5:1),a,hit);
       }
     },
   });
@@ -666,10 +669,11 @@ export function step(g, dt, input = {}) {
       g.bossShots = g.bossShots.filter((s) => segmentDistance(s, old, q) > 1.8);
       if (g.bossShots.length < n) emit(g, 'skill-pierce', {flavor: 'bow'});
     }
-    if (q.life > 0 && !q.bossHit && segmentDistance(b, old, q) < kwonBodyHitRadius(b)) {
-      q.bossHit = true;
-      if (!q.piercing) q.life = 0;
-      landHit(g, q.damage, q.poise, q.source);
+    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(kwonVisibleHurtShapes(b),old,q):null;
+    if(hit){
+      q.bossHit=true;
+      if(!q.piercing)q.life=0;
+      landHit(g,q.damage,q.poise,q.source,hit);
     }
   }
   g.projectiles = g.projectiles.filter((q) => q.life > 0);
