@@ -93,7 +93,9 @@ export function advanceJourney(run){
 }
 export function configureJourney(game,run,profile){
  game.evolutions=forgedEvolutions(profile,run.weapon);
- game.startGrace=1.6;
+ // The introduction is the only pre-fight lock; no second countdown.
+ game.startGrace=0;
+ game.introControlled=true;
  const bossId=BOSSES[run.stage],baseHp=BOSS_REGISTRY[bossId].maxHp,story=!run.secret;
  game.boss.maxHp=story?journeyBossHp(bossId,baseHp):baseHp;
  game.boss.hp=game.boss.maxHp;
