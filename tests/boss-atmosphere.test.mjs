@@ -109,8 +109,28 @@ test('four actual boss entrypoints connect the atmosphere to scene lifecycle, ev
   assert.match(src,/atmosphere\.reset\(\)/);
   assert.match(src,/atmosphere\.event\(e(?:v)?,g\)/);
   assert.match(src,/atmosphere\.update\(/);
+  assert.match(src,/atmosphere\.cameraReaction\(camera\)/);
   assert.match(src,/atmosphere\.dispose\(\)/);
  }
+});
+test('brief camera sway is bounded, once per rendered frame and off on reduced motion',()=>{
+ const scene=new THREE.Scene(),stage=createBossAtmosphere(scene,{profile:'clown',coarse:false,reduced:false});
+ const game={boss:{phase:2,hp:900},player:{hp:120},status:'playing'};
+ const camera=new THREE.PerspectiveCamera(),before=camera.position.y;
+ stage.event({type:'clown-phase2'},game);
+ stage.update(game,.04);
+ const offset=stage.cameraReaction(camera);
+ assert.ok(Math.abs(offset)<=.115);
+ assert.equal(camera.position.y,before+offset);
+ assert.equal(stage.cameraReaction(camera),0,'must never apply camera kick twice on same rendered frame');
+ stage.update(game,0);
+ assert.equal(stage.cameraReaction(camera),0,'paused scene must not move camera');
+ stage.dispose();assertReleased(scene);
+ const mobile=new THREE.Scene(),low=createBossAtmosphere(mobile,{profile:'clown',coarse:true,reduced:true});
+ const mobileCam=new THREE.PerspectiveCamera(),originalY=mobileCam.position.y;
+ low.event({type:'phase'},game);low.update(game,.04);
+ assert.equal(low.cameraReaction(mobileCam),0);assert.equal(mobileCam.position.y,originalY);
+ low.dispose();assertReleased(mobile);
 });
 test('atmosphere module contains no sound generation or media code',()=>{
  const text=readFileSync(new URL('../src/boss-atmosphere.mjs',import.meta.url),'utf8');
