@@ -28,7 +28,11 @@ try{
     try{
      // Use the exact same module URL as the inline production bootstrap.
      // Any first-boss module exception rejects this Promise.
-     const {bootstrapGame}=await import('./src/bootstrap.mjs?v=arena-startup-boolean-fix-20261105');
+     const source=[...document.querySelectorAll('script[type="module"]')]
+      .map(script=>script.textContent||'').find(text=>text.includes('bootstrap.mjs?v='));
+     const version=source?.match(/bootstrap\.mjs\?v=([\w-]+)/)?.[1];
+     if(!version)throw Error('Inline production bootstrap version not found');
+     const {bootstrapGame}=await import('./src/bootstrap.mjs?v='+version);
      const running=await bootstrapGame();
      const world=document.getElementById('world'),start=document.getElementById('start'),
       status=document.getElementById('load-status'),loading=document.getElementById('journey-loading');
