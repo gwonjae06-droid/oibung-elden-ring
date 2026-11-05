@@ -13,11 +13,11 @@ export function createClownHead({projectile=false}={}){
  // Deforming projectiles can grow past their idle bounding sphere. Keep them
  // visible without a per-frame bounding-sphere recalculation.
  if(projectile)front.frustumCulled=back.frustumCulled=false;
- group.add(back,front);let texture=null;
- const ready=new Promise(resolve=>{const img=new Image();img.onload=()=>{try{const c=document.createElement('canvas');c.width=CLOWN_FACE.w;c.height=CLOWN_FACE.h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);ctx.putImageData(applyFaceAlpha(ctx.getImageData(0,0,c.width,c.height)),0,0);texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;fm.map=fm.emissiveMap=texture;fm.color.setHex(0xffffff);fm.emissive.setHex(0x555555);fm.needsUpdate=true;resolve(true);}catch(e){console.error(e);resolve(false);}};img.onerror=()=>resolve(false);img.src='data:image/jpeg;base64,'+CLOWN_FACE.jpeg;});
+ group.add(back,front);let texture=null,disposed=false;
+ const ready=new Promise(resolve=>{const img=new Image();img.onload=()=>{if(disposed){resolve(false);return;}try{const c=document.createElement('canvas');c.width=CLOWN_FACE.w;c.height=CLOWN_FACE.h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);ctx.putImageData(applyFaceAlpha(ctx.getImageData(0,0,c.width,c.height)),0,0);texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;fm.map=fm.emissiveMap=texture;fm.color.setHex(0xffffff);fm.emissive.setHex(0x555555);fm.needsUpdate=true;resolve(true);}catch(e){console.error(e);resolve(false);}};img.onerror=()=>resolve(false);img.src='data:image/jpeg;base64,'+CLOWN_FACE.jpeg;});
  function setMorph(p,time=0){for(const part of[f,b]){morphHead(part.base,part.geo.attributes.position.array,p,time);part.geo.attributes.position.needsUpdate=true;part.geo.computeVertexNormals();if(!projectile)part.geo.computeBoundingSphere();}}
  function setPose(name,t=0,time=0){setMorph(headPose(name,t),time);}
- function dispose(){f.geo.dispose();b.geo.dispose();fm.dispose();bm.dispose();texture?.dispose();}
+ function dispose(){if(disposed)return;disposed=true;f.geo.dispose();b.geo.dispose();fm.dispose();bm.dispose();texture?.dispose();}
  setPose('idle');return {group,setMorph,setPose,ready,dispose};
 
  });
