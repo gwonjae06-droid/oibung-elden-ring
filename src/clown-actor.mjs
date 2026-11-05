@@ -7,6 +7,7 @@ import {cartoonPose} from './clown-cartoon.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
 import {createClownArmRig} from './clown-arm-rig.mjs';
 import {createClownCollapse} from './clown-collapse.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
 import {createClownGait} from './clown-gait.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
@@ -14,7 +15,8 @@ export function createClownActor(){
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
  const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
  const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
- const reduced=false,collapse=createClownCollapse(),gait=createClownGait();
+ const reduced=false,collapse=createClownCollapse(),gait=createClownGait(),balance=createSpringBank();
+ let lastGame=null,lastClock=-Infinity;
  const mesh=(geo,mat,x,y,z,parent=body)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;};
  const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');for(let i=0;i<16;i++){ctx.fillStyle=i%2?'#dfcfad':'#a61c33';ctx.fillRect(i*16,0,16,128);}ctx.fillStyle='#d4a83b';ctx.fillRect(0,56,256,16);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
  const ball=mesh(new THREE.SphereGeometry(2.6,40,28),new THREE.MeshStandardMaterial({map:tex,roughness:.6,transparent:true}),0,2.6,0,root);
@@ -37,10 +39,15 @@ export function createClownActor(){
   const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0);if(F.inflate!==null)p.inflate=F.inflate;
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
   const footMotion=gait.update(g,dt);
+  if(lastGame!==g||time<lastClock){balance.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
   root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+rise+A.lift+footMotion.bob-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13+footMotion.roll;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean+footMotion.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
+  // The planted-shoe gait owns foot contacts. This offsets only the decorative
+  // torso and leaves glove targets and gameplay hitboxes unchanged.
+  torso.rotation.y=balance.step('spine:y',-A.twist*.12,dt,12);
+  torso.rotation.z=balance.step('spine:z',v.tilt*-.018+A.lean*.035,dt,10);
   ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=(M?M.ballZ:0)+(death?.ballShift||0);ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025+(death?.ballShift||0)/2.6;
   mount.group.visible=Boolean(M?.visible);
   if(M?.visible){mount.group.position.set(0,M.y+rise-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6*A.headScale,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}

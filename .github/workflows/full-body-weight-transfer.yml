@@ -1,0 +1,41 @@
+name: Full-body weight transfer regression
+
+on:
+  pull_request:
+    paths:
+      - 'src/player-balance.mjs'
+      - 'src/player-polish.mjs'
+      - 'src/kwon-torso-rig.mjs'
+      - 'src/blood-regalia.mjs'
+      - 'src/dice-giant-view.mjs'
+      - 'src/clown-actor.mjs'
+      - 'tests/player-balance.test.mjs'
+      - 'tests/boss-balance.test.mjs'
+      - '.github/workflows/full-body-weight-transfer.yml'
+  push:
+    branches:
+      - feature/full-body-weight-transfer-20261106
+  workflow_dispatch:
+
+jobs:
+  weight-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Syntax-check modified modules
+        run: |
+          node --check src/player-balance.mjs
+          node --check src/player-polish.mjs
+          node --check src/clown-actor.mjs
+          node --check src/kwon-torso-rig.mjs
+          node --check src/blood-regalia.mjs
+          node --check src/dice-giant-view.mjs
+      - name: Validate movement, stable IK and boss skeletons
+        run: |
+          node --test tests/player-balance.test.mjs tests/boss-balance.test.mjs tests/player-avatar.test.mjs tests/player-foot-ik.test.mjs tests/kwon-torso-rig.test.mjs tests/blood-regalia.test.mjs tests/blood-motion-followthrough.test.mjs tests/dice-giant-motion.test.mjs tests/clown-arm-rig.test.mjs
