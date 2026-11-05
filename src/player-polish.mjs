@@ -1,4 +1,5 @@
 import {applyPlayerMotion} from './player-motion.mjs';
+import {createPlayerBalance} from './player-balance.mjs';
 import {createPlayerCombatVfx} from './player-combat-vfx.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
@@ -9,6 +10,7 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
 
  let disposed=false,completion=null;const nodes=new Set(),geometries=new Set(),materials=new Set(),errors=[];
  const safe=fn=>{try{return fn();}catch(error){errors.push(error);}},geometry=g=>(geometries.add(g),g),mat=m=>(materials.add(m),m),owned=n=>(nodes.add(n),n);
+ const balance=createPlayerBalance({reduced});
  let modernFx=null,lastAction=null,variant=0,deathTime=0,castLeft=0;const castAction={kind:'attack',t:0,total:.38,wind:.16,active:.08};
  let parts=null,lastGame=null,lastTime=null,lastPos=null,speed=0,phase=0,walked=0,trailLife=0,nock=null;const sound=own(makeSound(soundOptions)),samples=[],mats=[],v0=new THREE.Vector3(),v1=new THREE.Vector3();
  const a=new Float32Array(9*18),geo=geometry(new THREE.BufferGeometry());geo.setAttribute('position',new THREE.BufferAttribute(a,3));geo.setDrawRange(0,0);const material=mat(new THREE.MeshBasicMaterial({color:0x8cdeff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending})),trail=owned(new THREE.Mesh(geo,material));trail.frustumCulled=false;trail.renderOrder=9;scene.add(trail);
@@ -26,7 +28,7 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
   for(const card of [...parts.weapons.cards.children]){const mark=plate(card,gold,0,.022,0,.1,.012,.12);mark.rotation.y=Math.PI/4;}return true;
  }
  const rgb=hex=>[(hex>>16&255)/255,(hex>>8&255)/255,(hex&255)/255];
- function clear(){if(disposed)return;samples.length=0;geo.setDrawRange(0,0);material.opacity=0;walked=phase=speed=trailLife=0;lastTime=lastPos=lastGame=null;lastAction=null;deathTime=castLeft=variant=0;modernFx?.clear();sound.clear();}
+ function clear(){if(disposed)return;balance.reset();samples.length=0;geo.setDrawRange(0,0);material.opacity=0;walked=phase=speed=trailLife=0;lastTime=lastPos=lastGame=null;lastAction=null;deathTime=castLeft=variant=0;modernFx?.clear();sound.clear();}
  function event(e,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}modernFx?.event(e,g);const p=g.player,c=rgb(PLAYER_COLORS[g.weapon]||0xffffff),n=k=>reduced?Math.ceil(k/3):k;
   if(e.type==='phase'){clear();lastGame=g;return;}
   if(e.type==='skill-cast'&&g.weapon==='cards')castLeft=.38;
@@ -46,6 +48,7 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
    castLeft=Math.max(0,castLeft-h);castAction.t=.38-castLeft;
    const pose=playerPose(g,phase,g.boss.state==='transition'?0:speed,{variant,time:g.time||0,moveX:localX,moveZ:localZ,cast:castLeft>0?castAction:null});
    if(g.status==='lost'){deathTime+=Math.max(0,dt);const u=Math.min(1,deathTime/.85),k=u*u*(3-2*u);pose.lean=1.45*k;pose.lift=-.52*k;pose.kneeL=pose.kneeR=.85*k;pose.legL=pose.legR=-.30*k;pose.armL=pose.armR=-.5*k;pose.spin=pose.bob=0;pose.headX=.30*k;pose.trail=false;}
+   if(g.status==='playing')balance.apply(pose,{dt:h,clock:g.time||0,phase,speed,moveX:localX,moveZ:localZ,action});
    parts.rig.scale.y=1;applyPlayerMotion(parts,pose,g.weapon,(g.time||0)+deathTime,speed);modernFx.update(h,g,parts,pose);
    const skill=p.skill||{},hurt=action?.kind==='hurt';
    const enchant=action?.stun||skill.nextYellow?0xf6d36e:skill.nextRed?0xe56c79:skill.blue>0?0x79bdf2:0;
