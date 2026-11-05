@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import {CINEMATIC_PROFILES,CINEMATIC_SURFACES,buildCinematicTextureData,createCinematicWorld} from '../src/cinematic-graphics.mjs';
 import {createCinematicImpactFx} from '../src/cinematic-impact-fx.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
+import {buildBloodView} from '../src/blood-view.mjs';
+import {createBloodGame} from '../src/blood-combat.mjs';
 
 test('every playable boss and future Gyuwon share one explicit physically based style vocabulary',()=>{
  for(const key of ['kwon','clown','dice','blood','gyuwon']){
@@ -116,4 +118,26 @@ test('all four real boss entrypoints use the same graphics and hit event bridge'
   assert.match(contents,/contactFx\.reset/);
   assert.match(contents,/startup\.own\(/);
  }
+});
+
+test('authored normal strengths remain intact and cathedral phase lighting cannot re-enable mobile rim light',()=>{
+ const scene=new THREE.Scene(),renderer={toneMapping:THREE.NoToneMapping,toneMappingExposure:1,outputColorSpace:THREE.LinearSRGBColorSpace};
+ const map=new THREE.DataTexture(new Uint8Array([128,128,255,255]),1,1),normal=new THREE.DataTexture(new Uint8Array([128,128,255,255]),1,1);
+ const mat=new THREE.MeshStandardMaterial({color:0xc3b2a1,map,normalMap:normal});
+ mat.normalScale.set(.77,.65);
+ const node=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat);scene.add(node);
+ const world=createCinematicWorld(scene,renderer,{profile:'kwon',coarse:true});
+ world.apply(node,{actor:true});
+ assert.equal(mat.map,map);assert.equal(mat.normalMap,normal);
+ assert.equal(mat.normalScale.x,.77);assert.equal(mat.normalScale.y,.65);
+ world.dispose();
+ assert.deepEqual(disposeScene(scene).errors,[]);
+ const scene2=new THREE.Scene(),view=buildBloodView(scene2,{coarse:true,reduced:true});
+ const world2=createCinematicWorld(scene2,renderer,{profile:'blood',coarse:true});
+ const rim=scene2.getObjectByName('cinematic-boss-silhouette-fill');
+ assert.equal(rim.intensity,0);
+ const game=createBloodGame();view.update(game,.016);
+ assert.equal(rim.intensity,0,'blood cathedral phase lighting must not override mobile quality');
+ view.dispose();world2.dispose();
+ assert.deepEqual(disposeScene(scene2).errors,[]);
 });
