@@ -5,7 +5,8 @@ import {KWON_WAVE} from './kwon-wave-data.mjs';
 // + and X read differently, yet both have one collision width and one damage event.
 export function createKwonVerticalWaveView(scene,{reduced=false}={}){
  const root=new THREE.Group();root.name='kwon-overhead-sword-waves';scene.add(root);
- const meshes=new Map(),materials=[],geometries=[];
+ const meshes=new Map(),materials=[],geometries=[],pools={plus:[],x:[]};
+ const MAX_COSMETIC_WAVES=6;
  const mat=(color,opacity)=>{const m=new THREE.MeshBasicMaterial({
   color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide,
   blending:THREE.AdditiveBlending
@@ -46,13 +47,20 @@ export function createKwonVerticalWaveView(scene,{reduced=false}={}){
    if(q.kind!==KWON_WAVE.kind)continue;
    live.add(q.id);
    let group=meshes.get(q.id);
-   if(!group){group=make(q.variant==='x'?'x':'plus');meshes.set(q.id,group);}
+   if(!group){
+    if(meshes.size>=MAX_COSMETIC_WAVES)continue;
+    const variant=q.variant==='x'?'x':'plus';
+    group=pools[variant].pop()||make(variant);
+    group.visible=true;meshes.set(q.id,group);
+   }
    const falling=ease((q.age||0)/.2);
    group.position.set(q.x,1.8*(1-falling),q.z);
    group.rotation.y=q.yaw;group.scale.set(1,.74+.26*falling,1);
    if(q.life<.17)group.scale.multiplyScalar(.5+.5*Math.max(0,q.life/.17));
   }
-  for(const [id,m] of meshes)if(!live.has(id)){root.remove(m);meshes.delete(id);}
+  for(const [id,m] of meshes)if(!live.has(id)){
+   m.visible=false;pools[m.userData.variant].push(m);meshes.delete(id);
+  }
   previews.plus.visible=previews.x.visible=false;
   if(boss?.pattern==='wave'&&boss.state==='windup'&&boss.waveVariant){
    const v=previews[boss.waveVariant];
@@ -64,7 +72,8 @@ export function createKwonVerticalWaveView(scene,{reduced=false}={}){
   }
  }
  function clear(){
-  for(const m of meshes.values())root.remove(m);meshes.clear();
+  for(const m of meshes.values()){m.visible=false;pools[m.userData.variant].push(m);}
+  meshes.clear();
   previews.plus.visible=previews.x.visible=false;
  }
  function dispose(){
