@@ -449,6 +449,9 @@ export function startPattern(g, name) {
   if (!PATTERNS[name]) throw new Error('Unknown pattern');
   const b = g.boss;
   b.from = b.state === 'recovery' ? endPose(b) : null;
+  // Keep the torso at the previous strike's follow-through during quick
+  // combos. It now returns through the next windup instead of snapping.
+  b.motionFrom = b.state === 'recovery' && b.recovery <= .2 ? b.pattern : null;
   b.state = 'windup';
   b.pattern = name;
   b.t = 0;
