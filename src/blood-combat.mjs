@@ -9,6 +9,7 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {playerWalkSpeed,PLAYER_ROLL_SPEED,playerRolling} from './player-movement-rules.mjs';
 import {claimPlayerProjectileHit} from './player-projectile-data.mjs';
 import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {bloodHurtShapes} from './boss-hit-regions.mjs';
@@ -61,7 +62,9 @@ export function startBloodPattern(g,id){
  if(id==='fountain')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6,p.z-Math.sin(aim)*(i-2)*6);circle(q.x,q.z,1.2+i*.45,4);}
  if(id==='burst')circle(b.x,b.z,1.6,14,{damage:38,life:.5});
  if(id==='orbs')for(let i=-2;i<=2;i++){const a=aim+i*.23;circle(b.x,b.z,1.2,1.8,{vx:Math.sin(a)*15,vz:Math.cos(a)*15,life:2.3,damage:22,yaw:a});}
- if(id==='chain'){circle(p.x,p.z,1.1,3.8,{slow:.65,damage:12});circle(p.x,p.z,2.8,5,{damage:28});}
+ // The old 5m follow-up depended on an anomalous 18m/s player dodge.
+  // Keep a full 10m/s shared dodge viable with a slightly tighter ring.
+  if(id==='chain'){circle(p.x,p.z,1.1,3.8,{slow:.65,damage:12});circle(p.x,p.z,2.8,4.25,{damage:28});}
  if(id==='orbit')hazard(g,'ring',{r:3,width:1.4,grow:10,warn:1.2,life:2.1,damage:26});
  if(id==='vortex')circle(p.x,p.z,1.6,7.5,{life:1.6,damage:30});
  if(id==='lances')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6.5,p.z-Math.sin(aim)*(i-2)*6.5);circle(q.x,q.z,1.4+i*.5,4.5,{damage:27,life:.65});}
@@ -112,7 +115,7 @@ export function startBloodPattern(g,id){
 function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.walk=null;s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
 export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=R.transition;return true;}
 function hurt(g,h){
- const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
+ const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
  h.hit=true;const before=p.hp;p.hp=Math.max(0,p.hp-h.damage);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount:h.damage});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
@@ -164,8 +167,8 @@ function tickPlayer(g,dt,input){
   if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true,impact);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
- const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*18*dt;p.z+=Math.cos(a.yaw)*18*dt;}
- else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=8*(g.blood.slow>0?.65:1)*(p.skill.blue>0?1.5:1);p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);}
+ const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*PLAYER_ROLL_SPEED*dt;p.z+=Math.cos(a.yaw)*PLAYER_ROLL_SPEED*dt;}
+ else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=playerWalkSpeed(p,g.blood.slow>0?.65:1);p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);}
  clampArena(p);
 }
 export function stepBlood(g,dt,input={}){
