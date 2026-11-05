@@ -34,8 +34,7 @@ export function giantHandImpact(g,a,b,index){
  if(!impact)return null;
  // Convert the local-space strike to the real world by reconstructing its
  // swept segment parameter; keep the original impact point for audiovisual FX.
- const dx=to.x-from.x,dy=to.y-from.y,dz=to.z-from.z,denom=dx*dx+dy*dy+dz*dz;
- const t=denom?Math.max(0,Math.min(1,((impact.x-from.x)*dx+(impact.y-from.y)*dy+(impact.z-from.z)*dz)/denom)):0;
+ const t=impact.t;
  return {t,part:'hand',subpart:impact.part,index,face:0,
   point:{x:a.x+(b.x-a.x)*t,y:(a.y??1.2)+((b.y??1.2)-(a.y??1.2))*t,z:a.z+(b.z-a.z)*t}};
 }
