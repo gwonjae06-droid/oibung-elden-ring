@@ -24,10 +24,13 @@ export function actDice(g,type,input={}){
 }
 export function diceFaceDamageable(g,impact){return Boolean(impact)&&(!g.dice.giant||g.dice.giant.temperament==='feral'||diceWeakHit(impact));}
 export function diceFaceDamageMultiplier(g,impact){if(!diceFaceDamageable(g,impact))return 0;return !g.dice.giant&&g.boss.phase===1&&!diceWeakHit(impact)?.5:1;}
+export function diceGiantHitDamage(g,amount,impact){
+ return impact.part==='hand'?strikeGiantHand(g,impact.index,amount):amount*BOSS_WEAKPOINT_MULTIPLIERS.diceExposedHead;
+}
 function hit(g,amount,action,impact){
  const multiplier=diceFaceDamageMultiplier(g,impact);
  if(!multiplier){g.dice.blockFlash=.12;g.events.push({type:'dice-blocked',face:impact.face});return;}
- const dealt=g.dice.giant?(impact.part==='hand'?strikeGiantHand(g,impact.index,amount):amount*BOSS_WEAKPOINT_MULTIPLIERS.diceExposedHead):amount*multiplier;
+ const dealt=g.dice.giant?diceGiantHitDamage(g,amount,impact):amount*multiplier;
  const damage=damageDice(g,dealt);if(!damage)return;
  settlePlayerHit(g,damage,action,{canStun:g.status==='playing',stun:duration=>{g.dice.stun=duration;}});
 }
