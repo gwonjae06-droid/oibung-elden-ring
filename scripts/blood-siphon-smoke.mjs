@@ -30,7 +30,13 @@ try{
    });
    assert.ok(launched,'failed to launch blood battle');
    await page.locator('#blood-battle').waitFor({state:'visible',timeout:30000});
-   await page.waitForTimeout(2150);
+   // Blood's real intro lasts 3.4 seconds; do not manipulate a paused,
+   // not-yet-ready session or mistake an idle game for a healing bug.
+   await page.waitForFunction(()=>{
+    const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
+    return root && !root.querySelector('[role="dialog"][aria-label*="배서준"]');
+   },null,{timeout:30000});
+   await page.waitForTimeout(130);
    const prepared=await page.evaluate(async()=>{
     const {readBattleSession}=await import('./src/battle-session.mjs');
     const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
@@ -38,6 +44,7 @@ try{
     if(!session)throw Error('no blood battle session');
     const g=session.game;
     session.resume?.();
+    if(!readBattleSession(root)?.active)throw Error('Battle did not resume after the 3.4s intro');
     g.boss.phase=2;g.boss.hp=2000;g.boss.state='recovery';
     g.blood.transitioned=true;g.blood.phasePending=false;g.blood.recover=1e6;
     g.blood.hazards.length=0;g.blood.siphon.cooldown=.18;
