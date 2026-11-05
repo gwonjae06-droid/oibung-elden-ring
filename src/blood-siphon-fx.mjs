@@ -30,7 +30,7 @@ export function createBloodSiphonFx(parent,{coarse=false,reduced=false}={}){
   depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
  const edge=new THREE.Mesh(edgeGeometry,edgeMaterial);
  edge.name='blood-sea-absorption-shoreline';edge.position.y=.11;edge.visible=false;root.add(edge);
- const dummy=new THREE.Object3D();let disposed=false;
+ const dummy=new THREE.Object3D(),tangent=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);let disposed=false;
  function clear(){drops.count=0;ring.visible=edge.visible=false;ringMaterial.opacity=edgeMaterial.opacity=0;}
  function update(g,dt=0){
   if(disposed)return;
@@ -52,16 +52,26 @@ export function createBloodSiphonFx(parent,{coarse=false,reduced=false}={}){
    const a=TAU*(i*.61803398875+rand(i,3)*.035);
    const radius=30.1+rand(i,7)*5.3;
    const x0=Math.sin(a)*radius,z0=Math.cos(a)*radius;
-   const delay=rand(i,13)*.69;
-   const u=clamp((progress*(1+delay)-delay)*1.9);
+   const delay=rand(i,13)*.57;
+   const u=clamp((progress-delay)/Math.max(.38,1-delay));
    const travel=ease(u);
-   const swirl=reduced?0:Math.sin((g.time||0)*3.6+i*2.1)*(1-travel)*.52;
-   const x=x0+(b.x-x0)*travel+Math.cos(a)*swirl;
-   const z=z0+(b.z-z0)*travel+Math.sin(a)*swirl;
-   const y=.2+(coreY-.2)*travel+Math.sin(Math.PI*travel)*(4.5+rand(i,17)*3.5);
-   const size=(.11+rand(i,19)*.2)*(u>0&&u<1?1:.035);
-   dummy.position.set(x,y,z);dummy.rotation.set(u*4,i,0);
-   dummy.scale.set(size,size*(1+travel*.8),size);
+   // A heavy stream peels off the flooded shore, curves around the boss and
+   // then settles into the actual moving chest. Tangent-aligned droplets
+   // stretch ALONG their travel direction, never uniformly upward.
+   const dx=b.x-x0,dz=b.z-z0,d=Math.max(1,Math.hypot(dx,dz)),
+    perpendicularX=-dz/d,perpendicularZ=dx/d,
+    swirl=reduced?0:(.65+rand(i,23)*1.15)*Math.sin(Math.PI*travel);
+   const x=x0+dx*travel+perpendicularX*swirl,
+    z=z0+dz*travel+perpendicularZ*swirl,
+    height=3.7+rand(i,17)*2.8,
+    y=.2+(coreY-.2)*travel+Math.sin(Math.PI*travel)*height;
+   const waveSlope=reduced?0:Math.PI*Math.cos(Math.PI*travel)*(.65+rand(i,23)*1.15);
+   tangent.set(dx+perpendicularX*waveSlope,(coreY-.2)+Math.PI*Math.cos(Math.PI*travel)*height,
+    dz+perpendicularZ*waveSlope).normalize();
+   const size=(.11+rand(i,19)*.2)*(u>0&&u<1?1:.035),
+    elongation=1.12+(1-travel)*Math.min(1.25,d/48);
+   dummy.position.set(x,y,z);dummy.quaternion.setFromUnitVectors(up,tangent);
+   dummy.scale.set(size,size*elongation,size);
    dummy.updateMatrix();drops.setMatrixAt(i,dummy.matrix);
   }
   drops.count=visibleCount;drops.instanceMatrix.needsUpdate=true;
