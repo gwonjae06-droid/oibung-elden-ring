@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
 import {clownHurtShapes} from './boss-hit-regions.mjs';
 import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {
@@ -332,7 +333,7 @@ const definitions = [
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
     key,
-    {name, dur, recover, phases},
+    {name, dur:dur+clownPrecastTime(key), precast:clownPrecastTime(key), recover, phases},
   ]),
 );
 function dashPart(g, c, a, t, start, key) {
@@ -1060,7 +1061,15 @@ function tickClown(g, dt) {
     const d = PATTERNS[c.name],
       a = c.pt;
     c.pt += dt;
-    RUN[c.name](g, c, a, c.pt);
+    // No danger object or projectile can be spawned during this authored
+    // body-language introduction. The old stage timeline begins only after
+    // a visible bow, glove draw-back or compressing step.
+    const lead=d.precast,previous=Math.max(0,a-lead),elapsed=Math.max(0,c.pt-lead);
+    if(c.pt<=lead){
+      Object.assign(c.vis,clownPrecastPose(c.name,c.pt,lead));
+    }else{
+      RUN[c.name](g,c,previous,elapsed);
+    }
     c.punish =
       c.pt >= d.dur - d.recover &&
       !c.waves.length &&
