@@ -19,3 +19,24 @@ export function createGiantElbowFollow(frequency=11){
  }
  return {step,reset};
 }
+
+// Keep the elbow inside the two-arm arc without touching the attackable palm.
+// A teleporting or overbent elbow can otherwise cause the sleeve to reverse
+// through the shoulder after a large hand slam or a quick palm recovery.
+export function constrainGiantElbow(shoulder,palm,proposal){
+ const arrays=[shoulder,palm,proposal];
+ if(!arrays.every(a=>Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)))
+  throw new TypeError('Finite arm joints required');
+ const travel=palm.map((x,i)=>x-shoulder[i]),lengthSq=travel.reduce((a,x)=>a+x*x,0);
+ if(lengthSq<1e-10)return [...shoulder];
+ const delta=proposal.map((x,i)=>x-shoulder[i]),
+  projectedRatio=delta.reduce((n,x,i)=>n+x*travel[i],0)/lengthSq,
+  ratio=Math.max(.2,Math.min(.8,projectedRatio)),
+  center=shoulder.map((x,i)=>x+travel[i]*ratio),
+  // Remove the ORIGINAL longitudinal displacement, not just the clamped
+  // portion: otherwise the residual can still pull the elbow past the wrist.
+  originalProjection=shoulder.map((x,i)=>x+travel[i]*projectedRatio),
+  off=proposal.map((x,i)=>x-originalProjection[i]),size=Math.hypot(...off),
+  radialLimit=Math.sqrt(lengthSq)*.6,scale=size>radialLimit?radialLimit/size:1;
+ return center.map((x,i)=>x+off[i]*scale);
+}

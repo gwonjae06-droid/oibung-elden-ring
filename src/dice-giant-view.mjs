@@ -1,6 +1,6 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
-import {createGiantElbowFollow} from './giant-arm-inertia.mjs';
+import {createGiantElbowFollow,constrainGiantElbow} from './giant-arm-inertia.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
 import {HAND_REST,GIANT,giantHandPose,giantHazards,giantPosture,giantPropType} from './dice-giant.mjs';
@@ -133,7 +133,12 @@ export function buildDiceGiant(scene){
    // Simulated palm/hit geometry stays authoritative; joint inertia
    // only changes the two limb segments attached to that same palm.
    const softened=elbowFollow[i].step([elbow.x,elbow.y,elbow.z],dt);
-   elbow.set(softened.x,softened.y,softened.z);
+   const bounded=constrainGiantElbow(
+    [shoulder.x,shoulder.y,shoulder.z],
+    [group.position.x,group.position.y,group.position.z],
+    [softened.x,softened.y,softened.z]
+   );
+   elbow.set(...bounded);
    joint.position.copy(elbow);
    boneBetween(upper,shoulder,elbow,5.5);boneBetween(forearm,elbow,group.position,4.7);
   });

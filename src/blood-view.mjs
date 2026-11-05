@@ -32,10 +32,12 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();scene.add(root);
  const actor=new THREE.Group();root.add(actor);
  const regalia=createBloodRegalia(actor,{coarse,reduced});
- const portrait=createBloodHead({coarse,reduced}),head=portrait.group;head.position.set(0,4.6,0);actor.add(head);
+ // Keep the sculpted head at its original local rest coordinate but parent it
+ // beneath the real chest/neck pivot, so bowing cannot detach the throat.
+ const portrait=createBloodHead({coarse,reduced}),head=portrait.group;head.position.set(0,4.6,0);regalia.torso.add(head);
  const core=mesh(fluid.sphere,fluid.material,0,4.7,0,actor);core.visible=false;
  const halo=mesh(new THREE.TorusGeometry(1.65,.045,6,56),fluid.material,0,4.7,-.2,actor);
- const wings=createBloodWings(actor,fluid,quality,{reduced});
+ const wings=createBloodWings(regalia.torso,fluid,quality,{reduced});
  const motionDirector=createBloodMotionDirector();
  const birthWave=mesh(new THREE.TorusGeometry(1,.06,5,64),new THREE.MeshBasicMaterial({color:0xf04e65,transparent:true,opacity:.3,depthWrite:false}),0,.35,0,fxRoot);birthWave.rotation.x=Math.PI/2;birthWave.visible=false;
  const projectiles=createPlayerProjectileView(THREE,scene);

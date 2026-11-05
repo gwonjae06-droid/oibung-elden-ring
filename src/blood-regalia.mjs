@@ -119,7 +119,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   seam.scale.set(1,1,1);
  }
  // Heavy curtain cape with a separate over-shoulder mantle.
- const cape=new THREE.Group();actor.add(cape);cape.position.set(0,3.66,-.32);
+ const cape=new THREE.Group();torso.add(cape);cape.position.set(0,3.66,-.32);
  for(const side of [-1,1]){
   const sh=attach(cape,new THREE.SphereGeometry(.8,20,12),wine,side*.7,-.05,-.45);
   sh.scale.set(.95,.37,.7);
@@ -127,9 +127,11 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   fall.rotation.z=side*.07;
   tube(cape,[[side*.36,0,-.74],[side*.67,-1.0,-1],[side*1.12,-3.38,-.85]],.034,edge,22);
  }
- const arms=[armature(actor,-1,{dark,red,metal,edge,skin,vein}),armature(actor,1,{dark,red,metal,edge,skin,vein})];
+ // Shoulder sockets stay mounted on the turning chest: hand and elbow joints
+ // follow the same torso during every casting pose instead of floating.
+ const arms=[armature(torso,-1,{dark,red,metal,edge,skin,vein}),armature(torso,1,{dark,red,metal,edge,skin,vein})];
  // Phase two: exposed ribs and needlelike bone growth originate from beneath the armor.
- const growth=new THREE.Group();actor.add(growth);growth.visible=false;
+ const growth=new THREE.Group();torso.add(growth);growth.visible=false;
  for(const side of [-1,1]){
   for(let i=0;i<4;i++){
    const y=2.3+i*.32,spread=.45+i*.12;
@@ -187,5 +189,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,growth,legs:legRig.legs,plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
+ return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
 }
