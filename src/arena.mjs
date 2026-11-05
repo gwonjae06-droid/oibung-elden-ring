@@ -1,3 +1,4 @@
+import {createCameraVisibility} from './camera-visibility.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import {consumeBattleGrace,installChargeInput} from './weapon-evolution.mjs';
 import {actPlayer} from './player-combat.mjs';
@@ -32,13 +33,14 @@ renderer.setPixelRatio(qualityPixelRatio(2));renderer.shadowMap.enabled=true;ren
 const scene=new THREE.Scene();const releaseSceneRollback=startup.own('Arena scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
 const camera=new THREE.PerspectiveCamera(58,1,.1,120);scene.add(new THREE.HemisphereLight(0xbac6b4,0x1b221b,1.05));
 // Arena lifecycle bindings.
+let cameraVisibility=null;
 let stoppedAt=null,skinImage=null,resetStick=()=>{},unbindSession=()=>{};
 function stopArena(){
   if(stoppedAt!==null)return;
   stoppedAt=performance.now();recoverySfx.clear();damageFeedback.clear();playerWeaponSfx.clear();keys.clear();stick.x=stick.y=0;queued=null;dragging=false;resetStick();pauseGame();audio.ambience(false);
 }
 function disposeArena(){
-  unbindSession();
+  cameraVisibility?.dispose();unbindSession();
   for(const cleanup of [()=>clearFx(),()=>recoverySfx.dispose(),()=>damageFeedback.dispose(),()=>impact.dispose(),()=>traitView.dispose(),()=>playerWeaponSfx.dispose(),()=>audio.setEnabled(false),()=>skillAudio?.setEnabled(false),()=>{if(skinImage)skinImage.onload=skinImage.onerror=null;skinImage=null;},()=>{mode='disposed';setUi();$('start').disabled=true;$('hit-flash').classList.remove('visible');$('notice').classList.remove('visible');$('reticle').hidden=true;}]){
     try{cleanup();}catch(error){console.error('Arena cleanup failed',error);}
   }
@@ -88,6 +90,7 @@ const CARD_NOTICE={blue:'파랑 카드 · 이동 속도 +50%',red:'빨강 카드
 function playSkillSound(name){if(!skillAudio)return;if(skillAudio.enabled!==audio.enabled)skillAudio.setEnabled(audio.enabled);skillAudio.play(name);}
 function playEvent(ev,g){const bossCue=Boolean(bossFoleySpec(ev,g));recoverySfx.event(ev);damageFeedback.hit(ev);playerWeaponSfx.event(ev,g);if(['heal-start','healed','skill-heal','death'].includes(ev.type))playerWeaponSfx.clear();switch(ev.type){case 'swing':case 'shot':break;case 'roll':audio.play('roll');break;case 'dodge':audio.play('dodge');break;case 'heal-start':break;case 'healed':break;case 'boss-hit':break;case 'player-hit':audio.play('hit-player');break;case 'telegraph':{const k=patternKey(ev.name);if(k&&!bossCue)audio.play(TELEGRAPH_SOUND[k]);break;}case 'boss-swing':if(!bossCue)audio.play(SWING_SOUND[g.boss.pattern]||'boss-slash');break;case 'boss-shot':if(!bossCue)audio.play('boss-thrust');break;case 'phase':if(!bossCue)audio.play('phase');break;case 'stagger':audio.play('stagger');break;case 'victory':playBossCue('die');audio.play('victory');break;case 'death':audio.play('death');break;case 'skill-cast':case 'skill-stun':case 'skill-ready':case 'skill-pierce':break;case 'skill-heal':break;}}
 let selectedWeapon='sword',game=createGame(selectedWeapon,{register:false}),mode='menu',lock=true,queued=null,endAt=0,shake=0;
+cameraVisibility=createCameraVisibility(scene,{roots:()=>sanctuary?[sanctuary]:[],targets:()=>[{x:game.player.x,y:1.4,z:game.player.z},{x:game.boss.x,y:game.boss.phase===2?4:2,z:game.boss.z}]});startup.own('Arena camera visibility',()=>cameraVisibility.dispose());
 const view={yaw:Math.PI,pitch:.4,dist:9.5},vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0,px:0,pz:13,pphase:0,cast:0},keys=new Set(),stick={x:0,y:0};
 function setWeaponVisual(){for(const k of WEAPON_KEYS)weaponRigs[k].visible=k===game.weapon;setText('weapon-label',WEAPONS[game.weapon].name);}
 function selectWeapon(key){if(!WEAPONS[key])return;selectedWeapon=key;document.querySelectorAll('.weapon').forEach(btn=>{const on=btn.dataset.weapon===key;btn.classList.toggle('selected',on);btn.setAttribute('aria-pressed',String(on));});if(mode==='menu'){game=createGame(key,{register:false});setWeaponVisual();}}

@@ -1,3 +1,4 @@
+import {createCameraVisibility} from './camera-visibility.mjs';
 import * as THREE from 'three';
 import {createBloodHead} from './blood-head.mjs';
 import {createBloodRegalia} from './blood-regalia.mjs';
@@ -15,10 +16,11 @@ import {collectSceneResources} from './runtime/scene-resources.mjs';
 
 export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const quality=bloodQuality({coarse}),fluid=createBloodFluid(quality);
- const scenery=[];
+
  const mesh=(geo,mat,x=0,y=0,z=0,parent=scene)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);return m;};
  // White limestone nave and sacred altar are entirely outside the damage arena.
  const architecture=createWhiteCathedral(scene,{coarse,reduced,radius:R.radius});
+ let focusGame=null;const visibility=createCameraVisibility(scene,{roots:[architecture.root],targets:()=>focusGame?[{x:focusGame.player.x,y:1.4,z:focusGame.player.z},{x:focusGame.boss.x,y:4+focusGame.blood.elevation,z:focusGame.boss.z}]:[]});
  const heart=new THREE.Group();scene.add(heart);heart.position.set(0,34,-38);
  for(const side of [-1,1])mesh(fluid.sphere,fluid.material,side,0,0,heart).scale.set(1.6,1.9,1.5);
  const tip=mesh(fluid.sphere,fluid.material,0,-1.5,0,heart);tip.scale.set(1.8,2,1.3);
@@ -37,7 +39,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  let disposed=false,deathTime=0,lastHp=R.hp,lastBirth=0,shake=0,visualTime=0,dripTime=0,cast=0,energy=0,hitRoll=0;
  // Spells, rising blood and the cathedral environment replace precise red danger decals.
  function update(g,dt){
-  if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=motionDirector.update(g,dt),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
+  if(disposed)return;focusGame=g;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=motionDirector.update(g,dt),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
   const energyGoal=({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0;energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
@@ -69,11 +71,10 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   const live=new Set();for(const q of g.projectiles){live.add(q.id);let m=shots.get(q.id);if(!m){m=new THREE.Mesh(shotGeo,shotMat);shots.set(q.id,m);scene.add(m);}m.position.set(q.x,1.3+s.elevation,q.z);}for(const[id,m]of shots)if(!live.has(id)){scene.remove(m);shots.delete(id);}
   shake*=Math.exp(-dt*14);
  }
- const ray=new THREE.Raycaster(),from=new THREE.Vector3(),to=new THREE.Vector3(),direction=new THREE.Vector3();
- function occlude(camera,g){for(const m of scenery)m.visible=true;scene.updateMatrixWorld(true);from.copy(camera.position);for(const point of [{x:g.player.x,y:1,z:g.player.z},{x:g.boss.x,y:3+g.blood.elevation,z:g.boss.z}]){to.set(point.x,point.y,point.z);const distance=from.distanceTo(to);direction.subVectors(to,from).normalize();ray.set(from,direction);ray.far=Math.max(0,distance-1);for(const hit of ray.intersectObjects(scenery,false))hit.object.visible=false;}}
+ function occlude(camera,g){focusGame=g;}
  function clear(){for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();wings.clear();motionDirector.reset();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
   event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;clear();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
 }

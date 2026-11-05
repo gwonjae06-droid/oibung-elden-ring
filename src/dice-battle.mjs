@@ -1,3 +1,4 @@
+import {createCameraVisibility} from './camera-visibility.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import {damageDice} from './dice-combat.mjs';
 import {buildDiceGiant} from './dice-giant-view.mjs';
@@ -46,6 +47,7 @@ export function launchDiceBattle({weapon='sword',configure=()=>{},onClose=()=>{}
  const playerFx=createPlayerPolish(scene,{mobile:coarse,reduced});startup.own('Dice player effects',()=>playerFx.dispose());const bossFx=createDiceBossFx(scene,{coarse,reduced});startup.own('Dice Sungwon phase effects',()=>bossFx.dispose());const chip=createBossChip(hud.chipDocument);startup.own('Dice HUD effect',()=>chip.clear());
  const weaponSfx=createPlayerWeaponSfx();startup.own('Dice weapon sfx',()=>weaponSfx.dispose());const crowd=createCrowdScream(makeAudio);const ripple=createBoardRipple(board.root,{coarse});startup.own('Dice board ripple',()=>ripple.dispose());
  const slamFeedback=createDiceSlamFeedback({reduced});let g=createDicePlayerGame(weapon),mode='playing',ready=false,closed=false,ending=0,shake=0,w=0,h=0,lock=true,yaw=-Math.PI/2,pitch=.32,zoom=0,selected=weapon,drag=false;const keys=new Set(),stick={x:0,z:0},target=new THREE.Vector3(),desired=new THREE.Vector3(),screen=new THREE.Vector3(),arrows=new Map(),arrowGeo=startup.resource('Dice arrow geometry',new THREE.BoxGeometry(.12,.12,1.4)),arrowMat=startup.resource('Dice arrow material',new THREE.MeshBasicMaterial({color:0xffe3a8}));
+ const cameraVisibility=createCameraVisibility(scene,{roots:[board.root],targets:()=>[{x:g.player.x,y:1.4,z:g.player.z},{x:g.boss.x,y:g.dice.giant?(g.dice.pose.y||8):R.edge/2,z:g.boss.z}]});startup.own('Dice camera visibility',()=>cameraVisibility.dispose());
  startup.own('Invalidate battle',()=>{closed=true;});
  function setMode(value){mode=value;hud.mode(value);keys.clear();stick.x=stick.z=0;$('thumb').style.transform='';}
  function select(value){if(!WEAPONS[value])return;selected=value;for(const b of ui.querySelectorAll('.weapon')){const on=b.dataset.weapon===value;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));}}
@@ -60,7 +62,7 @@ export function launchDiceBattle({weapon='sword',configure=()=>{},onClose=()=>{}
  function menu(){bossFx.clear();traitView.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();bossSfx.clear();weaponSfx.clear();setMode('menu');chip.clear();playerFx.clear();audio.setEnabled(false);skillAudio.setEnabled(false);dread.setEnabled(false);crowd.setEnabled(false);select(g.weapon);$('start').focus();}
  const close=createBattleCleanup(()=>[
   ['Stop dice battle',()=>{closed=true;unbindSession();battleLoop.dispose();}],
-  ['Dice callbacks',()=>eventScope.dispose()],['Dice trait view',()=>traitView.dispose()],
+  ['Dice camera visibility',()=>cameraVisibility.dispose()],['Dice callbacks',()=>eventScope.dispose()],['Dice trait view',()=>traitView.dispose()],
   ['Dice player effects',()=>playerFx.dispose()],['Dice Sungwon phase effects',()=>bossFx.dispose()],
   ['Dice HUD effect',()=>chip.clear()],
   ['Dice audio',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);dread.dispose();bossSfx.dispose();weaponSfx.dispose();crowd.setEnabled(false);}],
