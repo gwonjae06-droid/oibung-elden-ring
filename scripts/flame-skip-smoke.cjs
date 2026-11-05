@@ -42,6 +42,19 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   const artifacts=path.join(root,'artifacts/flame-skip');await fs.mkdir(artifacts,{recursive:true});
   assert.match(await page.locator('.j-skip-offer').innerText(),/배서준부터 시작/);
   await click('skip-toggle');assert.equal((await read()).flames,2);
+  // A player with all four gates unlocked must be able to choose any earlier
+  // boss without spending the flame merely by changing the destination.
+  const destination=stage=>page.locator('[data-j="skip-target"][data-stage="'+stage+'"]');
+  assert.equal(await destination(1).isEnabled(),true);
+  assert.equal(await destination(2).isEnabled(),true);
+  assert.equal(await destination(3).isEnabled(),true);
+  await destination(1).click();
+  assert.match(await page.locator('.j-skip-offer').innerText(),/오슬우부터 시작/);
+  assert.equal((await read()).flames,2);
+  await destination(2).click();
+  assert.match(await page.locator('.j-skip-offer').innerText(),/박성원부터 시작/);
+  await destination(3).click();
+  assert.match(await page.locator('.j-skip-offer').innerText(),/배서준부터 시작/);
   await page.screenshot({path:path.join(artifacts,'home-selected.png'),animations:'disabled'});
   const homeVisibility=await page.locator('.j-skip-offer').evaluate(el=>({opacity:getComputedStyle(el).opacity,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height,viewport:innerHeight}));
   assert.ok(Number(homeVisibility.opacity)>.9&&homeVisibility.top>=0&&homeVisibility.top+homeVisibility.height<=homeVisibility.viewport,'home shortcut is not visible: '+JSON.stringify(homeVisibility));
@@ -58,7 +71,7 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   await page.waitForFunction(()=>{
    const readBattleSession=window.__readSession;
    const root=document.querySelector('#blood-battle')?.firstElementChild.shadowRoot;
-   const s=root&&readBattleSession(root);if(s?.active&&s.game.evolutions.includes('twin-arrow')&&!document.getElementById('journey').open){window.__skipGame=s.game;return true;}return false;
+   const s=root&&readBattleSession(root);if(s?.game?.status==='playing'&&s.game.evolutions.includes('twin-arrow')&&!document.getElementById('journey').open){window.__skipGame=s.game;return true;}return false;
   },null,{timeout:30000});
   const state=await page.evaluate(async()=>{
    const {readBattleSession}=await import('/src/battle-session.mjs'),{BOSS_REGISTRY}=await import('/src/boss-registry.mjs'),{journeyBossHp}=await import('/src/journey-balance.mjs');
