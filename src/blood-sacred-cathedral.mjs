@@ -162,7 +162,7 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
   fragmentShader:'varying vec2 vUv; uniform vec3 uTint;uniform float uStrength;void main(){float fade=pow(sin(vUv.y*3.14159265),1.15);float ribs=.85+.15*cos(vUv.x*6.2831853);gl_FragColor=vec4(uTint,uStrength*fade*ribs);}'
  });
  // Grand nave, six repeating bays: masonry around each tall pointed glass lancet.
- const bays=[-30,-18,-6,6,18,30],occluders=[],windowMeshes=[],pointLights=[];
+ const bays=coarse?[-30,-10,10,30]:[-30,-18,-6,6,18,30],occluders=[],windowMeshes=[];
  const shaftGeo=new THREE.CylinderGeometry(.75,.84,25,coarse?10:16),capitalGeo=new THREE.CylinderGeometry(1.1,.82,.7,coarse?10:16);
  const baseGeo=new THREE.CylinderGeometry(1.35,1.5,.55,coarse?10:16);
  const glassGeo=glassGeometry({coarse}),ringGeo=new THREE.TorusGeometry(.61,.08,6,12);
@@ -302,7 +302,7 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
   const beam=mesh(root,rayGeo,rayMaterial);beam.position.copy(p).add(q).multiplyScalar(.5);
   beam.quaternion.setFromUnitVectors(v(0,1,0),dir.clone().normalize());beam.scale.set(.9,dir.length(),.9);shafts.push(beam);
  }
- const sanctum=new THREE.PointLight(0xfff4de,coarse?5:12,48,2);sanctum.position.set(0,20,-38);root.add(sanctum);pointLights.push(sanctum);
+ const sanctum=new THREE.PointLight(0xfff4de,coarse?5:12,48,2);sanctum.position.set(0,20,-38);root.add(sanctum);
  function update(g,c,env){
   const phase=g?.boss?.phase??1,night=c?.darkness||0,dim=env?.light??1,dead=g?.status==='won';
   glassMat.color.setHex(phase===2?0xffdad9:0xffffff);
@@ -317,7 +317,7 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
   roof.visible=camera.position.y<29.6;
   apse.visible=camera.position.z>-44;
  }
- return {root,occlude,update,
+ return {root,occlude,update,floorMaterial:marble,trimMaterial:gold,
   stats:()=>({windows:windowMeshes.length,beams:shafts.length,occluders:occluders.length}),
   dispose(){// Geometry/material resources are traversed by the scene owner.
    texture?.dispose();
