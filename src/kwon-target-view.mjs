@@ -8,7 +8,8 @@ export function createKwonTargetView(T,B,torso,host){
  const world=new T.Vector3(),screen=new T.Vector3();
  let boss=null,disposed=false;
  function worldPoint(){
-  const local=torso.point({x:0,y:2.25,z:1.4},'chest');
+  // Match the thorax centre used by the combat hurtbox and automatic aim.
+  const local=torso.point({x:0,y:2.1,z:.8},'chest');
   world.set(local.x,local.y,local.z);B.model.localToWorld(world);
   return world;
  }
