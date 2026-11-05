@@ -18,7 +18,7 @@ import * as THREE from 'three';
 import {createCinematicWorld} from './cinematic-graphics.mjs';
 import {createCinematicImpactFx} from './cinematic-impact-fx.mjs';
 import {createBossAtmosphere} from './boss-atmosphere.mjs';
-import {createGame,act,step,rolling,swordPose,skillView,SWORD,WEAPONS,PATTERNS} from './combat.mjs';
+import {createGame,act,step,rolling,swordPose,skillView,SWORD,WEAPONS,PATTERNS,kwonBossAimPoint} from './combat.mjs';
 import {createAudio} from './audio.mjs';
 import {createRecoverySfx} from './recovery-sfx.mjs';
 import {createPlayerHitFeedback} from './player-hit-feedback.mjs';
@@ -121,7 +121,7 @@ function resumeGame(){return pauseControl.resume();}
 function showResult(){playerWeaponSfx.clear();const won=game.status==='won';mode='result';audio.ambience(false);setText('result-kicker',won?'승리':'패배');setText('result-title',won?'이권재 격파':'쓰러졌습니다');setText('result-text',won?'긴턱이 땅에 내려앉았습니다. 오슬우의 첫 번째 시련이 끝났습니다.':'긴턱이 지나간 자리에 다시 기회가 남아 있습니다.');const s=game.stats;setText('result-stats','적중 '+s.hits+'회 · 회피 '+s.dodges+'회 · 누적 피해 '+fmt(s.damage)+' · '+game.time.toFixed(1)+'초');setUi();$('retry').focus();$('result').dispatchEvent(new Event('oibung:result-ready'));}
 function camBasis(){const sx=Math.sin(view.yaw),cz=Math.cos(view.yaw);return {fx:sx,fz:cz,rx:-cz,rz:sx};}
 function readInput(){let sx=0,sy=0;if(keys.has('KeyW')||keys.has('ArrowUp'))sy+=1;if(keys.has('KeyS')||keys.has('ArrowDown'))sy-=1;if(keys.has('KeyD')||keys.has('ArrowRight'))sx+=1;if(keys.has('KeyA')||keys.has('ArrowLeft'))sx-=1;sx+=stick.x;sy+=stick.y;const m=Math.hypot(sx,sy);if(m>1){sx/=m;sy/=m;}const b=camBasis();return {x:b.fx*sy+b.rx*sx,z:b.fz*sy+b.rz*sx,lock};}
-function prepareAim(input){const p=game.player,b=game.boss;if(p.action)return;const d=Math.hypot(b.x-p.x,b.z-p.z),toB=Math.atan2(b.x-p.x,b.z-p.z);if(lock||d<7)p.yaw=toB;else if(!(input.x||input.z))p.yaw=view.yaw;}
+function prepareAim(input){const p=game.player,b=kwonBossAimPoint(game.boss);if(p.action)return;const d=Math.hypot(b.x-p.x,b.z-p.z),toB=Math.atan2(b.x-p.x,b.z-p.z);if(lock||d<7)p.yaw=toB;else if(!(input.x||input.z))p.yaw=view.yaw;}
 function tryQueued(input){if(!queued)return;if(performance.now()>queued.until){queued=null;return;}const p=game.player,type=queued.type;if(p.action)return;if(type==='light')prepareAim(input);const moving=Boolean(input.x||input.z);if(act(game,type)){if(type==='roll'&&!moving)game.player.action.yaw=game.player.yaw+Math.PI;queued=null;}}
 function castSkill(){const input=readInput();prepareAim(input);if(act(game,'skill')){vis.cast=.3;return;}const v=skillView(game);if(!v.ready)notice(game.weapon==='hammer'?'기본 공격을 4회 적중시켜야 합니다':game.weapon==='bow'?'화살 충전이 없습니다':'재사용 대기 중입니다');}
 function request(type){if(!arenaRuntime.running||mode!=='playing'||introGate.blocked)return;if(type==='lock'){lock=!lock;notice(lock?'록온 켜짐':'록온 꺼짐');return;}if(type==='skill'){castSkill();return;}if(type==='heal'){if(act(game,'heal'))recoverySfx.event({type:'heal-start'});return;}queued={type,until:performance.now()+300};}
