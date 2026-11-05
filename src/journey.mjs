@@ -6,7 +6,7 @@ import {playRewardPull} from './reward-pull.mjs';
 import {CHAPTER_MEMORIES} from './chapter-story.mjs';
 import {playJourneyTransition} from './journey-transition.mjs';
 import {readBattleSession} from './battle-session.mjs';
-import {BOSSES,BOSS_NAMES,TRIAL_NAME,newRun,newFlameRun,latestUnlockedStage,consumeFlameSkip,loadProfile,saveProfile,finishAttempt,advanceJourney,configureJourney} from './journey-state.mjs';
+import {BOSSES,BOSS_NAMES,TRIAL_NAME,newRun,newFlameRun,latestUnlockedStage,canFlameSkipTo,consumeFlameSkip,loadProfile,saveProfile,finishAttempt,advanceJourney,configureJourney} from './journey-state.mjs';
 import {BOSS_REGISTRY} from './boss-registry.mjs';
 import {JOURNEY_ART} from './journey-art.mjs?art=dice-giant-v3-crashfix';
 import {createMenuTheme} from './menu-theme.mjs';
@@ -21,7 +21,7 @@ const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
- let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,skipSelected=false;const secret=createBossSecret();
+ let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,skipSelected=false,skipStage=null;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -43,9 +43,18 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function skipOffer(){
   const stage=latestUnlockedStage(profile),available=stage>0&&flameBalance(profile)>0;
   if(!available)skipSelected=false;
-  return `<section class="j-skip-offer ${skipSelected?'j-skip-selected':''}" aria-label="불꽃 지름길"><div><strong>불꽃 지름길</strong><p>${stage>0?`${BOSS_NAMES[stage]}부터 시작 · 앞의 ${stage}명 건너뛰기`:'첫 보스를 토벌하면 지름길이 열립니다.'}</p><small>${skipSelected?'선택됨 · 전장 입장 시 불꽃 1개 소모':available?'불꽃 1개 · 미해금 보스는 이동 불가':stage>0?'정화의 불꽃이 부족합니다.':'미해금 보스로는 이동할 수 없습니다.'}</small></div>${button('skip-toggle',skipSelected?'사용 취소':'불꽃 사용',`class="j-skip-toggle" aria-pressed="${skipSelected}" ${available?'':'disabled'}`)}</section>`;
+  if(!Number.isInteger(skipStage)||skipStage<1||skipStage>stage)skipStage=stage;
+  const selectedStage=skipSelected?skipStage:stage;
+  const choices=skipSelected?`<div class="j-skip-targets" role="group" aria-label="이동할 보스 선택">
+   ${BOSSES.map((id,i)=>button('skip-target',`<span class="j-skip-number">0${i+1}</span><b>${BOSS_NAMES[i]}</b><small>${i===0?'처음부터 · 무료':i<=stage?'해금됨 · 불꽃 1개':'잠김'}</small>`,
+    `data-stage="${i}" class="j-skip-target ${i===selectedStage?'selected':''}" aria-pressed="${i===selectedStage}" ${i>stage?'disabled':''}`)).join('')}
+   </div><small class="j-skip-footnote">이권재를 선택하면 일반 시련으로 시작합니다. 다른 해금 보스는 선택 지점부터 이후 보스까지 순서대로 도전합니다.</small>`:'';
+  return `<section class="j-skip-offer ${skipSelected?'j-skip-selected':''}" aria-label="불꽃 지름길">
+   <div class="j-skip-head"><div><strong>불꽃 지름길</strong><p>${stage>0?`${BOSS_NAMES[selectedStage]}부터 시작 · 앞의 ${selectedStage}명 건너뛰기`:'첫 보스를 토벌하면 지름길이 열립니다.'}</p><small>${skipSelected?'선택됨 · 아래에서 원하는 해금 보스를 고르세요':available?'불꽃 1개 · 미해금 보스는 이동 불가':stage>0?'정화의 불꽃이 부족합니다.':'미해금 보스로는 이동할 수 없습니다.'}</small></div>
+   ${button('skip-toggle',skipSelected?'사용 취소':'불꽃 사용',`class="j-skip-toggle" aria-pressed="${skipSelected}" ${available?'':'disabled'}`)}</div>
+   ${choices}</section>`;
  }
- function home(resetSkip=true){secret.reset();screen='home';profile.run=null;if(resetSkip)skipSelected=false;persist();
+ function home(resetSkip=true){secret.reset();screen='home';profile.run=null;if(resetSkip){skipSelected=false;skipStage=null;}persist();
   show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p><p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p><div class="j-menu">${button('new','시련 시작','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div>${skipOffer()}<div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
  }
  function select(){screen='select';const offer=skipOffer();show(`<div class="j-panel"><h1>${TRIAL_NAME}</h1><p>대장간의 영구 무기 각인은 모든 전투에 적용됩니다.<br>패배·중단·새로고침 시 도전은 종료됩니다. 불꽃 지름길을 사용하지 않으면 첫 보스부터 시작합니다.</p>${offer}<div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div>${button('begin',skipSelected?'불꽃 1개로 선택한 무기 출정':'선택한 무기로 출정','class="j-primary"')}${back()}${warning()}</div>`);}
@@ -105,7 +114,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   }
   screen='result';
   show('<div class="j-panel j-death-ember"><p class="j-kicker">THE OATH AWAITS</p><h1>다시, 서약의 문으로</h1><p>'+name+
-   '에게 쓰러졌습니다. 메인에서 불꽃 지름길을 선택하면 해금된 마지막 보스부터 새로 도전할 수 있습니다.</p>'+
+   '에게 쓰러졌습니다. 메인에서 불꽃 지름길을 선택하면 해금한 보스 중 원하는 곳부터 새로 도전할 수 있습니다.</p>'+
    '<div class="j-result"><div><b>'+Math.ceil(game.boss.hp/game.boss.maxHp*100)+'%</b><span>남은 보스 생명</span></div><div><b>'+clock(game.time)+
    '</b><span>이번 전투</span></div><div><b>'+r.deaths+'회</b><span>누적 패배</span></div></div><p>'+
    BOSS_REGISTRY[BOSSES[r.stage]].hint(game)+'</p>'+
@@ -133,12 +142,21 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    if(refundForgeWeapon(profile,forgeWeapon)){persist();forge();}return;
   }
   if(action==='skip-toggle'&&(screen==='home'||screen==='select')){
-   if(latestUnlockedStage(profile)>0&&flameBalance(profile)>0)skipSelected=!skipSelected;
+   if(latestUnlockedStage(profile)>0&&flameBalance(profile)>0){
+    skipSelected=!skipSelected;
+    if(skipSelected&&!canFlameSkipTo(profile,skipStage))skipStage=latestUnlockedStage(profile);
+   }
+   if(screen==='home')home(false);else select();return;
+  }
+  if(action==='skip-target'&&(screen==='home'||screen==='select')&&skipSelected){
+   const stage=Number(b.dataset.stage);
+   if(stage===0){skipSelected=false;skipStage=null;}
+   else if(canFlameSkipTo(profile,stage))skipStage=stage;
    if(screen==='home')home(false);else select();return;
   }
   if(action==='new'&&screen==='home')select();
   else if(action==='weapon'&&screen==='select'&&Object.hasOwn(WEAPONS,b.dataset.weapon)){weapon=b.dataset.weapon;select();}
-  else if(action==='begin'&&screen==='select'){pendingReward=null;profile.run=skipSelected?newFlameRun(profile,weapon):newRun(weapon);if(!profile.run){skipSelected=false;select();return;}persist();await launch();}
+  else if(action==='begin'&&screen==='select'){pendingReward=null;profile.run=skipSelected?newFlameRun(profile,weapon,skipStage):newRun(weapon);if(!profile.run){skipSelected=false;select();return;}persist();await launch();}
   else if(action==='restart'&&screen==='result'&&profile.run){pendingReward=null;profile.run=newRun(profile.run.weapon);await launch();}
   else if(action==='continue'){if(screen==='loading'&&profile.run)await launch();}
   else if(action==='memory-next'&&screen==='memory'){flameReward();}
