@@ -32,7 +32,7 @@ export function buildDiceGiant(scene){
   const fillMat=barMat(0xd0ad65,1),fill=new T.Mesh(fillGeo,fillMat);fill.position.set(-8.2,0,.02);fill.scale.set(16.4,1.6,1);fill.renderOrder=32;
   grp.add(frame,back,fill);return {group:grp,fill,fillMat,flash:0,prev:GIANT.handHp};});
  const ray=new T.Raycaster(),focus=new T.Vector3(),sight=new T.Vector3(),elbow=new T.Vector3(),shoulder=new T.Vector3(),headPoint=new T.Vector3(),headDirection=new T.Vector3();
- const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3(),propGrip=new T.Vector3();
+ const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3(),propGrip=new T.Vector3(),propSpin=new T.Quaternion(),propEuler=new T.Euler();
  const boneBetween=(part,a,b,r)=>{delta.copy(b).sub(a);part.position.copy(a).addScaledVector(delta,.5);part.scale.set(r,Math.max(.1,delta.length()),r);part.quaternion.setFromUnitVectors(up,delta.normalize());};
  const warnMat=new T.MeshBasicMaterial({color:0x100c13,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide}),fillWarnMat=new T.MeshBasicMaterial({color:0xd9b579,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide});
  const circle=new T.CircleGeometry(1,48).rotateX(-Math.PI/2),auraGeo=new T.RingGeometry(.75,1,32).rotateX(-Math.PI/2);
@@ -42,7 +42,7 @@ export function buildDiceGiant(scene){
  // Shared prop geometry reacts to the authoritative hazard timeline.
  const propGeo={chip:new T.CylinderGeometry(3.4,3.4,.9,20),coin:new T.CylinderGeometry(4,4,.45,24),chess:new T.ConeGeometry(3.2,11,8),chessRook:new T.CylinderGeometry(3,3.6,9,8),chessKnight:new T.BoxGeometry(6,8,8),dice:new T.BoxGeometry(6,6,6)};
  const propMats={gold:new T.MeshStandardMaterial({color:0xe3b85e,metalness:.7,roughness:.3}),black:new T.MeshStandardMaterial({color:0x28202b,metalness:.35,roughness:.45})};
- const props=Array.from({length:20},(_,i)=>{const m=new T.Mesh(propGeo.chip,i%2?propMats.gold:propMats.black);m.castShadow=true;root.add(m);m.visible=false;return m;});
+ const props=Array.from({length:20},(_,i)=>{const m=new T.Mesh(propGeo.chip,i%2?propMats.gold:propMats.black);m.name='sungwon-thrown-prop-'+i;m.castShadow=true;root.add(m);m.visible=false;return m;});
  // Cream-white fantasy fluid burst sprays behind the struck patron's head.
  const sprayGeo=new T.SphereGeometry(1,6,5),sprayMat=new T.MeshStandardMaterial({color:0xf8f2e5,emissive:0xd8e2e8,emissiveIntensity:.18,transparent:true,opacity:.9,roughness:.26});
  // Small pooled meshes make the rage transformation readable without allocations per frame.
@@ -192,21 +192,24 @@ export function buildDiceGiant(scene){
    hand.group.localToWorld(propGrip.set(0,1.8,11));
    // Once released, do not chase the hand: its origin is fixed in world space.
    if(s.t>=timing.release&&!releaseOrigins.has(h))
-    releaseOrigins.set(h,{x:propGrip.x,y:propGrip.y,z:propGrip.z});
+    releaseOrigins.set(h,{x:propGrip.x,y:propGrip.y,z:propGrip.z,qx:hand.group.quaternion.x,qy:hand.group.quaternion.y,qz:hand.group.quaternion.z,qw:hand.group.quaternion.w});
    const p=giantThrownPropPose(s,h,type,propGrip,releaseOrigins.get(h));
    if(!p?.visible){m.visible=false;return;}
    m.geometry=type==='chess'?(s.chessPiece==='rook'?propGeo.chessRook:s.chessPiece==='knight'?propGeo.chessKnight:propGeo.chess):propGeo[type];
    m.material=i%2?propMats.gold:propMats.black;
    m.scale.setScalar(type==='coin'?1.48:type==='chess'?1.38:1.6);
    m.position.set(p.x,p.y,p.z);
-   if(p.phase==='grip'){
-    m.quaternion.copy(hand.group.quaternion);
-   }else if(p.phase==='pickup'){
+   if(p.phase==='grip')m.quaternion.copy(hand.group.quaternion);
+   else if(p.phase==='pickup'){
     m.rotation.set(0,.2+i*.4,0);
+    m.quaternion.slerp(hand.group.quaternion,p.blend);
    }else{
-    // Coins flip, dice tumble and heavy chess pieces spin less in flight.
-    m.rotation.set(type==='coin'?p.spin:type==='dice'?p.spin*.72:p.spin*.22,
+    // Never snap rotation at release: inherit the gripping wrist's exact orientation.
+    const origin=releaseOrigins.get(h);
+    m.quaternion.set(origin.qx,origin.qy,origin.qz,origin.qw);
+    propEuler.set(type==='coin'?p.spin:type==='dice'?p.spin*.72:p.spin*.22,
      type==='chess'?p.spin*.4:p.spin*.6,type==='chip'?p.spin*.84:p.spin*.37);
+    m.quaternion.multiply(propSpin.setFromEuler(propEuler));
    }
   });
  }};

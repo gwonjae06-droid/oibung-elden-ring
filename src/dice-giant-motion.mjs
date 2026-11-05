@@ -67,7 +67,7 @@ export function giantThrownPropPose(state,h,type,grip,launch){
  const current=grip||from;
  if(state.t<timing.pickupEnd){
   const a=ease((state.t-timing.ready)/Math.max(.01,timing.pickupEnd-timing.ready));
-  return {visible:true,phase:'pickup',x:lerp(from.x,current.x,a),y:lerp(from.y,current.y,a),z:lerp(from.z,current.z,a),spin:0,flight:0};
+  return {visible:true,phase:'pickup',x:lerp(from.x,current.x,a),y:lerp(from.y,current.y,a),z:lerp(from.z,current.z,a),spin:0,flight:0,blend:a};
  }
  if(state.t<timing.release)return {visible:true,phase:'grip',x:current.x,y:current.y,z:current.z,spin:0,flight:0};
  const start=launch||current,u=clamp01((state.t-timing.release)/(timing.impact-timing.release));
@@ -83,10 +83,11 @@ export function giantThrowGesture(state,h){
  const pickup=ease((state.t-t.ready)/Math.max(.01,t.pickupEnd-t.ready));
  const wind=ease((state.t-t.pickupEnd)/Math.max(.01,t.release-t.pickupEnd));
  const flick=ease((state.t-t.release+.11)/.11);
+ const opened=ease((state.t-t.release)/.09);
  const recoil=ease((state.t-t.release)/.32);
  const side=h.handIndex===1?-1:1,force=state.temperament==='feral'?1.2:1;
  return {anticipation:wind*(1-flick),impact:flick*(1-recoil),followThrough:recoil*(1-ease((state.t-t.release-.36)/.28)),
-  curl:clamp01((.87*pickup+.16*wind)*(1-flick)),release:flick,
+  curl:clamp01((.87*pickup+.16*wind)*(1-opened)),release:opened,
   wristPitch:force*(-.40*wind+.79*flick*(1-recoil)),
   wristYaw:side*force*(.23*wind-.30*flick*(1-recoil)),
   wristRoll:side*force*(.22*wind+.17*flick*(1-recoil)),
