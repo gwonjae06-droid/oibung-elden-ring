@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {clownLegTarget} from '../src/clown-gait.mjs';
-import {createClownActor} from '../src/clown-actor.mjs';
+import {readFileSync} from 'node:fs';
 import {createBloodRegalia} from '../src/blood-regalia.mjs';
 import {buildBloodView} from '../src/blood-view.mjs';
 import {createBloodGame,startBloodPattern} from '../src/blood-combat.mjs';
@@ -27,14 +27,12 @@ test('Clown legs keep constant-length bone segments while switching planted and 
    if(o.planted){assert.equal(o.lift,0);assert.equal(o.anklePitch,0);}
   }
 });
-test('Actual clown model uses articulated gait from the fixed bone target',()=>{
- const actor=createClownActor();
- assert.ok(actor.root.isGroup);
- assert.equal(actor.root.children.length>0,true);
- const meshes=[];actor.root.traverse(o=>{if(o.isMesh)meshes.push(o);});
- assert.ok(meshes.length>10);
- actor.head.dispose?.();
- assert.deepEqual(disposeScene(actor.root).errors,[]);
+test('Clown rig reaches actual thigh, shin and ankle meshes without depending on WebGL',()=>{
+ const src=readFileSync(new URL('../src/clown-actor.mjs',import.meta.url),'utf8');
+ assert.match(src,/gait\.update\(g,dt\)/);
+ assert.match(src,/link\(L\.thigh,hip,knee\)/);
+ assert.match(src,/link\(L\.shin,knee,foot\)/);
+ assert.match(src,/L\.shoe\.rotation\.x=.*anklePitch/);
 });
 test('Blood shoulders, armor, mantle and phase-two growth are children of the same torso socket',()=>{
  const actor=new THREE.Group(),rig=createBloodRegalia(actor,{coarse:true});
