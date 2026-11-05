@@ -7,11 +7,11 @@ import {createDicePlayerGame,diceFaceDamageMultiplier} from '../src/dice-player.
 import {createBloodGame} from '../src/blood-combat.mjs';
 const story=(game,stage)=>{const r=newRun('sword');r.stage=stage;configureJourney(game,r,freshProfile());return game;};
 test('story health is based on campaign HP, not standalone HP',()=>{
- assert.equal(journeyBossHp('dice',BOSS_REGISTRY.dice.maxHp),4500);
- assert.equal(journeyBossHp('blood',BOSS_REGISTRY.blood.maxHp),5000);
+ assert.equal(journeyBossHp('dice',BOSS_REGISTRY.dice.maxHp),4230);
+ assert.equal(journeyBossHp('blood',BOSS_REGISTRY.blood.maxHp),4700);
  const dice=story(createDicePlayerGame(),2),blood=story(createBloodGame(),3);
- assert.equal(dice.boss.maxHp,4500);assert.equal(blood.boss.maxHp,5000);
- assert.equal(dice.boss.hp,4500);assert.equal(blood.boss.hp,5000);
+ assert.equal(dice.boss.maxHp,4230);assert.equal(blood.boss.maxHp,4700);
+ assert.equal(dice.boss.hp,4230);assert.equal(blood.boss.hp,4700);
  const hidden=newRun();hidden.stage=2;hidden.secret=true;
  const secret=createDicePlayerGame();configureJourney(secret,hidden,freshProfile());
  assert.equal(secret.boss.maxHp,BOSS_REGISTRY.dice.maxHp);
