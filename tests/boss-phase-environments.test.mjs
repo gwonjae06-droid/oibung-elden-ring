@@ -83,7 +83,7 @@ test('existing patron casino room carries new roulette stage without changing ex
  assert.ok(get(scene,'casino-giant-roulette-sign').rotation.y>.3);
  assert.deepEqual(disposeScene(scene).errors,[]);
 });
-test('Kwon's abandoned throne, outer sword grave and red seal are decorative only',()=>{
+test("Kwon\u0027s abandoned throne, outer sword grave and red seal are decorative only",()=>{
  const scene=new THREE.Scene(),royal=createKwonRoyalRuins(THREE,scene,{coarse:true,reduced:true}),g=createGame();
  assert.equal(royal.stats().swords,22);
  assert.equal(royal.stats().damageSources,0);
