@@ -26,12 +26,12 @@ test('the timeline stays in range, ends on time, and is shorter with reduced mot
 
 test('the pieces appear in order and everything leaves before the end',()=>{
  const f=t=>introFrame(t);
- assert.ok(f(.3).bars>0&&f(.3).name===0);
- assert.ok(f(.8).epithet>0&&f(.8).name===0);
- assert.ok(f(1.4).name>0&&f(1.4).line===0);
- assert.ok(f(2.4).line>.9&&f(2.4).name>.9);
- assert.ok(f(3.35).name<.1&&f(3.35).bars<.1&&f(3.35).line<.1);
- assert.ok(f(1).spacing>f(2).spacing);
+ assert.ok(f(.2).bars>0&&f(.2).name===0);
+ assert.ok(f(.22).epithet>0&&f(.22).name===0);
+ assert.ok(f(.35).name>0&&f(.35).line===0);
+ assert.ok(f(.9).line>.9&&f(.9).name>.9);
+ assert.ok(f(1.98).name<.1&&f(1.98).bars<.1&&f(1.98).line<.1);
+ assert.ok(f(.4).spacing>f(1.2).spacing);
 });
 
 function makeEl(){return {style:{},children:[],attrs:{},isConnected:true,appendChild(c){this.children.push(c);c.parent=this;return c;},setAttribute(k,v){this.attrs[k]=v;},remove(){if(this.parent)this.parent.children=this.parent.children.filter(x=>x!==this);this.isConnected=false;},focus(){this.focused=true;}};}
