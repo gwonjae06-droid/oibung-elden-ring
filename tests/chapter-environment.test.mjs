@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createChapterClock} from '../src/chapter-environment.mjs';
 import {CHAPTER_MEMORIES,rememberBoss} from '../src/chapter-story.mjs';
-import {freshProfile,newRun,finishAttempt,chooseRelic,loadProfile} from '../src/journey-state.mjs';
+import {freshProfile,newRun,finishAttempt,advanceJourney,loadProfile} from '../src/journey-state.mjs';
 test('phase hush and collapse do not advance when simulation time is paused',()=>{
  const clock=createChapterClock();clock.update(20,1);const first=clock.update(21,2);
  assert.equal(first.hush,true);assert.equal(first.collapse,0);
@@ -19,7 +19,7 @@ test('death fades after combat time stops but respects pause and restart',()=>{
 });
 test('all three victories grant unique permanent memories before rewards or completion',()=>{
  const p=freshProfile();p.run=newRun();
- finishAttempt(p,{won:true,time:10});chooseRelic(p.run,'blade-wave');finishAttempt(p,{won:true,time:20});chooseRelic(p.run,'charged-blade');finishAttempt(p,{won:true,time:30});
+ finishAttempt(p,{won:true,time:10});advanceJourney(p.run);finishAttempt(p,{won:true,time:20});advanceJourney(p.run);finishAttempt(p,{won:true,time:30});
  assert.deepEqual(p.memories.map(m=>m.id),['kwon','clown','dice']);
  const first=p.memories[1].firstClear;rememberBoss(p,'clown','2099-01-01');assert.equal(p.memories[1].firstClear,first);
  const saved=loadProfile({getItem:()=>JSON.stringify(p)});assert.deepEqual(saved.memories,p.memories);assert.equal(saved.run,null);

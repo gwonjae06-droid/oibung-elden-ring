@@ -23,6 +23,8 @@ jobs:
         run: node --test tests/blood-white-cathedral.test.mjs tests/blood-render.test.mjs tests/blood-cinematic.test.mjs
       - name: Focused shared stamina-balance regression tests
         run: node --test tests/stamina-cost-relief.test.mjs tests/player-combat.test.mjs tests/weapon-evolution.test.mjs
+      - name: Focused purification flame, forge and journey tests
+        run: node --test tests/purification-forge.test.mjs tests/journey.test.mjs tests/journey-controller.test.mjs tests/weapon-evolution.test.mjs tests/boss-secret.test.mjs tests/blood.test.mjs tests/chapter-environment.test.mjs
       - name: Run Node tests
         run: npm test
       - name: Smoke test sacred white cathedral in WebGL

@@ -1,0 +1,102 @@
+/* Purification flame & forge — a restrained stone, iron and gold UI. */
+#journey .j-flame-counter{display:inline-flex;align-items:center;gap:9px;min-width:0;padding:5px 10px 5px 7px;border:1px solid #bc985555;border-radius:100px;background:linear-gradient(125deg,#090d11e9,#282015d4);box-shadow:inset 0 0 16px #c57e231c,0 0 20px #f2b33f0d;color:#e8d4a9;white-space:nowrap;font:500 11px/1.2 system-ui;letter-spacing:.06em}
+#journey .j-flame-counter strong{font-size:16px;font-weight:800;color:#fff2ce;text-shadow:0 0 11px #d99558a6}
+#journey .j-flame-icon{display:block;flex:none;overflow:visible;filter:drop-shadow(0 0 8px #e5a756aa);transform-origin:center 83%}
+#journey .j-flame-tiny{width:20px;height:25px}
+#journey .j-flame-large{width:112px;height:144px}
+#journey .j-flame-earned{width:115px;height:145px}
+#journey .j-top .j-flame-counter{margin-left:auto;font-size:11px;letter-spacing:0}
+#journey .j-forge-entry{position:relative;overflow:hidden;border-color:#bd965d!important;background:linear-gradient(115deg,#201c1a,#403322 46%,#17191b)!important;color:#ffdfa5!important;font-weight:700}
+#journey .j-forge-entry:before{content:'◆';margin-right:12px;color:#f2d18d;text-shadow:0 0 18px #f5aa54}
+#journey .j-forge-entry:after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(95deg,transparent 20%,#f2bf7240 50%,transparent 80%);transform:translateX(-110%);transition:transform .7s ease}
+#journey .j-forge-entry:hover:after{transform:translateX(110%)}
+#journey .j-forge{width:min(1120px,100%);animation:j-forge-rise .4s ease-out both}
+#journey .j-forge h1{font-size:clamp(38px,5.5vw,62px);letter-spacing:.17em;text-shadow:0 0 38px #e5b26244}
+#journey .j-forge-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:155px}
+#journey .j-forge-heading>div:first-child{max-width:590px}
+#journey .j-forge-heading p{max-width:570px;color:#cec0a4;line-height:1.9;margin-top:8px}
+#journey .j-forge-kiln{position:relative;display:grid;place-items:center;min-width:155px;height:155px;isolation:isolate}
+#journey .j-forge-kiln .j-forge-halo{position:absolute;inset:9%;z-index:-1;border:1px solid #efc17f5c;border-radius:50%;background:radial-gradient(circle,#fbd07b44,#bb74381c 43%,transparent 75%);box-shadow:inset 0 0 40px #db9a3b22,0 0 54px #d4a05232;animation:j-flame-halo 5s ease-in-out infinite}
+#journey .j-forge-kiln:before,#journey .j-forge-kiln:after{content:'';position:absolute;width:128px;height:128px;border:1px dotted #ceae7466;border-radius:50%;transform:rotate(16deg)}
+#journey .j-forge-kiln:after{width:142px;height:142px;transform:rotate(-16deg);border-style:solid;border-color:#ac81523b}
+#journey .j-forge-kiln .j-flame-icon{animation:j-flame-breathe 3.1s ease-in-out infinite}
+#journey .j-forge-kiln>span{position:absolute;bottom:0;font:9px system-ui;letter-spacing:.26em;color:#b29d74;white-space:nowrap}
+#journey .j-forge-resources{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:16px 19px;border:1px solid #b2955b47;border-radius:7px;background:linear-gradient(135deg,#1c1c1bd9,#100f12e7);box-shadow:0 22px 55px #0005,inset 0 0 1px #ead3a86a;font:12px system-ui;color:#e7d8b9}
+#journey .j-forge-resources>small{margin-left:auto;color:#a79b8b;font:11px system-ui}
+#journey .j-forge-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0 22px}
+#journey button.j-forge-tab{min-width:0;min-height:80px;padding:12px;border:1px solid #9a805749;text-align:center;background:linear-gradient(150deg,#15191ce0,#171311e0);border-radius:6px}
+#journey .j-forge-tab strong{display:block;color:#e9d1a4;font:600 17px 'Noto Serif KR',serif}
+#journey .j-forge-tab small{margin:0;color:#a69a83}
+#journey .j-forge-weapon-symbol{display:block;color:#bca36d;font-size:21px;line-height:1.3}
+#journey button.j-forge-current{border-color:#efc57c;background:linear-gradient(135deg,#443523,#1f1b1b);box-shadow:inset 0 0 22px #e0a85f12,0 0 20px #dfac521a}
+#journey .j-forge-trees{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+#journey .j-forge-branch{position:relative;min-width:0;padding:23px 24px 27px;background:linear-gradient(143deg,#151a1de9 4%,#1d1817ec 50%,#101216ef);border:1px solid #ab8e5b66;border-radius:8px;box-shadow:inset 0 1px 0 #fae0aa21,0 24px 45px #0006;overflow:hidden}
+#journey .j-forge-branch:before{content:'';position:absolute;top:0;left:20px;right:20px;height:1px;background:linear-gradient(90deg,transparent,#f5c779a6,transparent)}
+#journey .j-forge-branch:after{content:'◇';position:absolute;top:13px;right:20px;font-size:52px;color:#e0b66d0c;pointer-events:none}
+#journey .j-forge-path-index{color:#c8a86d;letter-spacing:.25em;font:10px system-ui}
+#journey .j-forge-branch h2{color:#f0dcb3;font:600 23px 'Noto Serif KR',serif;margin:14px 0 8px}
+#journey .j-forge-branch-heading p{font:12px/1.85 system-ui;color:#b9b6b0;min-height:67px;margin:0 0 12px}
+#journey .j-forge-rank{display:inline-block;font:11px system-ui;color:#e4ba7c;border-bottom:1px solid #97764f70;padding-bottom:5px}
+#journey .j-forge-node-line{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-top:14px}
+#journey .j-forge-node-wrap{position:relative;display:flex;justify-content:center;padding-top:13px}
+#journey .j-forge-chain{position:absolute;top:0;bottom:0;left:21px;width:1px;background:linear-gradient(#ac8c58,#f3c77f44);opacity:.85}
+#journey button.j-forge-node{position:relative;z-index:1;display:flex;gap:14px;align-items:center;width:100%;min-height:78px;padding:15px;border:1px solid #977a5166;background:linear-gradient(125deg,#1d211fe0,#151715f0);border-radius:7px;text-align:left}
+#journey .j-forge-node-glyph{display:grid;place-items:center;flex:none;width:39px;height:39px;border:1px solid #ba945f90;border-radius:50%;font-size:25px;color:#dfc08d;background:radial-gradient(circle,#3b3526,#181a1b);box-shadow:0 0 15px #d9a86018}
+#journey .j-forge-node-copy{display:block;min-width:0}
+#journey .j-forge-node-copy strong{display:block;font:600 15px 'Noto Serif KR',serif;color:#ece1c9;letter-spacing:0}
+#journey .j-forge-node-copy small{font:11px/1.5 system-ui;color:#b7ad9b}
+#journey .j-forge-available button.j-forge-node{border-color:#e2ba71a1;box-shadow:0 0 19px #e8a14b20}
+#journey .j-forge-owned button.j-forge-node{border-color:#e8c58daa;background:linear-gradient(130deg,#413623,#242723);box-shadow:inset 0 0 20px #efc6781b}
+#journey .j-forge-owned .j-forge-node-glyph{color:#fff7cf;background:radial-gradient(circle,#c49148,#3d3020);box-shadow:0 0 25px #ecbb65a2}
+#journey .j-forge-locked button.j-forge-node{filter:saturate(.55);opacity:.7}
+#journey .j-forge-bottom{display:flex;justify-content:space-between;align-items:center;gap:22px;margin-top:19px;padding:17px 20px;background:#15191cda;border:1px solid #a58b5966;border-radius:8px}
+#journey .j-forge-bottom strong{color:#e9d2a5;font:600 15px 'Noto Serif KR',serif}
+#journey .j-forge-bottom p{font:11px/1.8 system-ui;margin:5px 0 0;color:#afa99e}
+#journey button.j-forge-refund{flex:none;border-color:#a8895b;color:#e2c899;background:#27201d}
+#journey .j-flame-result{text-align:center;margin-inline:auto}
+#journey .j-flame-result .j-kicker{margin-bottom:14px}
+#journey .j-flame-result h1{font:600 clamp(27px,4.2vw,48px) 'Noto Serif KR',serif;letter-spacing:.045em;color:#f7dfaf;text-shadow:0 0 36px #e5aa6b7a}
+#journey .j-flame-result>p:not(.j-kicker):not(.j-flame-overline){max-width:640px;margin:18px auto;color:#c6bba6;line-height:2.1}
+#journey .j-flame-overline{font:12px system-ui!important;letter-spacing:.24em;color:#ddbd7e!important}
+#journey .j-earned-circle{position:relative;display:grid;place-items:center;width:198px;height:198px;margin:14px auto 26px}
+#journey .j-earned-circle:before{content:'';position:absolute;inset:4px;border-radius:50%;border:1px solid #d7bb8066;box-shadow:inset 0 0 48px #f2c87814,0 0 40px #dfb56c30}
+#journey .j-earned-circle:after{content:'✧ ✦ ✧';position:absolute;top:7px;font-size:19px;letter-spacing:34px;color:#d4a96e99}
+#journey .j-earned-circle .j-earned-rays{position:absolute;inset:-13px;border-radius:50%;background:repeating-conic-gradient(from 4deg,#e1b76a14 0 1deg,transparent 1deg 20deg);animation:j-forge-spin 28s linear infinite}
+#journey .j-earned-circle .j-flame-icon{animation:j-flame-breathe 2.8s ease-in-out infinite}
+#journey .j-earned-balance{display:flex;align-items:center;justify-content:center;gap:18px;margin:26px auto 29px}
+#journey .j-earned-balance>span:last-child{font:700 13px system-ui;color:#f4d59a}
+#journey .j-flame-result>button.j-primary{display:block;width:min(400px,100%);margin:0 auto;text-align:center}
+#journey .j-flame-result>button.j-back{display:block;margin:15px auto 0}
+#journey .j-revive-offer{display:flex;gap:15px;align-items:center;flex-wrap:wrap;padding:15px;margin:17px 0;background:linear-gradient(100deg,#48261c77,#271f1be8);border:1px solid #dfad7666;border-radius:5px}
+#journey .j-revive-action{flex:1;min-width:220px;text-align:center}
+#journey .j-death-ember .j-kicker{color:#e9a886}
+@keyframes j-forge-rise{from{opacity:.3;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes j-flame-breathe{0%,100%{transform:rotate(-2deg) scale(.97);filter:drop-shadow(0 0 7px #f2ad55aa)}50%{transform:rotate(2deg) scale(1.035);filter:drop-shadow(0 0 18px #ffd385aa)}}
+@keyframes j-flame-halo{0%,100%{opacity:.67;transform:scale(.98)}50%{opacity:.98;transform:scale(1.045)}}
+@keyframes j-forge-spin{to{transform:rotate(360deg)}}
+@media(max-width:780px){
+ #journey .j-forge-trees{grid-template-columns:1fr}
+ #journey .j-forge-heading{min-height:120px}
+ #journey .j-forge-kiln{min-width:104px;height:125px}
+ #journey .j-forge-kiln .j-flame-large{width:74px;height:104px}
+ #journey .j-forge-kiln>span{display:none}
+ #journey .j-forge-branch-heading p{min-height:0}
+ #journey .j-forge-bottom{flex-direction:column;align-items:stretch}
+}
+@media(max-width:540px){
+ #journey .j-top .j-flame-counter span:not(.j-flame-icon){font-size:0}
+ #journey .j-forge-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-forge-heading{align-items:flex-start}
+ #journey .j-forge-heading p{font-size:12px}
+ #journey .j-forge-kiln{min-width:88px;height:98px}
+ #journey .j-forge-kiln .j-flame-large{width:56px;height:80px}
+ #journey .j-forge-branch{padding:20px 16px}
+ #journey .j-forge-resources{padding:11px}
+ #journey .j-forge-resources>small{margin-left:0;width:100%}
+ #journey .j-earned-circle{width:156px;height:156px}
+ #journey .j-earned-circle .j-flame-earned{height:115px;width:90px}
+}
+@media(prefers-reduced-motion:reduce){
+ #journey .j-forge,#journey .j-flame-icon,#journey .j-earned-rays,#journey .j-forge-halo{animation:none!important}
+}
+body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journey .j-flame-icon,body[data-motion="reduced"] #journey .j-earned-rays,body[data-motion="reduced"] #journey .j-forge-halo{animation:none!important}
