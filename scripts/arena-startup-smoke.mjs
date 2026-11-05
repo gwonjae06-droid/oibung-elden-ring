@@ -53,7 +53,8 @@ try{
    assert.equal(startup.arenaReady,true,scenario.label+' failed to start real WebGL arena runtime');
    assert.equal(startup.startEnabled,true,scenario.label+' start button stayed disabled');
    assert.equal(startup.startLabel,'전투 시작');
-   assert.match(startup.status,/준비 완료/);
+   // Journey mode clears the old legacy load-status text after a successful boot.
+   assert.doesNotMatch(startup.status||'',/초기화 오류|초기화에 실패|불러오기 실패/);
    assert.ok(startup.canvas.width>400&&startup.canvas.height>200,scenario.label+' WebGL canvas has invalid dimensions');
    assert.doesNotMatch(startup.journeyMessage||'',/실패|불러오지 못했/);
    await page.waitForTimeout(450);
