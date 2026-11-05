@@ -5,6 +5,7 @@ import {bossMotion} from './boss-motion-data.mjs';
 import {kwonStanceWeights,finishKwonLeg,advanceKwonGaitClock} from './kwon-leg-rig.mjs';
 import {kwonTorsoRegion,createKwonTorsoRig} from './kwon-torso-rig.mjs';
 import {collectKwonMouthParts,createKwonNeckRig} from './kwon-neck-rig.mjs';
+import {installKwonKnight} from './kwon-knight-regalia.mjs';
 export function createBossStance(B){
  const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
  const atHead=B.model.children.filter(c=>c.geometry?.type==='SphereGeometry'&&Math.abs(c.position.y-B.HEAD.y)<.001&&Math.abs(c.position.z-B.HEAD.z)<.001);if(!atHead.length)throw new Error('Boss head mesh missing');const mouth=collectKwonMouthParts(THREE,B.model.children);B.model.add(headRig);
@@ -14,11 +15,7 @@ export function createBossStance(B){
  for(const c of parts){B.model.remove(c);c.position.y-=1.5;c.position.z+=1.5;torso.mount(c,regions.get(c));}
  const neck=createKwonNeckRig(THREE,torso,headRig,B.HEAD,B.model);
  for(const L of B.legs){L.deferKwonLeg=true;L.state=null;}
- const armour=new THREE.MeshStandardMaterial({color:0x272a32,roughness:.48,metalness:.65}),gold=new THREE.MeshStandardMaterial({color:0xb99653,roughness:.4,metalness:.75}),cloth=new THREE.MeshStandardMaterial({color:0x4d1521,roughness:.95,side:THREE.DoubleSide});
- const add=(geo,mat,x,y,z,region='chest')=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);torso.mount(m,region);return m;};
- for(const side of [-1,1]){add(new THREE.SphereGeometry(1,18,12),armour,side*1.5,1.15,2.25).scale.set(1.1,.65,1.3);add(new THREE.TorusGeometry(.9,.07,6,24),gold,side*1.5,1.15,2.25).rotation.y=side*.7;add(new THREE.BoxGeometry(1.15,2.7,.12),cloth,side*.65,-.25,-.45,'waist').rotation.z=side*.12;}
- for(let i=0;i<4;i++){add(new THREE.BoxGeometry(1.75-i*.15,.42,.32),armour,0,1-i*.43,3.15);add(new THREE.BoxGeometry(.1,.4,.37),gold,0,1-i*.43,3.15);}
- for(let i=0;i<5;i++){const tooth=new THREE.Mesh(new THREE.ConeGeometry(.08,.45+(i%2)*.15,5),gold);tooth.position.set((i-2)*.22,.9,.1);headRig.add(tooth);}
+ installKwonKnight(THREE,B,torso,headRig);
  const cinema=document.createElement('div');cinema.setAttribute('aria-live','polite');Object.assign(cinema.style,{position:'absolute',inset:'0',pointerEvents:'none',zIndex:'15',display:'none',borderTop:'7vh solid #000',borderBottom:'7vh solid #000'});
  const caption=document.createElement('p');Object.assign(caption.style,{position:'absolute',bottom:'8%',width:'100%',maxWidth:'none',textAlign:'center',fontSize:'24px',color:'#e9d3a0',textShadow:'0 2px 5px #000'});cinema.appendChild(caption);document.getElementById('arena').appendChild(cinema);
  let detached=false,lastFrame=null,lastLegClock=null;const collapse=createCollapseClock(),legClock={raw:null,phase:0},lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});

@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {KWON_KNIGHT as K,knightSpiderClutter} from '../src/kwon-knight-regalia.mjs';
+test('abdomen is shorter and smaller without a negative scale',()=>{assert.ok(K.abdomenScale.every(v=>v>0&&v<1));const volume=K.abdomenScale.reduce((a,b)=>a*b,1);assert.ok(volume>.4&&volume<.6);assert.ok(K.abdomenScale[2]<K.abdomenScale[0]);});
+test('breastplate outline is finite and symmetric',()=>{assert.ok(K.breast.length>=8);for(const [x,y]of K.breast){assert.ok(Number.isFinite(x)&&Number.isFinite(y));assert.ok(K.breast.some(([a,b])=>a===-x&&b===y));}});
+test('helmet dome occupies the back half rather than the face front',()=>{for(let i=0;i<=100;i++)assert.ok(Math.sin(K.helmetStart+K.helmetArc*i/100)<=1e-9);});
+test('side guards leave the central face opening clear in profile',()=>assert.ok(K.guardX-K.guardDepth>.88));
+test('only instanced spider bristles and spikes are hidden by the clutter policy',()=>{assert.equal(knightSpiderClutter({isInstancedMesh:true,geometry:{type:'ConeGeometry'}}),true);assert.equal(knightSpiderClutter({geometry:{type:'ConeGeometry'}}),false);assert.equal(knightSpiderClutter({geometry:{type:'SphereGeometry'}}),false);assert.equal(knightSpiderClutter({isInstancedMesh:true,geometry:{type:'SphereGeometry'}}),false);});
