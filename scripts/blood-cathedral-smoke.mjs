@@ -35,10 +35,14 @@ try{
   const canvas=root?.querySelector('canvas'),session=readBattleSession(root);
   const rect=canvas?.getBoundingClientRect();
   if(!session||!rect||rect.width<400||rect.height<200)throw Error('blood renderer canvas invalid');
-  return {canvas:{width:rect.width,height:rect.height},graphics:session.diagnostics()?.graphics,phase:session.game.boss.phase};
+  return {canvas:{width:rect.width,height:rect.height},graphics:session.diagnostics()?.graphics,sea:session.diagnostics()?.view?.bloodSea,phase:session.game.boss.phase};
  });
  assert.equal(desktop.phase,1);
+ assert.equal(desktop.sea?.radius,28,'crimson sea should wrap the actual movement boundary');
+ assert.equal(desktop.sea?.damageSources,0,'decorative sea must never inflict damage');
+ assert.ok(desktop.sea?.ripples>=20,'blood sea lost its animated detail');
  await page.screenshot({path:'artifacts/blood-cathedral/phase-one-white-nave.png'});
+ await page.screenshot({path:'artifacts/blood-cathedral/phase-one-crimson-sea.png'});
  const changed=await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const session=readBattleSession(document.querySelector('#blood-battle').firstElementChild.shadowRoot);
@@ -51,6 +55,7 @@ try{
  await page.waitForTimeout(900);
  assert.equal(errors.length,0,'phase-two WebGL error: '+errors.join(' / '));
  await page.screenshot({path:'artifacts/blood-cathedral/phase-two-red-contrast.png'});
+ await page.screenshot({path:'artifacts/blood-cathedral/phase-two-crimson-sea.png'});
  await page.setViewportSize({width:844,height:390});
  await page.waitForTimeout(450);
  const mobile=await page.evaluate(()=>{

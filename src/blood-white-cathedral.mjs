@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createCathedralBloodSea} from './blood-cathedral-sea.mjs';
 
 // Gothic nave surrounding the existing circular combat volume. Architectural
 // decoration is visual only: all solid furniture/columns are outside radius 28.
@@ -149,6 +150,9 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
  const materials=[ivory,limestone,moulding,gold,pewWood,floorMat,marble,roofMat,glassMaterial,lightShaftMaterial];
  const floor=mesh(parent,new THREE.CylinderGeometry(radius,radius,.75,coarse?48:96),marble,[0,-.4,0],'cathedral-battle-floor');floor.receiveShadow=true;
+ // Deep crimson water floods the Gothic nave beyond the dry circular combat arena.
+ // It is decorative only; actual movement and all damage radii are unchanged.
+ const bloodSea=createCathedralBloodSea(parent,{coarse,reduced,radius});
  // Tile the playable floor without adding any raycast/collision geometry.
  const tiles=[];for(let x=-25;x<=25;x+=5)for(let z=-25;z<=25;z+=5){
   if(Math.hypot(x,z)>radius-3)continue;
@@ -247,6 +251,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
  const altarLight=coarse?null:new THREE.PointLight(0xffe8bf,coarse?0:18,30,2);
  if(altarLight){altarLight.position.set(0,16,-42);parent.add(altarLight);}
  function update(g,c,env={}){
+  bloodSea.update(g);
   const shadow=clamp01(c?.darkness||0),phase=g?.boss?.phase||1;
   const light=clamp01(env.light??1);
   const strength=phase===2?.68:1;
@@ -260,6 +265,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
  let disposed=false;
  function dispose(){
   if(disposed)return;disposed=true;
+  bloodSea.dispose();
   const geometries=new Set(),mats=new Set();
   parent.traverse(o=>{if(o.geometry)geometries.add(o.geometry);
    if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);});
@@ -268,5 +274,5 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   parent.parent?.remove(parent);
  }
  return {root:parent,update,dispose,glassMaterial,occludables:[],
-  stats:()=>({tiles:tiles.length,windows:bayZ.length*2,panes:glazes.length,pews:pewSeat.length,roofPanels:(stations.length-1)*2,hasAltar:true})};
+  stats:()=>({tiles:tiles.length,windows:bayZ.length*2,panes:glazes.length,pews:pewSeat.length,roofPanels:(stations.length-1)*2,hasAltar:true,bloodSea:bloodSea.stats()})};
 }
