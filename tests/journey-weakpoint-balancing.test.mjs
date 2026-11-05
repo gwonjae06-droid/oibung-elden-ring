@@ -48,7 +48,7 @@ test('blood angel recovery is 1.3x for actual melee hit; ordinary direct damage 
  const g=createBloodGame('sword');const run={...newRun('sword'),stage:3};
  configureJourney(g,run,freshProfile());
  g.boss.phase=2;g.boss.hp=1800;g.boss.state='recovery';g.blood.recover=1000;
- g.blood.transitioned=true;g.player.z=-2;g.player.stamina=100;
+ g.blood.transitioned=true;g.startGrace=0;g.player.z=-2;g.player.stamina=100;
  assert.ok(actBlood(g,'light'));
  for(let i=0;i<60;i++)stepBlood(g,1/120);
  assert.ok(g.stats.hits>0,'actual weapon attack should land during grounded recovery');
