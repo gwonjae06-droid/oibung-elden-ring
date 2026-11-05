@@ -22,8 +22,8 @@ export function actDice(g,type,input={}){
  if(!p.action){const aim=giantAim(g);p.yaw=Math.atan2(aim.x-p.x,aim.z-p.z);if(type==='roll'&&(input.x||input.z))p.yaw=Math.atan2(input.x||0,input.z||0);}
  return actPlayer(g,type);
 }
-export function diceFaceDamageable(g,impact){return Boolean(impact)&&(!g.dice.giant||g.dice.giant.temperament==='feral'||diceWeakHit(impact));}
-export function diceFaceDamageMultiplier(g,impact){if(!diceFaceDamageable(g,impact))return 0;return !g.dice.giant&&g.boss.phase===1?(diceWeakHit(impact)?journeyWeaknessMultiplier(g,'dice',1):.5):1;}
+export function diceFaceDamageable(g,impact){return Boolean(impact)&&(!g.dice.giant?diceWeakHit(impact):g.dice.giant.temperament==='feral'||diceWeakHit(impact));}
+export function diceFaceDamageMultiplier(g,impact){if(!diceFaceDamageable(g,impact))return 0;return !g.dice.giant&&g.boss.phase===1?journeyWeaknessMultiplier(g,'dice',1):1;}
 function hit(g,amount,action,impact){
  const multiplier=diceFaceDamageMultiplier(g,impact);
  if(!multiplier){g.dice.blockFlash=.12;g.events.push({type:'dice-blocked',face:impact.face});return;}
