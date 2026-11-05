@@ -155,7 +155,7 @@ test('flame chooser can select an earlier unlocked boss across home and weapon m
  await f.click('weapon',{weapon:'bow'});assert.match(f.dialog.html,/광대 오슬우부터 시작/);
  assert.equal(saved().flames,3,'changing destination and weapon is free');
  await f.click('begin');assert.equal(f.game().boss.maxHp,3760,'chosen clown loads instead of blood');
- assert.equal(f.game().weapon,'bow');assert.equal(saved().flames,2);
+ assert.equal(f.lastLaunch().weapon,'bow','launch options must use the chosen bow');assert.equal(saved().flames,2);
  f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
  assert.match(f.dialog.html,/다음 도전/,'journey continues normally after chosen boss');
  await f.api.dispose();f.release();
