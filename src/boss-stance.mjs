@@ -23,6 +23,7 @@ export function createBossStance(B){
  let detached=false,lastFrame=null,lastLegClock=null;const collapse=createCollapseClock(),legClock={raw:null,phase:0},lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
  return {
   projectTarget(camera,locked,canvas){return targetView.project(camera,locked,canvas);},
+  cameraFocus(player){return targetView.cameraFocus(player);},
   dispose(){targetView.dispose();cinema.remove();},
   update(b){
   targetView.update(b);
