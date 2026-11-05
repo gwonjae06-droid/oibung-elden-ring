@@ -54,6 +54,18 @@ export function createClownEncoreTent(root,{coarse=false,reduced=false}={}){
   mix+=((target-mix)*(1-Math.exp(-h*(reduced?4:1.9))));
   if(Math.abs(target-mix)<.001)mix=target;
   const transformed=smooth(mix),step=Math.round(transformed*60);
+  // Phase one must retain the exact original buffer values (no trig rounding).
+  if(transformed===0){
+   if(lastStep!==0){
+    for(const item of fabrics){
+     item.pos.array.set(item.original);item.pos.needsUpdate=true;
+     if(item.colors){item.colors.array.set(item.originalColors);item.colors.needsUpdate=true;}
+    }
+    for(const item of palette)item.material.color.copy(item.base);
+   }
+   lastStep=0;shadow.visible=false;ink.opacity=0;
+   return {phase,transformed};
+  }
   const animated=!reduced&&transformed>.005&&game?.status==='playing';
   if(step===lastStep&&!animated)return {phase,transformed};
   if(animated&&clock-lastStepTime<1/28)return {phase,transformed};
