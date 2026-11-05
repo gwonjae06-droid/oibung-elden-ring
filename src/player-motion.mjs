@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {springStep} from './secondary-physics.mjs';
+import {solvePlayerFoot,playerFootTarget} from './player-foot-ik.mjs';
 const down=new THREE.Vector3(0,-1,0),axis=new THREE.Vector3(),bend=new THREE.Vector3(),elbow=new THREE.Vector3(),upper=new THREE.Vector3(),lower=new THREE.Vector3(),target=new THREE.Vector3();
 const armQ=new THREE.Quaternion(),lowerQ=new THREE.Quaternion(),bodyQ=new THREE.Quaternion(),parentQ=new THREE.Quaternion(),desired=new THREE.Quaternion(),angles=new THREE.Euler();
 const gripQ=new THREE.Quaternion(),handOffset=new THREE.Vector3();
@@ -34,6 +35,17 @@ export function applyPlayerMotion(parts,p,weapon,time=0,speed=0){
  for(let i=0;i<2;i++){
   const key=i?'R':'L';parts.legs[i].rotation.set(p['leg'+key],0,p['legZ'+key]||0);parts.knees[i].rotation.set(p['knee'+key],0,0);parts.ankles[i].rotation.set(p['ankle'+key]||0,0,0);
   parts.arms[i].rotation.set(p['arm'+key],0,p['armZ'+key]);parts.elbows[i].rotation.set(p['elbow'+key],0,0);parts.hands[i].rotation.set(0,0,0);
+ }
+ // Only ordinary locomotion uses foot IK. Attacks, evasions and knockbacks
+ // retain their authored timing and visual choreography.
+ if(p.locomotion&&p.grounded&&speed>.02){
+  for(let i=0;i<2;i++){
+   const key=i?'R':'L',foot=playerFootTarget(p,key,speed);
+   const solved=solvePlayerFoot(foot.y,foot.z),weight=foot.weight;
+   parts.legs[i].rotation.x+=(solved.hip-parts.legs[i].rotation.x)*weight;
+   parts.knees[i].rotation.x+=(solved.knee-parts.knees[i].rotation.x)*weight;
+   parts.ankles[i].rotation.x+=(solved.ankle-parts.ankles[i].rotation.x)*weight;
+  }
  }
  // Helmet inertia is local to the neck. Neither the gameplay root nor a
  // weapon mount is moved by this visual follow-through.
