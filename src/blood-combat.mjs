@@ -8,7 +8,9 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
-import {playerProjectileHitsCircle,claimPlayerProjectileHit} from './player-projectile-data.mjs';
+import {claimPlayerProjectileHit} from './player-projectile-data.mjs';
+import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
+import {bloodHurtShapes} from './boss-hit-regions.mjs';
 
 // Only the blood encounter uses floor-skimming ranged attacks. The other
 // bosses retain their original projectile trajectories and aerial hit rules.
@@ -33,17 +35,17 @@ export function actBlood(g,type,input={}){
  if(!g.player.action)g.player.yaw=type==='roll'&&(input.x||input.z)?Math.atan2(input.x||0,input.z||0):Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
  return actPlayer(g,type);
 }
-export function damageBlood(g,amount){
+export function damageBlood(g,amount,impact=null){
  if(g.status!=='playing'||g.boss.state==='transition'||bloodBossAirborne(g)||!Number.isFinite(amount)||amount<=0)return 0;
  const b=g.boss,s=g.blood,damage=Math.min(amount,b.phase===1?Math.max(0,b.hp-1):b.hp);b.hp-=damage;
- if(damage)emit(g,'boss-hit',{amount:damage});
+ if(damage)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
  if(b.phase===1&&b.hp<=b.maxHp*.5)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
 }
-function hit(g,amount,source,projectile=false){
+function hit(g,amount,source,projectile=false,impact=null){
  const s=g.blood;if(bloodBossAirborne(g))return 0;
- const damage=damageBlood(g,amount*(g.boss.phase===2&&g.boss.state==='recovery'?journeyWeaknessMultiplier(g,'blood',1.6):1));
+ const damage=damageBlood(g,amount*(g.boss.phase===2&&g.boss.state==='recovery'?journeyWeaknessMultiplier(g,'blood',1.6):1),impact);
  if(!damage)return 0;
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }
@@ -104,7 +106,12 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
- tickPlayerAction(g,dt,w,{melee:a=>{const dx=b.x-p.x,dz=b.z-p.z,dist=Math.hypot(dx,dz);if(dist<=w.range+1.5&&Math.abs(Math.atan2(Math.sin(Math.atan2(dx,dz)-a.yaw),Math.cos(Math.atan2(dx,dz)-a.yaw)))<1.2&&!bloodBossAirborne(g)){a.hit=true;hit(g,w.damage*a.mult,a);}}});
+ tickPlayerAction(g,dt,w,{melee:a=>{
+   if(bloodBossAirborne(g))return;
+   const reach=g.weapon==='hammer'?3.05:2.85;
+   const impact=kwonMeleeContact(bloodHurtShapes(g),p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
+   if(impact){a.hit=true;hit(g,w.damage*a.mult,a,false,impact);}
+  }});
  if(g.status!=='playing')return;
  for(const q of g.projectiles){
   // Blood shots skim the cathedral floor rather than pitching up to a flying
@@ -114,8 +121,10 @@ function tickPlayer(g,dt,input){
   if(q.hit||q.bossHit||q.life<=0)continue;
   // An airborne boss does not intercept, consume, reward or take damage from
   // a floor-level shot. It simply passes underneath until he lands.
-  if(!bloodBossAirborne(g)&&playerProjectileHitsCircle(prev,q,b,1.6)&&claimPlayerProjectileHit(q))
-   hit(g,q.damage,q.source,true);
+  const prevY=Number.isFinite(prev.y)?prev.y:q.y;
+  const impact=!bloodBossAirborne(g)?kwonProjectileContact(bloodHurtShapes(g),
+   {x:prev.x,y:prevY,z:prev.z},{x:q.x,y:q.y,z:q.z}):null;
+  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true,impact);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
  const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*18*dt;p.z+=Math.cos(a.yaw)*18*dt;}
