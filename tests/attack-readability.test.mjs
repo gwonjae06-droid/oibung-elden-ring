@@ -12,6 +12,7 @@ import {BLOOD_PATTERNS,bloodPool} from '../src/blood-data.mjs';
 import {createBloodGame,startBloodPattern,stepBlood} from '../src/blood-combat.mjs';
 import {BLOOD_ATTACK_GESTURES,bloodAttackMotion} from '../src/blood-attack-motion.mjs';
 import {CINEMATIC_PROFILES} from '../src/cinematic-graphics.mjs';
+import {bossMotion} from '../src/boss-motion-data.mjs';
 
 test('every Kwon sword swing has a visible windup with no damage before release',()=>{
  for(const phase of [1,2])for(const key of Object.keys(KWON)){
@@ -107,4 +108,13 @@ test('shared physical PBR lighting stays subdued and differentiated from danger 
   assert.ok(CINEMATIC_PROFILES[id].exposure<=1.2);
   assert.ok(CINEMATIC_PROFILES[id].reflection>0&&CINEMATIC_PROFILES[id].reflection<.8);
  }
+});
+
+test('Kwon combo torso starts from its last impact pose without teleporting to idle',()=>{
+ const cfg=patternConfig({pattern:'sweep',phase:2});
+ const prev=bossMotion({state:'active',pattern:'sweep',phase:2,t:cfg.active,stun:0,queue:[],recovery:1});
+ const next=bossMotion({state:'windup',pattern:'reverse',motionFrom:'sweep',phase:2,t:0,stun:0,queue:[],recovery:1});
+ for(const channel of ['lean','sink','sway'])assert.ok(Math.abs(prev[channel]-next[channel])<1e-9,channel+' snapped');
+ const later=bossMotion({state:'windup',pattern:'reverse',motionFrom:'sweep',phase:2,t:.1,stun:0,queue:[],recovery:1});
+ assert.ok(['lean','sink','sway'].every(channel=>Number.isFinite(later[channel])));
 });
