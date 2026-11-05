@@ -37,6 +37,8 @@ export function createKwonTorsoRig(T,pivot,model){
  const groups={waist,chest,abdomen};
  function mount(part,region){const group=groups[region]||waist;part.position.sub(group.position);group.add(part);}
  function point(p,region='waist'){const group=groups[region]||waist;v.set(...torsoLocalPoint(p,region));group.localToWorld(v);model.worldToLocal(v);return {x:v.x,y:v.y,z:v.z};}
- function update(b,m,dt){const p=motion.update(b,m,dt);waist.rotation.set(p.waistPitch,p.waistYaw,p.waistRoll);chest.rotation.set(p.chestPitch,p.chestYaw,p.chestRoll);abdomen.rotation.set(p.abdomenPitch,p.abdomenYaw,p.abdomenRoll);}
+ function update(b,m,dt){const p=motion.update(b,m,dt);waist.rotation.set(p.waistPitch,p.waistYaw,p.waistRoll);chest.rotation.set(p.chestPitch,p.chestYaw,p.chestRoll);const k=Math.sin(Math.PI*Math.max(0,Math.min(1,(b?.t||0)/.28)));
+ const brace=b?.state==='windup'?.012*k:b?.state==='recovery'?-.010*k:0;
+ abdomen.rotation.set(p.abdomenPitch+brace,p.abdomenYaw,p.abdomenRoll+brace*.30);}
  return {waist,chest,abdomen,mount,point,update,headPosition:p=>torsoLocalPoint(p,'chest')};
 }
