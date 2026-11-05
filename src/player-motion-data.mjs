@@ -8,12 +8,13 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
  const p={legL:walk,legR:-walk,kneeL:.06+Math.max(0,-walk)*.85,kneeR:.06+Math.max(0,walk)*.85,ankleL:-walk*.20,ankleR:walk*.20,
   armL:-walk*.42-.08,armR:walk*.20-.12,armZL:.10,armZR:-.10,elbowL:.16,elbowR:.27,pivotX:-.86,pivotY:0,pivotZ:-.10,
   twist:Math.sin(phase)*.035*moving,sway:Math.sin(phase)*.018*moving,lean:.055*moving*forward,lift:Math.abs(Math.sin(phase))*.025*moving,
-  bob:breathing*.009*(1-moving),headX:0,headY:0,pull:0,draw:0,trail:false,spin:0,strideX:side*.035*moving,strideZ:0,support:0,heal:0,charge:0,grip:0,handX:.03,handY:.55,handZ:.22,grounded:true};
+  bob:breathing*.009*(1-moving),headX:0,headY:0,pull:0,draw:0,trail:false,spin:0,strideX:side*.035*moving,strideZ:0,support:0,heal:0,charge:0,grip:0,handX:.03,handY:.55,handZ:.22,grounded:true,locomotion:true};
  p.legZL=p.legZR=-side*.13*moving;
   if(weapon==='hammer'){p.pivotX=-.48;p.armR=-.22;p.elbowR=.44;p.armL=-.24;p.handY=.46;}
   if(weapon==='bow'){p.pivotX=0;p.pivotZ=0;p.armL=-.30;p.elbowL=.35;p.armR=-.15;}
  if(weapon==='cards'){p.pivotX=-.12;p.pivotZ=.14;p.armR=-.32;p.elbowR=.35;}
  if(!a||g.boss.state==='transition')return p;
+ p.locomotion=false;
  if(a.kind==='charging'){
   const u=ease((a.t??0)/.45);p.pivotX=mix(-.86,-1.82,u);p.armR=-.42*u;p.elbowR=.45*u;p.twist=-.30*u;p.lean=-.09*u;p.kneeL=p.kneeR=.12*u;p.lift=-.055*u;p.charge=u;p.support=u;return p;
  }
