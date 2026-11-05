@@ -631,6 +631,14 @@ export function step(g, dt, input = {}) {
     if (input.lock) p.yaw = toward(p, b);
     else if (mag) p.yaw = Math.atan2(mx, mz);
   }
+  // Lock-on follows the boss during the attack's preparatory frames. The
+  // previously frozen initial yaw let fast bosses escape an apparently aimed hit.
+  const action=p.action;
+  if(input.lock&&action&&['attack','skill'].includes(action.kind)&&!action.done&&action.t<action.wind){
+    const desired=toward(p,b),delta=angleDelta(action.yaw,desired);
+    action.yaw+=clamp(delta,-dt*11,dt*11);
+    p.yaw=action.yaw;
+  }
   tickPlayerAction(g, dt, w, {
     roll: (a) => {
       if (a.t <= dt * 1.1 && mag) a.yaw = Math.atan2(mx, mz);
