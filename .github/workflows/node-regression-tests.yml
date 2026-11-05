@@ -19,8 +19,24 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Focused Blood boss sculpture and animation tests
         run: node --test tests/blood-attack-animation.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-regalia.test.mjs tests/blood-head.test.mjs tests/blood-render.test.mjs
+      - name: Sacred cathedral geometry and battle-render regression tests
+        run: node --test tests/blood-white-cathedral.test.mjs tests/blood-render.test.mjs tests/blood-cinematic.test.mjs
       - name: Run Node tests
         run: npm test
+      - name: Smoke test sacred white cathedral in WebGL
+        if: ${{ !cancelled() }}
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/oibung-cathedral-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-cathedral-smoke.mjs
+      - name: Save sacred white cathedral screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sacred-white-cathedral-screenshots
+          path: artifacts/blood-cathedral/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Smoke test browser boss battles
         if: ${{ !cancelled() }}
         run: |
