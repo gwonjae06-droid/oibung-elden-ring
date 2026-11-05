@@ -57,7 +57,7 @@
 import {installMobileLandscape} from './src/mobile-landscape.mjs';
 const mobileLandscape=installMobileLandscape();
 window.addEventListener('pagehide',event=>{if(!event.persisted)mobileLandscape?.dispose();});
-import('./src/bootstrap.mjs?v=arena-startup-boolean-fix-20261105').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장 초기화에 실패했습니다. 새로고침 후에도 문제가 지속되면 아래 오류를 알려주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent=''초기화 오류: '+String(error?.message||error||'원인 불명').slice(0,180)';if(start){start.disabled=true;start.textContent='불러오기 실패';}});
+import('./src/bootstrap.mjs?v=arena-startup-boolean-fix-20261105').then(m=>m.bootstrapGame()).catch(error=>{console.error(error);const loading=document.getElementById('journey-loading');if(loading)loading.textContent='전장 초기화에 실패했습니다. 새로고침 후에도 문제가 지속되면 아래 오류를 알려주세요.';const status=document.getElementById('load-status'),start=document.getElementById('start');if(status)status.textContent='초기화 오류: '+String(error?.message||error||'원인 불명').slice(0,180);if(start){start.disabled=true;start.textContent='불러오기 실패';}});
 </script>
 </body></html>
 
