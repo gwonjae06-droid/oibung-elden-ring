@@ -71,6 +71,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  // Prewarm small photo-head meshes and faces before the first shutter.
  // Head bombs reuse these instances across attacks and retries.
  const headPool=createClownHeadPool(()=>createClownHead({projectile:true}),{prewarm:2});
+ startup.own('Clown photo head pool',()=>headPool.dispose());
  const zones=new Map(),bombs=new Map(),shots=new Map(),particles=[],mats=[0xffcc50,0xc12e49,0x75c9ec,0x1a121a,0x8a0c12].map(color=>startup.resource('Particle material',new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9}))),confettiGeo=startup.resource('Confetti geometry',new THREE.BoxGeometry(.12,.04,.25)),smokeGeo=startup.resource('Smoke geometry',new THREE.SphereGeometry(.4,8,6)),bloodGeo=startup.resource('Blood geometry',new THREE.SphereGeometry(.07,5,4));
  const star=new THREE.Shape();for(let i=0;i<10;i++){const a=i*Math.PI/5,r=i%2?.08:.2;if(i)star.lineTo(Math.sin(a)*r,Math.cos(a)*r);else star.moveTo(Math.sin(a)*r,Math.cos(a)*r);}star.closePath();const starGeo=startup.resource('Star geometry',new THREE.ShapeGeometry(star));
  function burst(x,y,z,blood=false){for(let i=0;i<(reduced?8:blood?10:24);i++){if(particles.length>=160)scene.remove(particles.shift().m);const m=new THREE.Mesh(blood?bloodGeo:i>19?smokeGeo:i%3===0?starGeo:confettiGeo,mats[blood?4:i%4]);m.position.set(x,y,z);scene.add(m);particles.push({m,vx:(Math.random()-.5)*8,vy:2+Math.random()*6,vz:(Math.random()-.5)*8,life:blood?.7:1.4});}}
