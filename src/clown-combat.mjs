@@ -1,4 +1,6 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {clownHurtShapes} from './boss-hit-regions.mjs';
+import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {
   createGame,
   step as baseStep,
@@ -989,11 +991,9 @@ function updateClown(g, dt) {
   if (c.stunT > 0) c.stunT = Math.max(0, c.stunT - dt);
   else tickClown(g, dt);
   b.yaw = c.yaw;
-  if (!c.noSeparate && dist(p, b) < BODY_R) {
-    const a = dist(p, b) < 0.001 ? p.yaw : toward(b, p);
-    p.x = b.x + Math.sin(a) * BODY_R;
-    p.z = b.z + Math.cos(a) * BODY_R;
-    confine(p);
+  if(!c.noSeparate){
+    const contact=kwonPlayerSeparation(clownHurtShapes(g),p,{radius:.42,height:1.15});
+    if(contact){p.x=contact.x;p.z=contact.z;confine(p);}
   }
   c.prevPlayer = {x: p.x, z: p.z};
 }
