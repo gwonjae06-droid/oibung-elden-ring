@@ -14,6 +14,7 @@ import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparati
 import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {playerWalkSpeed,PLAYER_ROLL_SPEED,playerRolling} from './player-movement-rules.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
@@ -358,7 +359,7 @@ export function act(g, type) {
   return actPlayer(g, type);
 }
 export function rolling(p) {
-  return p.action?.kind === 'roll' && p.action.t >= 0.075 && p.action.t <= 0.35;
+  return playerRolling(p);
 }
 function poseParams(pattern, stand, carry, cut) {
   let ly = 0,
@@ -668,7 +669,7 @@ export function step(g, dt, input = {}) {
   const mx = input.x || 0,
     mz = input.z || 0,
     mag = Math.hypot(mx, mz),
-    speed = p.skill.blue > 0 ? 4.7 * SKILLS.cards.blueSpeed : 4.7;
+    speed = playerWalkSpeed(p);
   if (!p.action && mag&&!playerIncapacitated(p)) {
     p.x += (mx / Math.max(1, mag)) * speed * dt;
     p.z += (mz / Math.max(1, mag)) * speed * dt;
@@ -688,8 +689,8 @@ export function step(g, dt, input = {}) {
   tickPlayerAction(g, dt, w, {
     roll: (a) => {
       if (a.t <= dt * 1.1 && mag) a.yaw = Math.atan2(mx, mz);
-      p.x += Math.sin(a.yaw) * 10 * dt;
-      p.z += Math.cos(a.yaw) * 10 * dt;
+      p.x += Math.sin(a.yaw) * PLAYER_ROLL_SPEED * dt;
+      p.z += Math.cos(a.yaw) * PLAYER_ROLL_SPEED * dt;
     },
     melee: (a) => {
       const shapes=encounterBossHurtShapes(g);
