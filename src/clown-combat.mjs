@@ -845,7 +845,6 @@ const RUN = {
     for(let i=0;i<3;i++)if(cross(a,t,.8+i*.9)){
       const p=target(g),ang=c.yaw+(i-1)*.65,q={x:p.x+Math.sin(ang)*3,z:p.z+Math.cos(ang)*3};
       confine(q,21);bombAt(g,q,3.1,27,.8,'ball',.2);
-      emit(g,'clown-throw',{kind:'ball'});
     }
     if(cross(a,t,3.5)){
       const p=target(g);rosette(g,p,7.2,1.0,8,23,c.seq%8);
