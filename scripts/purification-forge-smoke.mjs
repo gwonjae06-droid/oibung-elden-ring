@@ -31,10 +31,13 @@ try{
  assert.equal(await page.locator('#journey [data-j="forge-tab"]').count(),0);
  assert.equal(await page.locator('#journey [data-j="forge-weapon"]').count(),4);
  await page.screenshot({path:'artifacts/purification-forge/forge-desktop.png'});
- assert.equal(await page.locator('#journey [data-forge-dev-easter-egg]').count(),1);
+ assert.equal(await page.locator('#journey [data-forge-dev-easter-egg]').count(),0,'developer shortcut must not be advertised');
+ assert.equal(await page.locator('#journey .j-forge-dev-result').count(),0);
+ assert.doesNotMatch(await page.locator('#journey .j-forge').innerText(),/개발자용|이스터에그|; 키/);
  await page.keyboard.press('Semicolon');
  assert.equal((await read()).flames,7,'one semicolon in the forge grants exactly +2 flames');
- assert.match(await page.locator('#journey .j-forge-dev-result').innerText(),/개발자용 이스터에그.*\+2/);
+ assert.equal(await page.locator('#journey [data-forge-dev-easter-egg], #journey .j-forge-dev-result').count(),0,'secret use must not reveal developer banner or message');
+ assert.match(await page.locator('#journey .j-forge-resources').innerText(),/7/,'flame counter must still update immediately');
  await page.screenshot({path:'artifacts/purification-forge/forge-developer-easter-egg.png'});
  await page.locator('#journey [data-j="forge-buy"][data-evolution="blade-wave"]:not([disabled])').click();
  await page.locator('#journey [data-j="forge-buy"][data-evolution="blade-wave"]:not([disabled])').click();

@@ -21,7 +21,7 @@ const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
- let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',forgeDevNotice='',pendingReward=null,skipSelected=false;const secret=createBossSecret();
+ let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,skipSelected=false;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -52,7 +52,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function secretMenu(){screen='secret';secret.reset();show(`<div class="j-panel"><h1>봉인 밖의 문</h1><p>숨겨진 길을 발견했습니다. 무기를 선택하고 원하는 보스에게 이동하세요.<br>이 이동 전투는 서약의 기억·완수 기록에 반영되지 않습니다. 보스를 쓰러뜨리면 정화의 불꽃 1개를 획득합니다.</p><div class="j-links" role="group" aria-label="이동 전투 무기">${Object.entries(WEAPONS).map(([id,name])=>button('secret-weapon',name,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div><div class="j-cards">${BOSSES.map((id,i)=>button('secret-enter',`<strong>0${i+1}</strong><b>${BOSS_NAMES[i]}</b><small>바로 이동</small>`,`data-boss="${id}"`)).join('')}</div><div class="j-links">${BOSSES.filter(id=>BOSS_REGISTRY[id].secret).map(id=>button('secret-phase',BOSS_REGISTRY[id].secret.label,`data-boss="${id}" data-phase="${BOSS_REGISTRY[id].secret.phase}"`)).join('')}</div>${back()}</div>`);}
  function secretRun(stage,phase=1){const run=newRun(weapon);run.stage=stage;run.secret=true;run.secretPhase=phase;return run;}
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
- function forge(){screen='forge';show(forgeScreen(profile,forgeWeapon,{button,back,warning,devNotice:forgeDevNotice}));}
+ function forge(){screen='forge';show(forgeScreen(profile,forgeWeapon,{button,back,warning}));}
  function flameReward(){if(!pendingReward)return;screen='flame';show(flameRewardScreen(profile,pendingReward.name,{button,back,warning,complete:pendingReward.complete}));}
  function records(){screen='records';const rows=[...profile.records].reverse();
   show(`<div class="j-panel"><h1>기록실</h1><p>전체 클리어 ${profile.clears}회 · 불꽃 지름길 기록은 별도로 표시합니다.</p>${rows.length?`<table class="j-table"><thead><tr><th>시련</th><th>무기</th><th>시간</th><th>패배</th><th>달성</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.startStage?`불꽃 지름길 · ${BOSS_NAMES[r.startStage]}부터`:TRIAL_NAME} · ${(r.bossCount||3)-(r.startStage||0)}보스</td><td>${WEAPONS[r.weapon]}</td><td>${clock(r.time)}</td><td>${r.deaths}회</td><td>${r.startStage?'지름길 토벌':r.deaths===0?'불굴의 도전자':(r.bossCount||3)+'지배자 토벌'}</td></tr>`).join('')}</tbody></table>`:`<p>여정 완수 기록은 아직 없습니다. ${BOSSES.length}명의 보스를 쓰러뜨리면 완수 기록이 남습니다.</p>`}${profile.memories?.length?profile.memories.map(entry=>{const m=CHAPTER_MEMORIES[entry.id];return `<details class="j-memory-record"><summary>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</summary><section><div class="j-memory-art" data-memory="${entry.id}" aria-hidden="true"></div><div><h2>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</h2><p>${m.last}</p><p>${m.text}</p><p>서약 · ${m.oath} · 첫 토벌 ${entry.firstClear?new Date(entry.firstClear).toLocaleDateString('ko-KR'):'이전 기록'}</p></div></section></details>`;}).join(''):'<p>보스를 토벌하면 서약의 기억과 첫 토벌 날짜가 기록됩니다.</p>'}${back()}</div>`);
@@ -122,7 +122,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(action==='secret-retry'&&screen==='secret-result'&&profile.run?.secret){profile.run=secretRun(profile.run.stage,profile.run.secretPhase);await launch();return;}
   if(action==='secret-menu'&&screen==='secret-result'){busy=true;try{await closeBattle();profile.run=null;secretMenu();}finally{busy=false;}return;}
   if(action==='home'){await goHome();return;}
-  if(action==='forge'&&screen==='home'){forgeWeapon=weapon;forgeDevNotice='';forge();return;}
+  if(action==='forge'&&screen==='home'){forgeWeapon=weapon;forge();return;}
   if(action==='forge-weapon'&&screen==='forge'){
    if(Object.hasOwn(WEAPONS,b.dataset.weapon)){forgeWeapon=b.dataset.weapon;forge();}return;
   }
@@ -163,7 +163,6 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   e.preventDefault();
   const amount=grantForgeDeveloperFlames(profile);
   if(amount)persist();
-  forgeDevNotice=amount?'개발자용 이스터에그 발동 · 정화의 불꽃 +2':'개발자용 이스터에그 · 불꽃 보유 한도에 도달했습니다.';
   forge();
  };
  const requestHome=()=>goHome(),focus=()=>{focused=true;syncMusic();},blur=()=>{focused=false;syncMusic();};

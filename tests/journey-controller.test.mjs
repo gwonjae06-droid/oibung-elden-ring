@@ -171,11 +171,11 @@ test('developer semicolon Easter egg only works in forge and persists two flames
  assert.equal(f.key('Semicolon').prevented,undefined,'home key must have no effect');
  assert.equal(saved().flames,0);
  await f.click('forge');
- assert.match(f.dialog.html,/개발자용 이스터에그/);
+ assert.doesNotMatch(f.dialog.html,/개발자용 이스터에그|data-forge-dev-easter-egg|<kbd>;<\/kbd>/,'developer shortcut must remain undisclosed');
  assert.equal(f.key('Semicolon').prevented,true);
  assert.equal(saved().flames,2);
  assert.equal(saved().earnedFlames,2);
- assert.match(f.dialog.html,/개발자용 이스터에그 발동 · 정화의 불꽃 \+2/);
+ assert.doesNotMatch(f.dialog.html,/개발자용 이스터에그|j-forge-dev-result/,'using secret must not reveal developer announcement');
  f.key('Semicolon',{repeat:true});
  f.key('Semicolon',{shiftKey:true,key:':'});
  f.key('Semicolon',{ctrlKey:true});

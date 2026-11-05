@@ -21,7 +21,7 @@ export const flameCounter=profile=>html(
  '<span class="j-flame-counter" aria-label="정화의 불꽃 ',safe(flameBalance(profile)),'개">',
  flameMark('tiny'),'<span>정화의 불꽃</span><strong>',safe(flameBalance(profile)),'</strong></span>'
 );
-export function forgeScreen(profile,weapon,{button,back,warning,devNotice=''}){
+export function forgeScreen(profile,weapon,{button,back,warning}){
  const w=Object.hasOwn(EVOLUTIONS,weapon)?weapon:'sword',balance=flameBalance(profile),owned=investedFlames(profile,w);
  const symbols={sword:'⚔',hammer:'◆',bow:'➶',cards:'✧'};
  const tabs=Object.entries(FORGE_WEAPON_NAMES).map(([id,label])=>button('forge-weapon',
@@ -63,10 +63,7 @@ export function forgeScreen(profile,weapon,{button,back,warning,devNotice=''}){
   '개</strong><p>반환하면 이 무기의 모든 진화가 해제되고 투자한 불꽃 ',owned,
   '개를 돌려받습니다. 다른 무기에 다시 투자할 수 있습니다.</p></div>',
   button('forge-refund','↶ 불꽃 반환 · +'+owned,'class="j-forge-refund" data-weapon="'+w+'" '+(owned?'':'disabled')),
-  '</div><div class="j-forge-developer" data-forge-dev-easter-egg="true"><span class="j-forge-dev-mark">DEV</span>',
-  '<span>개발자용 이스터에그 · 대장간에서 <kbd>;</kbd> 키를 누르면 정화의 불꽃 <strong>+2</strong></span></div>',
-  devNotice?'<p class="j-forge-dev-result" role="status" aria-live="polite">'+devNotice+'</p>':'',
-  back(),warning(),'</div>');
+  '</div>',back(),warning(),'</div>');
 }
 export function flameRewardScreen(profile,bossName,{button,back,warning,complete=false}){
  return html('<div class="j-panel j-flame-result"><p class="j-kicker">PURIFICATION · 시련의 잔불</p>',
