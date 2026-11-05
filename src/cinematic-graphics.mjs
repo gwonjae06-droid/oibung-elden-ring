@@ -148,7 +148,8 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
      saved.set(m,{map:m.map,normalMap:m.normalMap,roughnessMap:m.roughnessMap,
       normalScale:m.normalScale?.clone(),roughness:m.roughness,metalness:m.metalness,envMapIntensity:m.envMapIntensity});
      if(!m.map)m.map=maps.map;
-     if(!m.normalMap)m.normalMap=maps.normalMap;
+     const generatedNormal=!m.normalMap;
+     if(generatedNormal)m.normalMap=maps.normalMap;
      if(!m.roughnessMap)m.roughnessMap=maps.roughnessMap;
      if(!m.metalness||m.metalness<.2)m.metalness=surface.metalness;
      m.roughness=clamp(m.roughness*.48+surface.roughness*.52,.13,.97);
