@@ -6,6 +6,7 @@ import {kwonStanceWeights,finishKwonLeg,advanceKwonGaitClock} from './kwon-leg-r
 import {kwonTorsoRegion,createKwonTorsoRig} from './kwon-torso-rig.mjs';
 import {collectKwonMouthParts,createKwonNeckRig} from './kwon-neck-rig.mjs';
 import {installKwonKnight} from './kwon-knight-regalia.mjs';
+import {createKwonTargetView} from './kwon-target-view.mjs';
 export function createBossStance(B){
  const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
  const atHead=B.model.children.filter(c=>c.geometry?.type==='SphereGeometry'&&Math.abs(c.position.y-B.HEAD.y)<.001&&Math.abs(c.position.z-B.HEAD.z)<.001);if(!atHead.length)throw new Error('Boss head mesh missing');const mouth=collectKwonMouthParts(THREE,B.model.children);B.model.add(headRig);
@@ -18,8 +19,10 @@ export function createBossStance(B){
  installKwonKnight(THREE,B,torso,headRig);
  const cinema=document.createElement('div');cinema.setAttribute('aria-live','polite');Object.assign(cinema.style,{position:'absolute',inset:'0',pointerEvents:'none',zIndex:'15',display:'none',borderTop:'7vh solid #000',borderBottom:'7vh solid #000'});
  const caption=document.createElement('p');Object.assign(caption.style,{position:'absolute',bottom:'8%',width:'100%',maxWidth:'none',textAlign:'center',fontSize:'24px',color:'#e9d3a0',textShadow:'0 2px 5px #000'});cinema.appendChild(caption);document.getElementById('arena').appendChild(cinema);
+ const targetView=createKwonTargetView(THREE,B,torso,document.getElementById('arena'));
  let detached=false,lastFrame=null,lastLegClock=null;const collapse=createCollapseClock(),legClock={raw:null,phase:0},lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
  return {update(b){
+  targetView.update(b);
   const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b),weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));
   const stamp=[b.phase,b.state,b.pattern,b.t,b.wait,b.x,b.z,b.yaw,b.stun],frozen=Boolean(lastLegClock&&stamp.every((v,i)=>Object.is(v,lastLegClock[i])));lastLegClock=stamp;const gaitPhase=advanceKwonGaitClock(legClock,B.legs[0]?.pending?.phase,frozen);
   pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+m.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);torso.update(b,m,dt);neck.update(b,m,dt,frozen);
