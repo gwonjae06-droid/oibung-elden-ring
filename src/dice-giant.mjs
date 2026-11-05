@@ -1,6 +1,7 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
+import {giantThrowTimeline,giantSpringStep} from './dice-giant-motion.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기'];
@@ -65,8 +66,9 @@ export function giantPropType(s,h){
 // 'throw' = polite flick/lowering of a hand in front of the body, 'reach' = the hand goes to the target and slams.
 function handKind(s,h){
  if(h.headSlam||h.shape==='ring')return null;
- if(s.temperament==='feral')return [0,1,3,4,5,6,8].includes(s.slot)?'reach':null;
+ // Visible dice/chips/coins/chess pieces must be thrown, never mimicked by phantom palms.
  if(giantPropType(s,h))return 'throw';
+ if(s.temperament==='feral')return [0,1,3,4,5,6,8].includes(s.slot)?'reach':null;
  return [0,5,6,7,8].includes(s.slot)?'reach':null;
 }
 export const handCanAttack=(s,i)=>Boolean(s&&!s.destroyed?.[i]&&!(s.revive?.[i]>0));
@@ -114,6 +116,19 @@ export function giantPosture(g){
    return {lean,weight,bodyX:h.x*.65*lean,head:{x:lerp(0,h.x,lean),y:lerp(58,7,lean),z:lerp(-106,h.z,lean),rotation}};
   }
  }
+ if(s.state==='attack'){
+  const thrown=s.hazards?.find(h=>{
+   if(!giantPropType(s,h)||h.cancelled||!handCanAttack(s,h.handIndex))return false;
+   const t=giantThrowTimeline(s,h);return t&&s.t>=t.ready&&s.t<t.release+.34;
+  });
+  if(thrown){
+   const t=giantThrowTimeline(s,thrown),wind=ease((s.t-t.pickupEnd)/Math.max(.1,t.release-t.pickupEnd)),
+    recoil=ease((s.t-t.release)/.42),k=wind*(1-.72*recoil),side=thrown.handIndex===1?-1:1;
+   const lean=(s.temperament==='feral'?.14:.085)*k;
+   return {lean,weight:0,throwTwist:side*k*(s.temperament==='feral'?.13:.085),
+    bodyX:side*3.4*k,head:{...rest,x:side*2*k,y:58-2*lean,z:-106+9*lean}};
+  }
+ }
  if(s.state==='attack'&&s.temperament==='controlled'){
   const h=s.hazards?.find(h=>h.handIndex!=null&&!h.cancelled&&handCanAttack(s,h.handIndex)&&s.t>=h.start-.5&&s.t<=h.start+h.warn+h.active+.2);
   if(h){const bend=.2*ease((s.t-h.start+.5)/Math.max(.4,h.warn+.5));
@@ -132,9 +147,7 @@ export function hazardContains(h,p,pad=.42){
  }
  const d=Math.hypot(p.x-h.x,p.z-h.z);return h.shape==='ring'?Math.abs(d-h.r)<=h.band+pad:d<=h.r+pad;
 }
-// [lift, side sway, forward push] of the polite flick used for each table object.
-const THROW={chip:[5,4,2],dice:[9,5,4],coin:[11,4,3],chess:[6,0,5]};
-// Where the hand wants to be right now. giantHandPose() smooths this so every motion flows into the next.
+// The same smoothed physical palm position drives the rendering and the collider.
 function handTarget(g,index){
  const s=g.dice.giant,rest=HAND_REST[index];
  if(!s)return {...rest,fist:0};
@@ -145,28 +158,48 @@ function handTarget(g,index){
  let x=rest.x,z=rest.z,y=rest.y+(feral?.42*Math.sin(time*7+index*2):.16*Math.sin(time*1.8+index*2)),fist=feral?.85:0;
  if(s.state!=='attack')return {x,y,z,fist};
  const mine=(s.hazards||[]).filter(h=>!h.cancelled&&handKind(s,h)&&h.handIndex===index).sort((a,b)=>a.start-b.start);
- let reach=null;
- for(const h of mine){
-  const age=s.t-h.start;
-  if(handKind(s,h)==='throw'){
-   const u=(age+.45)/.7;
-   if(u>0&&u<1){const [lift,sway,push]=THROW[giantPropType(s,h)];y+=lift*Math.sin(Math.PI*u);x+=(index?-1:1)*sway*Math.sin(2*Math.PI*u);z+=push*Math.sin(Math.PI*u);}
-  }else if(!reach&&age>-.7&&age<h.warn+h.active+.9)reach={h,age};
+ // Each hand must actually collect the next object before performing its throw.
+ const next=mine.find(h=>{
+  if(handKind(s,h)!=='throw')return false;
+  const t=giantThrowTimeline(s,h);
+  return t&&s.t>=t.ready&&s.t<t.release+.1;
+ });
+ if(next){
+  const t=giantThrowTimeline(s,next),side=index?-1:1,
+   pickup=ease((s.t-t.ready)/Math.max(.05,t.pickupEnd-t.ready)),
+   wind=ease((s.t-t.pickupEnd)/Math.max(.06,t.release-t.pickupEnd)),
+   snap=ease((s.t-t.release+.12)/.12),
+   released=ease((s.t-t.release)/.12),
+   recoil=ease((s.t-t.release)/.38);
+  // Reach across the felt, grasp, pull the elbow back, flick, and recover.
+  x=rest.x+side*(3*pickup-5.3*wind+12*snap*(1-recoil));
+  z=rest.z+7*pickup-7*wind+13*snap*(1-recoil);
+  y=rest.y+2.4*pickup+10*Math.sin(Math.PI*wind*.65)+5*snap*(1-recoil);
+  fist=sat((.92*pickup+.08*wind)*(1-released));
+  return {x,y,z,fist};
  }
+ const reach=mine.find(h=>handKind(s,h)==='reach'&&s.t-h.start>-.7&&s.t-h.start<h.warn+h.active+.9);
  if(reach){
-  const {h,age}=reach,drop0=h.warn-.12,wind=ease((age+.7)/Math.max(.3,drop0+.7)),slam=ease((age-drop0)/.12),retreat=ease((age-h.warn-h.active-.05)/.4),r=wind*(1-retreat);
-  x=lerp(rest.x,h.x,r);z=lerp(rest.z,h.z,r);
-  y=2+(feral?27:21)*wind*(1-slam)+6*Math.sin(Math.PI*retreat);
+  const h=reach,age=s.t-h.start,drop0=h.warn-.18,
+   wind=ease((age+.7)/Math.max(.3,drop0+.7)),slam=ease((age-drop0)/.12),
+   retreat=ease((age-h.warn-h.active-.05)/.46),k=wind*(1-retreat);
+  x=lerp(rest.x,h.x,k);z=lerp(rest.z,h.z,k);
+  y=2+(feral?27:21)*wind*(1-slam)+5*Math.sin(Math.PI*retreat);
   fist=feral?.35+.65*wind:.1*wind;
  }
  return {x,y,z,fist};
 }
 function moveHands(g,dt){
  const s=g.dice.giant;s.smooth=s.smooth||HAND_REST.map(h=>({...h}));
+ s.handVelocity=s.handVelocity||HAND_REST.map(()=>({x:0,y:0,z:0}));
  const feral=s.temperament==='feral';
  for(const i of [0,1]){
-  const t=handTarget(g,i),p=s.smooth[i],kxz=1-Math.exp(-dt*(feral?16:9)),ky=1-Math.exp(-dt*(t.y<p.y?(feral?70:40):9));
-  p.x+=(t.x-p.x)*kxz;p.y+=(t.y-p.y)*ky;p.z+=(t.z-p.z)*kxz;
+  const target=handTarget(g,i),p=s.smooth[i],v=s.handVelocity[i];
+  for(const axis of ['x','y','z']){
+   const omega=axis==='y'?(feral?33:27):(feral?22:17);
+   const next=giantSpringStep(p[axis],v[axis],target[axis],dt,omega);
+   p[axis]=next.position;v[axis]=next.velocity;
+  }
  }
 }
 export function giantHandPose(g,index){
