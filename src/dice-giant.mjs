@@ -46,7 +46,7 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
   {...circle(x,z,9,2.05,1.2,38),handIndex:0}
  ];
  // Thrown table props (chips, dice, coin, chess pieces) fly 10% slower; palm attacks and the berserk phase are untouched.
- hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h));
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
@@ -82,6 +82,7 @@ function feralPattern(index,player,healthRatio=1){
     .55+i*2.05,.9,42),
   headSlam:true,rapid:true,active:.5
  }));
+ hazards=hazards.map(giantReadableWarning);
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
