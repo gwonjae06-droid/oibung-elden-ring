@@ -60,9 +60,9 @@ test('upgraded story arrows and cards keep full projectile counts but not full v
 test('Kwon story prioritizes real combos at close and far ranges',()=>{
  const g=story(createGame('sword',{register:false}),0);
  g.player.z=g.boss.z+3;
- assert.ok(['hunt','skewer','backsweep','sweep'].includes(chooseOpening(g)));
+ assert.ok(['hunt','skewer','counterDancer','skyJudge','backsweep'].includes(chooseOpening(g)));
  g.boss.phase=2;g.player.z=g.boss.z+20;
- assert.ok(['requiem','crescent','execution','draw'].includes(chooseOpening(g)));
+ assert.ok(['requiem','doubleMoon','falseExecution','crescent','execution','draw'].includes(chooseOpening(g)));
 });
 
 test('Clown story links its existing performance after ball cannon',()=>{
@@ -74,7 +74,7 @@ test('Clown story links its existing performance after ball cannon',()=>{
 
 test('Giant story uses each attack exactly once per cycle including feral attacks',()=>{
  const g={player:{x:0,z:-40},dice:{giant:{temperament:'controlled'}}};
- for(const [feral,total] of [[false,9],[true,10]]){
+ for(const [feral,total] of [[false,11],[true,12]]){
   g.dice.giant={temperament:feral?'feral':'controlled'};
   const chosen=Array.from({length:total},()=>nextGiantPressureSlot(g));
   assert.equal(new Set(chosen).size,total);
@@ -85,7 +85,7 @@ test('Giant story uses each attack exactly once per cycle including feral attack
 test('Blood adaptive deck remains complete with signature opener and phase-two ground cue',()=>{
  for(const phase of [1,2]){
   const deck=createBloodPatternDeck(456);
-  const out=Array.from({length:9},(_,i)=>nextBloodPattern(deck,phase,{distance:i%2?4:23}));
+  const out=Array.from({length:bloodPool(phase).length},(_,i)=>nextBloodPattern(deck,phase,{distance:i%2?4:23}));
   assert.deepEqual([...out].sort(),bloodPool(phase).sort());
   assert.ok((phase===1?['lances','cross']:['judgement','ritual']).includes(out[0]));
   if(phase===2)assert.ok(['wing','pulse'].includes(out[1]));
