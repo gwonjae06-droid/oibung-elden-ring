@@ -80,7 +80,8 @@ test('forge tiers follow the weapon into every boss without being a run-specific
   configureJourney(g,run,p);
   assert.equal(evolutionCount(g,'blade-wave'),1);
   assert.equal(evolutionCount(g,'charged-blade'),1);
-  assert.equal(g.startGrace,1.6);
+  assert.equal(g.startGrace,0);
+  assert.equal(g.introControlled,true);
  });
  const other=createGame('hammer',{register:false});configureJourney(other,newRun('hammer'),p);
  assert.equal(evolutionCount(other,'blade-wave'),0,'forged swords cannot leak into hammer');
