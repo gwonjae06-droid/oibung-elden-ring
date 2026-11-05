@@ -34,10 +34,10 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'h
 const releaseRendererRollback=startup.own('Arena renderer',()=>renderer.dispose());
 renderer.setPixelRatio(qualityPixelRatio(2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();const releaseSceneRollback=startup.own('Arena scene',()=>disposeScene(scene));
-const atmosphere=createBossAtmosphere(scene,{profile:'kwon',coarse,reduced:reduceMotion()});startup.own('Kwon silent atmosphere',()=>atmosphere.dispose());scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
+const atmosphere=createBossAtmosphere(scene,{profile:'kwon',coarse,reduced:reduceMotion});startup.own('Kwon silent atmosphere',()=>atmosphere.dispose());scene.background=new THREE.Color(0x121814);scene.fog=new THREE.Fog(0x121814,30,75);
 const camera=new THREE.PerspectiveCamera(58,1,.1,120);scene.add(new THREE.HemisphereLight(0xbac6b4,0x1b221b,1.05));
-const cinematic=createCinematicWorld(scene,renderer,{profile:'kwon',coarse,reduced:reduceMotion()});startup.own('Kwon cinematic PBR',()=>cinematic.dispose());
-const contactFx=createCinematicImpactFx(scene,{profile:'kwon',coarse,reduced:reduceMotion()});startup.own('Kwon physical hit fragments',()=>contactFx.dispose());
+const cinematic=createCinematicWorld(scene,renderer,{profile:'kwon',coarse,reduced:reduceMotion});startup.own('Kwon cinematic PBR',()=>cinematic.dispose());
+const contactFx=createCinematicImpactFx(scene,{profile:'kwon',coarse,reduced:reduceMotion});startup.own('Kwon physical hit fragments',()=>contactFx.dispose());
 // Arena lifecycle bindings.
 let cameraVisibility=null;
 let stoppedAt=null,skinImage=null,resetStick=()=>{},unbindSession=()=>{};
