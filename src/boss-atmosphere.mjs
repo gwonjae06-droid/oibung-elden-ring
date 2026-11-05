@@ -140,9 +140,9 @@ export function createBossAtmosphere(scene,{
   root.add(mesh);
   return {mesh,life:0,maxLife:1,originX:0,originZ:0,big:false};
  });
- let phase=1,time=0,phaseMix=0,phaseFlash=0,impactCount=0,pulseCursor=0,disposed=false,lastMatrixTime=-1;
+ let phase=1,time=0,phaseMix=0,phaseFlash=0,impactCount=0,pulseCursor=0,disposed=false,lastMatrixTime=-1,lastCameraTime=-1,frameActive=false;
  function reset(){
-  phase=1;phaseMix=0;phaseFlash=0;time=0;impactCount=0;pulseCursor=0;lastMatrixTime=-1;
+  phase=1;phaseMix=0;phaseFlash=0;time=0;impactCount=0;pulseCursor=0;lastMatrixTime=-1;lastCameraTime=-1;frameActive=false;
   for(const p of pulses){p.life=0;p.mesh.visible=false;p.mesh.material.opacity=0;}
   bannerMat.emissiveIntensity=.035;emblemMat.emissiveIntensity=0;
   for(let i=0;i<cfg.plaques;i++)standards.setColorAt(i,working.copy(palette).lerp(accent,i%3===0?.26:.07));
@@ -173,6 +173,7 @@ export function createBossAtmosphere(scene,{
  function update(g,dt=0){
   if(disposed)return;
   const h=clamp(Number.isFinite(dt)?dt:0,0,.05);
+  frameActive=h>0;
   time+=h;
   // A new attempt must restore clean scenery; visual phase never edits g.
   const wanted=Math.max(1,Math.min(profile==='dice'?3:2,g?.boss?.phase||1));
@@ -227,6 +228,15 @@ export function createBossAtmosphere(scene,{
    standards.instanceMatrix.needsUpdate=true;emblems.instanceMatrix.needsUpdate=true;
   }
  }
+ // Small, bounded camera response AFTER each battle sets its own camera.
+ // One offset per rendered frame; never changes FOV, targeting or combat logic.
+ function cameraReaction(camera){
+  if(disposed||reduced||!frameActive||!camera||phaseFlash<=.06||lastCameraTime===time)return 0;
+  lastCameraTime=time;
+  const displacement=Math.sin(time*21.7)*Math.min(.115,phaseFlash*.07);
+  camera.position.y+=displacement;
+  return displacement;
+ }
  function dispose(){
   if(disposed)return;disposed=true;
   const geometries=new Set(),materials=new Set();
@@ -240,7 +250,7 @@ export function createBossAtmosphere(scene,{
   root.parent?.remove(root);
  }
  reset();
- return {root,reset,event,update,dispose,
+ return {root,reset,event,update,cameraReaction,dispose,
   stats:()=>({profile,theme:cfg.name,playRadius:cfg.playRadius,decorRadius:cfg.radius,
    standards:cfg.plaques,particles:quantity,contactWaves:pulses.length,
    phase,phaseMix,impactCount,realLights:0,soundGenerators:0,collidableProps:0})};
