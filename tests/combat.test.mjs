@@ -26,7 +26,7 @@ test('lock-on steers the player hit direction during windup when Kwon changes la
   assert.equal(act(g,'light'),true);
   // Boss sidesteps during the player's anticipation; the new location is
   // within attack reach but well outside the attack's original yaw cone.
-  g.boss.x=5.5;g.boss.z=1;
+  g.boss.x=3.2;g.boss.z=-1;
   tick(g,.5,{lock:locked});
   return g;
  };
@@ -37,9 +37,9 @@ test('lock-on steers the player hit direction during windup when Kwon changes la
  assert.equal(free.stats.hits,0);
 });
 
-test('melee connects at the visible edge of Kwon torso rather than an undersized centre radius',()=>{
+test('melee connects only when the actual forward blade reaches the visible torso',()=>{
  const g=createGame('sword',{register:false});g.boss.wait=99;
- g.player.x=0;g.player.z=2.4;g.player.yaw=Math.PI;
+ g.player.x=0;g.player.z=1.2;g.player.yaw=Math.PI;
  const before=g.boss.hp;assert.ok(act(g,'light'));
  tick(g,.5);
  assert.equal(before-g.boss.hp,WEAPONS.sword.damage);
@@ -49,12 +49,27 @@ test('physical ranged shots register near the visible torso rim in both phases',
  for(const phase of [1,2]){
   const g=createGame('bow',{register:false});g.boss.phase=phase;g.boss.wait=99;
   const abdomen=kwonVisibleHurtShapes(g.boss).find(s=>s.id==='abdomen');
-  assert.ok(abdomen&&abdomen.rx>2.8,'large abdomen uses its displaced visible centre');
+  assert.ok(abdomen&&abdomen.rx>2,'anatomical abdomen is smaller than the old phantom hit circle');
   const before=g.boss.hp;
-  g.projectiles.push({id:982,x:abdomen.x+abdomen.rx-.17,z:abdomen.z,yaw:0,speed:0,life:1,damage:22,poise:0,source:{basic:true},bossHit:false});
+  g.projectiles.push({id:982,x:abdomen.x+abdomen.rx-.17,y:abdomen.y,z:abdomen.z,yaw:0,speed:0,life:1,damage:22,poise:0,source:{basic:true},bossHit:false});
   step(g,1/120);
   assert.equal(before-g.boss.hp,22,phase+' rim shot lands once');
   assert.equal(g.stats.hits,1);
   assert.equal(g.projectiles.length,0,'non-piercing shot consumed');
  }
+});
+
+test('sword swing in empty air must not damage Kwon outside visible blade reach',()=>{
+ const g=createGame('sword',{register:false});g.boss.wait=99;
+ g.player.z=2.8;g.player.yaw=Math.PI;
+ const hp=g.boss.hp;assert.ok(act(g,'light'));tick(g,.6);
+ assert.equal(g.boss.hp,hp,'the boss cannot lose HP merely because it is roughly in range');
+ assert.equal(g.stats.hits,0);
+});
+test('a sword swing to the side of Kwon does not damage him',()=>{
+ const g=createGame('sword',{register:false});g.boss.wait=99;
+ g.player.z=1.2;g.player.yaw=Math.PI/2;
+ const hp=g.boss.hp;assert.ok(act(g,'light'));tick(g,.6);
+ assert.equal(g.boss.hp,hp);
+ assert.equal(g.stats.hits,0);
 });
