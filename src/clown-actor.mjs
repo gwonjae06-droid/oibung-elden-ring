@@ -7,13 +7,15 @@ import {cartoonPose} from './clown-cartoon.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
 import {createClownArmRig} from './clown-arm-rig.mjs';
 import {createClownCollapse} from './clown-collapse.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
  return runThreeStartup(THREE,(THREE,own)=>{
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
  const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
  const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
- const reduced=false,collapse=createClownCollapse();
+ const reduced=false,collapse=createClownCollapse(),balance=createSpringBank();
+ let lastGame=null,lastClock=-Infinity;
  const mesh=(geo,mat,x,y,z,parent=body)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;};
  const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');for(let i=0;i<16;i++){ctx.fillStyle=i%2?'#dfcfad':'#a61c33';ctx.fillRect(i*16,0,16,128);}ctx.fillStyle='#d4a83b';ctx.fillRect(0,56,256,16);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
  const ball=mesh(new THREE.SphereGeometry(2.6,40,28),new THREE.MeshStandardMaterial({map:tex,roughness:.6,transparent:true}),0,2.6,0,root);
@@ -35,10 +37,15 @@ export function createClownActor(){
   const death=collapse.update(g,dt,Boolean(globalThis.document?.hidden));
   const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0);if(F.inflate!==null)p.inflate=F.inflate;
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
+  if(lastGame!==g||time<lastClock){balance.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
   root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+rise+A.lift-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean;torso.position.y=2.25-crouch*.25;torso.scale.y=1.2+elongation*.18;
+  // Secondary costume-torso twist only: the camera, glove attack endpoints
+  // and authoritative collider remain on the unchanged actor root.
+  torso.rotation.y=balance.step('spine:y',-A.twist*.12,dt,12);
+  torso.rotation.z=balance.step('spine:z',v.tilt*-.018+A.lean*.035,dt,10);
   ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=(M?M.ballZ:0)+(death?.ballShift||0);ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025+(death?.ballShift||0)/2.6;
   mount.group.visible=Boolean(M?.visible);
   if(M?.visible){mount.group.position.set(0,M.y+rise-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6*A.headScale,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
@@ -54,7 +61,7 @@ export function createClownActor(){
    if(A.cameraGrip)hand=[s*1.7,2.5,2.9];
    const shoulder=[s*.9,3-crouch*.25,0],locked=Boolean(A.cameraGrip||A.clapClose!==null&&A.clapClose>.97||grip&&F.pose==='hold'||boss.state==='transition'),arm=L.arm.pose(shoulder,hand,dt,locked,g);hand=arm.hand;
    L.glove.scale.set((1+gloveCue*1.7)*A.glove,(1+gloveCue)*A.glove,(1+gloveCue*1.4)*A.glove);L.puff.position.set(...shoulder);L.cuff.scale.setScalar(Math.sqrt(A.glove));L.smear.visible=A.smear>.1;L.smear.position.set(...hand);L.smear.position.z-=.8;L.smear.scale.set(1,A.smear+1,1+A.smear*5);
-   const hip=[s*.45,1.25,0],knee=[s*.55,.65,.1+crouch*.4],foot=[s*.55,.1,.25];link(L.thigh,hip,knee);link(L.shin,knee,foot);L.knee.position.set(...knee);L.shoe.position.set(...foot);L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
+   const hip=[s*.45,1.25,0],knee=[s*.55+A.twist*.025,.65,.1+crouch*.4],foot=[s*.55,.1,.25];link(L.thigh,hip,knee);link(L.shin,knee,foot);L.knee.position.set(...knee);L.shoe.position.set(...foot);L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
   }
  }
  return {root,update,head};
