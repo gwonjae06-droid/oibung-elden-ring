@@ -1,8 +1,10 @@
+import {runEncoreVariant} from './clown-encore-shows.mjs';
 const cross=(a,t,v)=>a<v&&t>=v;
 export function runStageVariant(name,g,c,a,t,api){
  if(!['headReturn','runaway'].includes(name))return false;
- if(!Object.hasOwn(c.f,'stageVariant')){c.stageCounts??={};const n=c.stageCounts[name]||0;c.stageCounts[name]=n+1;c.f.stageVariant=n%2===1?(name==='headReturn'?'photo':'tilt'):'original';c.stageKey=c.f.stageVariant==='original'?null:c.f.stageVariant;}
+ if(!Object.hasOwn(c.f,'stageVariant')){c.stageCounts??={};const n=c.stageCounts[name]||0;c.stageCounts[name]=n+1;const modes=name==='headReturn'?['original','photo','confetti','curtain']:['original','tilt','encore'];c.f.stageVariant=modes[n%modes.length];c.stageKey=c.f.stageVariant==='original'?null:c.f.stageVariant;}
  const mode=c.f.stageVariant;if(mode==='original')return false;
+ if(runEncoreVariant(mode,g,c,a,t,api))return true;
  if(mode==='photo'){
   api.once(c,'stage-intro',()=>{api.emit(g,'clown-telegraph',{name:'이쪽 보세요, 찰칵!',key:'photoShow'});api.emit(g,'clown-inflate');});
   c.vis.glove=t<1.1?1:Math.max(0,1-(t-1.1)*2);c.vis.tilt=t<1.1?-.5:0;

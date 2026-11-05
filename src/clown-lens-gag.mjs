@@ -1,3 +1,4 @@
+import {updateClownCurtains} from './clown-curtain-gag.mjs';
 const saved=new WeakMap();
 export function clownLensCue(g){
  const c=g?.clown,t=c?.pt;
@@ -11,6 +12,7 @@ export function clownLensCue(g){
 export function restoreClownLens(canvas){const old=canvas&&saved.get(canvas);if(!old)return;canvas.style.transform=old.transform;canvas.style.transformOrigin=old.origin;saved.delete(canvas);}
 export function updateClownLens(g,doc=globalThis.document){
  const canvas=doc?.getElementById?.('clown-battle')?.firstElementChild?.shadowRoot?.getElementById?.('world');if(!canvas?.style)return;
+ updateClownCurtains(g,canvas);
  let old=saved.get(canvas);if(old&&old.game!==g){restoreClownLens(canvas);old=null;}
  const cue=clownLensCue(g);if(!cue.active){restoreClownLens(canvas);return;}
  if(!old){old={game:g,transform:canvas.style.transform,origin:canvas.style.transformOrigin};saved.set(canvas,old);}
