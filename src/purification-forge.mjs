@@ -14,7 +14,7 @@ export function sanitizeForge(input){
  for(const [weapon,branches]of Object.entries(clean)){
   const saved=input[weapon];
   if(!saved||typeof saved!=='object'||Array.isArray(saved))continue;
-  for(const id of Object.keys(branches))branches[id]=safeInt(saved[id],FORGE_MAX_TIER);
+  for(const id of Object.keys(branches)){const tier=saved[id];branches[id]=Number.isSafeInteger(tier)&&tier>=0&&tier<=FORGE_MAX_TIER?tier:0;}
  }
  return clean;
 }
