@@ -38,13 +38,15 @@ try{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
   const session=readBattleSession(root),game=session.game,d=session.diagnostics();
-  return {phase:game.boss.phase,status:game.status,
+  return {phase:game.boss.phase,status:game.status,dialogOpen:document.querySelector('#blood-battle').open,menuDisplay:getComputedStyle(root.getElementById('menu')).display,
    geometry:d.graphics?.geometries??d.graphics?.geometry??0,
    drawCalls:d.calls,cathedral:d.view?.cathedral};
  });
  const initial=await report();
  assert.equal(initial.cathedral?.windows,12,'desktop must show all windows');
  assert.ok(initial.drawCalls>0,'real WebGL frame did not render');
+ assert.equal(initial.dialogOpen,true,'the boss battle dialog must be open');
+ assert.equal(initial.menuDisplay,'none','the cloned main menu must not obscure the battle');
  await page.screenshot({path:'artifacts/blood-cathedral/phase1-white-cathedral.png'});
  await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
