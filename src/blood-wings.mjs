@@ -109,7 +109,7 @@ export function createBloodWings(parent,fluid,quality,{reduced=false}={}){
   }
   sides.push({pivot,elbow,wrist,webs,digits,veins:edgeVeins,side});
  }
- let previousYaw=null,inertia=0,wingLift=0,wingFold=0,wingCurl=0,wingSlash=0,wingDownbeat=0;
+ let previousYaw=null,inertia=0,wingLift=0,wingFold=0,wingCurl=0,wingSlash=0,wingDownbeat=0,wingTrailing=0;
  function update(g,c,dt,pose={}){
   const delta=clamp(Number.isFinite(dt)?dt:0,0,.1);
   const yaw=g.boss.yaw||0;
@@ -125,6 +125,7 @@ export function createBloodWings(parent,fluid,quality,{reduced=false}={}){
   wingCurl=follow(wingCurl,target.curl||0);
   wingSlash=follow(wingSlash,target.sweep||0);
   wingDownbeat=follow(wingDownbeat,target.downbeat||0);
+  wingTrailing=follow(wingTrailing,pose.followThrough||0);
   const moving=g.boss.state==='pattern',t=g.time||0;
   const breathe=reduced?0:Math.sin(t*(moving?2.8:1.25))*.035;
   for(const {pivot,elbow,wrist,webs,digits,side} of sides){
@@ -135,22 +136,24 @@ export function createBloodWings(parent,fluid,quality,{reduced=false}={}){
    // Local +X points away from the spine for BOTH mirrored shoulders. Folding
    // turns the wings back, not inward through the torso.
    pivot.rotation.y=.14+wingFold*1.08+inertia*.5;
-   pivot.rotation.z=.12+wingLift*.5+(side>0?wingSlash*.69:-wingSlash*.24)-wingDownbeat*.26+breathe;
+   pivot.rotation.z=.12+wingLift*.5+(side>0?wingSlash*.69:-wingSlash*.24)-wingDownbeat*.35+wingTrailing*.1+breathe;
    pivot.rotation.x=(reduced?0:Math.sin(t*1.4+side)*.025)+wingFold*.13;
-   elbow.rotation.z=-.08+wingCurl*.42+wingLift*.12-(reduced?0:Math.sin(t*1.8+side)*.04);
+   elbow.rotation.z=-.08+wingCurl*.42+wingLift*.12-wingDownbeat*.19+wingTrailing*.09-(reduced?0:Math.sin(t*1.8+side)*.04);
    elbow.rotation.y=wingFold*.2+inertia*.12;
-   wrist.rotation.z=.07+wingCurl*.22+(side>0?wingSlash*.2:-wingSlash*.12)+(reduced?0:Math.sin(t*2.2+side)*.03);
+   wrist.rotation.z=.07+wingCurl*.22+(side>0?wingSlash*.2:-wingSlash*.12)-wingDownbeat*.24+wingTrailing*.13+(reduced?0:Math.sin(t*2.2+side)*.03);
    wrist.rotation.x=(reduced?0:Math.sin(t*1.7+side)*.04);
    for(let i=0;i<webs.length;i++){
     const birth=c.active?smooth(2.6+i*.055,3.6+i*.045,c.t):membraneBirth;
     const mesh=webs[i];mesh.visible=birth>.008;
     mesh.scale.setScalar(Math.max(.001,birth));
+    // Small delayed ripples belong to the joint, not a disconnected plane.
+    mesh.rotation.x=wingTrailing*.035*Math.sin(i*1.4+side)+(reduced?0:Math.sin(t*2.4-i*.7)*.012);
    }
    for(const digit of digits)digit.visible=boneBirth>.008;
   }
  }
  function clear(){
-  previousYaw=null;inertia=wingLift=wingFold=wingCurl=wingSlash=wingDownbeat=0;
+  previousYaw=null;inertia=wingLift=wingFold=wingCurl=wingSlash=wingDownbeat=wingTrailing=0;
   for(const {pivot,elbow,wrist}of sides){pivot.rotation.set(0,0,0);elbow.rotation.set(0,0,0);wrist.rotation.set(0,0,0);}
  }
  return {update,clear,sides,veins,dispose(){bone.dispose();ivory.dispose();tips.dispose();webMat.dispose();}};
