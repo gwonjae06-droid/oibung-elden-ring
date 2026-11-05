@@ -1,104 +1,100 @@
-// Arena-space silhouettes for Kwon's transforming model. The boss's root
-// is at his locomotion pivot, NOT at his abdomen or the face visible to players.
-// The horizontal projection is a union of anatomical ellipses, not one giant
-// circular area centred on the root.
-const RAD=1e-8, MARGIN=.12;
+// Physical (x,y,z) hit silhouettes for Kwon. The root is a locomotion pivot;
+// his tilted abdomen, armour, and detached head do not follow that pivot's circle.
+// Collision is resolved against swept weapon/projectile segments, not proximity.
+const EPS=1e-8;
+const DEFAULT_SKIN=.12;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-
+const finite=n=>typeof n==='number'&&Number.isFinite(n);
 function toWorld(b,local){
- const yaw=Number.isFinite(b.yaw)?b.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
+ const yaw=finite(b.yaw)?b.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
  return {x:b.x+local.x*c+local.z*s,y:local.y,z:b.z+local.z*c-local.x*s};
 }
-export function kwonHurtShapes(b,{point,angle=0,scale=1.4,headAttached=true}){
- const ellipsoid=(id,local,rx,rz)=>{
+export function kwonHurtShapes(b,{point,angle=0,scale=1.4,headAttached=true}={}){
+ const ellipsoid=(id,local,rx,ry,rz)=>{
   const w=toWorld(b,point(local));
-  return {id,x:w.x,y:w.y,z:w.z,rx,rz,yaw:b.yaw};
+  return {id,x:w.x,y:w.y,z:w.z,rx,ry,rz,yaw:b.yaw};
  };
- // The abdomen is a large, forward-facing ellipsoid with its physical centre
- // behind the motion root. Tilting in phase 2 compresses its horizontal depth.
  const c=Math.cos(angle),s=Math.sin(angle);
+ // The abdomen's actual authored mesh is scaled .82/.90/.72 by the knight
+ // armour pass. Previous hitbox ignored this and extended into empty space.
+ const abdomenY=1.785*.9,abdomenZ=2.625*.72;
+ const chestY=1.2*.88,chestZ=1.5*.85;
+ const tilt=(y,z)=>({
+  ry:Math.hypot(y*c,z*s)*scale,
+  rz:Math.hypot(z*c,y*s)*scale
+ });
+ const abdomen=tilt(abdomenY,abdomenZ),chest=tilt(chestY,chestZ);
  const shapes=[
-  ellipsoid('abdomen',{x:0,y:2.1,z:-1.5},
-   2.1*scale,Math.hypot(2.625*c,1.785*s)*scale),
-  ellipsoid('chest',{x:0,y:2.1,z:.8},
-   1.5*scale,Math.hypot(1.5*c,1.2*s)*scale)
+  ellipsoid('abdomen',{x:0,y:2.1,z:-1.5},2.1*.82*scale,abdomen.ry,abdomen.rz),
+  ellipsoid('chest',{x:0,y:2.1,z:.8},1.5*scale,chest.ry,chest.rz)
  ];
- if(headAttached)shapes.push(ellipsoid('head',{x:0,y:2.75,z:1.75},1.12*scale,1.12*scale));
+ if(headAttached)shapes.push(ellipsoid('head',{x:0,y:2.75,z:1.75},1.12*scale,1.12*scale,1.12*scale));
  return shapes;
 }
 function localDelta(shape,p){
- const dx=p.x-shape.x,dz=p.z-shape.z,yaw=Number.isFinite(shape.yaw)?shape.yaw:0;
- const c=Math.cos(yaw),s=Math.sin(yaw);
- return {x:dx*c-dz*s,z:dx*s+dz*c};
+ const dx=p.x-shape.x,dz=p.z-shape.z,yaw=finite(shape.yaw)?shape.yaw:0,
+  c=Math.cos(yaw),s=Math.sin(yaw);
+ return {x:dx*c-dz*s,y:p.y-shape.y,z:dx*s+dz*c};
 }
-function ellipseDistance(shape,p,radius=0){
- const d=localDelta(shape,p),rx=shape.rx+radius,rz=shape.rz+radius;
- return Math.hypot(d.x/rx,d.z/rz);
+function normalizedPoint(shape,p,pad=0){
+ const d=localDelta(shape,p);
+ return {x:d.x/(shape.rx+pad),y:d.y/(shape.ry+pad),z:d.z/(shape.rz+pad)};
 }
-function nearestSurface(shape,p){
- const d=localDelta(shape,p),rx=shape.rx,rz=shape.rz,u=Math.hypot(d.x/rx,d.z/rz);
- let x=rx,z=0;
- if(u>RAD&&u<=1){
-  // Inside the volume, report a meaningful outward contact for hit effects.
-  x=d.x/u;z=d.z/u;
- }else if(u>1){
-  // Exact closest point on an ellipse, found by bounded Lagrange multiplier
-  // search. This avoids 'phantom' melee hits at the broad diagonal corners.
-  const xx=rx*rx,zz=rz*rz,
-   fn=t=>xx*d.x*d.x/(t+xx)**2+zz*d.z*d.z/(t+zz)**2-1;
-  let lo=0,hi=1;
-  while(fn(hi)>0)hi*=2;
-  for(let i=0;i<23;i++){
-   const mid=(lo+hi)*.5;
-   if(fn(mid)>0)lo=mid;else hi=mid;
-  }
-  const t=(lo+hi)*.5;x=xx*d.x/(t+xx);z=zz*d.z/(t+zz);
- }
- const yaw=Number.isFinite(shape.yaw)?shape.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
- return {x:shape.x+x*c+z*s,y:shape.y,z:shape.z+z*c-x*s};
-}
-export function kwonHurtContact(shapes,p,{reach=0,yaw=null}={}){
- let best=null,score=Infinity;
- for(const shape of shapes){
-  const inside=ellipseDistance(shape,p)<=1;
-  const contact=nearestSurface(shape,p);
-  const actualDistance=inside?0:distance(contact,p);
-  if(actualDistance>reach+MARGIN)continue;
-  // Attacks have a facing requirement; this is evaluated against the actual
-  // silhouette, not the locomotion pivot far behind the chest.
-  const heading=Math.atan2(shape.x-p.x,shape.z-p.z);
-  const aiming=yaw===null||Math.abs(Math.atan2(Math.sin(heading-yaw),Math.cos(heading-yaw)))<1.25;
-  if(!aiming)continue;
-  if(actualDistance<score){score=actualDistance;best={...contact,part:shape.id};}
- }
- return best;
-}
-function normalizedPoint(shape,p,extra=0){
- const d=localDelta(shape,p);return {x:d.x/(shape.rx+extra),z:d.z/(shape.rz+extra)};
-}
-function segmentEllipseEntry(a,b){
- const dx=b.x-a.x,dz=b.z-a.z,aa=dx*dx+dz*dz,bb=2*(a.x*dx+a.z*dz),
-  cc=a.x*a.x+a.z*a.z-1;
- if(cc<=0)return {t:0,depth:Math.hypot(a.x,a.z)};
- if(aa<RAD)return null;
- const delta=bb*bb-4*aa*cc;if(delta<0)return null;
- const t=(-bb-Math.sqrt(delta))/(2*aa);
+function segmentEllipsoidEntry(a,b){
+ const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,
+  A=dx*dx+dy*dy+dz*dz,
+  B=2*(a.x*dx+a.y*dy+a.z*dz),
+  C=a.x*a.x+a.y*a.y+a.z*a.z-1;
+ if(C<=0)return {t:0,depth:Math.sqrt(Math.max(0,C+1))};
+ if(A<EPS)return null;
+ const delta=B*B-4*A*C;if(delta<0)return null;
+ const t=(-B-Math.sqrt(delta))/(2*A);
  if(t<0||t>1)return null;
  return {t,depth:1};
 }
-export function kwonProjectileContact(shapes,from,to){
+function toShapeContact(shape,p){
+ // Project a ray from the ellipsoid centre through the impact onto its skin.
+ const d=localDelta(shape,p),u=Math.hypot(d.x/shape.rx,d.y/shape.ry,d.z/shape.rz);
+ const factor=u>EPS?1/u:0,x=d.x*factor,y=d.y*factor,z=d.z*factor,
+  yaw=finite(shape.yaw)?shape.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
+ return {x:shape.x+x*c+z*s,y:shape.y+y,z:shape.z+z*c-x*s,part:shape.id};
+}
+export function kwonProjectileContact(shapes,from,to,{padding=DEFAULT_SKIN}={}){
+ if(!Array.isArray(shapes)||!from||!to||!['x','z'].every(k=>finite(from[k])&&finite(to[k])))return null;
  let best=null,first=Infinity,bestDepth=Infinity;
  for(const shape of shapes){
-  const a=normalizedPoint(shape,from,MARGIN),b=normalizedPoint(shape,to,MARGIN);
-  const entry=segmentEllipseEntry(a,b);
-  if(!entry)continue;
-  // The first intersected physical part wins. If a shot begins inside
-  // overlapping parts, report the more central body part, not whichever
-  // primitive happens to be first in the array.
-  if(entry.t>first+RAD||Math.abs(entry.t-first)<RAD&&entry.depth>=bestDepth)continue;
-  first=entry.t;bestDepth=entry.depth;
-  const p={x:from.x+(to.x-from.x)*entry.t,z:from.z+(to.z-from.z)*entry.t};
-  best={...nearestSurface(shape,p),part:shape.id};
+  // Legacy shape-only probes without a y coordinate use the shape's own
+  // midsection. All real projectiles pass explicit physical flight height.
+  const a=normalizedPoint(shape,{...from,y:finite(from.y)?from.y:shape.y},padding);
+  const b=normalizedPoint(shape,{...to,y:finite(to.y)?to.y:shape.y},padding);
+  const hit=segmentEllipsoidEntry(a,b);if(!hit)continue;
+  if(hit.t>first+EPS||Math.abs(hit.t-first)<=EPS&&hit.depth>=bestDepth)continue;
+  first=hit.t;bestDepth=hit.depth;
+  const point={x:from.x+(to.x-from.x)*hit.t,y:finite(from.y)&&finite(to.y)?from.y+(to.y-from.y)*hit.t:shape.y,
+   z:from.z+(to.z-from.z)*hit.t};
+  best=toShapeContact(shape,point);
+ }
+ return best;
+}
+export function kwonMeleeContact(shapes,p,{reach=0,yaw=0,height=1.55,bladeRadius=.20}={}){
+ if(!finite(reach)||reach<=0||!finite(yaw)||!finite(p?.x)||!finite(p?.z))return null;
+ // The player's rendered blade spans ~2m beyond the grip. Its horizontal
+ // swing is a NARROW swept corridor in the facing direction, not a full
+ // radius around the player or a 143-degree aim cone.
+ const dx=Math.sin(yaw),dz=Math.cos(yaw);
+ const start={x:p.x+dx*.18,y:height,z:p.z+dz*.18},
+  tip={x:p.x+dx*reach,y:height,z:p.z+dz*reach};
+ return kwonProjectileContact(shapes,start,tip,{padding:bladeRadius});
+}
+// Legacy helper kept for existing diagnostic callers; gameplay uses
+// kwonMeleeContact with a directional blade segment.
+export function kwonHurtContact(shapes,p,{reach=0,yaw=null}={}){
+ if(yaw!==null)return kwonMeleeContact(shapes,p,{reach,yaw});
+ let best=null,closest=Infinity;
+ for(const shape of shapes){
+  const aim=Math.atan2(shape.x-p.x,shape.z-p.z);
+  const hit=kwonMeleeContact([shape],p,{reach,yaw:aim});
+  if(hit){const d=distance(hit,p);if(d<closest){closest=d;best=hit;}}
  }
  return best;
 }
