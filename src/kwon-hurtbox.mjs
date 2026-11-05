@@ -98,3 +98,27 @@ export function kwonHurtContact(shapes,p,{reach=0,yaw=null}={}){
  }
  return best;
 }
+
+export function kwonPlayerSeparation(shapes,p,{radius=.46,height=1.15}={}){
+ // Collision with the body at the PLAYER'S height, not a fixed three-metre
+ // circle around the boss motion pivot. A phase-two torso tilts far behind
+ // that pivot, so the old rule forcibly teleported players away from its skin.
+ if(!finite(p?.x)||!finite(p?.z))return null;
+ let x=p.x,z=p.z,changed=false;
+ for(let pass=0;pass<2;pass++){
+  for(const shape of shapes){
+   const vertical=Math.abs(height-shape.y);
+   if(vertical>=shape.ry+.5)continue;
+   const slice=Math.sqrt(Math.max(0,1-(vertical/(shape.ry+.5))**2));
+   const rx=shape.rx*slice+radius,rz=shape.rz*slice+radius;
+   const d=localDelta(shape,{x,y:height,z});
+   let u=Math.hypot(d.x/rx,d.z/rz);
+   if(u>=1||!Number.isFinite(u))continue;
+   const localX=u>EPS?d.x/u:0,localZ=u>EPS?d.z/u:rz+.012;
+   const yaw=finite(shape.yaw)?shape.yaw:0,c=Math.cos(yaw),s=Math.sin(yaw);
+   const nx=shape.x+localX*c+localZ*s,nz=shape.z+localZ*c-localX*s;
+   if(Math.hypot(nx-x,nz-z)>EPS){x=nx;z=nz;changed=true;}
+  }
+ }
+ return changed?{x,z}:null;
+}
