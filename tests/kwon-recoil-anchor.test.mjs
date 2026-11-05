@@ -49,7 +49,7 @@ test('semicolon developer hits cannot permanently displace Kwon visual position'
   fx.bossPose(m);
   assert.ok(Math.abs(m.position.x)<.6);
  }
- fx.update(1);
+ for(let frame=0;frame<40;frame++)fx.update(1/60);
  anchorKwonVisualModel(m,0);fx.bossPose(m);
  assert.equal(m.position.x,0);
  fx.dispose();
