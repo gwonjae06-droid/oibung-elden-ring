@@ -41,7 +41,8 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
   scene.add(new THREE.HemisphereLight(0xfffbf1,0xbbb7b0,1.7));const sun=new THREE.DirectionalLight(0xfff3df,2.25);sun.position.set(19,38,16);scene.add(sun);
   const chapel=buildBloodView(scene,{coarse,reduced});startup.own('Blood view',()=>chapel.dispose());const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);
    const cinematic=createCinematicWorld(scene,renderer,{profile:'blood',coarse,reduced});startup.own('Blood cinematic PBR',()=>cinematic.dispose());
-   cinematic.apply(scene);cinematic.apply(player.rig,{actor:true});
+   cinematic.apply(scene.getObjectByName('blood-white-cathedral'));
+   cinematic.apply(chapel.root,{actor:true});cinematic.apply(player.rig,{actor:true});
    const contactFx=createCinematicImpactFx(scene,{profile:'blood',coarse,reduced});startup.own('Blood physical hit fragments',()=>contactFx.dispose());const traitView=createBossHitTraitView(scene,player.body,shell,{reduced});startup.own('Blood trait view',()=>traitView.dispose());const camera=new THREE.PerspectiveCamera(62,1,.1,160);
   const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const ctx=new C();contexts.push(ctx);if(startup.pending)startup.own('Blood audio context',()=>ctx.close?.());return ctx;};
   const bloodSfx=createBossSfx();startup.own('Blood foley',()=>bloodSfx.dispose());
