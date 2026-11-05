@@ -1,4 +1,5 @@
 import {playerIncapacitated} from './boss-hit-traits.mjs';
+import {playerStaminaCost} from './balance.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createSkillState, consumeSkill, SKILLS} from './skills.mjs';
@@ -122,7 +123,7 @@ export function actPlayer(game, type) {
     weapon = WEAPONS[game.weapon],
     skill = player.skill;
   if(game.status!=='playing'||game.startGrace>0||playerIncapacitated(player))return false;
-  if(type==='charge-release'&&player.action?.kind==='charging'){const held=player.action.t;player.action=null;const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=weapon.cost+10*u;if(player.stamina<cost)return false;player.stamina-=cost;player.regen=.85;player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,done:false,hit:false,basic:true,mult:1+(2+.5*Math.max(0,evolutionCount(game,'charged-blade')-1))*u,charged:u>0};emit(game,'attack-start');return true;}
+  if(type==='charge-release'&&player.action?.kind==='charging'){const held=player.action.t;player.action=null;const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=playerStaminaCost(weapon.cost+10*u);if(player.stamina<cost)return false;player.stamina-=cost;player.regen=.85;player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,done:false,hit:false,basic:true,mult:1+(2+.5*Math.max(0,evolutionCount(game,'charged-blade')-1))*u,charged:u>0};emit(game,'attack-start');return true;}
   if(type==='roll'&&player.action?.kind==='charging')player.action=null;
   if (
     game.status !== 'playing' ||
@@ -139,7 +140,7 @@ export function actPlayer(game, type) {
     return true;
   }
   if (type === 'roll') {
-    const cost=game.journey?.rollCost??25;
+    const cost=playerStaminaCost(game.journey?.rollCost??25);
     if (player.stamina < cost) return false;
     player.stamina -= cost;
     player.regen = 0.85;
@@ -169,7 +170,7 @@ export function actPlayer(game, type) {
     }
     return true;
   }
-  const attackCost=weapon.cost+(game.journey?.cost??0);
+  const attackCost=playerStaminaCost(weapon.cost+(game.journey?.cost??0));
   if (type !== 'light' || player.stamina < attackCost) return false;
   player.stamina -= attackCost;
   player.regen = 0.85;
