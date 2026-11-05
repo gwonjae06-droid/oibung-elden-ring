@@ -2,6 +2,7 @@ import {hurt} from './clown-combat.mjs';
 import {stepShowClown as baseStep} from './clown-show-runtime.mjs';
 import {segmentGap} from './clown-pressure.mjs';
 import {updateClownLens} from './clown-lens-gag.mjs';
+import {slowClownThrow} from './clown-throw-speed.mjs';
 export const CLOWN_SIZE=1.25;
 export const CLOWN_BODY_RADIUS=3.3*CLOWN_SIZE;
 // In phase two the clown stands on a head-ball that is 1.5x bigger, so his solid body grows a little too.
@@ -15,7 +16,7 @@ export function createLargeClownStepper(step=baseStep,damage=hurt){return functi
  step(g,dt,input);
  updateClownLens(g);
  const c=g.clown,b=g.boss,p=g.player;
- for(const q of c.bombs){if(!scaledBombs.has(q)){q.from.y*=CLOWN_SIZE;scaledBombs.add(q);}}
+ for(const q of c.bombs){if(!scaledBombs.has(q)){q.from.y*=CLOWN_SIZE;slowClownThrow(c,q);scaledBombs.add(q);}}
  if(c.name==='dash'&&!c.showKey)for(const z of c.zones)if(z.shape==='lane'&&z.visual)z.w=CLOWN_BODY_RADIUS*2;
  if(g.status!=='playing'||b.state==='transition'||g.time===time)return;
  const dashAdvanced=c.pt>oldPt&&Math.hypot(b.x-oldBoss.x,b.z-oldBoss.z)>1e-6;
