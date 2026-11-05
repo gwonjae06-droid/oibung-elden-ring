@@ -25,7 +25,12 @@ export function createBloodLegRig(actor,{dark,metal,edge}){
   for(let i=0;i<2;i++){
    const {hip,knee,ankle}=legs[i],foot=feet[i];target.set(foot.x,foot.y+air*.42*scale,foot.z-air*.3*scale);actor.worldToLocal(target);
    axis.copy(target).sub(hip.position);const d=Math.max(.04,Math.min(2*L-.0001,axis.length()));axis.normalize();
-   bend.copy(hint).addScaledVector(axis,-hint.dot(axis)).normalize();
+   // Keep the knee bend pole valid even when the foot briefly lines up with it.
+   // Degenerate targets must not produce undefined quaternions during a phase change.
+   if(axis.lengthSq()<.5)axis.set(0,-1,0);
+   bend.copy(hint).addScaledVector(axis,-hint.dot(axis));
+   if(bend.lengthSq()<1e-7){bend.set(1,0,0).addScaledVector(axis,-axis.x);}
+   bend.normalize();
    elbow.copy(hip.position).addScaledVector(axis,d/2).addScaledVector(bend,Math.sqrt(Math.max(0,L*L-d*d/4)));
    upper.copy(elbow).sub(hip.position).normalize();lower.copy(hip.position).addScaledVector(axis,d).sub(elbow).normalize();
    hipQ.setFromUnitVectors(down,upper);shinQ.setFromUnitVectors(down,lower);
