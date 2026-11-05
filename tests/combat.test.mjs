@@ -18,3 +18,21 @@ test('boss hit is at most once per attack',()=>{const g=createGame();startPatter
 test('defeated boss ends combat; retry creates clean state',()=>{const g=createGame();g.boss.wait=50;g.boss.hp=1;g.player.z=0;g.player.yaw=Math.PI;act(g,'light');tick(g,.6);assert.equal(g.status,'won');const hp=g.player.hp;tick(g,5);assert.equal(g.player.hp,hp);assert.equal(act(g,'light'),false);const n=createGame();assert.equal(n.boss.maxHp,2100);assert.equal(n.boss.hp,n.boss.maxHp);assert.equal(n.player.potions,3);});
 test('stamina recovery and arena bounds',()=>{const g=createGame();g.player.stamina=0;g.boss.wait=999;tick(g,1);assert.ok(g.player.stamina>20);tick(g,10,{x:1,z:1});assert.ok(Math.hypot(g.player.x,g.player.z)<=23.001);});
 test('segment projection includes endpoints',()=>{assert.equal(segmentDistance({x:2,z:2},{x:0,z:0},{x:0,z:4}),2);assert.equal(segmentDistance({x:0,z:6},{x:0,z:0},{x:0,z:4}),2);});
+
+test('lock-on steers the player hit direction during windup when Kwon changes lanes',()=>{
+ const make=locked=>{
+  const g=createGame('sword',{register:false});g.boss.wait=100;
+  g.player.x=g.player.z=0;g.player.yaw=Math.PI;
+  assert.equal(act(g,'light'),true);
+  // Boss sidesteps during the player's anticipation; the new location is
+  // within attack reach but well outside the attack's original yaw cone.
+  g.boss.x=5.5;g.boss.z=1;
+  tick(g,.5,{lock:locked});
+  return g;
+ };
+ const locked=make(true),free=make(false);
+ assert.equal(locked.boss.hp,locked.boss.maxHp-WEAPONS.sword.damage);
+ assert.equal(locked.stats.hits,1);
+ assert.equal(free.boss.hp,free.boss.maxHp);
+ assert.equal(free.stats.hits,0);
+});
