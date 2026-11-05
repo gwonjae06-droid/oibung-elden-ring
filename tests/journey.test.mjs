@@ -21,6 +21,29 @@ test('flame shortcut targets the highest consecutively unlocked playable boss',(
  p.defeated=['kwon','blood'];assert.equal(newFlameRun(p).stage,1);
  p.flames=0;assert.equal(newFlameRun(p),null);
 });
+test('flame selection can target any unlocked boss but cannot skip a locked gate',()=>{
+ const p=freshProfile();p.flames=4;p.defeated=['kwon','clown','dice'];
+ for(const stage of [1,2,3]){
+  const run=newFlameRun(p,'bow',stage);
+  assert.equal(run.stage,stage);assert.equal(run.startStage,stage);
+  assert.equal(run.skipFlamePending,true);
+  assert.equal(p.flames,4);
+ }
+ for(const stage of [-1,0,4,1.2,'2',null,NaN]){
+  assert.equal(newFlameRun(p,'bow',stage),null,'invalid destination '+stage);
+ }
+ const chosen=newFlameRun(p,'cards',1);
+ assert.equal(consumeFlameSkip(p,chosen),true);
+ assert.equal(p.flames,3,'a chosen earlier boss costs exactly one flame');
+ assert.equal(consumeFlameSkip(p,chosen),false);
+ const stale=newFlameRun(p,'sword',3);
+ p.defeated=['kwon'];
+ assert.equal(consumeFlameSkip(p,stale),false,'recheck unlocks before charging');
+ assert.equal(p.flames,3);
+ assert.equal(newFlameRun(p,'sword',2),null);
+ assert.equal(newFlameRun(p,'sword',1)?.stage,1);
+});
+
 test('a shortcut pays once, validates the gate again, and remains session-only',()=>{
  const p=freshProfile();p.flames=2;p.defeated=['kwon','clown'];const r=newFlameRun(p);
  assert.equal(consumeFlameSkip(p,{...r,stage:3,startStage:3}),false);
