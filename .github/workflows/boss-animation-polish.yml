@@ -1,0 +1,22 @@
+name: Boss secondary animation realism and rig regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  animation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js and Playwright core for procedural rig tests
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Regress physical gait, joints, body and wing cloth motion
+        run: |
+          node --test tests/boss-animation-polish.test.mjs tests/kwon-torso-rig.test.mjs tests/kwon-neck-rig.test.mjs tests/kwon-leg-rig.test.mjs tests/boss-motion.test.mjs tests/clown-arm-rig.test.mjs tests/clown-patterns.test.mjs tests/dice-giant-motion.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-attack-animation.test.mjs tests/attack-readability.test.mjs
