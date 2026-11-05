@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: '20'
       - name: Verify 1.5x dice weak head, 1.3x blood landing and canonical journey HP
-        run: node --test tests/journey-weakpoint-balancing.test.mjs tests/journey.test.mjs tests/combat-hit.test.mjs tests/dice-giant.test.mjs tests/blood.test.mjs
+        run: node --test tests/journey-weakpoint-balancing.test.mjs tests/journey.test.mjs tests/combat-hit.test.mjs tests/dice-weakness.test.mjs tests/blood.test.mjs
