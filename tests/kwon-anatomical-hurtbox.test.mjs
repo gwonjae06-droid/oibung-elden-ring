@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,step,act,WEAPONS,kwonVisibleHurtShapes} from '../src/combat.mjs';
+import {createGame,step,act,WEAPONS,kwonVisibleHurtShapes,kwonBossAimPoint} from '../src/combat.mjs';
 import {kwonHurtContact,kwonProjectileContact} from '../src/kwon-hurtbox.mjs';
 
 const setup=(phase=1)=>{const g=createGame('bow',{register:false});
@@ -67,4 +67,20 @@ test('melee near the visible head reaches the boss and shows a head-local impact
  const impact=g.events.find(e=>e.type==='boss-hit');
  assert.ok(impact&&impact.z>g.boss.z);
  assert.ok(['head','chest','abdomen'].includes(impact.part));
+});
+
+test('lock-on follows the real chest rather than the boss locomotion root',()=>{
+ const g=setup(1),p=g.player;
+ p.x=8;p.z=0;
+ const chest=kwonVisibleHurtShapes(g.boss).find(s=>s.id==='chest');
+ assert.deepEqual(kwonBossAimPoint(g.boss),chest);
+ step(g,1/120,{lock:true});
+ const wanted=Math.atan2(chest.x-p.x,chest.z-p.z);
+ assert.ok(Math.abs(Math.atan2(Math.sin(p.yaw-wanted),Math.cos(p.yaw-wanted)))<1e-8);
+});
+test('diagonal melee cannot hit empty space beside the abdomen',()=>{
+ const shapes=kwonVisibleHurtShapes(setup(1).boss);
+ const ghost={x:6.8,z:-4};
+ const contact=kwonHurtContact(shapes,ghost,{reach:3.5,yaw:-Math.PI/2});
+ assert.equal(contact,null);
 });
