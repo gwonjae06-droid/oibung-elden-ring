@@ -1,0 +1,29 @@
+name: All boss physical hitbox regression
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hitboxes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install the Three.js dependency used by shared tests
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check damage against all four visible boss bodies
+        run: >
+          node --test
+          tests/all-boss-physical-hitboxes.test.mjs
+          tests/kwon-anatomical-hurtbox.test.mjs
+          tests/combat.test.mjs
+          tests/clown-engine.test.mjs
+          tests/dice-player.test.mjs
+          tests/dice-giant.test.mjs
+          tests/blood.test.mjs
