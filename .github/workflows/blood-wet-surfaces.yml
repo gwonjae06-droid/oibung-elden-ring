@@ -1,0 +1,22 @@
+name: Blood wall splashes, body rivulets and merged droplets
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wet-surfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js and battle fixtures
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify walls, rigged streams, merging, fluid performance and no combat regression
+        run: |
+          node --test tests/blood-wall-surface-merging.test.mjs tests/blood-hydrodynamics.test.mjs tests/blood-fluid.test.mjs tests/blood-cathedral-sea.test.mjs tests/blood-siphon.test.mjs tests/blood-render.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-airborne-projectiles.test.mjs
