@@ -10,6 +10,7 @@ import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
+import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -203,6 +204,12 @@ export function kwonBossAimPoint(b){
  // The same centre of the visible chest drives player targeting and hurt tests.
  const chest=kwonVisibleHurtShapes(b).find(s=>s.id==='chest');
  return chest||b;
+}
+export function encounterBossHurtShapes(g){
+ return g.clown?clownHurtShapes(g):kwonVisibleHurtShapes(g.boss);
+}
+export function encounterBossAimPoint(g){
+ return g.clown?clownAimPart(g):kwonBossAimPoint(g.boss);
 }
 export function bodyPoint(b, p) {
   const q = bodyPose(b),
@@ -638,14 +645,14 @@ export function step(g, dt, input = {}) {
     p.z += (mz / Math.max(1, mag)) * speed * dt;
   }
   if (!p.action) {
-    if (input.lock) p.yaw = toward(p, kwonBossAimPoint(b));
+    if (input.lock) p.yaw = toward(p, encounterBossAimPoint(g));
     else if (mag) p.yaw = Math.atan2(mx, mz);
   }
   // Lock-on follows the boss during the attack's preparatory frames. The
   // previously frozen initial yaw let fast bosses escape an apparently aimed hit.
   const action=p.action;
   if(input.lock&&action&&['attack','skill'].includes(action.kind)&&!action.done&&action.t<action.wind){
-    const desired=toward(p,kwonBossAimPoint(b)),delta=angleDelta(action.yaw,desired);
+    const desired=toward(p,encounterBossAimPoint(g)),delta=angleDelta(action.yaw,desired);
     action.yaw+=clamp(delta,-dt*11,dt*11);
     p.yaw=action.yaw;
   }
@@ -656,7 +663,7 @@ export function step(g, dt, input = {}) {
       p.z += Math.cos(a.yaw) * 10 * dt;
     },
     melee: (a) => {
-      const shapes=kwonVisibleHurtShapes(b);
+      const shapes=encounterBossHurtShapes(g);
       // The sword is ~2m long beyond the character grip, NOT a radius
       // around the player's feet. Direction and blade height must both line up.
       const reach=a.skill?Math.max(3.55,Math.min(4.2,w.range+0.6)):
@@ -679,7 +686,7 @@ export function step(g, dt, input = {}) {
     const flightY=Number.isFinite(q.y)?q.y:1.2;
     const from={...old,y:Number.isFinite(old.y)?old.y:flightY};
     const to={x:q.x,y:flightY,z:q.z};
-    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(kwonVisibleHurtShapes(b),from,to):null;
+    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(encounterBossHurtShapes(g),from,to):null;
     if(hit){
       q.bossHit=true;
       if(!q.piercing)q.life=0;
@@ -822,7 +829,7 @@ export function step(g, dt, input = {}) {
   }
   // Prevent clipping against the boss's ACTUAL abdomen at player height.
   // Never snap the player to a circle about the invisible locomotion pivot.
-  const separation=kwonPlayerSeparation(kwonVisibleHurtShapes(b),p);
+  const separation=g.clown?null:kwonPlayerSeparation(kwonVisibleHurtShapes(b),p);
   if(separation){p.x=separation.x;p.z=separation.z;confine(p);}
 }
 export function skillView(g) {
