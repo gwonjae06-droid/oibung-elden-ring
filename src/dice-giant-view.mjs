@@ -3,7 +3,7 @@ import * as T from 'three';
 import {HAND_REST,GIANT,giantHandPose,giantHazards,giantPosture,giantPropType} from './dice-giant.mjs';
 import {POSSESSION} from './dice-giant-cinematic-data.mjs';
 import {buildGentlemanTorso,buildGentlemanHand} from './dice-giant-model.mjs';
-import {giantHandGesture,giantHeadImpactPulse} from './dice-giant-motion.mjs';
+import {giantHandGesture,giantHeadImpactPulse,giantThrowTimeline,giantThrowGesture,giantThrownPropPose} from './dice-giant-motion.mjs';
 import {diceEnvironmentCue} from './environmental-telegraphs.mjs';
 const sat=v=>Math.max(0,Math.min(1,v)),lerp=(a,b,t)=>a+(b-a)*t,ease=v=>{const t=sat(v);return t*t*(3-2*t);};
 // Geometry is decorative; all damage and warning bounds come from the simulation above.
@@ -32,7 +32,7 @@ export function buildDiceGiant(scene){
   const fillMat=barMat(0xd0ad65,1),fill=new T.Mesh(fillGeo,fillMat);fill.position.set(-8.2,0,.02);fill.scale.set(16.4,1.6,1);fill.renderOrder=32;
   grp.add(frame,back,fill);return {group:grp,fill,fillMat,flash:0,prev:GIANT.handHp};});
  const ray=new T.Raycaster(),focus=new T.Vector3(),sight=new T.Vector3(),elbow=new T.Vector3(),shoulder=new T.Vector3(),headPoint=new T.Vector3(),headDirection=new T.Vector3();
- const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3();
+ const up=new T.Vector3(0,1,0),delta=new T.Vector3(),anchor=new T.Vector3(),propGrip=new T.Vector3();
  const boneBetween=(part,a,b,r)=>{delta.copy(b).sub(a);part.position.copy(a).addScaledVector(delta,.5);part.scale.set(r,Math.max(.1,delta.length()),r);part.quaternion.setFromUnitVectors(up,delta.normalize());};
  const warnMat=new T.MeshBasicMaterial({color:0x100c13,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide}),fillWarnMat=new T.MeshBasicMaterial({color:0xd9b579,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide});
  const circle=new T.CircleGeometry(1,48).rotateX(-Math.PI/2),auraGeo=new T.RingGeometry(.75,1,32).rotateX(-Math.PI/2);
@@ -56,8 +56,8 @@ export function buildDiceGiant(scene){
  const phaseRings=Array.from({length:2},(_,i)=>{const m=mesh(ringGeo,ringMat.clone(),root,[1,1,1]);m.castShadow=m.receiveShadow=false;m.name='sungwon-feral-reveal-'+i;m.visible=false;m.renderOrder=8;return m;});
  const handImpactRings=[0,1].map(i=>{const m=mesh(ringGeo,ringMat.clone(),root,[1,1,1]);m.castShadow=m.receiveShadow=false;m.name='sungwon-palm-impact-'+i;m.visible=false;m.renderOrder=8;return m;});
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
- let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0];
- return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm,joint} of hands)for(const bone of [upper,forearm,joint])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0],releaseOrigins=new WeakMap();
+ return {root,occlude(camera,player){if(!root.visible)return;for(const b of bars)b.group.quaternion.copy(camera.quaternion);root.updateWorldMatrix(true,true);focus.set(player.x,1.2,player.z);sight.copy(focus).sub(camera.position);ray.far=sight.length();ray.set(camera.position,sight.normalize());for(const {upper,forearm,joint} of hands)for(const bone of [upper,forearm,joint])bone.material.opacity=ray.intersectObject(bone,false).length?.12:1;},dispose(){if(disposed)return;disposed=true;root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -68,7 +68,7 @@ export function buildDiceGiant(scene){
   const breath=feral?Math.sin(time*9)*.035:Math.sin(time*1.4)*.012;
   body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14;
   body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
-  body.rotation.y=feral?Math.sin(time*17)*rage*.045:0;
+  body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0);
   body.updateWorldMatrix(true,false);
   oldHead.visible=s.state==='transition'&&s.t>=POSSESSION.launchEnd&&s.t<4.7;
   const fly=sat((s.t-POSSESSION.launchEnd)/.85);
@@ -80,7 +80,12 @@ export function buildDiceGiant(scene){
   headDirection.normalize();neck.position.copy(headPoint).addScaledVector(headDirection,-len*.5);neck.scale.set(5,len,5);neck.quaternion.setFromUnitVectors(up,headDirection);
   const armsVisible=s.state!=='transition'||s.t>=4.7;
   hands.forEach(({group,upper,forearm,joint,fingers,thumb},i)=>{
-   const h=giantHandPose(g,i),gesture=giantHandGesture(s,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
+   const h=giantHandPose(g,i),
+     throwing=s.state==='attack'?(s.hazards||[]).find(q=>{
+      if(q.handIndex!==i||q.cancelled||!giantPropType(s,q))return false;
+      const t=giantThrowTimeline(s,q);return t&&s.t>=t.ready&&s.t<t.release+.12;
+     }):null,
+     gesture=throwing?giantThrowGesture(s,throwing):giantHandGesture(s,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
    const hp=Math.max(0,Number(s.hands?.[i])||0);if(hp<handPrev[i])handPulse[i]=1;handPrev[i]=hp;handPulse[i]=Math.max(0,handPulse[i]-Math.max(0,dt)*5);
    // The arm always stays; only the hand shakes, shrinks and bursts into shards.
    upper.visible=forearm.visible=joint.visible=armsVisible;
@@ -176,18 +181,33 @@ export function buildDiceGiant(scene){
    }
   });
   props.forEach((m,i)=>{
-   const h=hazards[i],type=h?giantPropType(s,h):null;
-   m.visible=Boolean(type&&!h.live);if(!m.visible)return;
-   const hand=HAND_REST[h.handIndex??h.id%2],u=sat(h.age/h.warn);
+   // Prop visibility starts on the tabletop; its grip and launch point come from
+   // the exact palm mesh. It cannot materialize midway through a flight.
+   const h=s.state==='attack'?s.hazards?.[i]:null,type=h?giantPropType(s,h):null;
+   const handIndex=h?.handIndex??(h?.id??i)%2;
+   const hand=hands[handIndex],timing=type?giantThrowTimeline(s,h):null;
+   m.visible=Boolean(type&&timing&&!h.cancelled&&!s.destroyed?.[handIndex]&&s.t>=timing.ready&&s.t<timing.impact);
+   if(!m.visible)return;
+   hand.group.updateWorldMatrix(true,false);
+   hand.group.localToWorld(propGrip.set(0,1.8,11));
+   // Once released, do not chase the hand: its origin is fixed in world space.
+   if(s.t>=timing.release&&!releaseOrigins.has(h))
+    releaseOrigins.set(h,{x:propGrip.x,y:propGrip.y,z:propGrip.z});
+   const p=giantThrownPropPose(s,h,type,propGrip,releaseOrigins.get(h));
+   if(!p?.visible){m.visible=false;return;}
    m.geometry=type==='chess'?(s.chessPiece==='rook'?propGeo.chessRook:s.chessPiece==='knight'?propGeo.chessKnight:propGeo.chess):propGeo[type];
-   m.material=i%2?propMats.gold:propMats.black;m.scale.setScalar(1.6);
-   // Each object has its own motion: chips slide and spin, coins flip, dice tumble, chess pieces are set down.
-   if(type==='chess'){m.position.set(h.x,2+14*(1-u*u),h.z);m.rotation.set(0,i,feral?h.age*5:0);return;}
-   const arc={chip:3,coin:14,dice:22}[type],run=feral?Math.sqrt(u):u;
-   m.position.set(lerp(hand.x,h.x,run),lerp(10,2,u)+arc*Math.sin(Math.PI*u),lerp(hand.z+5,h.z,run));
-   if(type==='coin')m.rotation.set(u*Math.PI*6+(s.coinFace==='tails'?Math.PI:0),0,0);
-   else if(type==='dice')m.rotation.set((1-u)*9+i,(1-u)*7,(1-u)*5);
-   else m.rotation.set(0,u*14+i,0);
+   m.material=i%2?propMats.gold:propMats.black;
+   m.scale.setScalar(type==='coin'?1.48:type==='chess'?1.38:1.6);
+   m.position.set(p.x,p.y,p.z);
+   if(p.phase==='grip'){
+    m.quaternion.copy(hand.group.quaternion);
+   }else if(p.phase==='pickup'){
+    m.rotation.set(0,.2+i*.4,0);
+   }else{
+    // Coins flip, dice tumble and heavy chess pieces spin less in flight.
+    m.rotation.set(type==='coin'?p.spin:type==='dice'?p.spin*.72:p.spin*.22,
+     type==='chess'?p.spin*.4:p.spin*.6,type==='chip'?p.spin*.84:p.spin*.37);
+   }
   });
  }};
 }
