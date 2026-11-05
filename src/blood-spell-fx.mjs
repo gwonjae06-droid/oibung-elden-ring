@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {hazardPosition} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
+import {bloodWaveVisualPose} from './blood-volumetric-wave.mjs';
 
 export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite',bloodScissors:'crisscross-sanguine',heartCage:'caged-heart',wingShear:'winged-shears',rosary:'rosary-procession'});
 // Visual-only settle time after a hazard stops dealing damage: blood sinks and spreads instead of vanishing.
@@ -12,19 +13,27 @@ const smooth=u=>{u=clamp01(u);return u*u*(3-2*u);};
 const reach=(h,c)=>h.shape==='lane'?Math.max(1.8,h.width*1.2):h.shape==='cone'?Math.max(2.5,h.r*.4):h.shape==='ring'?Math.max(1.5,h.width*1.5):Math.max(1.2,c.r);
 export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
  const live=new Map(),ghosts=new Set(),pool=new Map();let stamp=0,clock=0;
+ const sprayDummy=new THREE.Object3D(),sprayCount=reduced?8:20;
  const mesh=(geo,group)=>{const m=new THREE.Mesh(geo,fluid.material);group.add(m);return m;};
  function acquire(pattern){
   const free=pool.get(pattern)||[];pool.set(pattern,free);let item=free.pop();
   if(!item){
    const group=new THREE.Group();group.userData.spellForm=BLOOD_SPELL_FORMS[pattern];parent.add(group);const parts=[];
-   const forms={wave:['sheet','sheet','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['sheet','sheet','torus'],lances:['lance','torus','tendril'],cross:['sheet','sheet','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril'],bloodScissors:['sheet','sheet','tendril'],heartCage:['tendril','tendril','torus'],wingShear:['blade','blade'],rosary:['column','sphere','sphere']}[pattern];
+   const forms={wave:['surge','undertow','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['surge','undertow','torus'],lances:['lance','torus','tendril'],cross:['surge','undertow','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril'],bloodScissors:['surge','undertow','tendril'],heartCage:['tendril','tendril','torus'],wingShear:['blade','blade'],rosary:['column','sphere','sphere']}[pattern];
    for(const form of forms)parts.push(mesh(fluid[form],group));
     const omens=Array.from({length:3},()=>mesh(fluid.tendril,group));
-    item={group,parts,omens,pattern,stamp:0};
+    const liquidWave=['wave','tide','cross','bloodScissors'].includes(pattern);
+    let spray=null;
+    if(liquidWave){
+     spray=new THREE.InstancedMesh(fluid.sphere,fluid.material,sprayCount);
+     spray.name='blood-wave-crest-spray';spray.count=0;spray.frustumCulled=false;
+     spray.instanceMatrix.setUsage(THREE.DynamicDrawUsage);group.add(spray);
+    }
+    item={group,parts,omens,spray,pattern,stamp:0};
   }
   item.group.visible=true;item.fired=false;item.h=null;item.post=0;item.nextReady=item.nextRise=item.nextRun=0;item.runIndex=0;return item;
  }
- function release(item){item.group.visible=false;pool.get(item.pattern).push(item);}
+ function release(item){item.group.visible=false;if(item.spray)item.spray.count=0;pool.get(item.pattern).push(item);}
  function anchor(h,c,item){
   if(h.shape!=='ring')return {x:c.x,z:c.z};
   const a=h.id*1.7+item.runIndex++*2.4;return {x:c.x+Math.sin(a)*c.r,z:c.z+Math.cos(a)*c.r};
@@ -34,7 +43,7 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
   const {group,parts,pattern}=item,c=hazardPosition(h),active=h.age>=h.warn,t=Math.max(0,h.age-h.warn),charge=clamp01(h.age/h.warn);
   const span=reach(h,c),life=Math.max(.2,h.life),surge=active?easeOut(t/(onsetTime(h)+.25)):0,p=active?.45+.55*surge:smooth(charge)*.45,tail=clamp01(post/TAIL);
   group.position.set(c.x,.12,c.z);group.rotation.set(0,h.yaw||0,0);group.scale.set(1+tail*.1,Math.max(.001,1-smooth(tail)),1+tail*.1);
-  for(const m of parts){m.position.set(0,0,0);m.rotation.set(0,0,0);m.scale.set(1,1,1);}
+  for(const m of parts){m.visible=true;m.position.set(0,0,0);m.rotation.set(0,0,0);m.scale.set(1,1,1);}
    // Three-dimensional blood veins draw toward the impact point, but never trace the radius.
    item.omens.forEach((m,i)=>{
     m.visible=(Boolean(bloodEnvironmentCue(pattern))||['lances','cross','judgement','ritual'].includes(pattern))&&!active&&charge>.08;
@@ -47,10 +56,45 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
   const swirl=reduced?0:g.time*2.4;
   switch(pattern){
    case 'wave':case 'tide':case 'cross':case 'bloodScissors':{
-    for(let i=0;i<2;i++){const m=parts[i],height=(active?13:2.4)*p;m.position.set(0,height*.5+i*.4,i*.6);m.rotation.x=-.14-i*.18;m.scale.set(h.width*1.95,height,1.8);}
-    if(pattern==='wave'){parts[2].scale.set(h.width*.8,.3,h.length*.48);parts[2].position.y=.12;}
-    else if(pattern==='cross'||pattern==='bloodScissors'){parts[2].position.y=4*p;parts[2].scale.set(.9,10*p,.9);}
-    else {parts[2].rotation.x=Math.PI/2;parts[2].scale.set(h.width,h.width,1);}break;
+    // A real CLOSED 3D body, not a vertical sheet. The forward crest rolls
+    // over a thick undertow, with spray riding just above the front lip.
+    const v=bloodWaveVisualPose(h,post,clock,{reduced,tide:pattern==='tide'});
+    const main=parts[0],under=parts[1];
+    main.position.set(0,.08,v.crestForward*.24);
+    main.rotation.set(0,0,v.wobble);
+    main.scale.set(v.width*.54,v.height,(pattern==='tide'?3.65:2.95));
+    under.position.set(0,.08,-1.3-v.phase*.65);
+    under.scale.set(v.width*.58,Math.max(1.3,v.height*.53),5.3);
+    if(pattern==='wave'){
+     parts[2].position.set(0,.12,-1.7);
+     parts[2].scale.set(v.width*.48,.38,Math.max(2.4,h.length*.58));
+    }else if(pattern==='cross'||pattern==='bloodScissors'){
+     parts[2].position.set(0,v.height*.43,.05);
+     parts[2].scale.set(.95,Math.max(1.2,v.height*.85),.9);
+    }else{
+     parts[2].rotation.x=Math.PI/2;
+     parts[2].position.y=.19;parts[2].scale.set(h.width,h.width,1);
+    }
+    if(item.spray){
+     const spray=item.spray;
+     spray.count=v.spray?sprayCount:0;
+     if(v.spray){
+      const swell=active?Math.min(1,(t+.04)/Math.min(.3,life*.35)):0;
+      for(let i=0;i<sprayCount;i++){
+       const lateral=(i+.5)/sprayCount*2-1,edge=Math.pow(Math.max(0,1-lateral*lateral),.65),
+        phase=(clock*1.75+i*2.399+h.id*.61)%6.283185,
+        rise=(.55+.45*Math.sin(phase))*v.height*.14,
+        mass=.10+.12*(.5+.5*Math.sin(i*2.41));
+       sprayDummy.position.set(lateral*v.width*.48,Math.max(.3,v.height*(.72+.15*edge)+rise)*swell,
+        v.crestForward+1.3+Math.sin(phase)*.42);
+       sprayDummy.rotation.set(.42*Math.sin(phase),phase*.35,-lateral*.3);
+       sprayDummy.scale.set(mass,mass*(1.3+edge*2),mass);
+       sprayDummy.updateMatrix();spray.setMatrixAt(i,sprayDummy.matrix);
+      }
+      spray.instanceMatrix.needsUpdate=true;
+     }
+    }
+    break;
    }
    case 'fountain':case 'rain':case 'rosary':{
     const height=active?Math.max(.2,Math.sin(Math.min(1,t/h.life)*Math.PI)*24):smooth(charge)*1.1;
