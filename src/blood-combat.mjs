@@ -65,6 +65,22 @@ export function startBloodPattern(g,id){
  if(id==='vortex')circle(p.x,p.z,1.6,7.5,{life:1.6,damage:30});
  if(id==='lances')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6.5,p.z-Math.sin(aim)*(i-2)*6.5);circle(q.x,q.z,1.4+i*.5,4.5,{damage:27,life:.65});}
  if(id==='cross')for(let i=0;i<4;i++){const yaw=i*Math.PI/2;lane(yaw,1.5+(i%2)*1.3,{x:-Math.sin(yaw)*25,z:-Math.cos(yaw)*25,width:4.5,length:12,life:1.9,vx:Math.sin(yaw)*23,vz:Math.cos(yaw)*23,damage:29});}
+ // Two real sweeping blood blades, drawn backward before the hands
+ // intersect. Their two warning times drive distinct arm follow-throughs.
+ if(id==='bloodScissors')for(let i=0;i<2;i++){
+  const yaw=aim+(i?-.52:.52);
+  lane(yaw,1.3+i*1.05,{width:4.4,length:21,life:.72,damage:30,
+    vx:Math.sin(yaw)*22,vz:Math.cos(yaw)*22});
+ }
+ // Nails grow around the captured player position. A delayed central
+ // heart-beat stops camping the middle, but leaves a dodgeable exit.
+ if(id==='heartCage'){
+  for(let i=0;i<4;i++){
+   const angle=i*Math.PI/2+.3,q=point(p.x+Math.sin(angle)*6.4,p.z+Math.cos(angle)*6.4);
+   circle(q.x,q.z,1.25+i*.38,3.3,{life:.6,damage:25});
+  }
+  circle(p.x,p.z,3.0,4.5,{life:.55,damage:32});
+ }
  if(id==='dive')circle(p.x,p.z,1.8,7.5,{damage:38,life:.65});
  if(id==='eclipse')hazard(g,'ring',{x:0,z:0,r:18,width:10,warn:2.8,life:.8,damage:42});
  if(id==='rain')for(let i=0;i<10;i++){const a=i*2.4,q=point(p.x+Math.sin(a)*i*1.7,p.z+Math.cos(a)*i*1.7);circle(q.x,q.z,1+i*.35,3.7,{damage:20,life:.4});}
@@ -74,6 +90,21 @@ export function startBloodPattern(g,id){
  if(id==='tide')for(let i=0;i<4;i++)lane(i*Math.PI/2,1.4+i*.7,{x:0,z:0,length:13,width:5,life:1.3,damage:32});
  if(id==='judgement')for(let i=0;i<3;i++)hazard(g,'cone',{yaw:aim+[-.8,.8,0][i],arc:.5,r:23,warn:1.5+i*1.2,life:.55,damage:32});
  if(id==='ritual'){for(let beat=0;beat<2;beat++)for(let i=0;i<4;i++)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/2+beat*Math.PI/4,arc:.45,innerR:5.5,r:26,warn:2+beat*1.65,life:.65,damage:30});hazard(g,'ring',{x:0,z:0,r:2,width:1.1,grow:18,warn:4.9,life:1.4,damage:26});}
+ // Three wing scythes are visible in the existing animated wing rig;
+ // each has a distinct anticipation rather than dealing damage mid-twist.
+ if(id==='wingShear')for(let i=0;i<3;i++)
+  hazard(g,'cone',{yaw:aim+[0,.8,-.8][i],arc:.48,r:21,
+    warn:1.15+i*1.0,life:.48,damage:31});
+ // A processional chain of red beads advances in a readable spiral.
+ // The last bead returns to the locked position, rewarding movement.
+ if(id==='rosary'){
+  for(let i=0;i<6;i++){
+   const angle=i*Math.PI*.75,radius=2.4+(i%3)*3.4;
+   const q=point(p.x+Math.sin(angle)*radius,p.z+Math.cos(angle)*radius);
+   circle(q.x,q.z,1.15+i*.5,3.5,{life:.54,damage:26});
+  }
+  circle(p.x,p.z,4.25,4.5,{life:.58,damage:32});
+ }
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }

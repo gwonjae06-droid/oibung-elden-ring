@@ -322,6 +322,12 @@ const definitions = [
   ['bounceChain', '연쇄 공 튀기기', 5.6, 1.3, [2]],
   ['ballSpin', '회전 공 휩쓸기', 4.9, 1.3, [2]],
   ['ballCannon', '공 대포', 5.4, 1.5, [2]],
+  // Each new routine is a staged performance: pose -> environmental warning
+  // -> delayed impact -> clean recovery. No extra high-poly stage props.
+  ['mirrorStage', '거울 무대 · 뒤집힌 조명', 4.7, 1.25, [1, 2]],
+  ['trapdoorWaltz', '함정 무도회', 5.2, 1.5, [1, 2]],
+  ['grandEncore', '세 번의 앙코르', 6.1, 1.6, [2]],
+  ['invertedApplause', '거꾸로 박수', 6, 1.45, [2]],
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
@@ -788,6 +794,75 @@ const RUN = {
       emit(g, 'clown-stomp');
     }
   },
+  // An old-fashioned follow spotlight marks the player's last position,
+  // then the clown turns his shoulders and relights the stage behind them.
+  mirrorStage(g, c, a, t) {
+    once(c, 'intro', () => emit(g, 'clown-stomp'));
+    const b=g.boss,lead=once(c, 'lead',()=>target(g));
+    c.yaw+=clamp(angleDelta(c.yaw,toward(b,lead)),-.05,.05);
+    c.vis.glove=t<1.35?smooth(t/1.35):Math.max(0,1-smooth((t-1.35)/1.1));
+    c.vis.tilt=Math.sin(t*2.7)*.32;
+    if(cross(a,t,.16)){
+      zone(g,{shape:'circle',...lead,r:6,warn:1.25,damage:27,blast:true,major:true,sound:'spotlightSweep'});
+    }
+    if(cross(a,t,1.5)){
+      const side=c.seq%2?1:-1,aim=toward(b,g.player);
+      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-18,18),
+        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-18,18)};
+      confine(q,21);c.f.echo=q;
+      zone(g,{shape:'circle',...q,r:5.6,warn:1.05,damage:30,blast:true,major:true,sound:'spotlightSweep'});
+      emit(g,'clown-stomp');
+    }
+  },
+  // Three visually readable footfalls advance across the felt. Each warning
+  // lands only after the body sinks, springs up, and drops again.
+  trapdoorWaltz(g, c, a, t) {
+    const b=g.boss,T=[.35,1.45,2.55],phase=g.boss.phase===2;
+    c.vis.crouch=.35+.4*Math.max(0,Math.sin(t*Math.PI*2));
+    c.vis.jump=0;
+    for(let i=0;i<T.length;i++){
+      const u=t-T[i];
+      if(u>=.38&&u<1.05)c.vis.jump=Math.max(c.vis.jump,Math.sin(Math.PI*(u-.38)/.67)*.7);
+      if(cross(a,t,T[i])){
+        const p=target(g),yaw=toward(b,p);
+        const stride=phase?4.5:3.4,side=i%2?1:-1;
+        const q={x:p.x+Math.cos(yaw)*stride*side,z:p.z-Math.sin(yaw)*stride*side};
+        confine(q,21);
+        zone(g,{shape:'circle',...q,r:5.4,warn:1.05,damage:phase?32:28,
+          blast:true,major:true,sound:'bounce'});
+        emit(g,'clown-stomp');
+      }
+      if(cross(a,t,T[i]+1.05))emit(g,'clown-bounce');
+    }
+  },
+  // Balls are physically thrown in sequence; the final bouquet leaves an
+  // intentionally open wedge rather than covering the whole arena.
+  grandEncore(g, c, a, t) {
+    once(c,'overture',()=>emit(g,'clown-juggle'));
+    c.vis.juggle=t<3.5?1:0;
+    c.vis.throwK=t<3.4?Math.abs(Math.sin(t*Math.PI*1.2)):.0;
+    c.vis.tilt=Math.sin(t*4)*.22;
+    for(let i=0;i<3;i++)if(cross(a,t,.8+i*.9)){
+      const p=target(g),ang=c.yaw+(i-1)*.65,q={x:p.x+Math.sin(ang)*3,z:p.z+Math.cos(ang)*3};
+      confine(q,21);bombAt(g,q,3.1,27,.8,'ball',.2);
+    }
+    if(cross(a,t,3.5)){
+      const p=target(g);rosette(g,p,7.2,1.0,8,23,c.seq%8);
+      emit(g,'clown-juggle');
+    }
+  },
+  // Gloves visibly close before each existing wave. Delayed alternating
+  // fans, not instant damage, force a positional read.
+  invertedApplause(g, c, a, t) {
+    const aim=once(c,'aim',()=>({yaw:toward(g.boss,g.player)})).yaw;
+    c.vis.glove=t<3.7?.25+.7*Math.abs(Math.sin(t*2.8)):.1;
+    c.vis.tilt=Math.sin(t*3)*.28;
+    for(let i=0;i<3;i++)if(cross(a,t,.15+i*1.25)){
+      const yaw=aim+[0,.76,-.76][i];c.yaw=yaw;
+      cone(g,yaw,.9,16,i===0?.48:.42,27+(i===2?5:0),'clap');
+      emit(g,'clown-clap');
+    }
+  },
   // A volley of balls rains down around the player, alternating direct hits and a ring around them.
   ballRain(g, c, a, t) {
     once(c, 's', () => emit(g, 'clown-juggle'));
@@ -910,6 +985,8 @@ export function choosePattern(g) {
       'lastClap',
       'carousel',
       'ballSpin',
+      'trapdoorWaltz',
+      'invertedApplause',
     ]),
     prefer = list.filter((k) =>
       d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,

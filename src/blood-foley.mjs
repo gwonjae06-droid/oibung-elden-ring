@@ -26,10 +26,10 @@ export const BLOOD_ATTACK_SOUNDS=Object.freeze({
  wing:'hit3',
  pulse:'hit4',
  pursuit:'hit2',
- tide:'splash',lances:'hit5',cross:'splash',judgement:'hit3',ritual:'hit4'
+ tide:'splash',lances:'hit5',cross:'splash',judgement:'hit3',ritual:'hit4',bloodScissors:'hit3',heartCage:'hit4',wingShear:'hit3',rosary:'splash'
 });
-const WET_CHARGE=new Set(['wave','fountain','vortex','rain','tide','cross','ritual']);
-const HEAVY=new Set(['burst','dive','eclipse','pursuit','tide','lances','judgement','ritual']);
+const WET_CHARGE=new Set(['wave','fountain','vortex','rain','tide','cross','ritual','heartCage','rosary']);
+const HEAVY=new Set(['burst','dive','eclipse','pursuit','tide','lances','judgement','ritual','bloodScissors','wingShear']);
 const WET_HIT=new Set(['wave','fountain','vortex','rain','tide']);
 
 function cue(file,volume,duration,fade,minGap){

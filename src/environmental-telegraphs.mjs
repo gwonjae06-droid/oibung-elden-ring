@@ -2,8 +2,8 @@
 // Normal attacks are read from the boss pose or physical projectile.
 // Large attacks gain environmental cues rather than exact coloured hitbox overlays.
 export const KWON_ENVIRONMENT=new Set(['slam','leap','stomp','whirl','wave']);
-export const CLOWN_SPECTACLES=new Set(['tripleBomb','confettiCurtain','spotlightSweep','fireHoop','humanCannon','curtainCall','lastClap','drumMarch','balloonBouquet','ballRain','bounceChain','ballCannon','carousel','ballSpin']);
-export const BLOOD_ENVIRONMENT=new Set(['fountain','burst','chain','orbit','vortex','dive','eclipse','rain','pulse','pursuit','tide']);
+export const CLOWN_SPECTACLES=new Set(['tripleBomb','confettiCurtain','spotlightSweep','fireHoop','humanCannon','curtainCall','lastClap','drumMarch','balloonBouquet','ballRain','bounceChain','ballCannon','carousel','ballSpin','mirrorStage','trapdoorWaltz','grandEncore','invertedApplause']);
+export const BLOOD_ENVIRONMENT=new Set(['fountain','burst','chain','orbit','vortex','dive','eclipse','rain','pulse','pursuit','tide','bloodScissors','heartCage','wingShear','rosary']);
 export function kwonEnvironmentCue(zone,pattern){
  return zone?.active===false&&KWON_ENVIRONMENT.has(pattern)?'stone-tremor':null;
 }

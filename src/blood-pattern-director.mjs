@@ -24,11 +24,12 @@ export function nextBloodPattern(state,phase,{distance=null}={}){
  if(Number.isFinite(distance)&&distance!==null&&state.queue.length>1){
    // Preserve the signature opening and airborne/ground sequencing, but
    // choose among nearby cards to react to range. No attacks are removed.
-   const opening=state.queue.length===9||(phase===2&&state.queue.length===8);
+   const size=bloodPool(phase).length;
+   const opening=state.queue.length===size||(phase===2&&state.queue.length===size-1);
    if(!opening){
-     const pair={chain:'burst',wave:'fountain',dive:'wing',
+     const pair={chain:'burst',wave:'fountain',bloodScissors:'heartCage',heartCage:'bloodScissors',wingShear:'rosary',rosary:'wingShear',dive:'wing',
        eclipse:'rain',pursuit:'pulse',wing:'pursuit'}[state.last];
-     const close=new Set(['burst','chain','vortex','wave','wing','pulse','dive']);
+     const close=new Set(['burst','chain','vortex','wave','wing','pulse','dive','bloodScissors','heartCage','wingShear','rosary']);
      const candidates=state.queue.slice(0,Math.min(3,state.queue.length));
      const ix=pair&&candidates.includes(pair)?candidates.indexOf(pair):
        candidates.findIndex(id=>distance<10?close.has(id):distance>17?!close.has(id):false);

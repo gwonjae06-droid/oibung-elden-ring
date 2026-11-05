@@ -14,7 +14,7 @@ test('seeded decks cover every attack without repeats, introduce signature spell
  for(let seed=1;seed<=64;seed++)for(const phase of [1,2]){
   const state=createBloodPatternDeck(Math.imul(seed,0x9e3779b9));let last=null;
   for(let cycle=0;cycle<3;cycle++){
-   const deck=Array.from({length:9},()=>nextBloodPattern(state,phase));assert.deepEqual([...deck].sort(),bloodPool(phase).sort());assert.notEqual(deck[0],last);
+   const deck=Array.from({length:bloodPool(phase).length},()=>nextBloodPattern(state,phase));assert.deepEqual([...deck].sort(),bloodPool(phase).sort());assert.notEqual(deck[0],last);
    const signature=phase===1?['lances','cross']:['judgement','ritual'];assert.ok(signature.every(id=>deck.indexOf(id)<4));
    if(phase===2)assert.ok(['wing','pulse'].includes(deck[1]));last=deck.at(-1);if(cycle===0)openings.add(phase+':'+deck.join(','));
   }
@@ -23,15 +23,15 @@ test('seeded decks cover every attack without repeats, introduce signature spell
  const a=createBloodPatternDeck(42),b=createBloodPatternDeck(42);assert.deepEqual(Array.from({length:30},()=>nextBloodPattern(a,2)),Array.from({length:30},()=>nextBloodPattern(b,2)));
 });
 
-test('actual automatic combat reaches all nine attacks per phase and never loses the final hazards',()=>{
+test('actual automatic combat reaches all eleven attacks per phase and never loses the final hazards',()=>{
  for(const phase of [1,2]){
   const g=createBloodGame('sword',{seed:9341});g.boss.phase=phase;g.player.hp=g.player.maxHp=1e9;const seen=[],warnings=new Map(),impacts=new Map();
-  for(let i=0;i<1900&&seen.length<10;i++){
+  const total=bloodPool(phase).length;for(let i=0;i<2800&&seen.length<total+1;i++){
    stepBlood(g,.05);
    for(const e of g.events){if(e.type==='blood-warning'){seen.push(e.pattern);warnings.set(e.pattern,g.blood.hazards.length);}if(e.type==='blood-impact')impacts.set(e.pattern,(impacts.get(e.pattern)||0)+1);}
    g.events=[];
   }
-  assert.equal(seen.length,10);assert.equal(new Set(seen.slice(0,9)).size,9);
+  assert.equal(seen.length,total+1);assert.equal(new Set(seen.slice(0,total)).size,total);
   for(const id of bloodPool(phase))assert.equal(impacts.get(id),warnings.get(id),id+' was selected but not fully executed');
  }
 });
