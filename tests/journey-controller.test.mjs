@@ -87,7 +87,7 @@ test('five title taps award exactly two persistent flames instead of opening bos
  for(let i=0;i<4;i++){await f.click('secret-tap');assert.equal(saved().flames,0,'partial taps do not pay');}
  await f.click('secret-tap');
  assert.equal(saved().flames,2);assert.equal(saved().earnedFlames,2);
- assert.match(f.dialog.html,/정화의 불꽃 \\+2개 · 보유 2개/);
+ assert.match(f.dialog.html,/정화의 불꽃 \+2개 · 보유 2개/);
  assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|바로 이동|육체 강탈부터/);
  assert.deepEqual(saved().defeated,[]);assert.deepEqual(saved().memories,[]);assert.equal(saved().clears,0);
  for(let i=0;i<5;i++)await f.click('secret-tap');
