@@ -53,7 +53,7 @@ export function createBloodSiphonFx(parent,{coarse=false,reduced=false}={}){
    const radius=30.1+rand(i,7)*5.3;
    const x0=Math.sin(a)*radius,z0=Math.cos(a)*radius;
    const delay=rand(i,13)*.57;
-   const u=clamp((progress-delay)/Math.max(.4,1-delay*.7));
+   const u=clamp((progress-delay)/Math.max(.38,1-delay));
    const travel=ease(u);
    // A heavy stream peels off the flooded shore, curves around the boss and
    // then settles into the actual moving chest. Tangent-aligned droplets
