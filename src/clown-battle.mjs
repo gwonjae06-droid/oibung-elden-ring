@@ -70,7 +70,11 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  $('theme').onclick=()=>document.getElementById('theme')?.click();$('sound').onclick=()=>{document.getElementById('sound')?.click();soundState();};
  // Prewarm small photo-head meshes and faces before the first shutter.
  // Head bombs reuse these instances across attacks and retries.
- const headPool=createClownHeadPool(()=>createClownHead({projectile:true}),{prewarm:2});
+ const headPool=createClownHeadPool(()=>{
+  const head=createClownHead({projectile:true});
+  head.prewarmTexture(renderer).catch(()=>{});
+  return head;
+ },{prewarm:2});
  startup.own('Clown photo head pool',()=>headPool.dispose());
  const zones=new Map(),bombs=new Map(),shots=new Map(),particles=[],mats=[0xffcc50,0xc12e49,0x75c9ec,0x1a121a,0x8a0c12].map(color=>startup.resource('Particle material',new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9}))),confettiGeo=startup.resource('Confetti geometry',new THREE.BoxGeometry(.12,.04,.25)),smokeGeo=startup.resource('Smoke geometry',new THREE.SphereGeometry(.4,8,6)),bloodGeo=startup.resource('Blood geometry',new THREE.SphereGeometry(.07,5,4));
  const star=new THREE.Shape();for(let i=0;i<10;i++){const a=i*Math.PI/5,r=i%2?.08:.2;if(i)star.lineTo(Math.sin(a)*r,Math.cos(a)*r);else star.moveTo(Math.sin(a)*r,Math.cos(a)*r);}star.closePath();const starGeo=startup.resource('Star geometry',new THREE.ShapeGeometry(star));
