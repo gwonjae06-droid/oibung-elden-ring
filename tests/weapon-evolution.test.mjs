@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import {EVOLUTIONS,consumeBattleGrace,installChargeInput} from '../src/weapon-evolution.mjs';
 import {createGame,step} from '../src/combat.mjs';
 import {actPlayer,tickPlayerAction,rewardPlayerHit} from '../src/player-combat.mjs';
-import {configureJourney,newRun} from '../src/journey-state.mjs';
+import {configureJourney,newRun,freshProfile} from '../src/journey-state.mjs';
+import {buyForgeTier} from '../src/purification-forge.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
-function rig(weapon,ids){const g=createGame(weapon,{register:false}),r=newRun(weapon);r.relics=ids;configureJourney(g,r);g.startGrace=0;return g;}
+function rig(weapon,ids){const g=createGame(weapon,{register:false}),r=newRun(weapon),p=freshProfile();p.flames=20;ids.forEach(id=>{if(!buyForgeTier(p,weapon,id))throw Error('Forge buy failed '+id);});configureJourney(g,r,p);g.startGrace=0;return g;}
 test('each weapon has exactly two functional paths and repeated choices increase projectile output',()=>{
  for(const [weapon,options] of Object.entries(EVOLUTIONS)){assert.equal(options.length,2);assert.notEqual(options[0].id,options[1].id);}
  for(const [weapon,id,count] of [['sword','blade-wave',1],['hammer','earth-wave',1],['bow','twin-arrow',3],['cards','wide-deck',7]]){const g=rig(weapon,[id,id]);actPlayer(g,'light');tickPlayerAction(g,.5,WEAPONS[weapon]);assert.equal(g.projectiles.length,count);assert.ok(g.projectiles.every(q=>q.damage>0&&Number.isFinite(q.speed)));}
