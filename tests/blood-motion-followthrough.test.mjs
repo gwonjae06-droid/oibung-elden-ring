@@ -71,7 +71,7 @@ test('render director is dt-robust, pause-safe and blends phase boundaries',()=>
  g.boss.state='recovery';g.blood.recover=BLOOD_PATTERNS.burst.recover;
  const p=director.update(g,.016);
  assert.ok(Math.abs(p.body.lean-previous.body.lean)<.12);
- const frozen=structuredClone(p);at(g,0.1);
+ const frozen=structuredClone(p);
  assert.deepEqual(director.update(g,0),frozen,'pause changed model posture');
  director.reset();
  const idle=director.update(createBloodGame(),.016);
