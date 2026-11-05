@@ -149,7 +149,28 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
  const stone=new THREE.MeshStandardMaterial({color:0xeeeae4,map:texture,roughness:.77,metalness:0,bumpMap:texture,bumpScale:.035});
  const trim=new THREE.MeshStandardMaterial({color:0xc7b99f,metalness:.17,roughness:.55});
  const ivory=new THREE.MeshStandardMaterial({color:0xf7f5ec,roughness:.46,metalness:0});
- const marble=new THREE.MeshStandardMaterial({color:0xeeece8,map:texture,roughness:.34,metalness:.04,bumpMap:texture,bumpScale:.015});
+ const marble=new THREE.MeshStandardMaterial({color:0xeeece8,map:texture,roughness:.43,metalness:.04,bumpMap:texture,bumpScale:.012});
+ // Reuse the repository's licensed, locally bundled CC0 marble PBR maps.
+ // A procedural marble remains visible until images load (or offline/error).
+ // GPU resources are bounded and late callbacks cannot mutate a disposed fight.
+ let disposed=false;const loaded=[];
+ if(!coarse&&globalThis.document?.createElement&&globalThis.Image){
+  const loader=new THREE.TextureLoader();
+  for(const [suffix,slot]of [['diff','map'],['nor_gl','normalMap'],['rough','roughnessMap']]){
+   const path=new URL('../assets/materials/kwon/marble_01_'+suffix+'_1k.jpg',import.meta.url).href;
+   const t=loader.load(path,()=>{
+    if(disposed){t.dispose();return;}
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4.5,4.5);
+    t.colorSpace=slot==='map'?THREE.SRGBColorSpace:THREE.NoColorSpace;
+    marble[slot]=t;
+    if(slot==='map')marble.color.setHex(0xfaf9f3);
+    if(slot==='normalMap')marble.normalScale.set(.28,.28);
+    if(slot==='roughnessMap')marble.roughness=.72;
+    marble.needsUpdate=true;
+   },undefined,()=>{});
+   loaded.push(t);
+  }
+ }
  const deep=new THREE.MeshStandardMaterial({color:0x645b58,roughness:.92});
  const gold=new THREE.MeshStandardMaterial({color:0xc7aa70,metalness:.55,roughness:.38});
  const oak=new THREE.MeshStandardMaterial({color:0x988777,roughness:.75});
@@ -320,6 +341,6 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
  return {root,occlude,update,floorMaterial:marble,trimMaterial:gold,
   stats:()=>({windows:windowMeshes.length,beams:shafts.length,occluders:occluders.length}),
   dispose(){// Geometry/material resources are traversed by the scene owner.
-   texture?.dispose();
+   disposed=true;texture?.dispose();for(const t of loaded)t.dispose();
   }};
 }
