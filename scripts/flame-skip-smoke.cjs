@@ -61,9 +61,9 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
    const s=root&&readBattleSession(root);if(s?.active&&s.game.evolutions.includes('twin-arrow')&&!document.getElementById('journey').open){window.__skipGame=s.game;return true;}return false;
   },null,{timeout:30000});
   const state=await page.evaluate(async()=>{
-   const {readBattleSession}=await import('/src/battle-session.mjs'),{BOSS_REGISTRY}=await import('/src/boss-registry.mjs');
+   const {readBattleSession}=await import('/src/battle-session.mjs'),{BOSS_REGISTRY}=await import('/src/boss-registry.mjs'),{journeyBossHp}=await import('/src/journey-balance.mjs');
    const g=window.__skipGame;
-   return {weapon:g.weapon,hp:g.boss.maxHp,expected:BOSS_REGISTRY.blood.maxHp,stillOpen:!!document.querySelector('#blood-battle')};
+   return {weapon:g.weapon,hp:g.boss.maxHp,expected:journeyBossHp('blood',BOSS_REGISTRY.blood.maxHp),stillOpen:!!document.querySelector('#blood-battle')};
   });
   assert.equal(state.weapon,'bow');assert.equal(state.hp,state.expected);assert.equal(state.stillOpen,true,'blood battle closed after startup');assert.equal((await read()).flames,1);
   await page.evaluate(()=>window.__journey.dispose());
