@@ -94,6 +94,8 @@ export const ORDER = {
     'siege',
     'feint',
     'skewer',
+    'counterDancer',
+    'skyJudge',
   ],
   2: [
     'draw',
@@ -107,10 +109,14 @@ export const ORDER = {
     'requiem',
     'afterimage',
     'widow',
+    'falseExecution',
+    'jawSnare',
+    'doubleMoon',
+    'windParry',
   ],
 };
 export const CLOSE = {
-  1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer'],
+  1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer', 'counterDancer', 'skyJudge'],
   2: [
     'breaker',
     'counter',
@@ -119,6 +125,8 @@ export const CLOSE = {
     'tempest',
     'maelstrom',
     'royalHunt',
+    'jawSnare',
+    'windParry',
   ],
 };
 export const SEQUENCES = {
@@ -136,6 +144,12 @@ export const SEQUENCES = {
   requiem: ['wave', 'rush', 'slam'],
   afterimage: ['rush', 'retreat', 'rise'],
   widow: ['leap', 'jab', 'slam'],
+  // Every new combination uses the original sword/torso motion channels.
+  // Each constituent cut telegraphs, then resolves before the next begins.
+  falseExecution: ['retreat', 'thrust', 'reverse', 'slam'],
+  jawSnare: ['rush', 'backsweep', 'rise'],
+  doubleMoon: ['wave', 'retreat', 'rush', 'slam'],
+  windParry: ['jab', 'reverse', 'whirl'],
 };
 export const PHASE_ONE = {
   rush: ['rush'],
@@ -149,6 +163,8 @@ export const PHASE_ONE = {
   siege: ['leap', 'stomp'],
   feint: ['retreat', 'rush'],
   skewer: ['jab', 'sweep'],
+  counterDancer: ['retreat', 'jab', 'backsweep'],
+  skyJudge: ['leap', 'stomp', 'reverse'],
 };
 export const SWORD = {x: 0, y: 2.3, z: 2.8, length: 8.55, width: 0.78};
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z),
@@ -478,12 +494,12 @@ export function chooseOpening(g) {
           : ORDER[2];
   if(g.journeyBalance?.mode==='story'&&g.player.action?.kind!=='heal'){
     // Prioritize existing combos for close pursuit or distance denial.
-    if(d<6)list=b.phase===1?['hunt','skewer','backsweep','sweep']:
-      ['royalHunt','maelstrom','counter','trample'];
-    else if(d>11)list=b.phase===1?['siege','feint','hunt','thrust']:
-      ['requiem','crescent','execution','draw'];
+    if(d<6)list=b.phase===1?['hunt','skewer','counterDancer','skyJudge','backsweep']:
+      ['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
+    else if(d>11)list=b.phase===1?['siege','skyJudge','feint','hunt','thrust']:
+      ['requiem','doubleMoon','falseExecution','crescent','execution','draw'];
     else if(b.phase===2&&b.lastOpening==='crescent')
-      list=['royalHunt','counter','trample'];
+      list=['royalHunt','counter','windParry','trample'];
   }
   const i = b.sequence++;
   let pick = list[i % list.length];
