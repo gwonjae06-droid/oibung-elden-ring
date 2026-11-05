@@ -37,7 +37,11 @@ test('warnings never deal early damage, ordinary roll protection works, and paus
  g.dice.stun=1;const t=g.dice.giant.t;advance(g,.3);assert.equal(g.dice.giant.t,t);
 });
 test('unprotected impacts hurt once; death cancels all hazards and retry gets a fresh phase-one game',()=>{
- const g=ready(),pattern=giantPattern(2,{x:0,z:0});Object.assign(g.dice.giant,{state:'attack',t:0,slot:2,hazards:pattern.hazards,duration:pattern.duration});g.player.x=g.player.z=0;const hp=g.player.hp;advance(g,1.5);assert.ok(g.player.hp<hp);const after=g.player.hp;advance(g,.05);assert.equal(g.player.hp,after);
+ const g=ready(),pattern=giantPattern(2,{x:0,z:0});Object.assign(g.dice.giant,{state:'attack',t:0,slot:2,hazards:pattern.hazards,duration:pattern.duration});g.player.x=g.player.z=0;const hp=g.player.hp;
+ // Thrown dice warnings were lengthened, so advance through the actual live
+ // hazard window instead of assuming the pre-balance 1.5-second impact.
+ advance(g,pattern.hazards[0].start+pattern.hazards[0].warn+.12);
+ assert.ok(g.player.hp<hp);const after=g.player.hp;advance(g,.05);assert.equal(g.player.hp,after);
  damageDice(g,99999);assert.equal(g.status,'won');assert.deepEqual(giantHazards(g),[]);assert.equal(g.dice.giant.state,'dead');assert.equal(g.events.filter(e=>e.type==='victory').length,1);
  const fresh=createDicePlayerGame();assert.equal(fresh.boss.phase,1);assert.equal(fresh.dice.giant,undefined);assert.equal(fresh.boss.hp,fresh.boss.maxHp);
 });
