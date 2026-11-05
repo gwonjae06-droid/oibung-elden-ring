@@ -104,7 +104,7 @@ test('old v3 saves migrate without fabricating retroactive currency',()=>{
  const old={version:3,clears:3,defeated:['kwon'],records:[],memories:[],run:null};
  const p=loadProfile({getItem:()=>JSON.stringify(old)});
  assert.equal(p.version,4);assert.equal(p.flames,0);assert.equal(p.earnedFlames,0);
- assert.equal(investedFlames(p),0);assert.deepEqual(p.defeated,['kwon']);
+ assert.equal(investedFlames(p),0);assert.deepEqual(p.defeated,['kwon','clown','dice']);
  const poison=loadProfile({getItem:()=>JSON.stringify({...old,version:4,flames:-2,forge:{sword:{'blade-wave':999,'constructor':8}}})});
  assert.equal(poison.flames,0);assert.equal(forgeTier(poison,'sword','blade-wave'),0);
  assert.equal(forgeTier(poison,'sword','constructor'),0);
