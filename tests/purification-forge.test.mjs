@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EVOLUTIONS,evolutionCount} from '../src/weapon-evolution.mjs';
 import {freshProfile,newRun,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
-import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,consumeRevivalFlame,forgedEvolutions,sanitizeForge} from '../src/purification-forge.mjs';
+import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,consumeRevivalFlame,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES} from '../src/purification-forge.mjs';
 import {forgeScreen,flameRewardScreen} from '../src/forge-view.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
@@ -121,4 +121,30 @@ test('rendered Korean forge offers each tier, refund and the victory flame',()=>
  assert.match(gained,/정화의 불꽃을 획득했습니다/);
  assert.match(gained,/data-j="flame-next"/);
  assert.doesNotMatch(gained,/data-j="relic"/);
+});
+
+test('semicolon developer Easter egg grants exactly two saved flames and honors the balance cap',()=>{
+ const p=freshProfile();
+ assert.equal(grantForgeDeveloperFlames(p),2);
+ assert.equal(p.flames,2);assert.equal(p.earnedFlames,2);
+ assert.equal(grantForgeDeveloperFlames(p),2);
+ assert.equal(p.flames,4);
+ p.flames=MAX_FLAMES-1;
+ assert.equal(grantForgeDeveloperFlames(p),0,'partial grants would violate the explicit +2 promise');
+ assert.equal(p.flames,MAX_FLAMES-1);
+ assert.equal(grantForgeDeveloperFlames(null),0);
+});
+test('developer shortcut accepts only a non-repeating, unmodified semicolon key away from form fields',()=>{
+ const event={code:'Semicolon',key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null}};
+ assert.equal(isForgeDeveloperShortcut(event),true);
+ assert.equal(isForgeDeveloperShortcut({...event,key:'ㅁ'}),true,'physical key should work across keyboard layouts');
+ for(const field of ['repeat','ctrlKey','altKey','metaKey','shiftKey']){
+  assert.equal(isForgeDeveloperShortcut({...event,[field]:true}),false,field);
+ }
+ assert.equal(isForgeDeveloperShortcut({...event,code:'KeyA',key:'a'}),false);
+ assert.equal(isForgeDeveloperShortcut({...event,target:{closest:()=>({tagName:'INPUT'})}}),false);
+ const html=forgeScreen(freshProfile(),'sword',view);
+ assert.match(html,/개발자용 이스터에그/);
+ assert.match(html,/data-forge-dev-easter-egg="true"/);
+ assert.match(html,/<kbd>;<\/kbd>/);
 });
