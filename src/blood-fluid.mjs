@@ -11,21 +11,30 @@ export function createBloodFluid(quality){
  material.onBeforeCompile=shader=>{
   shader.uniforms.uBloodTime=uniforms.time;shader.uniforms.uBloodEnergy=uniforms.energy;
   shader.vertexShader='uniform float uBloodTime; uniform float uBloodEnergy; varying float vBloodThickness; varying vec3 vBloodCoord;\n'+shader.vertexShader;
-  // Slower, larger swell than before so the surface laps like thick liquid instead of buzzing.
+  // Two gently advected waves move along one shared flow direction; the
+  // smaller wave responds to energy rather than vibrating at random speeds.
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-   float flow=sin(position.y*3.1+position.x*2.3-uBloodTime*1.5)${quality.low?'':'*sin(position.z*2.7+uBloodTime*1.1)'};
-   float ripple=${quality.low?'0.0':'sin(position.x*7.0+position.y*4.0+uBloodTime*2.0)*0.03'};
-   transformed+=normal*(flow*(0.06+uBloodEnergy*0.035)+ripple);
+   vec2 currentDir=normalize(vec2(0.84,0.54));
+   float along=dot(position.xz,currentDir);
+   float crossFlow=dot(position.xz,vec2(-currentDir.y,currentDir.x));
+   float flow=sin(along*2.4-uBloodTime*(1.06+uBloodEnergy*0.25)
+      +sin(crossFlow*1.25+uBloodTime*0.24)*0.48);
+   float secondary=${quality.low?'0.0':'sin(along*4.1-uBloodTime*1.44+crossFlow*0.77)*0.023'};
+   float wave=flow*(0.046+uBloodEnergy*0.03)+secondary;
+   transformed+=normal*wave;
    vBloodThickness=flow*0.5+0.5;
    vBloodCoord=position.xyz;`);
   shader.fragmentShader='uniform float uBloodTime; uniform float uBloodEnergy; varying float vBloodThickness; varying vec3 vBloodCoord;\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-    // Advected streaks move through the fluid even on meshes with few vertices.
-    float current=sin(vBloodCoord.x*3.7-vBloodCoord.z*2.1-uBloodTime*1.4
-      +sin(vBloodCoord.y*2.0+uBloodTime*.36)*.7);
-    float eddy=sin(vBloodCoord.z*5.1+vBloodCoord.x*1.8+uBloodTime*.88);
-    float sheen=clamp(.5+.22*current+.12*eddy+.22*(vBloodThickness-.5),0.,1.);
-    diffuseColor.rgb*=mix(vec3(.65,.46,.52),vec3(1.18,.87,.85),sheen);
+    // Highlights ride downstream with the liquid, not across the surface.
+    vec2 currentDir=normalize(vec2(0.84,0.54));
+    float along=dot(vBloodCoord.xz,currentDir);
+    float across=dot(vBloodCoord.xz,vec2(-currentDir.y,currentDir.x));
+    float bend=sin(across*1.5+uBloodTime*.23)*.52;
+    float current=sin(along*3.4-uBloodTime*(1.04+uBloodEnergy*.16)+bend);
+    float eddy=sin(across*2.8+along*.68-uBloodTime*.47);
+    float sheen=clamp(.49+.19*current+.085*eddy+.19*(vBloodThickness-.5),0.,1.);
+    diffuseColor.rgb*=mix(vec3(.7,.52,.58),vec3(1.14,.91,.87),sheen);
   `);
  };
  const geometry=bloodSculptureGeometries(quality.segments);
