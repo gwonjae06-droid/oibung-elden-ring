@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {CLOWN_FACE,applyFaceAlpha} from './clown-face.mjs';
 import {mountPose} from './clown-visual-data.mjs';
 import {clownCameraPropPose,photoCardFrame} from './clown-stage-prop-data.mjs';
+import {updateClownShowLabel} from './clown-shows.mjs';
 export function createClownStageProps(parent){
  return runThreeStartup(THREE,(THREE,own)=>{
  const root=new THREE.Group();root.name='clown-stage-props';parent.add(root);
@@ -23,14 +24,13 @@ export function createClownStageProps(parent){
  let disposed=false,ownerDisposed=false,texture=null,game=null,flash=0,portraitState='pending';const released=new WeakSet();
  function assets(){const all=new Set();root.traverse(o=>{if(o.geometry)all.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){all.add(m);if(m.map)all.add(m.map);}});return all;}
  const watch=a=>a.addEventListener?.('dispose',()=>released.add(a));for(const a of assets())watch(a);
- const image=new Image();
- const cancelImage=()=>{image.onload=image.onerror=null;if(portraitState==='pending')portraitState='cancelled';};
+ const image=new Image();const cancelImage=()=>{image.onload=image.onerror=null;if(portraitState==='pending')portraitState='cancelled';};
  leather.addEventListener('dispose',()=>{ownerDisposed=true;cancelImage();});own({dispose:cancelImage});
  image.onload=()=>{if(disposed||ownerDisposed)return;try{const canvas=document.createElement('canvas');canvas.width=CLOWN_FACE.w;canvas.height=CLOWN_FACE.h;const ctx=canvas.getContext('2d');if(!ctx){portraitState='failed';return;}ctx.drawImage(image,0,0);ctx.putImageData(applyFaceAlpha(ctx.getImageData(0,0,canvas.width,canvas.height)),0,0);texture=new THREE.CanvasTexture(canvas);watch(texture);texture.colorSpace=THREE.SRGBColorSpace;for(const c of cards){c.mat.map=texture;c.mat.color.setHex(0xffffff);c.mat.needsUpdate=true;}portraitState='ready';}catch{portraitState='failed';}};
  image.onerror=()=>{if(!disposed&&!ownerDisposed)portraitState='failed';};image.src='data:image/jpeg;base64,'+CLOWN_FACE.jpeg;
  function clear(){game=null;flash=0;flashMat.opacity=0;camera.visible=false;for(const c of cards){c.group.visible=false;c.zone=null;}}
  function event(e,g){if(disposed||ownerDisposed)return;if(game!==g){clear();game=g;}if(['phase','victory','death'].includes(e.type)){clear();return;}if(e.type!=='clown-shutter'||!Number.isFinite(e.x)||!Number.isFinite(e.z))return;flash=.12;const zone=[...(g.clown?.zones||[])].reverse().find(z=>z.major&&Math.abs(z.x-e.x)<.01&&Math.abs(z.z-e.z)<.01);if(!zone)return;const card=cards.find(c=>!c.group.visible)||cards[0];card.zone=zone;card.group.position.set(e.x,.18,e.z);card.group.rotation.z=(g.time%1-.5)*.25;card.group.visible=true;}
- function update(dt,g){if(disposed||ownerDisposed)return;if(game!==g){clear();game=g;}const h=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;flash=Math.max(0,flash-h);flashMat.opacity=flash/.12;
+ function update(dt,g){if(disposed||ownerDisposed)return;if(game!==g){clear();game=g;}updateClownShowLabel(g);const h=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;flash=Math.max(0,flash-h);flashMat.opacity=flash/.12;
   const bodyY=g.boss.phase===2?mountPose(0,false).bodyY:5.2,p=clownCameraPropPose(g,bodyY);camera.visible=Boolean(p);if(p){camera.position.set(p.x,p.y,p.z);camera.rotation.y=p.yaw;camera.scale.setScalar(p.scale);}
   for(const card of cards){const attached=g.status==='playing'&&g.boss.state!=='transition'&&g.clown?.zones?.includes(card.zone),v=photoCardFrame(attached?card.zone:null);card.group.visible=v.visible;if(!v.visible)continue;card.group.scale.setScalar(v.scale);card.mat.color.setScalar(.22+.78*v.develop);}
  }
