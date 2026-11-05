@@ -7,14 +7,21 @@ export function createKwonTargetView(T,B,torso,host){
  const reticle=host?.querySelector?.('#reticle')||host?.ownerDocument?.getElementById?.('reticle');
  const world=new T.Vector3(),screen=new T.Vector3();
  let boss=null,disposed=false;
+ function worldPoint(){
+  const local=torso.point({x:0,y:2.25,z:1.4},'chest');
+  world.set(local.x,local.y,local.z);B.model.localToWorld(world);
+  return world;
+ }
+ function cameraFocus(player){
+  if(disposed||!boss||boss.state==='dead')return null;
+  return kwonLockFocus(player,worldPoint());
+ }
  function project(camera,locked,canvas){
   if(!reticle)return null;
   if(disposed||!locked||!boss||boss.state==='dead'||!camera?.isPerspectiveCamera){
    reticle.hidden=true;return null;
   }
-  const local=torso.point({x:0,y:2.25,z:1.4},'chest');
-  world.set(local.x,local.y,local.z);
-  B.model.localToWorld(world);
+  worldPoint();
   // Project after the arena finishes positioning AND orienting the camera.
   // No lookAt here: changing it during WebGL rendering breaks frustum culling.
   camera.updateMatrixWorld(true);
@@ -27,5 +34,5 @@ export function createKwonTargetView(T,B,torso,host){
   return p;
  }
  function dispose(){if(disposed)return;disposed=true;boss=null;if(reticle)reticle.hidden=true;}
- return {update(b){boss=b;},project,dispose};
+ return {update(b){boss=b;},cameraFocus,project,dispose};
 }
