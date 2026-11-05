@@ -1,4 +1,6 @@
 import {qualityPixelRatio,reducedMotion} from '../src/display-preferences.mjs';
+import * as REAL_THREE from 'three';
+import {buildPlayerAvatar} from '../src/player-avatar.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runThreeStartup} from '../src/runtime/three-startup.mjs';
@@ -28,13 +30,11 @@ test('successful factories retain resources and do not keep startup disposal hoo
   assert.equal(resource.disposals,0);resource.dispose();assert.equal(resource.disposals,1);
 });
 
-test('actual player-model factory cleans an allocated material when canvas creation fails',()=>{
-  const r=rig(),error=Error('canvas');
-  let source=readFileSync(new URL('../src/models.mjs',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replaceAll('export function ','function ');
-  const context={BASE_THREE:r.THREE,runThreeStartup,document:{createElement(){throw error;}}};
-  vm.runInNewContext(source+'\nglobalThis.build=buildPlayer;',context);
-  assert.throws(()=>context.build(['sword']),e=>e===error);
-  assert.equal(r.values.length,1);assert.equal(r.values[0].disposals,1);
+test('actual player-model factory releases every authored material when geometry allocation fails',()=>{
+  const error=Error('geometry allocation'),released=[];
+  const namespace=new Proxy(REAL_THREE,{get(t,k){if(k==='BufferGeometry')return class{constructor(){throw error;}};if(k==='MeshStandardMaterial'||k==='LineBasicMaterial')return class extends t[k]{constructor(...a){super(...a);const state={disposals:0};released.push(state);this.addEventListener('dispose',()=>state.disposals++);}};return t[k];}});
+  assert.throws(()=>buildPlayerAvatar(['sword'],namespace),e=>e===error);
+  assert.ok(released.length>=8);assert.ok(released.every(m=>m.disposals===1));
 });
 
 test('main arena rolls back its renderer when initial scene construction fails',()=>{

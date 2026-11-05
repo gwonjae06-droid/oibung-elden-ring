@@ -31,9 +31,9 @@ test('names imported from local modules are exported by those modules',()=>{
     for(const n of m[1].split(',').map(s=>s.trim()))assert.match(src,new RegExp('export (?:const|function) '+n+'\\b'),m[2]+' does not export '+n);
   }
 });
-test('models.mjs only imports three, the combat module and the model data',()=>{
+test('models.mjs delegates the player and articulated Kwon legs to their authored model modules',()=>{
   const specs=[...read('src/models.mjs').matchAll(/from '([^']+)'/g)].map(m=>m[1]).sort();
-  assert.deepEqual(specs,['./combat.mjs','./model-data.mjs','./runtime/three-startup.mjs','three']);
+  assert.deepEqual(specs,['./combat.mjs','./kwon-leg-rig.mjs','./model-data.mjs','./player-avatar.mjs','./runtime/three-startup.mjs','three']);
 });
 test('the boss face photo is embedded as data, not fetched from the network',()=>{
   assert.match(arena,/data:image\/jpeg;base64,/);

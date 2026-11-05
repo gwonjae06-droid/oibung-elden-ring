@@ -1,0 +1,26 @@
+name: Player model and motion quality
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  player:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - run: node --test tests/player-avatar.test.mjs tests/player-presentation.test.mjs tests/player-polish-disposal.test.mjs tests/three-startup.test.mjs tests/wiring.test.mjs tests/player-projectile-data.test.mjs tests/blood-siphon.test.mjs tests/blood-airborne-projectiles.test.mjs
+      - run: node scripts/player-quality-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: player-quality
+          path: qa-output/player-quality/
+          retention-days: 7

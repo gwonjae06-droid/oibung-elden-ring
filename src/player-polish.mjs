@@ -1,3 +1,5 @@
+import {applyPlayerMotion} from './player-motion.mjs';
+import {createPlayerCombatVfx} from './player-combat-vfx.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {findPlayerParts,playerPose,PLAYER_COLORS} from './player-presentation.mjs';
@@ -7,10 +9,12 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
 
  let disposed=false,completion=null;const nodes=new Set(),geometries=new Set(),materials=new Set(),errors=[];
  const safe=fn=>{try{return fn();}catch(error){errors.push(error);}},geometry=g=>(geometries.add(g),g),mat=m=>(materials.add(m),m),owned=n=>(nodes.add(n),n);
+ let modernFx=null,lastAction=null,variant=0,deathTime=0,castLeft=0;const castAction={kind:'attack',t:0,total:.38,wind:.16,active:.08};
  let parts=null,lastGame=null,lastTime=null,lastPos=null,speed=0,phase=0,walked=0,trailLife=0,nock=null;const sound=own(makeSound(soundOptions)),samples=[],mats=[],v0=new THREE.Vector3(),v1=new THREE.Vector3();
  const a=new Float32Array(9*18),geo=geometry(new THREE.BufferGeometry());geo.setAttribute('position',new THREE.BufferAttribute(a,3));geo.setDrawRange(0,0);const material=mat(new THREE.MeshBasicMaterial({color:0x8cdeff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending})),trail=owned(new THREE.Mesh(geo,material));trail.frustumCulled=false;trail.renderOrder=9;scene.add(trail);
  function decorate(){
   if(disposed)return false;if(parts)return true;parts=findPlayerParts(scene);if(!parts)return false;
+  if(parts.quality==='oathwarden-v1'){trail.visible=false;modernFx=createPlayerCombatVfx(scene,{mobile,reduced});nock=parts.weaponDetails.bow.arrow;return true;}
   const metal=mat(new THREE.MeshStandardMaterial({color:0x829cad,metalness:.6,roughness:.4,transparent:true})),gold=mat(new THREE.MeshStandardMaterial({color:0xd3b36c,metalness:.65,roughness:.4,transparent:true})),gem=mat(new THREE.MeshStandardMaterial({color:0x72b3c6,emissive:0x163b4b,roughness:.3,transparent:true}));mats.push(metal,gold,gem);
   const sphere=geometry(new THREE.SphereGeometry(1,10,8)),box=geometry(new THREE.BoxGeometry(1,1,1)),bead=(parent,material,x,y,z,sx,sy,sz)=>{const m=owned(new THREE.Mesh(sphere,material));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=!mobile;parent.add(m);return m;},plate=(parent,material,x,y,z,sx,sy,sz)=>{const m=owned(new THREE.Mesh(box,material));m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);return m;};
   bead(parts.body,metal,0,.35,.28,.31,.38,.13);bead(parts.body,gem,0,.7,.34,.075,.075,.04);
@@ -22,9 +26,10 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
   for(const card of [...parts.weapons.cards.children]){const mark=plate(card,gold,0,.022,0,.1,.012,.12);mark.rotation.y=Math.PI/4;}return true;
  }
  const rgb=hex=>[(hex>>16&255)/255,(hex>>8&255)/255,(hex&255)/255];
- function clear(){if(disposed)return;samples.length=0;geo.setDrawRange(0,0);material.opacity=0;walked=phase=speed=trailLife=0;lastTime=lastPos=lastGame=null;sound.clear();}
- function event(e,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}const p=g.player,c=rgb(PLAYER_COLORS[g.weapon]||0xffffff),n=k=>reduced?Math.ceil(k/3):k;
+ function clear(){if(disposed)return;samples.length=0;geo.setDrawRange(0,0);material.opacity=0;walked=phase=speed=trailLife=0;lastTime=lastPos=lastGame=null;lastAction=null;deathTime=castLeft=variant=0;modernFx?.clear();sound.clear();}
+ function event(e,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}modernFx?.event(e,g);const p=g.player,c=rgb(PLAYER_COLORS[g.weapon]||0xffffff),n=k=>reduced?Math.ceil(k/3):k;
   if(e.type==='phase'){clear();lastGame=g;return;}
+  if(e.type==='skill-cast'&&g.weapon==='cards')castLeft=.38;
   if(e.type==='roll'){sound.play('roll',g.weapon);emit?.(p.x,.1,p.z,n(14),[.5,.47,.4],true);ring?.(p.x,p.z,.9,0x93c8d5,.3);}
   if(e.type==='swing'&&['sword','hammer'].includes(g.weapon)){emit?.(p.x+Math.sin(p.yaw),1,p.z+Math.cos(p.yaw),n(7),c);}
   if(e.type==='shot'){emit?.(p.x+Math.sin(p.yaw)*2,1.2,p.z+Math.cos(p.yaw)*2,n(12),c);}
@@ -34,8 +39,21 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
  function update(dt,g){
   if(disposed)return;if(lastGame!==g){clear();lastGame=g;}sound.update();if(dt<=0)sound.clear();if(!decorate())return;
   const p=g.player,h=dt>0?Math.max(0,Math.min(.05,lastTime===null?dt:g.time-lastTime)):0;lastTime=g.time;
-  if(!lastPos)lastPos={x:p.x,z:p.z};const distance=Math.hypot(p.x-lastPos.x,p.z-lastPos.z);lastPos={x:p.x,z:p.z};
-  if(h>0){speed+=(Math.min(9,distance/h)-speed)*(1-Math.exp(-12*h));phase+=speed*h*2.3;if(!p.action&&g.status==='playing'){walked+=distance;if(walked>=1.55){walked%=1.55;sound.play('step',g.weapon);emit?.(p.x,.05,p.z,reduced?2:5,[.42,.39,.32],true);}}}
+  if(!lastPos)lastPos={x:p.x,z:p.z};const vx=p.x-lastPos.x,vz=p.z-lastPos.z,distance=Math.hypot(vx,vz),localX=distance?(vx*Math.cos(p.yaw)-vz*Math.sin(p.yaw))/distance:0,localZ=distance?(vx*Math.sin(p.yaw)+vz*Math.cos(p.yaw))/distance:1;lastPos.x=p.x;lastPos.z=p.z;
+  if(h>0){speed+=(Math.min(9,distance/h)-speed)*(1-Math.exp(-12*h));phase+=speed*h*2.3*(localZ<-.25?-1:1);if(!p.action&&g.status==='playing'){walked+=distance;const stride=parts.quality==='oathwarden-v1'?1.36:1.55;if(walked>=stride){walked%=stride;sound.play('step',g.weapon);modernFx?.step(p.x,p.z);emit?.(p.x,.05,p.z,reduced?2:5,[.42,.39,.32],true);}}}
+  if(parts.quality==='oathwarden-v1'){
+   const action=p.action;if(action!==lastAction){if(action&&['attack','skill'].includes(action.kind))variant=(variant+1)%3;lastAction=action;}
+   castLeft=Math.max(0,castLeft-h);castAction.t=.38-castLeft;
+   const pose=playerPose(g,phase,g.boss.state==='transition'?0:speed,{variant,time:g.time||0,moveX:localX,moveZ:localZ,cast:castLeft>0?castAction:null});
+   if(g.status==='lost'){deathTime+=Math.max(0,dt);const u=Math.min(1,deathTime/.85),k=u*u*(3-2*u);pose.lean=1.45*k;pose.lift=-.52*k;pose.kneeL=pose.kneeR=.85*k;pose.legL=pose.legR=-.30*k;pose.armL=pose.armR=-.5*k;pose.spin=pose.bob=0;pose.headX=.30*k;pose.trail=false;}
+   parts.rig.scale.y=1;applyPlayerMotion(parts,pose,g.weapon,(g.time||0)+deathTime,speed);modernFx.update(h,g,parts,pose);
+   const skill=p.skill||{},hurt=action?.kind==='hurt';
+   const enchant=action?.stun||skill.nextYellow?0xf6d36e:skill.nextRed?0xe56c79:skill.blue>0?0x79bdf2:0;
+   const gemColor=pose.heal>.05?0x95e9ba:enchant||PLAYER_COLORS[g.weapon]||0x90d8e1;
+   parts.materials.cardRed.color.setHex(g.weapon==='cards'&&enchant?enchant:0x842a3d);
+   for(const [key,m]of Object.entries(parts.materials))if(m.emissive){m.opacity=1;if(key==='gem')m.color.setHex(gemColor);m.emissive.setHex(key==='gem'?hurt?0x802f36:gemColor:hurt?0x2e080b:p.invuln>0?0x0b242c:0x000000);m.emissiveIntensity=key==='gem'?.32+pose.charge*1.2+(skill.haste>0||skill.hammerHits>=4?.35:0):hurt?.25:p.invuln>0?.22:0;}
+   return;
+  }
   if(g.status!=='playing'){samples.length=0;geo.setDrawRange(0,0);for(const m of mats){m.opacity=1;m.emissive.setHex(0x061016);}return;}
   const pose=playerPose(g,phase,g.boss.state==='transition'?0:speed),act=p.action;
   parts.legs[0].rotation.x=pose.legL;parts.legs[1].rotation.x=pose.legR;parts.knees[0].rotation.x=pose.kneeL;parts.knees[1].rotation.x=pose.kneeR;parts.arms[0].rotation.x=pose.armL;parts.arms[1].rotation.x=pose.armR;parts.elbows[0].rotation.x=pose.elbowL;parts.elbows[1].rotation.x=pose.elbowR;parts.pivot.rotation.x=pose.pivotX;parts.pivot.rotation.z=pose.pivotZ;parts.body.rotation.y=pose.twist;parts.body.rotation.z=reduced?pose.sway*.3:pose.sway;parts.body.rotation.x=act?.kind==='roll'?act.t/act.total*Math.PI*2:pose.lean;parts.body.position.y+=pose.lift;
@@ -48,7 +66,7 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
  function finishDispose(delegated){
   if(completion)return completion;let finish;completion=new Promise(resolve=>{finish=resolve;});disposed=true;let audio;
   try{audio=sound.dispose();}catch(error){errors.push(error);}
-  safe(()=>geo.removeEventListener('dispose',onOwnerDispose));samples.length=0;lastTime=lastPos=lastGame=parts=nock=null;
+  safe(()=>modernFx?.dispose(delegated));modernFx=null;safe(()=>geo.removeEventListener('dispose',onOwnerDispose));samples.length=0;lastTime=lastPos=lastGame=parts=nock=null;
   if(!delegated){for(const node of nodes)safe(()=>node.parent?.remove(node));for(const g of geometries)safe(()=>g.dispose());for(const m of materials)safe(()=>m.dispose());}
   nodes.clear();geometries.clear();materials.clear();mats.length=0;
   Promise.resolve(audio).then(report=>finish({errors:[...errors,...(report?.errors||[])]}),error=>{errors.push(error);finish({errors:[...errors]});});return completion;

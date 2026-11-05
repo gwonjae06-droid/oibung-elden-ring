@@ -1,3 +1,4 @@
+import {buildPlayerAvatar} from './player-avatar.mjs';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as BASE_THREE from 'three';
 const THREE=BASE_THREE;
@@ -38,113 +39,7 @@ function tube(points,r0,r1,mat,seg,namespace=BASE_THREE){
   const m=new THREE.Mesh(geo,mat);m.castShadow=true;return m;
 }
 
-export function buildPlayer(weaponKeys){
- return runThreeStartup(THREE,(THREE,own)=>{
-
-  const rig=new THREE.Group();rig.name='player';
-  const body=new THREE.Group();body.position.y=1;rig.add(body);
-  const skin=new THREE.MeshStandardMaterial({color:0xe0c7a5,roughness:.8});
-  const cloth=new THREE.MeshStandardMaterial({color:0x4f7da6,roughness:.7,transparent:true,map:noiseTexture('#4f7da6',160,128,3,THREE)});
-  const dark=new THREE.MeshStandardMaterial({color:0x2a3340,roughness:.85,transparent:true,side:THREE.DoubleSide});
-  const leather=new THREE.MeshStandardMaterial({color:0x4a3526,roughness:.8,transparent:true});
-  const hair=new THREE.MeshStandardMaterial({color:0x1b1a1f,roughness:.6});
-  const gold=new THREE.MeshStandardMaterial({color:0xc9a85a,roughness:.35,metalness:.7});
-  const mats=[cloth,dark,leather];
-
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.36,.62,6,14),cloth);torso.scale.set(1.08,1,.84);torso.position.y=.3;torso.castShadow=true;body.add(torso);
-  const belt=new THREE.Mesh(new THREE.CylinderGeometry(.38,.4,.1,16),leather);belt.position.y=-.05;belt.scale.z=.86;body.add(belt);
-  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.04),gold);buckle.position.set(0,-.05,.33);body.add(buckle);
-  const skirt=new THREE.Mesh(new THREE.CylinderGeometry(.38,.52,.42,16,1,true),dark);skirt.position.y=-.28;skirt.scale.z=.86;body.add(skirt);
-  for(const side of [-1,1]){
-    const pad=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),dark);pad.position.set(side*.5,.72,0);pad.scale.set(1.1,.7,1);pad.castShadow=true;body.add(pad);
-  }
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,.14,10),skin);neck.position.y=.9;body.add(neck);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.26,20,16),skin);head.position.y=1.12;head.castShadow=true;body.add(head);
-  const cap=new THREE.Mesh(new THREE.SphereGeometry(.275,20,14,0,Math.PI*2,0,Math.PI*.55),hair);cap.position.y=1.14;cap.rotation.x=-.18;body.add(cap);
-  const fringe=new THREE.Mesh(new THREE.BoxGeometry(.4,.07,.1),hair);fringe.position.set(0,1.27,.2);fringe.rotation.x=.4;body.add(fringe);
-  for(const side of [-1,1]){
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.028,8,6),new THREE.MeshStandardMaterial({color:0x111111}));eye.position.set(side*.095,1.14,.235);body.add(eye);
-  }
-
-  const legs={},knees={};
-  for(const side of [-1,1]){
-    const hip=new THREE.Group();hip.position.set(side*.18,-.42,0);body.add(hip);
-    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.12,.38,4,10),dark);thigh.position.y=-.22;thigh.castShadow=true;hip.add(thigh);
-    const knee=new THREE.Group();knee.position.y=-.45;hip.add(knee);
-    const shin=new THREE.Mesh(new THREE.CapsuleGeometry(.1,.34,4,10),leather);shin.position.y=-.2;shin.castShadow=true;knee.add(shin);
-    const boot=new THREE.Mesh(new THREE.BoxGeometry(.2,.12,.34),dark);boot.position.set(0,-.42,.06);knee.add(boot);
-    const key=side<0?'L':'R';legs[key]=hip;knees[key]=knee;
-  }
-  const arms={},elbows={};
-  for(const side of [-1,1]){
-    const sh=new THREE.Group();sh.position.set(side*.52,.7,0);body.add(sh);
-    const up=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.3,4,10),cloth);up.position.y=-.2;up.castShadow=true;sh.add(up);
-    const el=new THREE.Group();el.position.y=-.38;sh.add(el);
-    const lo=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.28,4,10),leather);lo.position.y=-.18;lo.castShadow=true;el.add(lo);
-    const hand=new THREE.Mesh(new THREE.SphereGeometry(.08,10,8),skin);hand.position.y=-.38;el.add(hand);
-    const bracer=new THREE.Mesh(new THREE.CylinderGeometry(.092,.086,.15,10),gold);bracer.position.y=-.14;el.add(bracer);
-    const key=side<0?'L':'R';arms[key]=sh;elbows[key]=el;
-  }
-
-  for(const side of [-1,1]){
-    const plate=new THREE.Mesh(new THREE.SphereGeometry(.24,14,10,0,Math.PI*2,0,Math.PI*.55),dark);plate.position.set(side*.52,.78,0);plate.scale.set(1.2,.8,1.1);plate.rotation.z=side*-.25;plate.castShadow=true;body.add(plate);
-    const edge=new THREE.Mesh(new THREE.TorusGeometry(.21,.018,6,18),gold);edge.position.set(side*.52,.74,0);edge.rotation.x=Math.PI/2;edge.scale.set(1.2,1.1,1);body.add(edge);
-  }
-  const emblem=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);emblem.position.set(0,.5,.31);emblem.scale.set(1,1.5,.5);body.add(emblem);
-  const scarfMat=new THREE.MeshStandardMaterial({color:0x8d2f3a,roughness:.8,transparent:true});mats.push(scarfMat);
-  const scarf=new THREE.Mesh(new THREE.TorusGeometry(.14,.045,8,16),scarfMat);scarf.position.y=.86;scarf.rotation.x=Math.PI/2;body.add(scarf);
-  const scarfTail=new THREE.Mesh(new THREE.BoxGeometry(.12,.5,.04),scarfMat);scarfTail.position.set(.08,.62,-.2);scarfTail.rotation.x=.2;body.add(scarfTail);
-
-  const capeParts=[];let cape;
-  {
-    const root=new THREE.Group();root.position.set(0,.8,-.3);body.add(root);cape=root;
-    let parent=root;
-    for(let i=0;i<3;i++){
-      const seg=new THREE.Group();parent.add(seg);
-      const m=new THREE.Mesh(new THREE.BoxGeometry(.8-i*.08,.4,.05),new THREE.MeshStandardMaterial({color:0x6a2f36,roughness:.9,side:THREE.DoubleSide}));
-      m.position.y=-.2;m.castShadow=true;seg.add(m);
-      const next=new THREE.Group();next.position.y=-.4;seg.add(next);
-      capeParts.push(seg);parent=next;
-    }
-  }
-
-  const pivot=new THREE.Group();pivot.position.set(0,-.78,.05);arms.R.add(pivot);
-  const metal=new THREE.MeshStandardMaterial({color:0xcfd4d8,metalness:.8,roughness:.28});
-  const glint=new THREE.MeshStandardMaterial({color:0xdff6ff,emissive:0x2f7aa0,emissiveIntensity:.7,metalness:.6,roughness:.25});
-  const wood=new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:.8});
-  const weaponRigs={};
-  {
-    const sword=new THREE.Group();
-    const blade=new THREE.Mesh(new THREE.BoxGeometry(.07,.12,1.5),metal);blade.position.z=1.05;
-    const bladeEdge=new THREE.Mesh(new THREE.BoxGeometry(.018,.128,1.46),glint);bladeEdge.position.z=1.05;
-    const tip=new THREE.Mesh(new THREE.ConeGeometry(.06,.3,4).rotateX(Math.PI/2),metal);tip.position.z=1.9;tip.scale.y=1.6;
-    const guard=new THREE.Mesh(new THREE.BoxGeometry(.5,.07,.09),gold);guard.position.z=.3;
-    const grip=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.3,8).rotateX(Math.PI/2),leather);grip.position.z=.1;
-    const pommel=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),gold);pommel.position.z=-.06;
-    sword.add(blade,bladeEdge,tip,guard,grip,pommel);weaponRigs.sword=sword;
-    const hammer=new THREE.Group();
-    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1.6,8).rotateX(Math.PI/2),wood);shaft.position.z=.7;
-    const mass=new THREE.Mesh(new THREE.BoxGeometry(.6,.5,.55),metal);mass.position.z=1.6;
-    for(const s of [-1,1]){const sp=new THREE.Mesh(new THREE.ConeGeometry(.08,.2,6).rotateZ(-s*Math.PI/2),metal);sp.position.set(s*.38,0,1.6);hammer.add(sp);}
-    hammer.add(shaft,mass);weaponRigs.hammer=hammer;
-    const bow=new THREE.Group();
-    const arc=new THREE.Mesh(new THREE.TorusGeometry(.62,.04,6,22,Math.PI),wood);arc.rotation.z=Math.PI/2;arc.position.z=.5;
-    const str=new THREE.Mesh(new THREE.CylinderGeometry(.01,.01,1.24,4),new THREE.MeshStandardMaterial({color:0xe9e2cc}));str.position.z=.5;
-    bow.add(arc,str);weaponRigs.bow=bow;
-    const cards=new THREE.Group();
-    for(let i=0;i<4;i++){
-      const c=new THREE.Mesh(new THREE.BoxGeometry(.3,.02,.46),new THREE.MeshStandardMaterial({color:i===1?0xb94a48:i===2?0x2a2a35:0xf2ecdc,roughness:.5}));
-      c.position.set((i-1.5)*.17,0,.55);c.rotation.y=(i-1.5)*.3;cards.add(c);
-    }
-    weaponRigs.cards=cards;
-    for(const k of weaponKeys){weaponRigs[k].visible=false;pivot.add(weaponRigs[k]);}
-  }
-  const presentationParts=Object.freeze({rig,body,pivot,arms:Object.freeze([arms.L,arms.R]),elbows:Object.freeze([elbows.L,elbows.R]),legs:Object.freeze([legs.L,legs.R]),knees:Object.freeze([knees.L,knees.R]),weapons:Object.freeze({...weaponRigs}),cape});
-  Object.defineProperty(rig,'presentationParts',{value:presentationParts});
-  return {rig,body,mats,pivot,weaponRigs,legs,arms,capeParts,cloth,elbows,knees,cape,presentationParts};
-
- });
-}
+export function buildPlayer(weaponKeys){return buildPlayerAvatar(weaponKeys,THREE);}
 
 export function buildBoss(){
  return runThreeStartup(THREE,(THREE,own)=>{

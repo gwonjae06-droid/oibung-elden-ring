@@ -1,13 +1,41 @@
+import * as THREE from 'three';
 import {runThreeStartup} from './runtime/three-startup.mjs';
-import {playerProjectileStyle,playerProjectilePose} from './player-projectile-data.mjs';
-export function createPlayerProjectileView(T,parent){return runThreeStartup(T,(T,own)=>{
- const root=new T.Group();root.name='shared-player-projectiles';parent.add(root);const items=new Map(),materials=new Map(),released=new WeakSet();let owner=null,disposed=false;
- const geos={shaft:new T.CylinderGeometry(.035,.045,1,8).rotateX(Math.PI/2),long:new T.CylinderGeometry(.035,.045,2,8).rotateX(Math.PI/2),tip:new T.ConeGeometry(.09,.25,8).rotateX(Math.PI/2),card:new T.BoxGeometry(.4,.035,.55),mark:new T.BoxGeometry(.12,.04,.16),wave:new T.TorusGeometry(.9,.065,8,32,Math.PI).rotateX(Math.PI/2),orb:new T.SphereGeometry(.15,12,8)};
- const watch=a=>a.addEventListener('dispose',()=>released.add(a));for(const g of Object.values(geos))watch(g);
- function material(color){if(!materials.has(color)){const m=new T.MeshBasicMaterial({color,side:T.DoubleSide});watch(m);materials.set(color,m);}return materials.get(color);}
- function make(style){const group=new T.Group();const add=(g,c,x=0,y=0,z=0)=>{const m=new T.Mesh(g,material(c));m.position.set(x,y,z);group.add(m);};if(style.kind==='bow'){add(style.length===2?geos.long:geos.shaft,style.color);add(geos.tip,style.color,0,0,style.length/2+.1);}else if(style.kind==='cards'){add(geos.card,style.color);add(geos.mark,0xe4c27c,0,.035,0);}else add(style.kind==='wave'?geos.wave:geos.orb,style.color);group.scale.setScalar(style.scale);root.add(group);return group;}
- function clear(){for(const item of items.values())item.group.removeFromParent();items.clear();owner=null;}
- function update(g){if(disposed)return;if(owner!==g){clear();owner=g;}const live=new Set();for(const q of g.projectiles||[]){if(!(q.life>0))continue;live.add(q.id);const style=playerProjectileStyle(q,g.weapon),key=JSON.stringify(style);let item=items.get(q.id);if(!item||item.key!==key){item?.group.removeFromParent();item={key,group:make(style)};items.set(q.id,item);}const p=playerProjectilePose(q,g.time);item.group.position.set(p.x,p.y,p.z);item.group.rotation.set(0,p.yaw,p.spin);}for(const [id,item]of items)if(!live.has(id)){item.group.removeFromParent();items.delete(id);}}
- function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();for(const a of [...Object.values(geos),...materials.values()])if(!released.has(a))a.dispose();materials.clear();}
- return {root,update,clear,dispose};
- });}
+import {loft,plate,beam,addMesh,mergeRigid,mergeTinted} from './player-geometry.mjs';
+
+export function createPlayerProjectileView(sceneOrNamespace,parent=null){
+ const scene=parent||sceneOrNamespace,namespace=parent?sceneOrNamespace:THREE;
+ return runThreeStartup(namespace,T=>{
+  const root=new T.Group();root.name='shared-player-projectiles';scene.add(root);
+  const wood=new T.MeshStandardMaterial({color:0x78502e,roughness:.72}),metal=new T.MeshStandardMaterial({color:0xe2e7e9,metalness:.67,roughness:.30}),gold=new T.MeshStandardMaterial({color:0xc7a461,metalness:.68,roughness:.40});
+  const ivory=new T.MeshStandardMaterial({color:0xf0e8cd,roughness:.65,side:T.DoubleSide}),ink=new T.MeshStandardMaterial({color:0x61293a,roughness:.55});
+  const flightMat=new T.MeshStandardMaterial({vertexColors:true,color:0xffffff,metalness:.26,roughness:.5}),glow=new T.MeshStandardMaterial({vertexColors:true,color:0xffffff,metalness:.26,roughness:.38,emissive:0x337966,emissiveIntensity:.7}),waveMat=new T.MeshBasicMaterial({color:0xa4dcf4,transparent:true,opacity:.64,side:T.DoubleSide,depthWrite:false,blending:T.AdditiveBlending});
+  const arrow=new T.Group();
+  addMesh(T,arrow,loft(T,[[-.48,.018,.018],[.43,.018,.018]],6,'z'),wood,'player-arrow-shaft');
+  addMesh(T,arrow,loft(T,[[.43,.065,.032],[.65,.001,.001]],4,'z'),metal,'player-arrow-forged-head');
+  for(let i=0;i<3;i++){const g=plate(T,[[0,0],[.075,.07],[.06,.23],[0,.27]],.007);g.rotateX(Math.PI/2);g.rotateZ(i*Math.PI*2/3);addMesh(T,arrow,g,ivory,'player-arrow-fletching',0,0,-.46);}
+  mergeRigid(T,arrow);
+  const card=new T.Group(),face=plate(T,[[-.15,-.22],[.15,-.22],[.15,.22],[-.15,.22]],.018);face.rotateX(-Math.PI/2);addMesh(T,card,face,ivory,'player-flying-card');
+  const suit=plate(T,[[0,.10],[.07,0],[0,-.10],[-.07,0]],.008);suit.rotateX(-Math.PI/2);addMesh(T,card,suit,ink,'player-card-suit',0,.02,0);
+  addMesh(T,card,beam(T,[[-.13,.016,-.20,.007],[-.13,.016,.20,.007],[.13,.016,.20,.007],[.13,.016,-.20,.007],[-.13,.016,-.20,.007]],4),gold,'player-card-inlaid-border');
+  mergeTinted(T,arrow,flightMat);mergeTinted(T,card,flightMat);
+  const p=[],uv=[],indices=[];
+  for(let i=0;i<=28;i++){const a=-Math.PI*.70+i/28*Math.PI*1.4;for(const r of [.88,1.0]){p.push(Math.sin(a)*r,Math.cos(a)*r,0);uv.push(i/28,r);}if(i){const k=i*2;indices.push(k-2,k-1,k,k,k-1,k+1);}}
+  const waveGeo=new T.BufferGeometry();waveGeo.setAttribute('position',new T.Float32BufferAttribute(p,3));waveGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));waveGeo.setIndex(indices);waveGeo.computeVertexNormals();const wave=new T.Mesh(waveGeo,waveMat);
+  const active=new Map(),pools=new Map(),resources=new Set([wood,metal,gold,ivory,ink,flightMat,glow,waveMat]);
+  for(const template of [arrow,card,wave])template.traverse(o=>{if(o.geometry)resources.add(o.geometry);});
+  let disposed=false,time=0,allocated=0,owner=null;
+  function clear(){for(const entry of active.values()){root.remove(entry.node);const pool=pools.get(entry.key)||[];pool.push(entry.node);pools.set(entry.key,pool);}active.clear();time=0;owner=null;}
+  function update(input,dt=0){if(disposed)return;const game=Array.isArray(input)?null:input,list=game?.projectiles??input??[];if(game&&owner!==game){clear();owner=game;}time=game?game.time||0:time+Math.max(0,dt);const seen=new Set();
+   for(const q of list){
+    if(q.life!==undefined&&!(q.life>0))continue;
+    seen.add(q.id);let e=active.get(q.id);const key=q.kind==='wave'?'wave':q.kind==='cards'?'cards':q.piercing||q.skill?'piercing':'bow';
+    if(e&&e.key!==key){root.remove(e.node);const pool=pools.get(e.key)||[];pool.push(e.node);pools.set(e.key,pool);active.delete(q.id);e=null;}
+    if(!e){const pool=pools.get(key);let node=pool?.pop();if(!node){if(allocated>=128){let recycled=false;for(const spare of pools.values())if(spare.length){spare.pop();allocated--;recycled=true;break;}if(!recycled)continue;}node=(key==='cards'?card:key==='wave'?wave:arrow).clone(true);allocated++;if(key==='piercing')node.traverse(o=>{if(o.isMesh)o.material=glow;});}e={key,node};active.set(q.id,e);root.add(node);}
+    const node=e.node;node.position.set(q.x,Number.isFinite(q.y)?q.y:q.kind==='wave'?.25:1.2,q.z);node.rotation.set(key==='wave'&&(q.y??.25)<.4?-Math.PI/2:0,q.yaw||0,key==='cards'?time*10+(q.id||0):0);node.scale.setScalar(q.skill?1.20:q.piercing?1.10:1);
+   }
+   for(const[id,e]of active)if(!seen.has(id)){root.remove(e.node);const pool=pools.get(e.key)||[];pool.push(e.node);pools.set(e.key,pool);active.delete(id);}
+  }
+  function dispose(){if(disposed)return;disposed=true;clear();root.parent?.remove(root);pools.clear();for(const r of resources)r.dispose();resources.clear();}
+  return {root,update,clear,dispose,stats:()=>({active:active.size,allocated,capacity:128})};
+ });
+}
