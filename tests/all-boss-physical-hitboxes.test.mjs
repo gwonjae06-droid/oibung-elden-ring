@@ -52,7 +52,7 @@ test('blood boss has robe, chest, arms, legs and head at true different heights'
 });
 test('blood boss melee in wrong direction cannot damage even inside the old range',()=>{
  const g=blood(1),hp=g.boss.hp;g.player.z=-2;g.player.yaw=0;
- assert.equal(actBlood(g,'light'),true);stepFor(g,stepBlood,.5);
+ assert.equal(actBlood(g,'light'),true);g.player.action.yaw=0;stepFor(g,stepBlood,.5);
  assert.equal(g.boss.hp,hp);
 });
 test('blood boss ground-level bow actually hits robe when grounded',()=>{
