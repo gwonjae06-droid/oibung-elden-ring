@@ -42,7 +42,9 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   const artifacts=path.join(root,'artifacts/flame-skip');await fs.mkdir(artifacts,{recursive:true});
   assert.match(await page.locator('.j-skip-offer').innerText(),/배서준부터 시작/);
   await click('skip-toggle');assert.equal((await read()).flames,2);
-  await page.waitForTimeout(900);await page.screenshot({path:path.join(artifacts,'home-selected.png')});
+  await page.screenshot({path:path.join(artifacts,'home-selected.png'),animations:'disabled'});
+  const homeVisibility=await page.locator('.j-skip-offer').evaluate(el=>({opacity:getComputedStyle(el).opacity,top:el.getBoundingClientRect().top,height:el.getBoundingClientRect().height,viewport:innerHeight}));
+  assert.ok(Number(homeVisibility.opacity)>.9&&homeVisibility.top>=0&&homeVisibility.top+homeVisibility.height<=homeVisibility.viewport,'home shortcut is not visible: '+JSON.stringify(homeVisibility));
   await click('new');await click('home');assert.equal((await read()).flames,2);
   assert.equal(await page.locator('[data-j="skip-toggle"]').getAttribute('aria-pressed'),'false');
   await click('skip-toggle');await click('new');
