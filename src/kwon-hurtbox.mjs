@@ -3,7 +3,6 @@
 // The horizontal projection is a union of anatomical ellipses, not one giant
 // circular area centred on the root.
 const RAD=1e-8, MARGIN=.12;
-const inRange=(v,max)=>Math.max(0,Math.min(max,v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 
 function toWorld(b,local){
@@ -62,19 +61,27 @@ export function kwonHurtContact(shapes,p,{reach=0,yaw=null}={}){
 function normalizedPoint(shape,p,extra=0){
  const d=localDelta(shape,p);return {x:d.x/(shape.rx+extra),z:d.z/(shape.rz+extra)};
 }
-function segmentClosestToOrigin(a,b){
- const dx=b.x-a.x,dz=b.z-a.z,m=dx*dx+dz*dz;
- const t=m?inRange(-(a.x*dx+a.z*dz)/m,1):0;
- return {distance:Math.hypot(a.x+dx*t,a.z+dz*t),t};
+function segmentEllipseEntry(a,b){
+ const dx=b.x-a.x,dz=b.z-a.z,aa=dx*dx+dz*dz,bb=2*(a.x*dx+a.z*dz),
+  cc=a.x*a.x+a.z*a.z-1;
+ if(cc<=0)return {t:0,depth:Math.hypot(a.x,a.z)};
+ if(aa<RAD)return null;
+ const delta=bb*bb-4*aa*cc;if(delta<0)return null;
+ const t=(-bb-Math.sqrt(delta))/(2*aa);
+ if(t<0||t>1)return null;
+ return {t,depth:1};
 }
 export function kwonProjectileContact(shapes,from,to){
- let best=null,first=Infinity;
+ let best=null,first=Infinity,bestDepth=Infinity;
  for(const shape of shapes){
   const a=normalizedPoint(shape,from,MARGIN),b=normalizedPoint(shape,to,MARGIN);
-  const entry=segmentClosestToOrigin(a,b);
-  if(entry.distance>1)continue;
-  if(entry.t>=first)continue;
-  first=entry.t;
+  const entry=segmentEllipseEntry(a,b);
+  if(!entry)continue;
+  // The first intersected physical part wins. If a shot begins inside
+  // overlapping parts, report the more central body part, not whichever
+  // primitive happens to be first in the array.
+  if(entry.t>first+RAD||Math.abs(entry.t-first)<RAD&&entry.depth>=bestDepth)continue;
+  first=entry.t;bestDepth=entry.depth;
   const p={x:from.x+(to.x-from.x)*entry.t,z:from.z+(to.z-from.z)*entry.t};
   best={...nearestSurface(shape,p),part:shape.id};
  }
