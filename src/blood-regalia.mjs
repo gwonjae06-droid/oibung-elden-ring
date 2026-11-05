@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {createBloodLegRig} from './blood-leg-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
+import {createWeightedJoint} from './joint-skinning.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
 // the spell system and all damage volumes remain independent of this visual rig.
@@ -34,7 +35,7 @@ function taperedCuff(parent,side,mat){
  cuff.rotation.z=-side*.12;
  return cuff;
 }
-function armature(actor,side,{dark,red,metal,edge,skin,vein}){
+function armature(actor,side,{dark,red,metal,edge,skin,vein,coarse=false}){
  const arm=new THREE.Group();arm.position.set(side*1.06,3.26,-.02);actor.add(arm);
  const shoulder=attach(arm,new THREE.SphereGeometry(.56,20,12),metal,side*.08,-.08,-.03);
  shoulder.scale.set(1.17,.66,1);
@@ -68,7 +69,11 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  }
  const thorn=attach(arm,new THREE.ConeGeometry(.15,.78,8),vein,side*.47,.11,-.12);
  thorn.rotation.z=-side*.45;thorn.visible=false;
- return {arm,forearm,hand,fingers,thorn,side};
+ const skins=[
+  createWeightedJoint(THREE,arm,forearm,dark,{name:'blood-skinned-elbow-'+side,radius:.26,length:.34,sides:coarse?8:10}),
+  createWeightedJoint(THREE,forearm,hand,skin,{name:'blood-skinned-wrist-'+side,radius:.16,length:.22,sides:coarse?8:10})
+ ];
+ return {arm,forearm,hand,fingers,thorn,side,skins};
 }
 export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const dark=material(0x1a1118,0,.92),wine=material(0x35111e,0,.84,{side:THREE.DoubleSide});
@@ -76,7 +81,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const edge=material(0xd5ba88,.7,.28),skin=material(0xb38b80,0,.85);
  const vein=material(0x790a2c,.16,.29,{emissive:0x310612,emissiveIntensity:.5});
  const bone=material(0xb8a8a0,.16,.44),ashes=material(0x26131f,.2,.6);
- const legRig=createBloodLegRig(actor,{dark,metal,edge});
+ const legRig=createBloodLegRig(actor,{dark,metal,edge,coarse});
  const torso=new THREE.Group();actor.add(torso);
  // The inner robe is one continuous lathed volume, rather than a flat cone.
  const outline=[new THREE.Vector2(1.28,.55),new THREE.Vector2(1.43,.65),new THREE.Vector2(1.25,1.02),new THREE.Vector2(.98,1.65),new THREE.Vector2(.73,2.48),new THREE.Vector2(.89,3.15),new THREE.Vector2(.68,3.48)];
@@ -129,7 +134,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  }
  // Shoulder sockets stay mounted on the turning chest: hand and elbow joints
  // follow the same torso during every casting pose instead of floating.
- const arms=[armature(torso,-1,{dark,red,metal,edge,skin,vein}),armature(torso,1,{dark,red,metal,edge,skin,vein})];
+ const arms=[armature(torso,-1,{dark,red,metal,edge,skin,vein,coarse}),armature(torso,1,{dark,red,metal,edge,skin,vein,coarse})];
  // Phase two: exposed ribs and needlelike bone growth originate from beneath the armor.
  const growth=new THREE.Group();torso.add(growth);growth.visible=false;
  for(const side of [-1,1]){
@@ -189,5 +194,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
+ return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,jointSkins:[...arms.flatMap(a=>a.skins),...legRig.legs.flatMap(l=>l.skins)],plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
 }
