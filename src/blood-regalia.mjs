@@ -27,7 +27,7 @@ function panelGeometry(angle,width,segments=12){
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setIndex(ids);g.computeVertexNormals();return g;
 }
 function taperedCuff(parent,side,mat){
- const cuff=attach(parent,new THREE.CylinderGeometry(.26,.36,.64,12),mat,side*.25,-1.31,.04);
+ const cuff=attach(parent,new THREE.CylinderGeometry(.26,.36,.64,12),mat,side*.02,-.29,.04);
  cuff.rotation.z=-side*.12;
  return cuff;
 }
@@ -42,9 +42,10 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  attach(arm,new THREE.TorusGeometry(.39,.065,7,24,Math.PI*1.2),edge,side*.17,-.6,.09).rotation.z=-side*.3;
  const elbow=attach(arm,new THREE.SphereGeometry(.28,12,10),metal,side*.23,-1.02,0);
  elbow.scale.set(1,1,.95);
- taperedCuff(arm,side,metal);
- tube(arm,[[side*.23,-1.06,.29],[side*.3,-1.34,.38],[side*.32,-1.64,.32]],.043,edge,16);
- const hand=new THREE.Group();hand.position.set(side*.3,-1.75,.12);arm.add(hand);
+ const forearm=new THREE.Group();forearm.position.set(side*.23,-1.02,0);arm.add(forearm);
+ taperedCuff(forearm,side,metal);
+ tube(forearm,[[0,-.04,.29],[side*.07,-.32,.38],[side*.09,-.62,.32]],.043,edge,16);
+ const hand=new THREE.Group();hand.position.set(side*.07,-.73,.12);forearm.add(hand);
  const palm=attach(hand,new THREE.SphereGeometry(.26,12,10),skin,0,0,0);palm.scale.set(1.03,.78,.65);
  for(let f=0;f<4;f++){
   const x=(f-1.5)*.117;
@@ -61,7 +62,7 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  }
  const thorn=attach(arm,new THREE.ConeGeometry(.15,.78,8),vein,side*.47,.11,-.12);
  thorn.rotation.z=-side*.45;thorn.visible=false;
- return {arm,hand,thorn,side};
+ return {arm,forearm,hand,thorn,side};
 }
 export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const dark=material(0x1a1118,0,.92),wine=material(0x35111e,0,.84,{side:THREE.DoubleSide});
@@ -131,18 +132,26 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const ring=attach(growth,new THREE.TorusGeometry(.52,.04,6,32),edge,0,3.12,.73);
  // A restrained moving silhouette in phase one; violent structural bloom in phase two.
  let bloom=0;
- function update(g,c,dt,cast=0){
+ function update(g,c,dt,cast=0,pose={}){
   const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,dt):0;
   const target=c.veins||0;bloom+=(target-bloom)*(1-Math.exp(-t*5));
   const sway=reduced?0:Math.sin(time*1.5)*.023;
-  torso.rotation.y=sway*.5;cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.11;
-  cape.rotation.z=reduced?0:Math.sin(time*.9)*.025;
-  drapes.forEach((p,i)=>{p.rotation.y=reduced?0:Math.sin(time*1.35+i*.65)*.018;p.rotation.x=reduced?0:Math.sin(time*1.7+i*.85)*.014;});
-  cuirass.rotation.x=-cast*.06;waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
-  for(const {arm,hand,thorn,side}of arms){
-   arm.rotation.x=-cast*.9+(reduced?0:Math.sin(time*1.2+side)*.018);
-   arm.rotation.z=side*(.17+cast*.32);
-   hand.rotation.x=-cast*.17;hand.rotation.z=side*(reduced?0:Math.sin(time*1.6+side)*.03);
+  torso.rotation.y=sway*.5+(pose.body?.twist||0)*.24;
+  torso.rotation.x=(pose.body?.lean||0)*.16;
+  cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17;
+  cape.rotation.z=(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55;
+  drapes.forEach((p,i)=>{p.rotation.y=(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07;p.rotation.x=(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7);});
+  cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
+  for(const {arm,forearm,hand,thorn,side}of arms){
+   const gesture=pose.arms?.[side<0?0:1];
+   const raise=gesture?.raise??cast,open=gesture?.open??cast;
+   arm.rotation.x=-raise*.88+(reduced?0:Math.sin(time*1.2+side)*.018);
+   arm.rotation.z=side*(.17+open*.32);
+   arm.rotation.y=(pose.body?.twist||0)*.14;
+   forearm.rotation.x=-(gesture?.elbow||0)*.62-cast*.05;
+   forearm.rotation.z=side*(gesture?.open||0)*.08;
+   hand.rotation.x=-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12;
+   hand.rotation.z=side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12);
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);
   }
   growth.visible=bloom>.004;growth.scale.set(1,Math.max(.001,bloom),1);
