@@ -6,19 +6,20 @@ import {SAVE_KEY,freshProfile} from '../src/journey-state.mjs';
 import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 function rig({holdClown=false,failScene=null,savedProfile=null}={}){
- const listeners=new Map(),timers=[],data=new Map(),modals={},releases=[],states=[];
+ const listeners=new Map(),windowListeners=new Map(),timers=[],data=new Map(),modals={},releases=[],states=[];
  if(savedProfile)data.set(SAVE_KEY,JSON.stringify(savedProfile));
  const root=()=>({addEventListener(){},removeEventListener(){},getElementById:id=>id==='result'?{hidden:false}:id==='battle-preparation'?{style:{},hidden:true}:{focus(){}}});
  const dialog={...root(),open:true,html:'',set innerHTML(v){this.html=v;},querySelector:()=>({focus(){}}),showModal(){this.open=true;},close(){this.open=false;},addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)};
  let current,lastLaunch;
  const doc={...root(),hidden:false,getElementById:id=>id==='journey'?dialog:modals[id]||root().getElementById(id)};
- const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener(){},removeEventListener(){}};
+ const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener:(type,fn)=>{const a=windowListeners.get(type)||[];a.push(fn);windowListeners.set(type,a);},removeEventListener:(type,fn)=>{windowListeners.set(type,(windowListeners.get(type)||[]).filter(f=>f!==fn));}};
  const makeGame=()=>({status:'playing',time:10,weapon:'sword',player:{maxHp:120,hp:120,potions:3},boss:{hp:100,maxHp:100}});
  releases.push(bindBattleSession(doc,()=>({game:current,start(w,configure){current=makeGame();current.weapon=w;configure(current);},menu(){},pause(){}})));
  const loadBattle=async boss=>{const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch};};
  let releaseClown;const scenes=[];const api=installJourney(doc,win,{loadBattle,playPull:()=>{scenes.push('pull');return {finished:Promise.resolve(true),dispose(){}};},playTransition:boss=>{if(failScene===boss)throw Error('cinematic exploded');scenes.push(boss);return {finished:boss==='clown'&&holdClown?new Promise(r=>releaseClown=r):Promise.resolve(true),dispose(){releaseClown?.(false);}};},makeMusic:()=>({unlock(){},update:on=>states.push(on),dispose(){}})});
  const click=(action,extra={})=>listeners.get('click')({target:{closest:()=>({dataset:{j:action,...extra}})}});
- return {api,dialog,data,states,scenes,finishScene:()=>releaseClown(true),click,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
+ const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},...overrides};for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
+ return {api,dialog,data,states,scenes,finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
 }
 test('controller grants four repeatable flames, replaces relic choices, and records a full clear',async()=>{
  const f=rig();await f.click('new');await f.click('begin');
@@ -122,4 +123,34 @@ test('one journey revival spends a flame and retries current boss only once',asy
  await f.click('restart');f.game().status='lost';await f.poll();
  assert.match(f.dialog.html,/data-j="revive"/);
  await f.api.dispose();f.release();
+});
+
+test('developer semicolon Easter egg only works in forge and persists two flames per real keypress',async()=>{
+ const f=rig();
+ const saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ assert.equal(saved().flames,0);
+ assert.equal(f.key('Semicolon').prevented,undefined,'home key must have no effect');
+ assert.equal(saved().flames,0);
+ await f.click('forge');
+ assert.match(f.dialog.html,/개발자용 이스터에그/);
+ assert.equal(f.key('Semicolon').prevented,true);
+ assert.equal(saved().flames,2);
+ assert.equal(saved().earnedFlames,2);
+ assert.match(f.dialog.html,/개발자용 이스터에그 발동 · 정화의 불꽃 \+2/);
+ f.key('Semicolon',{repeat:true});
+ f.key('Semicolon',{shiftKey:true,key:':'});
+ f.key('Semicolon',{ctrlKey:true});
+ f.key('Semicolon',{target:{closest:()=>({tagName:'INPUT'})}});
+ f.key('KeyA',{key:'a'});
+ assert.equal(saved().flames,2,'repeat/modifier/editable keys must not mint currency');
+ f.key('Semicolon');
+ assert.equal(saved().flames,4,'a distinct press grants another two');
+ await f.click('home');
+ f.key('Semicolon');
+ assert.equal(saved().flames,4,'currency is unchanged outside forge');
+ await f.api.dispose();f.release();
+ const second=rig({savedProfile:saved()});
+ await second.click('forge');
+ assert.match(second.dialog.html,/정화의 불꽃 4개/);
+ await second.api.dispose();second.release();
 });
