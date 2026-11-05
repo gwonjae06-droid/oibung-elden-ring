@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {clownCameraPropPose,photoCardFrame} from '../src/clown-stage-prop-data.mjs';
+const game=()=>({status:'playing',boss:{x:0,z:0,state:'clown'},clown:{state:'pattern',showKey:'headReturn',stageKey:'photo',pt:.5,yaw:0}});
+test('camera aligns with boss facing and body height',()=>{const p=clownCameraPropPose(game());assert.equal(p.x,0);assert.ok(p.z>0);assert.ok(p.y>9);});
+test('phase-two body offset lifts the camera',()=>{assert.ok(clownCameraPropPose(game(),10).y>clownCameraPropPose(game(),5.2).y);});
+test('camera does not leak into other routines or transition',()=>{const g=game();g.clown.showKey='offbeatClap';assert.equal(clownCameraPropPose(g),null);g.clown.showKey='headReturn';g.boss.state='transition';assert.equal(clownCameraPropPose(g),null);});
+test('invalid coordinates never create invalid prop transforms',()=>{const g=game();g.boss.x=NaN;assert.equal(clownCameraPropPose(g),null);});
+test('photo development follows the actual zone age',()=>{assert.deepEqual(photoCardFrame({state:'warn',age:.7,warn:1.4}),{visible:true,develop:.5,scale:1});});
+test('photo shrinks on burst and disappears after cleanup',()=>{assert.equal(photoCardFrame({state:'burst',fade:.14,warn:1.4}).scale,.5);assert.equal(photoCardFrame(null).visible,false);});

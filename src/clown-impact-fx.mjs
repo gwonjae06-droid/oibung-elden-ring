@@ -3,9 +3,10 @@ import * as THREE from 'three';
 import {blastTheme,blastParticles,writeWave} from './clown-impact-data.mjs';
 import {clownDebris,stepClownDebris} from './clown-debris-data.mjs';
 import {applyClownTelegraphs} from './clown-telegraph-policy.mjs';
+import {createClownStageProps} from './clown-stage-props.mjs';
 export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  return runThreeStartup(THREE,(THREE,own)=>{
- const root=new THREE.Group();root.name='clown-impact-effects';scene.add(root);const limit=reduced?70:mobile?160:360,pos=new Float32Array(limit*3),rgb=new Float32Array(limit*3),geo=new THREE.BufferGeometry(),color=new THREE.Color();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(rgb,3));geo.setDrawRange(0,0);
+ const root=new THREE.Group();root.name='clown-impact-effects';scene.add(root);const stageProps=own(createClownStageProps(root));const limit=reduced?70:mobile?160:360,pos=new Float32Array(limit*3),rgb=new Float32Array(limit*3),geo=new THREE.BufferGeometry(),color=new THREE.Color();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(rgb,3));geo.setDrawRange(0,0);
  const points=new THREE.Points(geo,new THREE.PointsMaterial({size:mobile?.23:.3,vertexColors:true,transparent:true,opacity:.85,depthWrite:false,blending:THREE.AdditiveBlending}));points.frustumCulled=false;points.renderOrder=11;root.add(points);const particles=[],decor=[],live=[],fragments=[];let serial=0,game=null,trailTime=0,lightLife=0;
  const capacity=reduced?24:mobile?64:128,dummy=new THREE.Object3D();
  const paperGeo=new THREE.BufferGeometry();paperGeo.setAttribute('position',new THREE.Float32BufferAttribute([-1,0,-.5,0,.25,-.5,0,.25,.5,-1,0,-.5,0,.25,.5,-1,0,.5,0,.25,-.5,1,0,-.5,1,0,.5,0,.25,-.5,1,0,.5,0,.25,.5],3));paperGeo.computeVertexNormals();
@@ -16,9 +17,9 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  function wave(x,z,r,hex,jagged=0){const w=decor.find(w=>w.life<=0)||decor.reduce((a,b)=>a.life<b.life?a:b);Object.assign(w,{x,z,r,life:.7,max:.7,jagged});w.m.material.color.setHex(hex);w.m.visible=true;}
  function burst(x,z,index){for(const p of blastParticles(index,reduced?10:mobile?28:56)){if(particles.length>=limit)particles.shift();color.setHex(p.color);particles.push({...p,x,y:.5,z,max:p.life,r:color.r,g:color.g,b:color.b});}}
  function debris(x,z,index,count=48){const theme=blastTheme(index);for(const p of clownDebris(index,reduced?12:mobile?24:count)){if(fragments.length>=capacity)fragments.shift();fragments.push({...p,x:p.x+x,z:p.z+z,hex:theme.colors[p.color%theme.colors.length]});}}
- function clear(){game=null;particles.length=fragments.length=0;geo.setDrawRange(0,0);paper.count=rubber.count=0;light.intensity=lightLife=trailTime=0;for(const w of[...decor,...live]){w.life=0;w.m.visible=false;}serial=0;}
+ function clear(){stageProps.clear();game=null;particles.length=fragments.length=0;geo.setDrawRange(0,0);paper.count=rubber.count=0;light.intensity=lightLife=trailTime=0;for(const w of[...decor,...live]){w.life=0;w.m.visible=false;}serial=0;}
  function event(e,g){
-  if(!g.clown)return;game=g;if(['phase','victory','death'].includes(e.type)){clear();return;}
+  if(!g.clown)return;game=g;stageProps.event(e,g);if(['phase','victory','death'].includes(e.type)){clear();return;}
   if(e.type==='clown-shutter'){wave(e.x,e.z,1.4,0xffffff);light.position.set(e.x,2,e.z);light.color.setHex(0xffffff);lightLife=.08;light.intensity=45;}
   if(e.type==='clown-blast'){
    const index=serial++,theme=blastTheme(index),r=e.r||3.2;burst(e.x,e.z,index);debris(e.x,e.z,index);wave(e.x,e.z,r,theme.colors[0],theme.jagged);if(!reduced){wave(e.x,e.z,r*.7,theme.colors[1],theme.jagged);wave(e.x,e.z,r*1.15,theme.colors[0],0);}
@@ -29,6 +30,7 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  }
  function update(dt){
   const h=Number.isFinite(dt)?Math.max(0,Math.min(dt,.05)):0;
+  if(game)stageProps.update(h,game);
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=h;if(p.life<=0){particles.splice(i,1);continue;}const a=p.curl*h,x=p.vx;p.vx=x*Math.cos(a)-p.vz*Math.sin(a);p.vz=x*Math.sin(a)+p.vz*Math.cos(a);p.vy-=p.gravity*h;p.x+=p.vx*h;p.y+=p.vy*h;p.z+=p.vz*h;}
   let i=0;for(const p of particles){const f=p.life/p.max;pos[i*3]=p.x;pos[i*3+1]=p.y;pos[i*3+2]=p.z;rgb[i*3]=p.r*f;rgb[i*3+1]=p.g*f;rgb[i*3+2]=p.b*f;i++;}geo.setDrawRange(0,i);geo.attributes.position.needsUpdate=geo.attributes.color.needsUpdate=true;
   let pi=0,ri=0;
