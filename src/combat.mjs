@@ -1,4 +1,5 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
+import {kwonReadableWind} from './attack-readability.mjs';
 import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
 import {
   actPlayer,
@@ -241,7 +242,7 @@ export function bodyPoint(b, p) {
 }
 export function patternConfig(b) {
   const c = PATTERNS[b.pattern];
-  if (b.phase !== 2) return {...c, damage: c.damage > 0 ? c.damage + 3 : 0};
+  if (b.phase !== 2) return {...c,wind:kwonReadableWind(b.pattern,c.wind,b.phase),damage: c.damage > 0 ? c.damage + 3 : 0};
   const wind = {
     rush: 0.38,
     jab: 0.19,
@@ -261,7 +262,7 @@ export function patternConfig(b) {
   }[b.pattern];
   return {
     ...c,
-    wind,
+    wind:kwonReadableWind(b.pattern,wind,b.phase),
     damage: c.damage > 0 ? c.damage + (b.pattern === 'jab' ? 6 : 10) : 0,
     recover:
       {
@@ -448,6 +449,9 @@ export function startPattern(g, name) {
   if (!PATTERNS[name]) throw new Error('Unknown pattern');
   const b = g.boss;
   b.from = b.state === 'recovery' ? endPose(b) : null;
+  // Keep the torso at the previous strike's follow-through during quick
+  // combos. It now returns through the next windup instead of snapping.
+  b.motionFrom = b.state === 'recovery' && b.recovery <= .2 ? b.pattern : null;
   b.state = 'windup';
   b.pattern = name;
   b.t = 0;

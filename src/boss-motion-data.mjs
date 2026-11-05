@@ -29,7 +29,7 @@ export function bossMotion(b){
  if(!s||!PATTERNS[b.pattern]||!['windup','active','recovery'].includes(b.state))return {...ZERO};
  const cfg=patternConfig(b),power=b.phase===2?1.2:1;
  let m;
- if(b.state==='windup')m=mix(ZERO,s[0],ease(t/cfg.wind));
+ if(b.state==='windup')m=mix(MOTION_STYLE[b.motionFrom]?.[1]||ZERO,s[0],ease(t/cfg.wind));
  else if(b.state==='active')m=mix(s[0],s[1],ease(t/cfg.active));
  else if(b.queue&&b.queue.length)m=s[1];
  else m=mix(s[1],ZERO,ease(t/Math.max(.01,b.recovery||cfg.recover)));
