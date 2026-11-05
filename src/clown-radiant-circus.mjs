@@ -117,12 +117,42 @@ function makeChandelier(root,x,z,coarse,gold,bulbMat){
  batch(group,new THREE.SphereGeometry(.19,coarse?8:12,coarse?6:8),bulbMat,bulbs,'circus-chandelier-warm-bulbs');
  return group;
 }
+function makeCanopy(root,coarse,gold){
+ // A lofty striped ceiling makes the theatre feel illuminated and enclosed,
+ // while leaving a large central oculus and plenty of boss/camera clearance.
+ const sides=coarse?12:16,radial=5,lateral=4,points=[],colors=[],indices=[];
+ const cream=new THREE.Color(0xf2dbb2),wine=new THREE.Color(0x823449),muted=new THREE.Color(0xd5ad85);
+ const n=sides*lateral;
+ for(let i=0;i<=n;i++){
+  const a=i*TAU/n,sector=Math.floor((i%n)/lateral),stripe=sector%4===0?muted:sector%2?wine:cream;
+  for(let j=0;j<=radial;j++){
+   const u=j/radial,r=5.3+u*29.6,h=40.8-u*15+Math.sin(u*Math.PI)*.65;
+   points.push(...polar(r,a,h));
+   colors.push(stripe.r,stripe.g,stripe.b);
+  }
+ }
+ for(let i=0;i<n;i++)for(let j=0;j<radial;j++){
+  const a=i*(radial+1)+j,b=(i+1)*(radial+1)+j;
+  indices.push(a,b,a+1,b,b+1,a+1);
+ }
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(points,3));
+ geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ geometry.setIndex(indices);geometry.computeVertexNormals();
+ put(root,geometry,new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.88,metalness:0}),0,0,0,'circus-vaulted-ivory-velvet-canopy');
+ ring(root,5.3,.32,40.77,gold,'circus-canopy-oculus');
+ for(let i=0;i<sides;i++){
+  const a=i*TAU/sides;
+  tube(root,[polar(5.4,a,40.8),polar(19,a,34.5),polar(34.5,a,25.8)],.09,gold,'circus-gilded-canopy-rib',coarse?9:16);
+ }
+}
 function makeScenery(root,coarse){
  const ivory=material(0xece0ce,.67),gold=material(0xc5a163,.38,.63,{emissive:0x382713,emissiveIntensity:.2}),
        darkGold=material(0x967342,.51,.45),velvet=material(0xa7374c,.96,0,{side:THREE.DoubleSide}),
        velvetShade=material(0x762b40,.96,0,{side:THREE.DoubleSide}),
        wood=material(0x57343b,.82),shadow=material(0x342831,.92);
  makeFloor(root,coarse,ivory,gold);
+ makeCanopy(root,coarse,gold);
  const n=coarse?12:16,r=CIRCUS_LAYOUT.columnsRadius;
  const columns=[],bases=[],caps=[],finials=[];
  for(let i=0;i<n;i++){
