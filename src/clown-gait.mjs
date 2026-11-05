@@ -15,15 +15,19 @@ export function clownLegTarget(side,phase,activity,crouch=0){
  const stride=stance?mix(.44,-.44,u):mix(-.44,.44,u);
  const lift=stance?0:Math.sin(Math.PI*u)*.28*a;
  const hip=[side*.45,1.25-crouch*.12,0];
- const foot=[side*(.55+.025*a),.10+lift,.25+stride*a*.78];
- const toward=minus(foot,hip),dist=Math.max(1e-8,length(toward)),
-  axis=toward.map(v=>v/dist),pole=[side*.16,.04,1],
-  projection=dot(pole,axis),v=pole.map((q,i)=>q-projection*axis[i]),
-  norm=Math.max(1e-8,length(v)),
-  // Two articulated, almost-constant length bones instead of a frozen knee.
-  radius=Math.max(.68,dist/2+.015),bend=Math.sqrt(Math.max(0,radius*radius-dist*dist/4)),
-  knee=hip.map((q,i)=>q+toward[i]*.5+v[i]/norm*bend);
- return {hip,knee,foot,planted:stance,lift,phase:p};
+ const desired=[side*(.55+.025*a),.10+lift,.25+stride*a*.78];
+ // Keep thigh and shin at an anatomically fixed length. Clamp any extreme
+ // animation target rather than silently stretching the bones each frame.
+ const bone=.77,delta=minus(desired,hip),distance=length(delta),
+  reach=Math.min(distance,2*bone-.012),direction=distance>1e-8?delta.map(q=>q/distance):[0,-1,0],
+  foot=hip.map((q,i)=>q+direction[i]*reach);
+ const pole=[side*.16,.04,1],projection=dot(pole,direction),
+  tangent=pole.map((q,i)=>q-projection*direction[i]),norm=length(tangent),
+  alternate=[side,0,0],fallback=alternate.map((q,i)=>q-dot(alternate,direction)*direction[i]),
+  perp=(norm>1e-8?tangent:fallback),plen=Math.max(1e-8,length(perp)),
+  bend=Math.sqrt(Math.max(0,bone*bone-reach*reach*.25)),
+  knee=hip.map((q,i)=>q+direction[i]*reach*.5+perp[i]/plen*bend);
+ return {hip,knee,foot,planted:stance,lift,phase:p,anklePitch:stance?0:-Math.sin(Math.PI*u)*.22*a};
 }
 export function createClownGait(){
  let owner=null,odo=0,activity=0;
