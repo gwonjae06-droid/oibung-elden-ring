@@ -48,10 +48,15 @@ function textureData(type,size,seed){
  const color=bytes(size),normal=bytes(size),roughness=bytes(size),profile=CINEMATIC_SURFACES[type];
  const shade={marble:[240,236,229],stone:[221,219,213],velvet:[235,229,232],wood:[228,218,209],
   metal:[233,235,241],leather:[233,223,217],skin:[242,224,209],blood:[220,217,223]}[type];
+ // Compute height once per texel; derivative passes read from the cache.
+ // Avoid five procedural-noise evaluations per pixel on mobile startup.
+ const heights=new Float32Array(size*size);
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++)
+  heights[y*size+x]=heightAt(type,x/size,y/size,seed);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-  const u=x/size,v=y/size,h=heightAt(type,u,v,seed),eps=1/size;
-  const dx=heightAt(type,u+eps,v,seed)-heightAt(type,u-eps,v,seed);
-  const dy=heightAt(type,u,v+eps,seed)-heightAt(type,u,v-eps,seed);
+  const h=heights[y*size+x];
+  const dx=heights[y*size+Math.min(size-1,x+1)]-heights[y*size+Math.max(0,x-1)];
+  const dy=heights[Math.min(size-1,y+1)*size+x]-heights[Math.max(0,y-1)*size+x];
   const length=Math.hypot(dx*1.3,dy*1.3,1),j=(y*size+x)*4;
   const grain=.88+h*.19,veil=type==='marble'&&h>.65?.75:1;
   for(let k=0;k<3;k++)color[j+k]=Math.round(clamp(shade[k]*grain*veil,3,255));
@@ -88,7 +93,8 @@ function probe(profile,coarse){
   arr[j+2]=Math.round(255*clamp(sky*(.77+.3*tint.b)+.4*hotspot));
   arr[j+3]=255;
  }
- const t=mapFromData(arr,w,true);t.image.height=h;t.mapping=THREE.EquirectangularReflectionMapping;
+ const t=new THREE.DataTexture(arr,w,h,THREE.RGBAFormat,THREE.UnsignedByteType);t.colorSpace=THREE.SRGBColorSpace;
+ t.minFilter=THREE.LinearMipmapLinearFilter;t.magFilter=THREE.LinearFilter;t.generateMipmaps=true;t.mapping=THREE.EquirectangularReflectionMapping;t.needsUpdate=true;
  return t;
 }
 function category(mesh,profile){
