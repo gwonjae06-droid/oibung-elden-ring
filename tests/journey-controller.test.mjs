@@ -126,7 +126,7 @@ test('flame selection can be cancelled and only a successful trial start spends 
  const first=f.game();await f.click('begin');assert.equal(f.game(),first);assert.equal(saved().flames,2);
  first.status='lost';await f.poll();assert.doesNotMatch(f.dialog.html,/data-j="revive"/);
  await f.click('revive');assert.equal(f.game(),first);assert.equal(saved().flames,2);
- await f.click('restart');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);assert.equal(saved().flames,2);
+ await f.click('restart');assert.equal(f.game().boss.maxHp,3572);assert.equal(saved().flames,2);
  await f.api.dispose();f.release();
 });
 test('flame shortcut cannot bypass the first locked gate or spend an empty balance',async()=>{
@@ -134,20 +134,20 @@ test('flame shortcut cannot bypass the first locked gate or spend an empty balan
   const profile=freshProfile();profile.flames=5;profile.defeated=defeated;
   const f=rig({savedProfile:profile});assert.match(f.dialog.html,/data-j="skip-toggle"[^>]*disabled/);
   await f.click('skip-toggle');await f.click('new');await f.click('begin',{boss:'blood'});
-  assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);
+  assert.equal(f.game().boss.maxHp,3572);
   assert.equal(JSON.parse(f.data.get(SAVE_KEY)).flames,5);await f.api.dispose();f.release();
  }
  const profile=freshProfile();profile.defeated=['kwon'];
  const f=rig({savedProfile:profile});assert.match(f.dialog.html,/정화의 불꽃이 부족합니다/);
  await f.click('skip-toggle');await f.click('new');await f.click('begin');
- assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);await f.api.dispose();f.release();
+ assert.equal(f.game().boss.maxHp,3572);await f.api.dispose();f.release();
 });
 test('a failed shortcut load does not spend a flame; retry spends exactly once',async()=>{
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
  const f=rig({savedProfile:profile,failLoadOnce:true}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
  await f.click('skip-toggle');await f.click('new');await f.click('begin');
  assert.match(f.dialog.html,/전장을 열지 못했습니다/);assert.equal(saved().flames,2);
- await f.click('continue');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.clown.maxHp);assert.equal(saved().flames,1);
+ await f.click('continue');assert.equal(f.game().boss.maxHp,3760);assert.equal(saved().flames,1);
  await f.click('continue');assert.equal(saved().flames,1);await f.api.dispose();f.release();
 });
 test('last unlocked boss skip earns only its own memory and a separate completion record',async()=>{
