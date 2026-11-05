@@ -79,7 +79,7 @@ export function buildCasinoPhaseTheatre(T,parent,{coarse=false,reduced=false}={}
   const chip=block(splinters,x,height+1,z,2+i%4,5,.9,trim,'casino-hanging-gold-shard');
   chip.rotation.z=.45+(i%3)*.3;chip.userData.baseline=chip.rotation.z;
  }
- const crown=new T.Mesh(new T.RingGeometry(94,102,coarse?48:96).rotateX(-Math.PI/2),scarlet);
+ const crown=new T.Mesh(new T.RingGeometry(103,110,coarse?48:96).rotateX(-Math.PI/2),scarlet);
  crown.position.y=.03;crown.name='casino-collapse-ring';root.add(crown);
  const banner=new T.Group();banner.name='casino-failing-chandelier-ornament';
  banner.position.set(0,95,-45);root.add(banner);
