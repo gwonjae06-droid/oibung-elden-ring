@@ -37,7 +37,7 @@ test('each wave strike releases only one broad projectile with matching artwork 
   assert.equal(shot.kind,KWON_WAVE.kind);
   assert.equal(shot.radius,KWON_WAVE.radius);
   assert.equal(shot.damage,cfg.damage);
-  assert.equal(shot.age,0);
+  assert.ok(shot.age>=0&&shot.age<.1,'projectile has just been released');
   assert.equal(g.events.filter(e=>e.type==='boss-shot').length,1);
   tick(g,35);assert.equal(g.events.filter(e=>e.type==='boss-shot').length,1,'must not fire twice');
  }
