@@ -4,13 +4,15 @@ import {createCollapseClock} from './boss-collapse.mjs';
 import {bossMotion} from './boss-motion-data.mjs';
 import {kwonStanceWeights,finishKwonLeg,advanceKwonGaitClock} from './kwon-leg-rig.mjs';
 import {kwonTorsoRegion,createKwonTorsoRig} from './kwon-torso-rig.mjs';
+import {collectKwonMouthParts,createKwonNeckRig} from './kwon-neck-rig.mjs';
 export function createBossStance(B){
  const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
- const atHead=B.model.children.filter(c=>c.geometry?.type==='SphereGeometry'&&Math.abs(c.position.y-B.HEAD.y)<.001&&Math.abs(c.position.z-B.HEAD.z)<.001);if(!atHead.length)throw new Error('Boss head mesh missing');B.model.add(headRig);
- for(const c of [...atHead,...B.eyes]){B.model.remove(c);c.position.x-=B.HEAD.x;c.position.y-=B.HEAD.y;c.position.z-=B.HEAD.z;headRig.add(c);}
+ const atHead=B.model.children.filter(c=>c.geometry?.type==='SphereGeometry'&&Math.abs(c.position.y-B.HEAD.y)<.001&&Math.abs(c.position.z-B.HEAD.z)<.001);if(!atHead.length)throw new Error('Boss head mesh missing');const mouth=collectKwonMouthParts(THREE,B.model.children);B.model.add(headRig);
+ for(const c of new Set([...atHead,...B.eyes,...mouth])){B.model.remove(c);c.position.x-=B.HEAD.x;c.position.y-=B.HEAD.y;c.position.z-=B.HEAD.z;headRig.add(c);}
  const pivot=new THREE.Group();pivot.position.set(0,1.5*S,-1.5*S);pivot.scale.setScalar(S);
  const legSet=new Set(B.legs.map(L=>L.g)),parts=B.model.children.filter(c=>!legSet.has(c)&&c!==B.swordGroup),regions=new Map(parts.map(c=>[c,kwonTorsoRegion(THREE,c,headRig,B.joint)]));B.model.add(pivot);const torso=createKwonTorsoRig(THREE,pivot,B.model);
  for(const c of parts){B.model.remove(c);c.position.y-=1.5;c.position.z+=1.5;torso.mount(c,regions.get(c));}
+ const neck=createKwonNeckRig(THREE,torso,headRig,B.HEAD,B.model);
  for(const L of B.legs){L.deferKwonLeg=true;L.state=null;}
  const armour=new THREE.MeshStandardMaterial({color:0x272a32,roughness:.48,metalness:.65}),gold=new THREE.MeshStandardMaterial({color:0xb99653,roughness:.4,metalness:.75}),cloth=new THREE.MeshStandardMaterial({color:0x4d1521,roughness:.95,side:THREE.DoubleSide});
  const add=(geo,mat,x,y,z,region='chest')=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);torso.mount(m,region);return m;};
@@ -23,11 +25,11 @@ export function createBossStance(B){
  return {update(b){
   const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b),weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));
   const stamp=[b.phase,b.state,b.pattern,b.t,b.wait,b.x,b.z,b.yaw,b.stun],frozen=Boolean(lastLegClock&&stamp.every((v,i)=>Object.is(v,lastLegClock[i])));lastLegClock=stamp;const gaitPhase=advanceKwonGaitClock(legClock,B.legs[0]?.pending?.phase,frozen);
-  pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+m.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);torso.update(b,m,dt);
-  const shouldDetach=c.detach>0;if(shouldDetach&&!detached){headRig.parent?.remove(headRig);B.swordGroup.add(headRig);detached=true;}else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);torso.chest.add(headRig);detached=false;}
-  if(detached){headRig.scale.setScalar(S);headRig.position.set(0,-S,-.5*S);headRig.rotation.set(-Math.PI/2,0,0);}else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(...torso.headPosition(B.HEAD));}
+  pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+m.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);torso.update(b,m,dt);neck.update(b,m,dt,frozen);
+  const shouldDetach=c.detach>0;if(shouldDetach&&!detached){headRig.parent?.remove(headRig);B.swordGroup.add(headRig);detached=true;}else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);neck.joint.add(headRig);detached=false;}
+  if(detached){headRig.scale.setScalar(S);headRig.position.set(0,-S,-.5*S);headRig.rotation.set(-Math.PI/2,0,0);}else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(...neck.headOffset);}
   cinema.style.display=b.state==='transition'?'block':'none';if(b.state==='transition')caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?'내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';
-  const head=detached?bodyPoint(b,B.HEAD):torso.point(B.HEAD,'chest');
+  const head=detached?bodyPoint(b,B.HEAD):neck.point();
   for(const L of B.legs){
    const side=L.plan.side,front=L.plan.k===0,rear=L.plan.k===3,weight=rear?weights.rear:front?weights.front:0,shoulder=front?torso.point({x:side*1.4,y:2.6,z:1.1},'chest'):null,region=front?'chest':L.plan.k===1?'waist':'abdomen';
    let p=torso.point({x:L.plan.root[0],y:L.plan.root[1],z:L.plan.root[2]},region);if(front)p=lerp(p,shoulder,weight);
