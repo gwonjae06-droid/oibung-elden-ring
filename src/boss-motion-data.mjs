@@ -14,7 +14,7 @@ export const MOTION_STYLE={
  jab:[{lean:-.06,sink:-.1,sway:0},{lean:.12,sink:-.05,sway:0}],
  rush:[{lean:.05,sink:-.55,sway:0},{lean:.25,sink:-.35,sway:0}],
  retreat:[{lean:-.1,sink:-.2,sway:.04},{lean:-.18,sink:-.1,sway:-.04}],
- wave:[{lean:-.12,sink:.1,sway:0},{lean:.12,sink:-.05,sway:0}],
+ wave:[{lean:-.27,sink:.15,sway:-.03},{lean:.25,sink:-.25,sway:.04}],
  stomp:[{lean:-.12,sink:.25,sway:0},{lean:.1,sink:-.4,sway:0}],
  backsweep:[{lean:-.05,sink:-.1,sway:.1},{lean:.05,sink:0,sway:-.14}],
  shove:[{lean:-.1,sink:-.15,sway:0},{lean:.15,sink:-.05,sway:0}]
