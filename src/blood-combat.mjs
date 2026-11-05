@@ -4,6 +4,7 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {playerProjectileHitsCircle,claimPlayerProjectileHit,playerAttackCanReachAir} from './player-projectile-data.mjs';
 
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
@@ -26,11 +27,11 @@ export function damageBlood(g,amount){
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
 }
-function hit(g,amount,source){
- const s=g.blood;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
+function hit(g,amount,source,projectile=false){
+ const s=g.blood;if(s.elevation>2&&!playerAttackCanReachAir(WEAPONS[g.weapon],projectile))return 0;
  const damage=damageBlood(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1));
- if(!damage)return;
- settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
+ if(!damage)return 0;
+ settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};g.blood.hazards.push(h);return h;}
 export function startBloodPattern(g,id){
@@ -91,7 +92,7 @@ function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
  tickPlayerAction(g,dt,w,{melee:a=>{const dx=b.x-p.x,dz=b.z-p.z,dist=Math.hypot(dx,dz);if(dist<=w.range+1.5&&Math.abs(Math.atan2(Math.sin(Math.atan2(dx,dz)-a.yaw),Math.cos(Math.atan2(dx,dz)-a.yaw)))<1.2&&g.blood.elevation<=2){a.hit=true;hit(g,w.damage*a.mult,a);}}});
  if(g.status!=='playing')return;
- for(const q of g.projectiles){const prev=advancePlayerProjectile(q,dt);if(q.hit||q.life<=0)continue;const dx=q.x-prev.x,dz=q.z-prev.z,n=dx*dx+dz*dz,u=n?Math.max(0,Math.min(1,((b.x-prev.x)*dx+(b.z-prev.z)*dz)/n)):0;if(Math.hypot(prev.x+dx*u-b.x,prev.z+dz*u-b.z)<=1.6){q.hit=true;hit(g,q.damage,q.source);q.life=0;}}
+ for(const q of g.projectiles){const prev=advancePlayerProjectile(q,dt);if(q.hit||q.bossHit||q.life<=0)continue;if(playerProjectileHitsCircle(prev,q,b,1.6)&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true);}
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
  const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*18*dt;p.z+=Math.cos(a.yaw)*18*dt;}
  else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=8*(g.blood.slow>0?.65:1)*(p.skill.blue>0?1.5:1);p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);}

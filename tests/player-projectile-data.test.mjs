@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {playerProjectileStyle as style,playerProjectilePose as pose,claimPlayerProjectileHit as claim,playerProjectileHitsCircle as hits,playerAttackCanReachAir as air} from '../src/player-projectile-data.mjs';
+test('arrow card and wave use distinct shared visual types',()=>{assert.equal(style({kind:'bow'}).kind,'bow');assert.equal(style({kind:'cards'}).kind,'cards');assert.equal(style({kind:'wave'}).kind,'wave');assert.equal(style({kind:'unknown'}).kind,'orb');});
+test('projectile height comes from the projectile itself',()=>{assert.equal(pose({x:0,z:0,y:1.2,kind:'bow'},0).y,1.2);assert.equal(pose({x:0,z:0,y:.25,kind:'wave'},50).y,.25);});
+test('legacy missing heights have finite defaults',()=>{assert.equal(pose({x:0,z:0,kind:'cards'}).y,1.2);assert.equal(pose({x:0,z:0,kind:'wave'}).y,.25);});
+test('ordinary projectile is consumed on its first claimed boss hit',()=>{const q={life:1};assert.equal(claim(q),true);assert.equal(q.life,0);assert.equal(q.bossHit,true);assert.equal(claim(q),false);});
+test('piercing projectile stays alive without repeated boss damage',()=>{const q={life:1,piercing:true};let accepted=0;for(let i=0;i<100;i++)if(claim(q))accepted++;assert.equal(accepted,1);assert.equal(q.life,1);assert.equal(q.hit,true);});
+test('expired and previously hit projectiles are not claimed',()=>{assert.equal(claim({life:0}),false);assert.equal(claim({life:1,hit:true}),false);assert.equal(claim({life:1,bossHit:true}),false);});
+test('swept segment detects a fast projectile crossing the boss',()=>assert.equal(hits({x:-10,z:0},{x:10,z:0},{x:0,z:0},1.6),true));
+test('misses stationary shots and invalid coordinates are handled',()=>{assert.equal(hits({x:-10,z:4},{x:10,z:4},{x:0,z:0},1.6),false);assert.equal(hits({x:0,z:0},{x:0,z:0},{x:0,z:0},1.6),true);assert.equal(hits({x:NaN,z:0},{x:1,z:0},{x:0,z:0},1.6),false);});
+test('actual projectile can hit airborne targets even from a melee weapon',()=>{assert.equal(air({projectile:false},true),true);assert.equal(air({projectile:false},false),false);assert.equal(air({projectile:true},false),true);});
+test('visual poses are deterministic and do not mutate combat state',()=>{const q={id:3,kind:'cards',x:1,y:1.2,z:2,yaw:.3,life:1},before={...q};assert.deepEqual(pose(q,4),pose(q,4));style(q);assert.deepEqual(q,before);});
