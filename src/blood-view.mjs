@@ -73,7 +73,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  }
  function occlude(camera,g){focusGame=g;}
  function clear(){for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();wings.clear();motionDirector.reset();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea}),
   event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
   dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
