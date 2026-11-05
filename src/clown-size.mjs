@@ -3,6 +3,8 @@ import {stepShowClown as baseStep} from './clown-show-runtime.mjs';
 import {segmentGap} from './clown-pressure.mjs';
 import {updateClownLens} from './clown-lens-gag.mjs';
 import {slowClownThrow} from './clown-throw-speed.mjs';
+import {clownHurtShapes} from './boss-hit-regions.mjs';
+import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 export const CLOWN_SIZE=1.25;
 export const CLOWN_BODY_RADIUS=3.3*CLOWN_SIZE;
 // In phase two the clown stands on a head-ball that is 1.5x bigger, so his solid body grows a little too.
@@ -22,7 +24,10 @@ export function createLargeClownStepper(step=baseStep,damage=hurt){return functi
  const dashAdvanced=c.pt>oldPt&&Math.hypot(b.x-oldBoss.x,b.z-oldBoss.z)>1e-6;
  if(c.name==='dash'&&!c.showKey&&!wasStunned&&!(c.stunT>0)&&dashAdvanced)for(const [key,start]of [['lane',0],['returnLane',1.8]]){const lane=c.f[key],u=c.pt-start;if(!lane||lane.hit||u<.9||u>1.35+Math.min(dt,1/30))continue;
  const gap=segmentGap({x:0,z:0},{x:oldBoss.x-oldPlayer.x,z:oldBoss.z-oldPlayer.z},{x:b.x-p.x,z:b.z-p.z});if(gap<CLOWN_BODY_RADIUS){lane.hit=true;damage(g,30,'dash'+key);}}
- if(g.status==='playing'&&!c.noSeparate)separateLargeClown(b,p,b.phase===2);
+ if(g.status==='playing'&&!c.noSeparate){
+  const contact=kwonPlayerSeparation(clownHurtShapes(g),p,{radius:.42,height:1.15});
+  if(contact){p.x=contact.x;p.z=contact.z;const len=Math.hypot(p.x,p.z);if(len>23){p.x*=23/len;p.z*=23/len;}}
+ }
  c.prevPlayer={x:p.x,z:p.z};
  };}
 export const stepLargeClown=createLargeClownStepper();
