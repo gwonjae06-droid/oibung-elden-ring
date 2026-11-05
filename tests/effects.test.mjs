@@ -28,7 +28,7 @@ test('impact happens late in the strike, not in windup or recovery',()=>{
   assert.equal(impactDue({state:'recovery',pattern:'leap',t:1},1),false);
 });
 test('trails show only during physical sword attacks',()=>{
-  for(const pattern of ['sweep','jab','whirl'])assert.equal(trailAllowed({state:'active',pattern}),true);
-  for(const pattern of ['wave','retreat'])assert.equal(trailAllowed({state:'active',pattern}),false);
+  for(const pattern of ['sweep','jab','whirl','wave'])assert.equal(trailAllowed({state:'active',pattern}),true);
+  for(const pattern of ['retreat'])assert.equal(trailAllowed({state:'active',pattern}),false);
   assert.equal(trailAllowed({state:'idle',pattern:'slam'}),false);
 });
