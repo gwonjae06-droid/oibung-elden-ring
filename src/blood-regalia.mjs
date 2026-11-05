@@ -191,7 +191,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
    // Finger joints contract as energy gathers, uncurl at the impact and relax
    // after the wrist. No new geometry or IK allocation is needed per frame.
    const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
-   fingers.forEach((finger,i)=>{finger.rotation.x=follow('finger:curl:'+side+':'+i,-grip*(.38+i*.055),22-i*2);
+   fingers.forEach((finger,i)=>{const wanted=-grip*(.38+i*.055);finger.rotation.x=wanted*.86+follow('finger:curl:'+side+':'+i,wanted,22-i*2)*.14;
     finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);
   }
