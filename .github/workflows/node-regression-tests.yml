@@ -32,6 +32,17 @@ jobs:
           node scripts/dice-phase2-smoke.mjs || status=1
           node scripts/clown-shows-smoke.mjs || status=1
           exit "$status"
+      - name: Smoke test sacred white cathedral in WebGL
+        if: ${{ !cancelled() }}
+        run: node scripts/blood-cathedral-smoke.mjs
+      - name: Save sacred white cathedral screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sacred-white-cathedral-screenshots
+          path: artifacts/blood-cathedral/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Save clown browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
