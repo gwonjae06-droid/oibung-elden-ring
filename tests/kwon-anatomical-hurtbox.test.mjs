@@ -106,3 +106,22 @@ test('phase two is still vulnerable when the blade actually meets its lowered ab
  for(let i=0;i<70;i++)step(g,1/120);
  assert.equal(hp-g.boss.hp,WEAPONS.sword.damage);
 });
+
+test('phase-two invisible locomotion pivot cannot grant phantom sword damage',()=>{
+ const g=createGame('sword',{register:false});g.boss.phase=2;g.boss.wait=99;
+ // Very close to the boss ROOT, but outside its visible tilted torso.
+ g.player.x=g.boss.x+2.8;g.player.z=g.boss.z;g.player.yaw=-Math.PI/2;
+ const hp=g.boss.hp,initial={x:g.player.x,z:g.player.z};
+ assert.equal(act(g,'light'),true);
+ for(let i=0;i<75;i++)step(g,1/120);
+ assert.equal(g.boss.hp,hp,'origin proximity alone must never count as a hit');
+ assert.ok(Math.hypot(g.player.x-initial.x,g.player.z-initial.z)<.03,'origin collider must not teleport the player');
+});
+test('phase-two player is not forcibly snapped to a circle around the old pivot',()=>{
+ const g=createGame('sword',{register:false});g.boss.phase=2;g.boss.wait=99;
+ const belly=kwonVisibleHurtShapes(g.boss)[0];
+ g.player.x=belly.x;g.player.z=belly.z+belly.rz+2;
+ const old={x:g.player.x,z:g.player.z};
+ step(g,1/120);
+ assert.ok(Math.hypot(g.player.x-old.x,g.player.z-old.z)<.03,'player must stay in front of visible abdomen');
+});
