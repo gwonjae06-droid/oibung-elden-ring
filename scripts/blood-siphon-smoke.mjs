@@ -50,19 +50,22 @@ try{
     const {readBattleSession}=await import('./src/battle-session.mjs');
     return !!readBattleSession(document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot)?.game?.blood?.siphon?.active;
    },null,{timeout:15000});
-   await page.waitForTimeout(600);
+   await page.waitForTimeout(200);
    const casting=await page.evaluate(async()=>{
     const {readBattleSession}=await import('./src/battle-session.mjs');
     const root=document.querySelector('#blood-battle').firstElementChild.shadowRoot;
     const s=readBattleSession(root);return {hp:s.game.boss.hp,heals:s.game.blood.siphon.heals,
      active:s.game.blood.siphon.active,stream:s.diagnostics()?.view?.siphon,
-     label:root.getElementById('boss-action')?.textContent};
+     label:root.getElementById('boss-action')?.textContent,
+     time:s.game.time,phase:s.game.boss.phase,bossState:s.game.boss.state,
+     siphon:{...s.game.blood.siphon},activeSession:s.active};
    });
+   console.log('BLOOD SIPHON CASTING DEBUG',JSON.stringify({scenario:scenario.name,prepared,casting}));
+   await page.screenshot({path:'artifacts/blood-siphon/'+scenario.name+'-blood-absorption.png'});
    assert.equal(casting.hp,2000,'healing should happen only after absorption is complete');
    assert.equal(casting.heals,0);assert.equal(casting.active,true);
    assert.ok(casting.stream?.droplets>0,'no blood moving from the sea to the boss');
    assert.match(casting.label||'',/혈해 흡수/);
-   await page.screenshot({path:'artifacts/blood-siphon/'+scenario.name+'-blood-absorption.png'});
    await page.waitForFunction(async()=>{
     const {readBattleSession}=await import('./src/battle-session.mjs');
     return readBattleSession(document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot)?.game?.blood?.siphon?.heals===1;
