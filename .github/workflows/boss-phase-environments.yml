@@ -1,0 +1,34 @@
+name: Three boss phase environment regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js and Chromium browser driver
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Test 3D phases, visual-only boundaries and existing boss invariants
+        run: node --test tests/boss-phase-environments.test.mjs tests/clown-radiant-circus.test.mjs tests/casino-room.test.mjs tests/casino-theme.test.mjs tests/environment.test.mjs
+      - name: WebGL snapshots for each boss before and after phase change
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/boss-phase-http.log 2>&1 &
+          sleep 2
+          node scripts/boss-phase-environments-smoke.mjs
+      - name: Archive phase-change stage screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boss-phase-environment-screenshots
+          path: artifacts/boss-phase-environments/
+          if-no-files-found: warn
+          retention-days: 7
