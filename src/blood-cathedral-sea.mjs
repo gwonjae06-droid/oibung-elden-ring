@@ -50,9 +50,13 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
   shader.uniforms.uSeaTime=uniforms.time;
   shader.uniforms.uSeaFrenzy=uniforms.frenzy;
   shader.vertexShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.vertexShader;
-  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
-   '#include <begin_vertex>\n float a=sin(position.x*.44+uSeaTime*.83)*cos(position.z*.31-uSeaTime*.56);\n float b=sin(length(position.xz)*.68-uSeaTime*1.14);\n transformed.y+=(a*.11+b*.045)*(1.+uSeaFrenzy*.48);\n vSeaSheen=.5+.5*sin(position.x*.58+position.z*.31+uSeaTime*1.2);
- vSeaCoord=position.xz;');
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    float a=sin(position.x*.44+uSeaTime*.83)*cos(position.z*.31-uSeaTime*.56);
+    float b=sin(length(position.xz)*.68-uSeaTime*1.14);
+    transformed.y+=(a*.11+b*.045)*(1.+uSeaFrenzy*.48);
+    vSeaSheen=.5+.5*sin(position.x*.58+position.z*.31+uSeaTime*1.2);
+    vSeaCoord=position.xz;
+   `);
   shader.fragmentShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
    // Per-fragment current: readable flow across the entire sparse shore mesh.
