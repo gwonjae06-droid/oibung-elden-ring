@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '20'
       - name: Install Three.js test dependency
-        run: npm install --no-save --no-audit --no-fund three@0.180.0
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Purification economy and forge UI
         run: node --test tests/purification-forge.test.mjs
       - name: Journey state and legacy migration
@@ -28,3 +28,17 @@ jobs:
       - name: Weapon evolution and blood progression compatibility
         if: always()
         run: node --test tests/weapon-evolution.test.mjs tests/blood.test.mjs
+      - name: Browser forge purchase, refund and persistence smoke
+        if: always()
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/forge-http.log 2>&1 &
+          sleep 2
+          node scripts/purification-forge-smoke.mjs
+      - name: Archive purification forge screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: purification-forge-screenshots
+          path: artifacts/purification-forge/
+          if-no-files-found: warn
+          retention-days: 7
