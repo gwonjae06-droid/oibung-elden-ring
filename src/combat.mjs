@@ -9,7 +9,7 @@ import {
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
-import {kwonHurtShapes,kwonHurtContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
+import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -656,8 +656,12 @@ export function step(g, dt, input = {}) {
       p.z += Math.cos(a.yaw) * 10 * dt;
     },
     melee: (a) => {
-      const shapes=kwonVisibleHurtShapes(b),reach=a.skill?Math.max(6.8,w.range):w.range;
-      const hit=kwonHurtContact(shapes,p,{reach,yaw:a.yaw});
+      const shapes=kwonVisibleHurtShapes(b);
+      // The sword is ~2m long beyond the character grip, NOT a radius
+      // around the player's feet. Direction and blade height must both line up.
+      const reach=a.skill?Math.max(3.55,Math.min(4.2,w.range+0.6)):
+        g.weapon==='hammer'?3.05:2.85;
+      const hit=kwonMeleeContact(shapes,p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
       if(hit){
         a.hit=true;
         landHit(g,w.damage*a.mult,w.poise*(a.skill?2.5:1),a,hit);
@@ -672,7 +676,10 @@ export function step(g, dt, input = {}) {
       g.bossShots = g.bossShots.filter((s) => segmentDistance(s, old, q) > 1.8);
       if (g.bossShots.length < n) emit(g, 'skill-pierce', {flavor: 'bow'});
     }
-    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(kwonVisibleHurtShapes(b),old,q):null;
+    const flightY=Number.isFinite(q.y)?q.y:1.2;
+    const from={...old,y:Number.isFinite(old.y)?old.y:flightY};
+    const to={x:q.x,y:flightY,z:q.z};
+    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(kwonVisibleHurtShapes(b),from,to):null;
     if(hit){
       q.bossHit=true;
       if(!q.piercing)q.life=0;
