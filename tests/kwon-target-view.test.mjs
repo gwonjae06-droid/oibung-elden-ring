@@ -10,7 +10,8 @@ test('the target reticle never overwrites the arena camera or scene render hooks
  const scene=new THREE.Scene(),root=new THREE.Group(),model=new THREE.Group();
  scene.add(root);root.add(model);model.position.z=-4;
  const reticle={hidden:true,style:{}},host={querySelector:()=>reticle};
- const boss={root,model},torso={point:()=>({x:0,y:3,z:0})};
+ let requested=null;
+ const boss={root,model},torso={point:p=>{requested=p;return p;}};
  const previousBefore=()=>{};scene.onBeforeRender=previousBefore;
  const camera=new THREE.PerspectiveCamera(60,16/9,.1,120);
  camera.position.set(0,6,16);camera.lookAt(0,3,-4);camera.updateMatrixWorld(true);
@@ -20,6 +21,7 @@ test('the target reticle never overwrites the arena camera or scene render hooks
  const before=camera.quaternion.clone(),position=camera.position.clone();
  const screen=view.project(camera,true,{clientWidth:1600,clientHeight:900});
  assert.ok(screen,'visible boss has a projected marker');
+ assert.deepEqual(requested,{x:0,y:2.1,z:.8},'target corresponds to the thorax contact centre');
  assert.equal(reticle.hidden,false);
  assert.ok(camera.quaternion.equals(before),'target projection cannot override lock orientation');
  assert.ok(camera.position.equals(position),'target projection cannot move the camera');
