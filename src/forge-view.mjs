@@ -75,7 +75,7 @@ export function flameRewardScreen(profile,bossName,{button,back,warning,complete
   '<p class="j-flame-overline">',bossName,' 토벌</p>',
   '<h1>정화의 불꽃을 획득했습니다</h1>',
   '<p>소멸한 지배자의 혼에서 작은 빛 하나가 되살아났습니다. 불꽃은 메인화면의 ',
-  '<strong>대장간</strong>에서 영구 무기 진화에 쓰거나 여정 중 단 한 번의 부활에 사용할 수 있습니다.</p>',
+  '<strong>대장간</strong>에서 영구 무기 진화에 쓰거나, 메인에서 1개를 사용해 해금된 마지막 보스로 건너뛸 수 있습니다.</p>',
   '<div class="j-earned-balance">',flameCounter(profile),'<span>+1 정화의 불꽃</span></div>',
   button('flame-next',complete?'서약의 기록을 마주한다':'다음 시련으로','class="j-primary"'),
   back(),warning(),'</div>');

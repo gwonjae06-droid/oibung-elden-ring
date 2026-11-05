@@ -73,11 +73,3 @@ export function forgedEvolutions(profile,weapon){
  const owned=sanitizeForge(profile?.forge)[weapon];
  return EVOLUTIONS[weapon].flatMap(({id})=>Array(owned[id]).fill(id));
 }
-// The single revive is once per active journey, not once per encounter.
-// It cannot be triggered in the hidden practice/secret route.
-export function consumeRevivalFlame(profile,run){
- if(!run||run.secret||run.reviveUsed||flameBalance(profile)<1)return false;
- profile.flames=flameBalance(profile)-1;
- run.reviveUsed=true;
- return true;
-}

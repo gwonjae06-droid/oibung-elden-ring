@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EVOLUTIONS,evolutionCount} from '../src/weapon-evolution.mjs';
 import {freshProfile,newRun,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
-import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,consumeRevivalFlame,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES} from '../src/purification-forge.mjs';
+import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES} from '../src/purification-forge.mjs';
 import {forgeScreen,flameRewardScreen} from '../src/forge-view.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
@@ -79,18 +79,9 @@ test('forge tiers follow the weapon into every boss without being a run-specific
  const other=createGame('hammer',{register:false});configureJourney(other,newRun('hammer'),p);
  assert.equal(evolutionCount(other,'blade-wave'),0,'forged swords cannot leak into hammer');
 });
-test('revive spends one flame, leaves the current stage, and cannot be repeated in one run',()=>{
- const p=freshProfile();p.flames=2;const r=newRun('sword');r.stage=2;
- assert.equal(consumeRevivalFlame(p,r),true);
- assert.equal(p.flames,1);assert.equal(r.reviveUsed,true);assert.equal(r.stage,2);
- assert.equal(consumeRevivalFlame(p,r),false);assert.equal(p.flames,1);
- assert.equal(consumeRevivalFlame(p,{...newRun(),secret:true}),false);
- assert.equal(consumeRevivalFlame(p,newRun()),true);assert.equal(p.flames,0);
- assert.equal(consumeRevivalFlame(p,newRun()),false);
-});
 test('v4 save keeps forge and earned flames per browser but not active run',()=>{
  const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
- const p=freshProfile();p.flames=4;p.earnedFlames=4;buy(p,'cards','wide-deck');p.run=newRun('cards');p.run.reviveUsed=true;
+ const p=freshProfile();p.flames=4;p.earnedFlames=4;buy(p,'cards','wide-deck');p.run=newRun('cards');
  assert.equal(saveProfile(storage,p),true);
  const raw=JSON.parse(data.get(SAVE_KEY));
  assert.equal(raw.run,null);assert.equal(raw.forge.cards['wide-deck'],1);
@@ -121,6 +112,8 @@ test('rendered Korean forge offers each tier, refund and the victory flame',()=>
  assert.match(gained,/정화의 불꽃을 획득했습니다/);
  assert.match(gained,/data-j="flame-next"/);
  assert.doesNotMatch(gained,/data-j="relic"/);
+ assert.match(gained,/해금된 마지막 보스로 건너뛸/);
+ assert.doesNotMatch(gained,/부활/);
 });
 
 test('semicolon developer Easter egg grants exactly two saved flames and honors the balance cap',()=>{

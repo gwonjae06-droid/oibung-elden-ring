@@ -22,7 +22,7 @@ jobs:
       - name: Journey state and legacy migration
         if: always()
         run: node --test tests/journey.test.mjs tests/boss-secret.test.mjs tests/chapter-environment.test.mjs
-      - name: Full journey UI and revival controller
+      - name: Full journey UI and flame shortcut controller
         if: always()
         run: node --test tests/journey-controller.test.mjs
       - name: Weapon evolution and blood progression compatibility
@@ -34,11 +34,16 @@ jobs:
           python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/forge-http.log 2>&1 &
           sleep 2
           node scripts/purification-forge-smoke.mjs
+      - name: Flame shortcut gate, mobile menu and real blood battle
+        if: always()
+        run: node scripts/flame-skip-smoke.cjs
       - name: Archive purification forge screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: purification-forge-screenshots
-          path: artifacts/purification-forge/
+          path: |
+            artifacts/purification-forge/
+            artifacts/flame-skip/
           if-no-files-found: warn
           retention-days: 7

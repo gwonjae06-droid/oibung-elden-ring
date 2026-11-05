@@ -1,11 +1,50 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshProfile,newRun,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY,BOSSES} from '../src/journey-state.mjs';
+import {freshProfile,newRun,newFlameRun,latestUnlockedStage,consumeFlameSkip,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY,BOSSES} from '../src/journey-state.mjs';
 import {buyForgeTier,forgedEvolutions} from '../src/purification-forge.mjs';
 import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
 import {createDicePlayerGame} from '../src/dice-player.mjs';
+
+test('flame shortcut targets the highest consecutively unlocked playable boss',()=>{
+ const p=freshProfile();p.flames=5;
+ assert.equal(latestUnlockedStage(p),0);assert.equal(newFlameRun(p),null);
+ for(let count=1;count<=BOSSES.length;count++){
+  p.defeated=BOSSES.slice(0,count);
+  const stage=Math.min(count,BOSSES.length-1),r=newFlameRun(p,'cards');
+  assert.equal(latestUnlockedStage(p),stage);assert.equal(r.stage,stage);assert.equal(r.startStage,stage);
+  assert.equal(p.flames,5,'reserving must not spend');assert.deepEqual(r.splits,[]);
+ }
+ p.defeated=['clown','dice','blood'];assert.equal(newFlameRun(p),null);
+ p.defeated=['kwon','blood'];assert.equal(newFlameRun(p).stage,1);
+ p.flames=0;assert.equal(newFlameRun(p),null);
+});
+test('a shortcut pays once, validates the gate again, and remains session-only',()=>{
+ const p=freshProfile();p.flames=2;p.defeated=['kwon','clown'];const r=newFlameRun(p);
+ assert.equal(consumeFlameSkip(p,{...r,stage:3,startStage:3}),false);
+ assert.equal(consumeFlameSkip(p,{...r,secret:true}),false);
+ assert.equal(consumeFlameSkip(p,newRun()),false);
+ assert.equal(consumeFlameSkip(p,r),true);assert.equal(p.flames,1);
+ assert.equal(consumeFlameSkip(p,r),false);assert.equal(p.flames,1);
+ const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ p.run=r;saveProfile(storage,p);const loaded=loadProfile(storage);
+ assert.equal(loaded.run,null);assert.equal(loaded.flames,1);assert.equal(latestUnlockedStage(loaded),2);
+});
+test('skipped victories record actual time and never count as a full campaign clear',()=>{
+ const p=freshProfile();p.flames=3;p.defeated=['kwon'];p.run=newFlameRun(p,'hammer');consumeFlameSkip(p,p.run);
+ assert.equal(finishAttempt(p,{won:true,time:20}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:30}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:40}),'complete');
+ assert.equal(p.clears,0);assert.equal(p.flames,5);assert.equal(p.records[0].time,90);assert.equal(p.records[0].startStage,1);
+ assert.deepEqual(p.memories.map(m=>m.id),['clown','dice','blood']);
+ const loaded=loadProfile({getItem:()=>JSON.stringify(p)});
+ assert.equal(loaded.records[0].startStage,1);assert.equal(loaded.clears,0);
+ const isolated=loadProfile({getItem:()=>JSON.stringify({...p,defeated:[],memories:[]})});
+ assert.equal(latestUnlockedStage(isolated),0,'a skip record must not fabricate skipped kills');
+ const invalid=loadProfile({getItem:()=>JSON.stringify({...p,defeated:[],memories:[],records:[{...p.records[0],startStage:99}]})});
+ assert.equal(invalid.records.length,0);assert.equal(latestUnlockedStage(invalid),0,'invalid skip metadata cannot become a full clear');
+});
 
 test('four victories each award a flame and one run completion with persistent records',()=>{
  const p=freshProfile();p.run=newRun();

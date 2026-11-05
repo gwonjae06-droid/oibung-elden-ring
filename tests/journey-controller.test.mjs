@@ -5,7 +5,7 @@ import {bindBattleSession} from '../src/battle-session.mjs';
 import {SAVE_KEY,freshProfile} from '../src/journey-state.mjs';
 import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
-function rig({holdClown=false,failScene=null,savedProfile=null}={}){
+function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=false}={}){
  const listeners=new Map(),windowListeners=new Map(),timers=[],data=new Map(),modals={},releases=[],states=[];
  if(savedProfile)data.set(SAVE_KEY,JSON.stringify(savedProfile));
  const root=()=>({addEventListener(){},removeEventListener(){},getElementById:id=>id==='result'?{hidden:false}:id==='battle-preparation'?{style:{},hidden:true}:{focus(){}}});
@@ -15,7 +15,7 @@ function rig({holdClown=false,failScene=null,savedProfile=null}={}){
  const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener:(type,fn)=>{const a=windowListeners.get(type)||[];a.push(fn);windowListeners.set(type,a);},removeEventListener:(type,fn)=>{windowListeners.set(type,(windowListeners.get(type)||[]).filter(f=>f!==fn));}};
  const makeGame=()=>({status:'playing',time:10,weapon:'sword',player:{maxHp:120,hp:120,potions:3},boss:{hp:100,maxHp:100}});
  releases.push(bindBattleSession(doc,()=>({game:current,start(w,configure){current=makeGame();current.weapon=w;configure(current);},menu(){},pause(){}})));
- const loadBattle=async boss=>{const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch};};
+ const loadBattle=async boss=>{if(failLoadOnce){failLoadOnce=false;throw Error('test load failure');}const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch};};
  let releaseClown;const scenes=[];const api=installJourney(doc,win,{loadBattle,playPull:()=>{scenes.push('pull');return {finished:Promise.resolve(true),dispose(){}};},playTransition:boss=>{if(failScene===boss)throw Error('cinematic exploded');scenes.push(boss);return {finished:boss==='clown'&&holdClown?new Promise(r=>releaseClown=r):Promise.resolve(true),dispose(){releaseClown?.(false);}};},makeMusic:()=>({unlock(){},update:on=>states.push(on),dispose(){}})});
  const click=(action,extra={})=>listeners.get('click')({target:{closest:()=>({dataset:{j:action,...extra}})}});
  const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},...overrides};for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
@@ -111,17 +111,56 @@ test('main-menu forge invests permanent points and can refund across weapons',as
  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).forge.bow['twin-arrow'],1);
  await f.api.dispose();f.release();
 });
-test('one journey revival spends a flame and retries current boss only once',async()=>{
- const profile=freshProfile();profile.flames=2;profile.earnedFlames=2;
- const f=rig({savedProfile:profile});
- await f.click('new');await f.click('begin');const first=f.game();
- first.status='lost';await f.poll();assert.match(f.dialog.html,/정화의 불꽃 1개로 부활/);
- await f.click('revive');assert.notEqual(f.game(),first);assert.equal(f.game().status,'playing');
- assert.equal(JSON.parse(f.data.get(SAVE_KEY)).flames,1);
- f.game().status='lost';await f.poll();assert.doesNotMatch(f.dialog.html,/data-j="revive"/);
- assert.match(f.dialog.html,/부활을 이미 사용했습니다/);
- await f.click('restart');f.game().status='lost';await f.poll();
- assert.match(f.dialog.html,/data-j="revive"/);
+test('flame selection can be cancelled and only a successful trial start spends one',async()=>{
+ const profile=freshProfile();profile.flames=3;profile.defeated=['kwon','clown'];
+ profile.forge.bow['twin-arrow']=1;
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ assert.match(f.dialog.html,/거대 주사위 박성원부터 시작/);
+ await f.click('skip-toggle');assert.match(f.dialog.html,/선택됨/);assert.equal(saved().flames,3);
+ await f.click('new');await f.click('home');assert.equal(saved().flames,3);
+ await f.click('new');assert.doesNotMatch(f.dialog.html,/선택됨/);await f.click('home');
+ await f.click('skip-toggle');await f.click('new');await f.click('weapon',{weapon:'bow'});
+ assert.match(f.dialog.html,/불꽃 1개로 선택한 무기 출정/);
+ await f.click('begin');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);
+ assert.deepEqual(f.game().evolutions,['twin-arrow']);assert.equal(saved().flames,2);
+ const first=f.game();await f.click('begin');assert.equal(f.game(),first);assert.equal(saved().flames,2);
+ first.status='lost';await f.poll();assert.doesNotMatch(f.dialog.html,/data-j="revive"/);
+ await f.click('revive');assert.equal(f.game(),first);assert.equal(saved().flames,2);
+ await f.click('restart');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);assert.equal(saved().flames,2);
+ await f.api.dispose();f.release();
+});
+test('flame shortcut cannot bypass the first locked gate or spend an empty balance',async()=>{
+ for(const defeated of [[],['blood'],['clown','dice','blood']]){
+  const profile=freshProfile();profile.flames=5;profile.defeated=defeated;
+  const f=rig({savedProfile:profile});assert.match(f.dialog.html,/data-j="skip-toggle"[^>]*disabled/);
+  await f.click('skip-toggle');await f.click('new');await f.click('begin',{boss:'blood'});
+  assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);
+  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).flames,5);await f.api.dispose();f.release();
+ }
+ const profile=freshProfile();profile.defeated=['kwon'];
+ const f=rig({savedProfile:profile});assert.match(f.dialog.html,/정화의 불꽃이 부족합니다/);
+ await f.click('skip-toggle');await f.click('new');await f.click('begin');
+ assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);await f.api.dispose();f.release();
+});
+test('a failed shortcut load does not spend a flame; retry spends exactly once',async()=>{
+ const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
+ const f=rig({savedProfile:profile,failLoadOnce:true}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('skip-toggle');await f.click('new');await f.click('begin');
+ assert.match(f.dialog.html,/전장을 열지 못했습니다/);assert.equal(saved().flames,2);
+ await f.click('continue');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.clown.maxHp);assert.equal(saved().flames,1);
+ await f.click('continue');assert.equal(saved().flames,1);await f.api.dispose();f.release();
+});
+test('last unlocked boss skip earns only its own memory and a separate completion record',async()=>{
+ const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice'];
+ profile.records=[{weapon:'sword',time:100,deaths:0,bossCount:4,startStage:0}];profile.clears=1;
+ const f=rig({savedProfile:profile});await f.click('skip-toggle');await f.click('new');await f.click('begin');
+ assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.blood.maxHp);
+ f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
+ assert.match(f.dialog.html,/마지막 시련을 넘어섰다/);assert.match(f.dialog.html,/별도로 기록/);
+ const saved=JSON.parse(f.data.get(SAVE_KEY));assert.equal(saved.flames,2);assert.equal(saved.earnedFlames,3);
+ assert.equal(saved.clears,1);assert.equal(saved.records.at(-1).startStage,3);assert.equal(saved.records.at(-1).time,10);
+ assert.deepEqual(saved.memories.map(m=>m.id),['blood']);
+ await f.click('records');assert.match(f.dialog.html,/불꽃 지름길 · 영원한 혈왕 배서준부터 · 1보스/);
  await f.api.dispose();f.release();
 });
 
