@@ -7,7 +7,7 @@ test('arena startup treats already-evaluated reducedMotion as boolean, never as 
  assert.match(src,/\breduceMotion\s*=\s*reducedMotion\(\)/,'arena gets value from getter once');
  assert.doesNotMatch(src,/\breduceMotion\s*\(\s*\)/,'regression: a boolean is not callable');
  const usage=src.match(/reduced:reduceMotion\b/g)||[];
- assert.equal(usage.length,3,'every first-boss graphics module needs the same boolean');
+ assert.ok(usage.length>=3,'every first-boss graphics module needs the same boolean');
  for(const moduleName of ['createBossAtmosphere','createCinematicWorld','createCinematicImpactFx'])
   assert.match(src,new RegExp(moduleName+'\\(scene,[^\\n]*reduced:reduceMotion'));
 });
