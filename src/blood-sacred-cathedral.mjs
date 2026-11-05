@@ -203,9 +203,9 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
    pointedArch(w,{halfWidth:3.46,base:3.75,peak:7.14,material:ivory,radius:.24});
    for(const x of [-3.42,3.42])box(w,ivory,.27,10.8,.28,x,-1.62,.07);
    box(w,ivory,7,.3,.4,0,-6.95,.06);
-   for(const x of [-1.62,1.62])box(w,trim,.12,10.5,.18,x,-1.6,.13);
-   for(const y of [-3.5,.3,3.25])box(w,trim,6.6,.095,.19,0,y,.12);
-   for(const k of [-1,1]){
+   for(const x of (coarse?[0]:[-1.62,1.62]))box(w,trim,.12,10.5,.18,x,-1.6,.13);
+   for(const y of (coarse?[-1.1]:[-3.5,.3,3.25]))box(w,trim,6.6,.095,.19,0,y,.12);
+   if(!coarse)for(const k of [-1,1]){
     tube(w,[[k*.06,5.95,.16],[k*1,5.15,.16],[k*2.15,3.8,.16]],.082,ivory,14);
     mesh(w,new THREE.TorusGeometry(.77,.09,6,24),ivory,k*.76,4.6,.18).scale.set(.7,1.2,1);
    }
@@ -230,11 +230,11 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
    const shaft=mesh(pillarGroup,shaftGeo,stone,x,12.5,z);shaft.castShadow=!coarse;
    mesh(pillarGroup,capitalGeo,ivory,x,24.7,z);
    mesh(pillarGroup,baseGeo,marble,x,.3,z);
-   for(const dx of [-.5,.5])for(const dz of [-.5,.5]){
+   if(!coarse)for(const dx of [-.5,.5])for(const dz of [-.5,.5]){
     const rod=mesh(pillarGroup,new THREE.CylinderGeometry(.19,.22,23,8),ivory,x+dx,12,z+dz);
     rod.castShadow=false;
    }
-   for(const height of [1.1,20.7,23.9])mesh(pillarGroup,ringGeo,gold,x,height,z).rotation.x=Math.PI/2;
+   for(const height of (coarse?[23.9]:[1.1,20.7,23.9]))mesh(pillarGroup,ringGeo,gold,x,height,z).rotation.x=Math.PI/2;
   }
   // The near-side aisle is hidden if the camera moves outside its wall.
   occluders.push({root:sideRoot,side});
@@ -249,9 +249,9 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
    pts.push([x,27.3+11.2*Math.pow(Math.max(0,1-r),.86)+.12,z]);
   }
   tube(roof,pts,.3,ivory,48);
-  tube(roof,pts.map(([x,y,zz])=>[x,y-.32,zz]),.065,gold,40);
+  if(!coarse)tube(roof,pts.map(([x,y,zz])=>[x,y-.32,zz]),.065,gold,40);
  }
- for(let z=-36;z<36;z+=12)for(const side of [-1,1]){
+ for(let z=-36;z<36;z+=(coarse?24:12))for(const side of [-1,1]){
   const pts=[];
   for(let i=0;i<=12;i++){
    const t=i/12,x=side*(39-39*t),y=27.3+11.2*Math.pow(t,.86)+.12,zz=z+6*t;
@@ -264,7 +264,7 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
  box(apse,stone,78,9.8,1.1,0,4.9,-.1);
  box(apse,stone,78,7.9,1.1,0,33,-.1);
  for(const x of [-31,-20,-10,10,20,31])box(apse,stone,5,16.8,1.1,x,20,-.1);
- for(const x of [-24,-12,0,12,24]){
+ for(const x of (coarse?[-14,0,14]:[-24,-12,0,12,24])){
   const w=new THREE.Group();w.position.set(x,20,.7);apse.add(w);
   mesh(w,glassGeo,glassMat);
   pointedArch(w,{halfWidth:3.45,base:3.75,peak:7.1,material:ivory,radius:.24});
@@ -280,11 +280,11 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
  }
  altarSculpture(root,ivory,marble,gold,{coarse});
  // Side benches remain outside the radius-28 collision space.
- for(const side of [-1,1])for(const z of [-24,-13,-2,9,20,30]){
+ for(const side of [-1,1])for(const z of (coarse?[-11,19]:[-24,-13,-2,9,20,30])){
   const x=side*34.4,bench=new THREE.Group();bench.position.set(x,0,z);root.add(bench);
   box(bench,oak,7.5,.23,1.5,0,1.38,0);
   box(bench,oak,7.7,1.2,.23,0,1.94,-.63);
-  for(const xx of [-3.4,0,3.4]){
+  for(const xx of (coarse?[-3.4,3.4]:[-3.4,0,3.4])){
    box(bench,oak,.29,1.4,.33,xx,.73,.49);
    box(bench,oak,.29,2.28,.32,xx,1.2,-.63);
   }
