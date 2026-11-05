@@ -7,7 +7,7 @@ export const BLOOD_SIPHON_RULES=Object.freeze({
  firstDelay:10.5,
  interval:15,
  channel:2.4,
- healFraction:.05, // 5% of full HP: 320 for the 6,400 HP encounter.
+ healFraction:.05, // 5% of the encounter's configured max HP (250 at 5,000 story HP).
  maxHeals:5,
  phaseCeiling:.5,
  retryWhenFull:1.25
