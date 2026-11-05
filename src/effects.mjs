@@ -42,7 +42,18 @@ export function createEffects(scene,sword,reduced=false){
   pool.emit(ev.x,.3,ev.z,reduced?10:28,[1,.34,.26]);
  }else if(ev.type==='victory'){ring(b.x,b.z,8);pool.emit(b.x,2,b.z,reduced?20:90,gold,true);}}
  function update(dt,g){if(disposed)return;if(lastGame!==g){clear();lastGame=g;}feel.update(dt,g);updateZone(g);const h=Math.max(0,Math.min(dt,.05)),boss=g.boss;pool.step(h);
- if(impactDue(boss,PATTERNS[boss.pattern].active)&&boss.attackId!==impactId){impactId=boss.attackId;const tip=boss.zone||swordSegment(boss).b;ring(tip.x,tip.z,boss.pattern==='leap'?5.2:3.2);pool.emit(tip.x,.15,tip.z,reduced?12:45,[.65,.5,.32],true);pool.emit(tip.x,.2,tip.z,reduced?8:24,gold);}
+ if(impactDue(boss,PATTERNS[boss.pattern].active)&&boss.attackId!==impactId){impactId=boss.attackId;const tip=boss.zone||swordSegment(boss).b;
+  if(boss.pattern==='slam'){
+   // The sword hits at the pre-existing slam damage beat; this is visual only.
+   ring(tip.x,tip.z,4.1,0xffa887);
+   pool.emit(tip.x,2.5,tip.z,reduced?16:68,[1,.63,.35],true);
+   pool.emit(tip.x,.18,tip.z,reduced?12:43,[1,.23,.16]);
+  }else{
+   ring(tip.x,tip.z,boss.pattern==='leap'?5.2:3.2);
+   pool.emit(tip.x,.15,tip.z,reduced?12:45,[.65,.5,.32],true);
+   pool.emit(tip.x,.2,tip.z,reduced?8:24,gold);
+  }
+ }
  if(h>0&&!reduced&&g.status==='playing'&&trailAllowed(boss)){sword.updateWorldMatrix(true,false);a.set(0,0,.4).applyMatrix4(sword.matrixWorld);b.set(0,0,SWORD.length).applyMatrix4(sword.matrixWorld);if(history.length&&history[0].id!==boss.attackId)history.length=0;history.unshift({a:a.clone(),b:b.clone(),life:.16,id:boss.attackId});}
  for(let i=history.length-1;i>=0;i--){history[i].life-=h;if(history[i].life<=0)history.splice(i,1);}history.length=Math.min(history.length,18);let n=0;for(let i=0;i<history.length-1;i++){const q=history[i],r=history[i+1],fade=Math.max(0,r.life/.16),col=boss.phase===2?red:gold;for(const v of[q.a,q.b,r.b,q.a,r.b,r.a]){trailPos[n*3]=v.x;trailPos[n*3+1]=v.y;trailPos[n*3+2]=v.z;for(let j=0;j<3;j++)trailColor[n*3+j]=col[j]*fade;n++;}}trailGeo.setDrawRange(0,n);trailGeo.attributes.position.needsUpdate=true;trailGeo.attributes.color.needsUpdate=true;let i=0;for(const p of pool.particles){const fade=Math.max(0,p.life/p.max);positions[i*3]=p.x;positions[i*3+1]=p.y;positions[i*3+2]=p.z;for(let j=0;j<3;j++)colors[i*3+j]=p.color[j]*fade*(p.dust?.35:1);i++;}geo.setDrawRange(0,i);geo.attributes.position.needsUpdate=true;geo.attributes.color.needsUpdate=true;for(const r of rings){if(r.life<=0)continue;r.life-=h;r.m.visible=r.life>0;const t=1-Math.max(0,r.life/r.max);r.m.scale.setScalar(.12+r.radius*t);r.m.material.opacity=(1-t)*.55;}}
  function dispose(){if(completion)return completion;clear();disposed=true;const gpu=disposeScene(root);root.parent?.remove(root);completion=Promise.resolve(feel.dispose()).then(report=>({errors:[...gpu.errors,...(report?.errors||[])]}));return completion;}
