@@ -66,7 +66,7 @@ export function forgeScreen(profile,weapon,{button,back,warning}){
   '</div>',back(),warning(),'</div>');
 }
 export function flameRewardScreen(profile,bossName,{button,back,warning,complete=false}){
- return html('<div class="j-panel j-flame-earned"><p class="j-kicker">PURIFICATION · 시련의 잔불</p>',
+ return html('<div class="j-panel j-flame-result"><p class="j-kicker">PURIFICATION · 시련의 잔불</p>',
   '<div class="j-earned-circle" aria-hidden="true"><div class="j-earned-rays"></div>',
   flameMark('earned'),'</div>',
   '<p class="j-flame-overline">',bossName,' 토벌</p>',
