@@ -1,6 +1,6 @@
 import {createBossSecret} from './boss-secret.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
-import {flameBalance,buyForgeTier,refundForgeWeapon,consumeRevivalFlame,investedFlames} from './purification-forge.mjs';
+import {flameBalance,buyForgeTier,refundForgeWeapon,consumeRevivalFlame,investedFlames,grantForgeDeveloperFlames,isForgeDeveloperShortcut} from './purification-forge.mjs';
 import {forgeScreen,flameRewardScreen,flameCounter} from './forge-view.mjs';
 import {playRewardPull} from './reward-pull.mjs';
 import {CHAPTER_MEMORIES} from './chapter-story.mjs';
@@ -21,7 +21,7 @@ const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
- let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null;const secret=createBossSecret();
+ let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',forgeDevNotice='',pendingReward=null;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -47,7 +47,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function secretMenu(){screen='secret';secret.reset();show(`<div class="j-panel"><h1>봉인 밖의 문</h1><p>숨겨진 길을 발견했습니다. 무기를 선택하고 원하는 보스에게 이동하세요.<br>이 이동 전투는 서약의 기억·완수 기록에 반영되지 않습니다. 보스를 쓰러뜨리면 정화의 불꽃 1개를 획득합니다.</p><div class="j-links" role="group" aria-label="이동 전투 무기">${Object.entries(WEAPONS).map(([id,name])=>button('secret-weapon',name,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div><div class="j-cards">${BOSSES.map((id,i)=>button('secret-enter',`<strong>0${i+1}</strong><b>${BOSS_NAMES[i]}</b><small>바로 이동</small>`,`data-boss="${id}"`)).join('')}</div><div class="j-links">${BOSSES.filter(id=>BOSS_REGISTRY[id].secret).map(id=>button('secret-phase',BOSS_REGISTRY[id].secret.label,`data-boss="${id}" data-phase="${BOSS_REGISTRY[id].secret.phase}"`)).join('')}</div>${back()}</div>`);}
  function secretRun(stage,phase=1){const run=newRun(weapon);run.stage=stage;run.secret=true;run.secretPhase=phase;return run;}
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
- function forge(){screen='forge';show(forgeScreen(profile,forgeWeapon,{button,back,warning}));}
+ function forge(){screen='forge';show(forgeScreen(profile,forgeWeapon,{button,back,warning,devNotice:forgeDevNotice}));}
  function flameReward(){if(!pendingReward)return;screen='flame';show(flameRewardScreen(profile,pendingReward.name,{button,back,warning,complete:pendingReward.complete}));}
  function records(){screen='records';const rows=[...profile.records].reverse();
   show(`<div class="j-panel"><h1>기록실</h1><p>전체 클리어 ${profile.clears}회</p>${rows.length?`<table class="j-table"><thead><tr><th>시련</th><th>무기</th><th>시간</th><th>패배</th><th>달성</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${TRIAL_NAME} · ${r.bossCount||3}보스</td><td>${WEAPONS[r.weapon]}</td><td>${clock(r.time)}</td><td>${r.deaths}회</td><td>${r.deaths===0?'불굴의 도전자':(r.bossCount||3)+'지배자 토벌'}</td></tr>`).join('')}</tbody></table>`:`<p>여정 완수 기록은 아직 없습니다. ${BOSSES.length}명의 보스를 쓰러뜨리면 완수 기록이 남습니다.</p>`}${profile.memories?.length?profile.memories.map(entry=>{const m=CHAPTER_MEMORIES[entry.id];return `<details class="j-memory-record"><summary>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</summary><section><div class="j-memory-art" data-memory="${entry.id}" aria-hidden="true"></div><div><h2>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</h2><p>${m.last}</p><p>${m.text}</p><p>서약 · ${m.oath} · 첫 토벌 ${entry.firstClear?new Date(entry.firstClear).toLocaleDateString('ko-KR'):'이전 기록'}</p></div></section></details>`;}).join(''):'<p>보스를 토벌하면 서약의 기억과 첫 토벌 날짜가 기록됩니다.</p>'}${back()}</div>`);
@@ -118,7 +118,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(action==='secret-retry'&&screen==='secret-result'&&profile.run?.secret){profile.run=secretRun(profile.run.stage,profile.run.secretPhase);await launch();return;}
   if(action==='secret-menu'&&screen==='secret-result'){busy=true;try{await closeBattle();profile.run=null;secretMenu();}finally{busy=false;}return;}
   if(action==='home'){await goHome();return;}
-  if(action==='forge'&&screen==='home'){forgeWeapon=weapon;forge();return;}
+  if(action==='forge'&&screen==='home'){forgeWeapon=weapon;forgeDevNotice='';forge();return;}
   if(action==='forge-weapon'&&screen==='forge'){
    if(Object.hasOwn(WEAPONS,b.dataset.weapon)){forgeWeapon=b.dataset.weapon;forge();}return;
   }
@@ -154,9 +154,17 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const input=e=>{if(e.target.id==='j-muted'){put('oibung-muted',e.target.checked?'1':'0');syncMusic();}if(e.target.id==='j-volume'){volume=Number(e.target.value);put('oibung.menu.volume',String(volume));syncMusic();}if(e.target.dataset?.audioChannel){writeAudioVolume(e.target.dataset.audioChannel,e.target.value,storage);syncMusic();}};
  const cancel=e=>{e.preventDefault();if(!busy&&screen!=='home')goHome();};
  const secretKey=e=>{if(disposed||busy||screen!=='home'||!dialog.open||e.repeat||e.ctrlKey||e.altKey||e.metaKey||e.target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(secret.key(e.code,performance.now())){e.preventDefault();secretMenu();}};
+ const forgeDeveloperKey=e=>{
+  if(disposed||busy||screen!=='forge'||!dialog.open||!isForgeDeveloperShortcut(e))return;
+  e.preventDefault();
+  const amount=grantForgeDeveloperFlames(profile);
+  if(amount)persist();
+  forgeDevNotice=amount?'개발자용 이스터에그 발동 · 정화의 불꽃 +2':'개발자용 이스터에그 · 불꽃 보유 한도에 도달했습니다.';
+  forge();
+ };
  const requestHome=()=>goHome(),focus=()=>{focused=true;syncMusic();},blur=()=>{focused=false;syncMusic();};
  dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',cancel);dialog.addEventListener('keydown',e=>e.stopPropagation());
- win.addEventListener('keydown',secretKey,true);win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
+ win.addEventListener('keydown',secretKey,true);win.addEventListener('keydown',forgeDeveloperKey,true);win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
  const timer=win.setInterval(poll,150);if(dialog.open)dialog.close();home();
- return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('keydown',secretKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
+ return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('keydown',secretKey,true);win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
 }
