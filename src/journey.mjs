@@ -74,7 +74,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   }
  }
  async function scene(boss){if(!transitionsOn)return;screen='transition';dialog.close();syncMusic();await play(()=>playTransition(boss,root.getElementById('arena')));}
- function nextReady(){screen='ready';const r=profile.run;show(`<div class="j-panel"><p class="j-kicker">THE NEXT OATH</p><h1>${BOSS_NAMES[r.stage]}</h1><p>정화의 불꽃은 보관되었습니다. 대장간에서 영구 각인한 ${WEAPONS[r.weapon]}의 무기 진화는 다음 전투에도 유지됩니다.</p>${button('next','다음 도전','class="j-primary"')}${back()}${warning()}</div>`);}
+ function nextReady(){screen='ready';const r=profile.run,place=BOSS_REGISTRY[BOSSES[r.stage]].place||'다음 시련';show(`<div class="j-panel"><p class="j-kicker">${place} · THE NEXT OATH</p><h1>${BOSS_NAMES[r.stage]}</h1><p>정화의 불꽃은 보관되었습니다. 대장간에서 영구 각인한 ${WEAPONS[r.weapon]}의 무기 진화는 다음 전투에도 유지됩니다.</p>${button('next','다음 도전','class="j-primary"')}${back()}${warning()}</div>`);}
  async function launch(){
   if(busy||!profile.run)return;busy=true;screen='loading';show(`<div class="j-panel"><h1>${BOSS_NAMES[profile.run.stage]}</h1><p role="status">전장을 준비합니다…</p></div>`);
   try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>configureJourney(g,r,profile);
