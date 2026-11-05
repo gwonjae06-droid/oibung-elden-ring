@@ -6,6 +6,7 @@ import {BLOOD_RULES as R} from './blood-data.mjs';
 import {bloodQuality,createBloodFluid} from './blood-fluid.mjs';
 import {createBloodParticles} from './blood-particles.mjs';
 import {createBloodSpellFx} from './blood-spell-fx.mjs';
+import {createBloodSiphonFx} from './blood-siphon-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
 import {createBloodMotionDirector} from './blood-attack-motion.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
@@ -26,6 +27,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const tip=mesh(fluid.sphere,fluid.material,0,-1.5,0,heart);tip.scale.set(1.8,2,1.3);
  const fxRoot=new THREE.Group();scene.add(fxRoot);
  const particles=createBloodParticles(fxRoot,fluid,quality,{reduced}),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
+ const siphonFx=createBloodSiphonFx(fxRoot,{coarse,reduced});
  const root=new THREE.Group();scene.add(root);
  const actor=new THREE.Group();root.add(actor);
  const regalia=createBloodRegalia(actor,{coarse,reduced});
@@ -41,7 +43,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  function update(g,dt){
   if(disposed)return;focusGame=g;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=motionDirector.update(g,dt),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
-  const energyGoal=({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0;energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
+  const energyGoal=(({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0)+(s.siphon?.active?.7:0);energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
   // Choreography is tied to the actual spell clock, never an independent visual timer.
   actor.position.y=(reduced?0:Math.sin(g.time*1.8)*.06)+motion.body.bob;
@@ -66,14 +68,14 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   else hitRoll*=Math.exp(-dt*13);
   actor.rotation.z=motion.body.roll+hitRoll;lastHp=b.hp;
   // The blood spell scene reads the same hazards as damage calculations; no floor hitbox meshes.
-  spells.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
+  spells.update(g,dt);siphonFx.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.siphon?.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   projectiles.update(g);
   shake*=Math.exp(-dt*14);
  }
  function occlude(camera,g){focusGame=g;}
- function clear(){projectiles.clear();spells.clear();wings.clear();motionDirector.reset();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea}),
-  event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
+ function clear(){projectiles.clear();spells.clear();siphonFx.clear();wings.clear();motionDirector.reset();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,siphon:siphonFx.stats()}),
+  event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();siphonFx.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }
