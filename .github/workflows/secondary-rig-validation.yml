@@ -1,0 +1,46 @@
+name: Secondary physics and foot rig validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/player-motion.mjs'
+      - 'src/player-motion-data.mjs'
+      - 'src/player-foot-ik.mjs'
+      - 'src/secondary-physics.mjs'
+      - 'src/blood-leg-rig.mjs'
+      - 'src/blood-regalia.mjs'
+      - 'src/blood-fluid.mjs'
+      - 'src/blood-particles.mjs'
+      - 'src/blood-cathedral-sea.mjs'
+      - 'src/dice-giant-view.mjs'
+      - 'tests/player-foot-ik.test.mjs'
+      - 'tests/secondary-physics.test.mjs'
+      - '.github/workflows/secondary-rig-validation.yml'
+  push:
+    branches:
+      - feature/secondary-physics-bloodflow-20261106
+  workflow_dispatch:
+
+jobs:
+  rig-and-fluid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check modified JavaScript module syntax
+        run: |
+          node --check src/player-foot-ik.mjs
+          node --check src/player-motion.mjs
+          node --check src/player-motion-data.mjs
+          node --check src/secondary-physics.mjs
+          node --check src/blood-leg-rig.mjs
+          node --check src/blood-fluid.mjs
+          node --check src/blood-cathedral-sea.mjs
+      - name: Test stable springs, articulated feet and existing boss rigs
+        run: |
+          node --test tests/secondary-physics.test.mjs tests/player-foot-ik.test.mjs tests/player-avatar.test.mjs tests/blood-regalia.test.mjs tests/blood-motion-followthrough.test.mjs tests/dice-giant-motion.test.mjs

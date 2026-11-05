@@ -49,12 +49,23 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
  water.onBeforeCompile=shader=>{
   shader.uniforms.uSeaTime=uniforms.time;
   shader.uniforms.uSeaFrenzy=uniforms.frenzy;
-  shader.vertexShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen;\n'+shader.vertexShader;
-  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',
-   '#include <begin_vertex>\n float a=sin(position.x*.44+uSeaTime*.83)*cos(position.z*.31-uSeaTime*.56);\n float b=sin(length(position.xz)*.68-uSeaTime*1.14);\n transformed.y+=(a*.11+b*.045)*(1.+uSeaFrenzy*.48);\n vSeaSheen=.5+.5*sin(position.x*.58+position.z*.31+uSeaTime*1.2);');
-  shader.fragmentShader='varying float vSeaSheen;\n'+shader.fragmentShader;
-  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',
-   '#include <color_fragment>\n diffuseColor.rgb *= mix(vec3(.75,.54,.66),vec3(1.5,.87,1.04),vSeaSheen);');
+  shader.vertexShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    float a=sin(position.x*.44+uSeaTime*.83)*cos(position.z*.31-uSeaTime*.56);
+    float b=sin(length(position.xz)*.68-uSeaTime*1.14);
+    transformed.y+=(a*.11+b*.045)*(1.+uSeaFrenzy*.48);
+    vSeaSheen=.5+.5*sin(position.x*.58+position.z*.31+uSeaTime*1.2);
+    vSeaCoord=position.xz;
+   `);
+  shader.fragmentShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   // Per-fragment current: readable flow across the entire sparse shore mesh.
+   float bend=sin(vSeaCoord.y*.14+uSeaTime*.24)*1.15;
+   float current=sin(vSeaCoord.x*.57-vSeaCoord.y*.24+bend-uSeaTime*(1.05+uSeaFrenzy*.24));
+   float crossCurrent=sin(vSeaCoord.y*.63+vSeaCoord.x*.19+uSeaTime*.72);
+   float sheen=clamp(.49+.22*current+.11*crossCurrent+.08*(vSeaSheen-.5),0.,1.);
+   diffuseColor.rgb*=mix(vec3(.71,.52,.64),vec3(1.40,.93,1.06),sheen);
+  `);
  };
  const surface=new THREE.Mesh(geometryOutsideCombat(radius,coarse),water);
  surface.name='cathedral-blood-sea-surface';surface.position.y=CATHEDRAL_BLOOD_SEA.surfaceHeight;

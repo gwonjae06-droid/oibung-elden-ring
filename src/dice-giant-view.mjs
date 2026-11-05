@@ -1,4 +1,5 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
 import {HAND_REST,GIANT,giantHandPose,giantHazards,giantPosture,giantPropType} from './dice-giant.mjs';
@@ -58,6 +59,7 @@ export function buildDiceGiant(scene){
  const handImpactRings=[0,1].map(i=>{const m=mesh(ringGeo,ringMat.clone(),root,[1,1,1]);m.castShadow=m.receiveShadow=false;m.name='sungwon-palm-impact-'+i;m.visible=false;m.renderOrder=8;return m;});
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
  let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0],releaseOrigins=new WeakMap();
+ const wristSprings=createSpringBank();
  let trackedPlayer=null;
  const handParts=hands.flatMap(h=>[h.group,h.upper,h.forearm,h.joint]);
  const visibility=createCameraVisibility(scene,{roots:()=>root.visible?handParts:[],targets:()=>trackedPlayer?[{x:trackedPlayer.x,y:1.4,z:trackedPlayer.z,radius:2.6}]:[]});
@@ -69,7 +71,7 @@ export function buildDiceGiant(scene){
    const depth=Math.max(1,-barView.copy(b.group.position).applyMatrix4(camera.matrixWorldInverse).z);
    b.group.scale.setScalar(Math.min(1,2*depth*Math.tan(camera.fov*Math.PI/360)*camera.aspect*.16/17.6));
   }
- },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -108,8 +110,11 @@ export function buildDiceGiant(scene){
    const shake=destroyed&&crumble<.35?Math.sin(crumble*90)*.6:0;
    group.position.set(h.x+shake+(i?1:-1)*handPulse[i]*.8,h.y-12*fall-handPulse[i]*.28,h.z+handPulse[i]*.5);
    group.scale.setScalar(destroyed?Math.max(.05,1-crumble/.35*.5):revive>0?.3+.7*(1-revive/GIANT.handRecover):1);
-   group.rotation.set(gesture.wristPitch,gesture.wristYaw,
-    (i?1:-1)*(fall*.6+handPulse[i]*.22)+gesture.wristRoll+(feral?Math.sin(time*11+i)*.07:Math.sin(time*1.5+i)*.016));
+   // The attackable palm stays at its authoritative position. Only the wrist
+   // attitude has a small secondary settling movement after each heavy gesture.
+   group.rotation.set(wristSprings.step('pitch:'+i,gesture.wristPitch,dt,28),
+    wristSprings.step('yaw:'+i,gesture.wristYaw,dt,27),
+    wristSprings.step('roll:'+i,(i?1:-1)*(fall*.6+handPulse[i]*.22)+gesture.wristRoll+(feral?Math.sin(time*11+i)*.07:Math.sin(time*1.5+i)*.016),24));
    // Fingers curl sequentially in the wind-up, clench on contact and open during recovery.
    const curl=sat(h.fist*.62+gesture.curl)*1.25,open=1-sat(curl/1.7);
    fingers.forEach((joints,j)=>joints.forEach((jt,k)=>{

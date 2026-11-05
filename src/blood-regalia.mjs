@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createBloodLegRig} from './blood-leg-rig.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
 // the spell system and all damage volumes remain independent of this visual rig.
@@ -143,29 +144,32 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const heart=attach(growth,new THREE.IcosahedronGeometry(.3,1),vein,0,3.12,.76);
  const ring=attach(growth,new THREE.TorusGeometry(.52,.04,6,32),edge,0,3.12,.73);
  // A restrained moving silhouette in phase one; violent structural bloom in phase two.
- let bloom=0;
+ let bloom=0,lastOwner=null,lastClock=-Infinity;
+ const joints=createSpringBank();
  function update(g,c,dt,cast=0,pose={}){
-  const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,dt):0;
+  const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;
+  if(lastOwner!==g||time<lastClock){joints.reset();lastOwner=g;}lastClock=time;
+  const follow=(key,goal,frequency=15)=>joints.step(key,goal,t,frequency);
   const target=c.veins||0;bloom+=(target-bloom)*(1-Math.exp(-t*5));
   const sway=reduced?0:Math.sin(time*1.5)*.023;
   torso.rotation.y=sway*.5+(pose.body?.twist||0)*.24;
   torso.rotation.x=(pose.body?.lean||0)*.16;
   torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023;
-  cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06;
-  cape.rotation.z=(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55;
-  drapes.forEach((p,i)=>{p.rotation.y=(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07;p.rotation.x=(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7);});
+  cape.rotation.x=follow('cape:x',(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06,8);
+  cape.rotation.z=follow('cape:z',(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55,9);
+  drapes.forEach((p,i)=>{p.rotation.y=follow('drape:y:'+i,(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07,10);p.rotation.x=follow('drape:x:'+i,(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7),8);});
   cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
   for(const {arm,forearm,hand,fingers,thorn,side}of arms){
    const gesture=pose.arms?.[side<0?0:1];
    const raise=gesture?.raise??cast,open=gesture?.open??cast;
    const stride=pose.walk?.moving?((pose.walk.feet[0]||0)-(pose.walk.feet[1]||0))*.14:0;
-   arm.rotation.x=-raise*.88+side*stride+(reduced?0:Math.sin(time*1.2+side)*.018);
-   arm.rotation.z=side*(.17+open*.32);
-   arm.rotation.y=(pose.body?.twist||0)*.14;
-   forearm.rotation.x=-(gesture?.elbow||0)*.62-cast*.05;
-   forearm.rotation.z=side*(gesture?.open||0)*.08;
-   hand.rotation.x=-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12;
-   hand.rotation.z=side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12);
+   arm.rotation.x=follow('arm:x:'+side,-raise*.88+side*stride+(reduced?0:Math.sin(time*1.2+side)*.018),21);
+   arm.rotation.z=follow('arm:z:'+side,side*(.17+open*.32),18);
+   arm.rotation.y=follow('arm:y:'+side,(pose.body?.twist||0)*.14,17);
+   forearm.rotation.x=follow('elbow:x:'+side,-(gesture?.elbow||0)*.62-cast*.05,23);
+   forearm.rotation.z=follow('elbow:z:'+side,side*(gesture?.open||0)*.08,20);
+   hand.rotation.x=follow('wrist:x:'+side,-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12,18);
+   hand.rotation.z=follow('wrist:z:'+side,side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12),16);
    // Finger joints contract as energy gathers, uncurl at the impact and relax
    // after the wrist. No new geometry or IK allocation is needed per frame.
    const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
@@ -177,5 +181,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,growth,legs:legRig.legs,plantFeet:legRig.update,dispose(){}};
+ return {update,arms,drapes,growth,legs:legRig.legs,plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
 }
