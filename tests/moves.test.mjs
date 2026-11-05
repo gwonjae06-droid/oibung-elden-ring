@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,act,step,startPattern} from '../src/combat.mjs';
+import {createGame,act,step,startPattern,patternConfig} from '../src/combat.mjs';
+import {KWON_WAVE} from '../src/kwon-wave-data.mjs';
 const tick=(g,t)=>{for(let s=0;s<t;s+=1/240)step(g,1/240);};
-test('crescent waves are three physical projectiles with a dodgeable fan',()=>{
-  const g=createGame();g.boss.phase=2;g.player.z=20;startPattern(g,'wave');tick(g,.38);assert.equal(g.bossShots.length,3);assert.ok(g.bossShots[0].yaw<g.bossShots[1].yaw&&g.bossShots[1].yaw<g.bossShots[2].yaw);
+test('crescent wave now fires one large vertical sword projectile after an overhead warning',()=>{
+  const g=createGame();g.boss.phase=2;g.player.z=20;startPattern(g,'wave');
+  const cfg=patternConfig(g.boss);tick(g,cfg.wind-.03);assert.equal(g.bossShots.length,0,'preparation must not deal ranged damage');
+  tick(g,.03+cfg.active*KWON_WAVE.releaseRatio+.04);
+  assert.equal(g.bossShots.length,1);
+  assert.equal(g.bossShots[0].kind,KWON_WAVE.kind);
+  assert.equal(g.bossShots[0].radius,KWON_WAVE.radius);
   g.player.x=15;tick(g,1.5);assert.equal(g.player.hp,120);
 });
 test('melee and arrows can still hit the enlarged boss in phase two',()=>{
