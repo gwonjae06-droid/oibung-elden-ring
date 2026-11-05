@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EVOLUTIONS,evolutionCount} from '../src/weapon-evolution.mjs';
 import {freshProfile,newRun,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
-import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES} from '../src/purification-forge.mjs';
+import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES,consumeRevivalFlame} from '../src/purification-forge.mjs';
 import {forgeScreen,flameRewardScreen} from '../src/forge-view.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
@@ -10,6 +10,12 @@ import {createDicePlayerGame} from '../src/dice-player.mjs';
 import {createBloodGame} from '../src/blood-combat.mjs';
 
 const buy=(p,weapon,id)=>assert.equal(buyForgeTier(p,weapon,id),true);
+test('cached pre-shortcut modules can import the retired revival name without spending flames',()=>{
+ const p=freshProfile();p.flames=2;p.run=newRun();
+ const before=JSON.stringify(p);
+ assert.equal(consumeRevivalFlame(p,p.run),false);
+ assert.equal(JSON.stringify(p),before);
+});
 const view={button:(id,text,attrs='')=>'<button data-j="'+id+'" '+attrs+'>'+text+'</button>',back:()=>'<button data-j="home">닫기</button>',warning:()=>''};
 
 test('four weapons each expose two independent evolution paths with two tiers',()=>{

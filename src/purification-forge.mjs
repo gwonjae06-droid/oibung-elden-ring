@@ -73,3 +73,7 @@ export function forgedEvolutions(profile,weapon){
  const owned=sanitizeForge(profile?.forge)[weapon];
  return EVOLUTIONS[weapon].flatMap(({id})=>Array(owned[id]).fill(id));
 }
+// Older cached journey modules still import this name. Keep an inert export so
+// mixed-version clients can open the menu while refreshing the entry module.
+// Revival is retired: this compatibility function never spends or resumes.
+export const consumeRevivalFlame=()=>false;

@@ -6,6 +6,19 @@ import {installClownEntry} from '../src/clown-entry-controller.mjs';
 function bootRig({fail=null}={}){const log=[],doc={},win={},modules={};for(const [path,method] of [['./clown-entry-controller.mjs','installClownEntry'],['./boss-transition.mjs','installBossTransition'],['./game-ui.mjs','installGameUi'],['./boss-music.mjs','installBossMusic'],['./dice-chain.mjs','installDiceChain'],['./coop-menu.mjs','installCoopMenu']])modules[path]={[method](){log.push(method);return {dispose(){log.push('dispose:'+method);}};}};return {log,doc,win,load:async path=>{log.push('load:'+path);if(path===fail)throw Error('load failed');return modules[path]||{};},onWarning:name=>log.push('warning:'+name)};}
 test('bootstrap installs entry handling before arena and transition UI after arena',async()=>{const f=bootRig(),r=await bootstrapGame(f);assert.ok(f.log.indexOf('installClownEntry')<f.log.indexOf('load:./arena.mjs'));assert.ok(f.log.indexOf('load:./arena.mjs')<f.log.indexOf('installBossTransition'));assert.equal(r.features.length,4);assert.ok(r.features.every(x=>x.ready));});
 test('repeated bootstrap calls share one startup promise',async()=>{const f=bootRig(),a=bootstrapGame(f),b=bootstrapGame(f);assert.equal(a,b);await a;assert.equal(f.log.filter(x=>x==='load:./arena.mjs').length,1);assert.equal(f.log.filter(x=>x==='installCoopMenu').length,1);});
+test('production journey boot uses the canonical import-map path and installs its menu',async()=>{
+ const f=bootRig(),load=f.load;f.doc.body={dataset:{journey:'1'}};f.doc.getElementById=id=>id==='journey'?{}:null;
+ f.load=async path=>{if(path==='./journey.mjs'){f.log.push('load:'+path);return {installJourney(){f.log.push('installJourney');return {dispose(){}};}};}return load(path);};
+ const app=await bootstrapGame(f);
+ assert.ok(f.log.includes('installJourney'));assert.ok(app.features.find(x=>x.name==='Journey')?.ready);
+ assert.ok(!f.log.some(x=>x.includes('journey.mjs?art=')));await app.dispose();
+});
+test('HTML aliases cached legacy journey URLs and refreshes the bootstrap entry',()=>{
+ const h=readFileSync(new URL('../spider-combat.html',import.meta.url),'utf8');
+ const {imports}=JSON.parse(h.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
+ assert.equal(imports['./src/journey.mjs?art=blood-boss-v1'],imports['./src/journey.mjs']);
+ assert.match(h,/bootstrap\.mjs\?v=startup-cache-fix-/);
+});
 test('optional loading failure does not disable other features',async()=>{const f=bootRig({fail:'./boss-music.mjs'}),r=await bootstrapGame(f);assert.equal(r.features.find(x=>x.name==='Boss music').ready,false);assert.ok(r.features.find(x=>x.name==='Dice chain').ready);assert.ok(f.log.includes('warning:Boss music'));});
 test('required arena failure disposes the entry controller and does not install transition UI',async()=>{const f=bootRig({fail:'./arena.mjs'});await assert.rejects(bootstrapGame(f),/load failed/);assert.ok(f.log.includes('dispose:installClownEntry'));assert.ok(!f.log.includes('installBossTransition'));assert.ok(!f.log.includes('installCoopMenu'));});
 function entryRig(){const handlers=new Map(),button={disabled:true,textContent:'',focus(){}},label={textContent:''},outer={open:true,isConnected:true,style:{visibility:''},querySelector:s=>s==='.bt-confirm'?button:label},doc={getElementById:id=>id==='boss-transition'?outer:{}},win={addEventListener:(n,f)=>handlers.set(n,f),removeEventListener:(n,f)=>{if(handlers.get(n)===f)handlers.delete(n);}},covered=[];return {doc,win,outer,button,label,handlers,covered,event:{target:outer,detail:{bossId:'clown',weapon:'hammer',preview:false}},options:{restoreName(){},setCovered:v=>covered.push(v)}};}
