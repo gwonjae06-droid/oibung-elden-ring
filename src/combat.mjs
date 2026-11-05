@@ -201,6 +201,11 @@ export function kwonVisibleHurtShapes(b){
  const pose=bodyPose(b),cinema=cinematicPose(b);
  return kwonHurtShapes(b,{point:p=>bodyPoint(b,p),angle:pose.angle,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
 }
+export function kwonBossAimPoint(b){
+ // The same centre of the visible chest drives player targeting and hurt tests.
+ const chest=kwonVisibleHurtShapes(b).find(s=>s.id==='chest');
+ return chest||b;
+}
 export function bodyPoint(b, p) {
   const q = bodyPose(b),
     c = Math.cos(q.angle),
@@ -635,14 +640,14 @@ export function step(g, dt, input = {}) {
     p.z += (mz / Math.max(1, mag)) * speed * dt;
   }
   if (!p.action) {
-    if (input.lock) p.yaw = toward(p, b);
+    if (input.lock) p.yaw = toward(p, kwonBossAimPoint(b));
     else if (mag) p.yaw = Math.atan2(mx, mz);
   }
   // Lock-on follows the boss during the attack's preparatory frames. The
   // previously frozen initial yaw let fast bosses escape an apparently aimed hit.
   const action=p.action;
   if(input.lock&&action&&['attack','skill'].includes(action.kind)&&!action.done&&action.t<action.wind){
-    const desired=toward(p,b),delta=angleDelta(action.yaw,desired);
+    const desired=toward(p,kwonBossAimPoint(b)),delta=angleDelta(action.yaw,desired);
     action.yaw+=clamp(delta,-dt*11,dt*11);
     p.yaw=action.yaw;
   }
