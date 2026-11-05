@@ -16,7 +16,7 @@ test('bright circus constructs ivory-crimson floor, gold motifs and physical the
  assert.ok(CIRCUS_LAYOUT.columnsRadius>CIRCUS_LAYOUT.floorRadius);
  assert.ok(CIRCUS_LAYOUT.curtainsRadius>CIRCUS_LAYOUT.columnsRadius);
  for(const name of ['clown-radiant-nightmare-circus','circus-ivory-crimson-floor','circus-gold-floor-inlay',
- 'circus-central-star-medallion','circus-gilded-radial-rays','circus-ivory-pilasters',
+ 'circus-central-star-medallion','circus-gilded-radial-rays','circus-vaulted-ivory-velvet-canopy','circus-gilded-canopy-rib','circus-ivory-pilasters',
  'circus-pilaster-gold-capitals','circus-gilded-theatre-arch','circus-scalloped-velvet-curtain',
  'circus-curtain-gold-swag','circus-audience-tier','circus-silhouette-audience',
  'circus-instanced-marquee-bulbs','circus-marquee-lamp-halos','circus-gilded-chandelier',
