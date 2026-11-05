@@ -9,7 +9,7 @@ import {
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
-import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
+import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -820,13 +820,10 @@ export function step(g, dt, input = {}) {
       b.from = null;
     }
   }
-  const d = dist(p, b);
-  if (d < 3) {
-    const a = d < 0.001 ? p.yaw : toward(b, p);
-    p.x = b.x + Math.sin(a) * 3;
-    p.z = b.z + Math.cos(a) * 3;
-    confine(p);
-  }
+  // Prevent clipping against the boss's ACTUAL abdomen at player height.
+  // Never snap the player to a circle about the invisible locomotion pivot.
+  const separation=kwonPlayerSeparation(kwonVisibleHurtShapes(b),p);
+  if(separation){p.x=separation.x;p.z=separation.z;confine(p);}
 }
 export function skillView(g) {
   const s = g.player.skill,
