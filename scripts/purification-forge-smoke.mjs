@@ -15,7 +15,7 @@ try{
  page.on('pageerror',error=>errors.push(String(error.stack||error)));
  page.on('console',message=>{if(message.type()==='error'&&/Journey launch failed|Game UI.*failed|Unhandled|ReferenceError|SyntaxError/.test(message.text()))errors.push(message.text());});
  await page.addInitScript(()=>{
-  localStorage.setItem('oibung.journey.v1',JSON.stringify({
+  if(!localStorage.getItem('oibung.journey.v1'))localStorage.setItem('oibung.journey.v1',JSON.stringify({
    version:4,clears:0,records:[],memories:[],defeated:[],run:null,flames:5,earnedFlames:5,forge:{}
   }));
  });
