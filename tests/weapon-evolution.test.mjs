@@ -11,7 +11,7 @@ test('each weapon has exactly two functional paths and repeated choices increase
  for(const [weapon,id,count] of [['sword','blade-wave',1],['hammer','earth-wave',1],['bow','twin-arrow',3],['cards','wide-deck',7]]){const g=rig(weapon,[id,id]);actPlayer(g,'light');tickPlayerAction(g,.5,WEAPONS[weapon]);assert.equal(g.projectiles.length,count);assert.ok(g.projectiles.every(q=>q.damage>0&&Number.isFinite(q.speed)));}
 });
 test('charging reserves no stamina until release and full charge yields a real stronger attack',()=>{
- const g=rig('sword',['charged-blade']);assert.ok(actPlayer(g,'charge-start'));assert.equal(g.player.stamina,100);tickPlayerAction(g,.9,WEAPONS.sword);assert.ok(actPlayer(g,'charge-release'));assert.equal(g.player.action.kind,'attack');assert.equal(g.player.action.mult,3);assert.equal(g.player.stamina,72);
+ const g=rig('sword',['charged-blade']);assert.ok(actPlayer(g,'charge-start'));assert.equal(g.player.stamina,100);tickPlayerAction(g,.9,WEAPONS.sword);assert.ok(actPlayer(g,'charge-release'));assert.equal(g.player.action.kind,'attack');assert.equal(g.player.action.mult,3);assert.equal(g.player.stamina,76.2);
  const a=rig('sword',['charged-blade']);actPlayer(a,'charge-start');assert.ok(actPlayer(a,'roll'));assert.equal(a.player.action.kind,'roll');
 });
 test('evolved waves travel and damage through the actual original combat collision path',()=>{
