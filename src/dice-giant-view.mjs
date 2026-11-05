@@ -83,6 +83,9 @@ export function buildDiceGiant(scene){
   body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14;
   body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
   body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0);
+  // Subtle secondary mass correction complements the authored head-slams and
+  // shoulder windups. Attackable hands keep their pre-existing world positions.
+  body.rotation.z+=wristSprings.step('torso:counterweight',Math.max(-.012,Math.min(.012,(posture.bodyX||0)*-.0003+weight*.006)),dt,11);
   body.updateWorldMatrix(true,false);
   oldHead.visible=s.state==='transition'&&s.t>=POSSESSION.launchEnd&&s.t<4.7;
   const fly=sat((s.t-POSSESSION.launchEnd)/.85);
