@@ -1,5 +1,6 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
+import {createGiantElbowFollow} from './giant-arm-inertia.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
 import {HAND_REST,GIANT,giantHandPose,giantHazards,giantPosture,giantPropType} from './dice-giant.mjs';
@@ -60,6 +61,7 @@ export function buildDiceGiant(scene){
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
  let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0],releaseOrigins=new WeakMap();
  const wristSprings=createSpringBank();
+ const elbowFollow=[createGiantElbowFollow(),createGiantElbowFollow()];
  let trackedPlayer=null;
  const handParts=hands.flatMap(h=>[h.group,h.upper,h.forearm,h.joint]);
  const visibility=createCameraVisibility(scene,{roots:()=>root.visible?handParts:[],targets:()=>trackedPlayer?[{x:trackedPlayer.x,y:1.4,z:trackedPlayer.z,radius:2.6}]:[]});
@@ -71,7 +73,7 @@ export function buildDiceGiant(scene){
    const depth=Math.max(1,-barView.copy(b.group.position).applyMatrix4(camera.matrixWorldInverse).z);
    b.group.scale.setScalar(Math.min(1,2*depth*Math.tan(camera.fov*Math.PI/360)*camera.aspect*.16/17.6));
   }
- },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();elbowFollow.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -83,8 +85,8 @@ export function buildDiceGiant(scene){
   body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14;
   body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
   body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0);
-  // Subtle secondary mass correction complements the authored head-slams and
-  // shoulder windups. Attackable hands keep their pre-existing world positions.
+  // Gentle delayed counterweight augments existing elbows and wrists.
+  // All attackable hands still use their original authoritative positions.
   body.rotation.z+=wristSprings.step('torso:counterweight',Math.max(-.012,Math.min(.012,(posture.bodyX||0)*-.0003+weight*.006)),dt,11);
   body.updateWorldMatrix(true,false);
   oldHead.visible=s.state==='transition'&&s.t>=POSSESSION.launchEnd&&s.t<4.7;
@@ -128,6 +130,10 @@ export function buildDiceGiant(scene){
    shoulder.set(i?20:-20,18,7);body.localToWorld(shoulder);
    elbow.copy(shoulder).lerp(group.position,.53);
    elbow.x+=(i?1:-1)*(9+gesture.elbowOut);elbow.y+=7+gesture.elbowLift;elbow.z-=6+gesture.anticipation*2;
+   // Simulated palm/hit geometry stays authoritative; joint inertia
+   // only changes the two limb segments attached to that same palm.
+   const softened=elbowFollow[i].step([elbow.x,elbow.y,elbow.z],dt);
+   elbow.set(softened.x,softened.y,softened.z);
    joint.position.copy(elbow);
    boneBetween(upper,shoulder,elbow,5.5);boneBetween(forearm,elbow,group.position,4.7);
   });
