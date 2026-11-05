@@ -108,7 +108,7 @@ test('forearm hinge, fingers and cape follow pose instead of generic casting',()
 });
 test('integrated model plays all patterns without new meshes or broken reuse',()=>{
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true,reduced:true}),g=createBloodGame();
- const count=()=>{let n=0;scene.traverse(o=>{if(o.isMesh)n++;});return n;};
+ const count=()=>{let n=0;view.root.traverse(o=>{if(o.isMesh)n++;});return n;};
  const initial=count();g.player.hp=1e9;
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   g.boss.phase=spec.phase;startBloodPattern(g,id);
