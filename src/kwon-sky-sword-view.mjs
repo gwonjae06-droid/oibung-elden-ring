@@ -30,10 +30,9 @@ export function createKwonSkySwordView(scene,{reduced=false}={}){
  const ring=mesh(new THREE.RingGeometry(.85,1.03,64).rotateX(-Math.PI/2),glow,root);ring.position.y=.065;
  const impact=mesh(new THREE.CylinderGeometry(.2,1.8,8,20,1,true),flare,root);
  impact.position.y=4;impact.visible=false;
- const light=new THREE.PointLight(0xffa66a,0,19);light.position.y=2;root.add(light);
  const ease=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
  const fall=t=>Math.pow(Math.max(0,Math.min(1,t)),2.8);
- const hide=()=>{root.visible=false;impact.visible=false;light.intensity=0;};
+ const hide=()=>{root.visible=false;impact.visible=false;};
  function update(b){
   if(!b||b.pattern!=='slam'||!b.zone||!['windup','active','recovery'].includes(b.state)){hide();return;}
   const cfg=patternConfig(b),w=b.state==='windup'?ease(b.t/cfg.wind):1;
@@ -51,10 +50,10 @@ export function createKwonSkySwordView(scene,{reduced=false}={}){
   if(hit){
    const left=finished?1-ease(b.t/.27):1;
    impact.scale.setScalar(.85+.6*(1-left));
-   flare.opacity=.48*left;light.intensity=3.8*left;
-  }else{flare.opacity=0;light.intensity=.25+.65*w;}
+   flare.opacity=.48*left;
+  }else{flare.opacity=0;}
  }
  function clear(){hide();}
- function dispose(){clear();root.parent?.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();light.dispose?.();}
+ function dispose(){clear();root.parent?.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();}
  hide();return {update,clear,dispose,root};
 }
