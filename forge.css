@@ -53,10 +53,10 @@
 #journey .j-forge-bottom strong{color:#e9d2a5;font:600 15px 'Noto Serif KR',serif}
 #journey .j-forge-bottom p{font:11px/1.8 system-ui;margin:5px 0 0;color:#afa99e}
 #journey button.j-forge-refund{flex:none;border-color:#a8895b;color:#e2c899;background:#27201d}
-#journey .j-flame-earned{text-align:center;margin-inline:auto}
-#journey .j-flame-earned .j-kicker{margin-bottom:14px}
-#journey .j-flame-earned h1{font:600 clamp(27px,4.2vw,48px) 'Noto Serif KR',serif;letter-spacing:.045em;color:#f7dfaf;text-shadow:0 0 36px #e5aa6b7a}
-#journey .j-flame-earned>p:not(.j-kicker):not(.j-flame-overline){max-width:640px;margin:18px auto;color:#c6bba6;line-height:2.1}
+#journey .j-flame-result{text-align:center;margin-inline:auto}
+#journey .j-flame-result .j-kicker{margin-bottom:14px}
+#journey .j-flame-result h1{font:600 clamp(27px,4.2vw,48px) 'Noto Serif KR',serif;letter-spacing:.045em;color:#f7dfaf;text-shadow:0 0 36px #e5aa6b7a}
+#journey .j-flame-result>p:not(.j-kicker):not(.j-flame-overline){max-width:640px;margin:18px auto;color:#c6bba6;line-height:2.1}
 #journey .j-flame-overline{font:12px system-ui!important;letter-spacing:.24em;color:#ddbd7e!important}
 #journey .j-earned-circle{position:relative;display:grid;place-items:center;width:198px;height:198px;margin:14px auto 26px}
 #journey .j-earned-circle:before{content:'';position:absolute;inset:4px;border-radius:50%;border:1px solid #d7bb8066;box-shadow:inset 0 0 48px #f2c87814,0 0 40px #dfb56c30}
@@ -65,8 +65,8 @@
 #journey .j-earned-circle .j-flame-icon{animation:j-flame-breathe 2.8s ease-in-out infinite}
 #journey .j-earned-balance{display:flex;align-items:center;justify-content:center;gap:18px;margin:26px auto 29px}
 #journey .j-earned-balance>span:last-child{font:700 13px system-ui;color:#f4d59a}
-#journey .j-flame-earned>button.j-primary{display:block;width:min(400px,100%);margin:0 auto;text-align:center}
-#journey .j-flame-earned>button.j-back{display:block;margin:15px auto 0}
+#journey .j-flame-result>button.j-primary{display:block;width:min(400px,100%);margin:0 auto;text-align:center}
+#journey .j-flame-result>button.j-back{display:block;margin:15px auto 0}
 #journey .j-revive-offer{display:flex;gap:15px;align-items:center;flex-wrap:wrap;padding:15px;margin:17px 0;background:linear-gradient(100deg,#48261c77,#271f1be8);border:1px solid #dfad7666;border-radius:5px}
 #journey .j-revive-action{flex:1;min-width:220px;text-align:center}
 #journey .j-death-ember .j-kicker{color:#e9a886}
