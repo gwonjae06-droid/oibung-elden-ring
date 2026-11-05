@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {clownSpectaclePose} from '../src/clown-spectacle-pose.mjs';
+const cases=[['headReturn',null,.7],['offbeatClap',null,.8],['runaway',null,1.1],['headReturn','photo',.6],['runaway','tilt',.25],['headReturn','confetti',1.6],['headReturn','curtain',1.5],['runaway','encore',4.25]];
+const make=(key,stage,t,phase=2)=>({status:'playing',boss:{phase,state:'clown'},clown:{showKey:key,stageKey:stage,pt:t,state:'pattern'}});
+for(const [key,stage,t]of cases)test('distinct large pose: '+(stage||key),()=>{const p=clownSpectaclePose(make(key,stage,t));assert.ok(p.arms>1.1||p.glove>1.5||p.headScale>1.2);});
+test('all samples are finite and maintain positive geometry',()=>{for(const [key,stage]of cases)for(const phase of[1,2])for(let t=0;t<6.6;t+=.025){const p=clownSpectaclePose(make(key,stage,t,phase),{bodyX:1,bodyY:1,bodyZ:1});for(const v of Object.values(p))if(typeof v==='number')assert.ok(Number.isFinite(v));for(const k of['bodyX','bodyY','bodyZ','headScale','neckWidth'])assert.ok(p[k]>.3);}});
+test('clap closure matches authoritative impacts',()=>{for(const t of[.8,1.6,4.1])assert.equal(clownSpectaclePose(make('offbeatClap',null,t)).clapClose,1);assert.equal(clownSpectaclePose(make('runaway','encore',4.25)).clapClose,1);});
+test('photo holds the enlarged camera without body distortion',()=>{const p=clownSpectaclePose(make('headReturn','photo',1.2));assert.equal(p.cameraGrip,true);assert.equal(p.bodyY,1);assert.equal(p.bodyZ,1);assert.equal(p.lean,0);});
+test('input game and fallback pose are not mutated',()=>{const g=make('headReturn','curtain',1.5),b={bodyX:1},copy=structuredClone(g);clownSpectaclePose(g,b);assert.deepEqual(g,copy);assert.deepEqual(b,{bodyX:1});});
+test('inactive and malformed cues do not apply spectacle',()=>{for(const t of[NaN,Infinity,-1,10])assert.equal(clownSpectaclePose(make('headReturn',null,t)).headScale,1);const g=make('headReturn','photo',.5);g.status='lost';assert.equal(clownSpectaclePose(g).cameraGrip,false);});
