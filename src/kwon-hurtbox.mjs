@@ -72,7 +72,7 @@ export function kwonProjectileContact(shapes,from,to,{padding=DEFAULT_SKIN}={}){
   first=hit.t;bestDepth=hit.depth;
   const point={x:from.x+(to.x-from.x)*hit.t,y:finite(from.y)&&finite(to.y)?from.y+(to.y-from.y)*hit.t:shape.y,
    z:from.z+(to.z-from.z)*hit.t};
-  best=toShapeContact(shape,point);
+  best={...toShapeContact(shape,point),t:hit.t};
  }
  return best;
 }
