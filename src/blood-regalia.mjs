@@ -47,11 +47,14 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  tube(forearm,[[0,-.04,.29],[side*.07,-.32,.38],[side*.09,-.62,.32]],.043,edge,16);
  const hand=new THREE.Group();hand.position.set(side*.07,-.73,.12);forearm.add(hand);
  const palm=attach(hand,new THREE.SphereGeometry(.26,12,10),skin,0,0,0);palm.scale.set(1.03,.78,.65);
+ const fingers=[];
  for(let f=0;f<4;f++){
-  const x=(f-1.5)*.117;
-  const finger=attach(hand,new THREE.CapsuleGeometry(.052,.18+(1-Math.abs(f-1.5)/2)*.11,4,7),skin,x,-.27,.035);
+  const x=(f-1.5)*.117,len=.18+(1-Math.abs(f-1.5)/2)*.11;
+  const joint=new THREE.Group();joint.position.set(x,-.15,.035);hand.add(joint);
+  const finger=attach(joint,new THREE.CapsuleGeometry(.052,len,4,7),skin,0,-.12,0);
   finger.rotation.z=(f-1.5)*.085;
-  attach(hand,new THREE.SphereGeometry(.05,8,6),vein,x,-.4-(1-Math.abs(f-1.5)/2)*.06,.044);
+  attach(joint,new THREE.SphereGeometry(.05,8,6),vein,0,-.25-(1-Math.abs(f-1.5)/2)*.06,.01);
+  fingers.push(joint);
  }
  const thumb=attach(hand,new THREE.CapsuleGeometry(.07,.18,4,7),skin,-side*.25,-.14,.13);
  thumb.rotation.z=-side*.58;
@@ -62,7 +65,7 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  }
  const thorn=attach(arm,new THREE.ConeGeometry(.15,.78,8),vein,side*.47,.11,-.12);
  thorn.rotation.z=-side*.45;thorn.visible=false;
- return {arm,forearm,hand,thorn,side};
+ return {arm,forearm,hand,fingers,thorn,side};
 }
 export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const dark=material(0x1a1118,0,.92),wine=material(0x35111e,0,.84,{side:THREE.DoubleSide});
@@ -138,11 +141,12 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   const sway=reduced?0:Math.sin(time*1.5)*.023;
   torso.rotation.y=sway*.5+(pose.body?.twist||0)*.24;
   torso.rotation.x=(pose.body?.lean||0)*.16;
-  cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17;
+  torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023;
+  cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06;
   cape.rotation.z=(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55;
   drapes.forEach((p,i)=>{p.rotation.y=(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07;p.rotation.x=(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7);});
   cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
-  for(const {arm,forearm,hand,thorn,side}of arms){
+  for(const {arm,forearm,hand,fingers,thorn,side}of arms){
    const gesture=pose.arms?.[side<0?0:1];
    const raise=gesture?.raise??cast,open=gesture?.open??cast;
    arm.rotation.x=-raise*.88+(reduced?0:Math.sin(time*1.2+side)*.018);
@@ -152,6 +156,10 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
    forearm.rotation.z=side*(gesture?.open||0)*.08;
    hand.rotation.x=-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12;
    hand.rotation.z=side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12);
+   // Finger joints contract as energy gathers, uncurl at the impact and relax
+   // after the wrist. No new geometry or IK allocation is needed per frame.
+   const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
+   fingers.forEach((finger,i)=>{finger.rotation.x=-grip*(.38+i*.055);finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);
   }
   growth.visible=bloom>.004;growth.scale.set(1,Math.max(.001,bloom),1);
