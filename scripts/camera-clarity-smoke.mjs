@@ -44,6 +44,7 @@ try{
  await page.goto(url+'/spider-combat.html',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#start')?.disabled===false,{timeout:60000});
  await page.evaluate(()=>{localStorage.setItem('oibung-muted','1');document.getElementById('journey')?.setAttribute('hidden','');});
+ await page.evaluate(async()=>{const T=await import('three'),render=T.WebGLRenderer.prototype.render;window.clarityMainFrames=0;T.WebGLRenderer.prototype.render=function(...args){if(this.domElement===document.getElementById('world'))window.clarityMainFrames++;return render.apply(this,args);};});
  const layouts=[];
  for(const size of diceOnly?[]:[{width:1280,height:1024},{width:1920,height:1080},{width:3440,height:1440},{width:844,height:390}]){
   await page.setViewportSize(size);await page.waitForFunction(size=>{const b=document.getElementById('world').getBoundingClientRect(),scale=Math.min(size.width/1600,size.height/900);return Math.abs(b.width-1600*scale)<1&&Math.abs(b.height-900*scale)<1;},size);
@@ -56,6 +57,7 @@ try{
    const {BOSS_REGISTRY}=await import('/src/boss-registry.mjs'),b=BOSS_REGISTRY[boss],m=await b.load();window.clarityBattle=b.launch(m,{weapon:'sword',configure:g=>{g.player.hp=g.player.maxHp=99999;},onClose(){}});
   },boss);
   await page.waitForFunction(boss=>{const d=document.getElementById(boss+'-battle'),r=d?.firstElementChild?.shadowRoot,c=r?.getElementById('world');return d?.open&&c?.width===1600&&c?.height===900;},boss,{timeout:60000});
+  const background=await page.evaluate(()=>window.clarityMainFrames);await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>window.clarityMainFrames),background,'covered first arena must not keep rendering');
   await page.waitForTimeout(boss==='blood'?5500:900);
   for(const size of [{width:1280,height:1024},{width:844,height:390}]){
    await page.setViewportSize(size);await page.waitForFunction(({boss,size})=>{const c=document.getElementById(boss+'-battle').firstElementChild.shadowRoot.getElementById('world'),b=c.getBoundingClientRect(),scale=Math.min(size.width/1600,size.height/900);return c.width===1600&&c.height===900&&Math.abs(b.width-1600*scale)<1&&Math.abs(b.height-900*scale)<1;},{boss,size});
