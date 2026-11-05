@@ -1,0 +1,19 @@
+name: Journey boss weakpoint balance and player damage audit
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  weakpoints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify 1.5x dice weak head, 1.3x blood landing and canonical journey HP
+        run: node --test tests/journey-weakpoint-balancing.test.mjs tests/journey.test.mjs tests/combat-hit.test.mjs tests/dice-giant.test.mjs tests/blood.test.mjs
