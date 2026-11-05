@@ -3,7 +3,7 @@ import {hazardPosition} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
 
-export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite'});
+export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite',bloodScissors:'crisscross-sanguine',heartCage:'caged-heart',wingShear:'winged-shears',rosary:'rosary-procession'});
 // Visual-only settle time after a hazard stops dealing damage: blood sinks and spreads instead of vanishing.
 const TAIL=1.4;
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -17,7 +17,7 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
   const free=pool.get(pattern)||[];pool.set(pattern,free);let item=free.pop();
   if(!item){
    const group=new THREE.Group();group.userData.spellForm=BLOOD_SPELL_FORMS[pattern];parent.add(group);const parts=[];
-   const forms={wave:['sheet','sheet','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['sheet','sheet','torus'],lances:['lance','torus','tendril'],cross:['sheet','sheet','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril']}[pattern];
+   const forms={wave:['sheet','sheet','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['sheet','sheet','torus'],lances:['lance','torus','tendril'],cross:['sheet','sheet','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril'],bloodScissors:['sheet','sheet','tendril'],heartCage:['tendril','tendril','torus'],wingShear:['blade','blade'],rosary:['column','sphere','sphere']}[pattern];
    for(const form of forms)parts.push(mesh(fluid[form],group));
     const omens=Array.from({length:3},()=>mesh(fluid.tendril,group));
     item={group,parts,omens,pattern,stamp:0};
@@ -46,26 +46,26 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
    });
   const swirl=reduced?0:g.time*2.4;
   switch(pattern){
-   case 'wave':case 'tide':case 'cross':{
+   case 'wave':case 'tide':case 'cross':case 'bloodScissors':{
     for(let i=0;i<2;i++){const m=parts[i],height=(active?13:2.4)*p;m.position.set(0,height*.5+i*.4,i*.6);m.rotation.x=-.14-i*.18;m.scale.set(h.width*1.95,height,1.8);}
     if(pattern==='wave'){parts[2].scale.set(h.width*.8,.3,h.length*.48);parts[2].position.y=.12;}
-    else if(pattern==='cross'){parts[2].position.y=4*p;parts[2].scale.set(.9,10*p,.9);}
+    else if(pattern==='cross'||pattern==='bloodScissors'){parts[2].position.y=4*p;parts[2].scale.set(.9,10*p,.9);}
     else {parts[2].rotation.x=Math.PI/2;parts[2].scale.set(h.width,h.width,1);}break;
    }
-   case 'fountain':case 'rain':{
+   case 'fountain':case 'rain':case 'rosary':{
     const height=active?Math.max(.2,Math.sin(Math.min(1,t/h.life)*Math.PI)*24):smooth(charge)*1.1;
     parts[0].scale.set(c.r*.8,height,c.r*.8);parts[0].position.y=height*.5;
-    parts[1].scale.set(c.r*.6,pattern==='rain'?1:height*.8,c.r*.6);parts[1].position.set(c.r*.25,pattern==='rain'?(1-charge)*15:height*.65,0);parts[1].rotation.z=.18;
+    parts[1].scale.set(c.r*.6,(pattern==='rain'||pattern==='rosary')?1:height*.8,c.r*.6);parts[1].position.set(c.r*.25,(pattern==='rain'||pattern==='rosary')?(1-charge)*15:height*.65,0);parts[1].rotation.z=.18;
     parts[2].scale.set(c.r*.65,.3,c.r*.65);parts[2].position.y=height;break;
    }
    case 'burst':{const r=active?c.r*(.4+.6*easeOut(t/(h.life*.9))):1.8*charge;parts[0].position.y=active?.45:2;parts[0].scale.set(r,active?.4:r*.8,r);parts[1].rotation.x=Math.PI/2;parts[1].scale.setScalar(active?r:charge*2);break;}
    case 'orbs':{parts[0].position.y=1.25;parts[0].scale.set(c.r*p,c.r*p*(1+Math.sin(swirl)*.08),c.r*p);parts[1].position.set(0,1.1,-c.r*1.4);parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.6,3*p,.6);break;}
-   case 'chain':{for(let i=0;i<2;i++){const m=parts[i];m.position.set(Math.sin(swirl+i*Math.PI)*c.r*.4,1.2,Math.cos(swirl+i*Math.PI)*c.r*.4);m.rotation.z=Math.sin(swirl+i)*.4;m.scale.set(.35,3.5*p,.35);}parts[2].rotation.x=Math.PI/2;parts[2].scale.set(c.r*.8,c.r*.8,1);break;}
+   case 'chain':case 'heartCage':{for(let i=0;i<2;i++){const m=parts[i];m.position.set(Math.sin(swirl+i*Math.PI)*c.r*.4,1.2,Math.cos(swirl+i*Math.PI)*c.r*.4);m.rotation.z=Math.sin(swirl+i)*.4;m.scale.set(.35,3.5*p,.35);}parts[2].rotation.x=Math.PI/2;parts[2].scale.set(c.r*.8,c.r*.8,1);break;}
    case 'orbit':case 'pulse':{for(let i=0;i<2;i++){parts[i].rotation.set(Math.PI/2+i*.08,0,swirl*(i?-1:1));parts[i].position.y=.25+i*.35;parts[i].scale.set(c.r,c.r,h.width*3);}if(parts[2]){parts[2].position.y=.45;parts[2].scale.set(.7,.2,.7);}break;}
    case 'vortex':{for(let i=0;i<2;i++){parts[i].rotation.y=swirl*(i?-1:1);parts[i].position.y=.12+i*.3;parts[i].scale.set(c.r*(1-i*.2)*p,1,c.r*(1-i*.2)*p);}parts[2].scale.set(c.r*.45,.05,c.r*.45);break;}
    case 'dive':{parts[0].rotation.x=Math.PI/2;parts[0].scale.setScalar(active?c.r*(.6+.4*easeOut(t/h.life)):c.r*charge);for(let i=1;i<3;i++){parts[i].position.set((i===1?-1:1)*c.r*.5,active?1.5:.1,0);parts[i].rotation.z=(i===1?-1:1)*.65;parts[i].scale.set(.8,active?4:charge*.5,.8);}break;}
    case 'eclipse':{const grow=smooth(charge);parts[0].position.y=19;parts[0].scale.setScalar(8*grow);parts[1].position.y=19;parts[1].scale.setScalar(9*grow);parts[1].rotation.z=swirl*.25;parts[2].rotation.x=Math.PI/2;parts[2].position.y=.25;parts[2].scale.set(c.r,c.r,h.width*5);break;}
-   case 'wing':{for(let i=0;i<2;i++){parts[i].position.y=1.2+i*.35;parts[i].rotation.y=active?Math.sin(t/h.life*Math.PI)*.08:0;parts[i].scale.set(c.r*(1-i*.08),active?1:.35,c.r*(1-i*.08));}break;}
+   case 'wing':case 'wingShear':{for(let i=0;i<2;i++){parts[i].position.y=1.2+i*.35;parts[i].rotation.y=active?Math.sin(t/h.life*Math.PI)*.08:0;parts[i].scale.set(c.r*(1-i*.08),active?1:.35,c.r*(1-i*.08));}break;}
    case 'pursuit':{if(h.shape==='circle'){parts[0].rotation.x=-Math.PI/2;parts[0].scale.set(c.r*1.5,c.r*1.5,1);parts[1].scale.set(c.r*.3,active?3:.3,c.r*.3);break;}parts[0].position.set(0,.65,0);parts[0].rotation.x=Math.PI/2;parts[0].scale.set(h.width*1.7,h.length,1);parts[1].position.y=.8;parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.8,h.length*.8,.8);break;}
    case 'lances':{
     parts[0].position.y=active?0:8+(1-charge)*15;parts[0].rotation.z=active?0:.12*(1-charge);parts[0].scale.set(c.r*.4,active?25:18,c.r*.4);
