@@ -1,0 +1,34 @@
+name: Baeseojun airborne invulnerability and floor projectile regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js and Chromium browser driver
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify all weapon hitboxes, ground projectiles, landing windows and healing invariants
+        run: node --test tests/blood-airborne-projectiles.test.mjs tests/blood.test.mjs tests/blood-render.test.mjs tests/blood-siphon.test.mjs tests/player-projectile-data.test.mjs
+      - name: Render flying boss above arrows and confirm grounded hits in actual WebGL
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/blood-airborne-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-airborne-smoke.mjs
+      - name: Save real PC and mobile ground-skimming projectile scenes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baeseojun-airborne-projectiles-screenshots
+          path: artifacts/blood-airborne/
+          if-no-files-found: warn
+          retention-days: 7
