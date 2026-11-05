@@ -1,0 +1,44 @@
+name: Sacred cathedral visual regression
+on:
+  pull_request:
+    paths:
+      - 'src/blood-*.mjs'
+      - 'tests/blood-*.test.mjs'
+      - 'spider-combat.html'
+      - '.github/workflows/blood-cathedral-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/blood-*.mjs'
+      - 'tests/blood-*.test.mjs'
+      - 'spider-combat.html'
+      - '.github/workflows/blood-cathedral-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cathedral:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install rendering dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Validate sacred cathedral and active blood spell scenes
+        run: node --test tests/blood-sacred-cathedral.test.mjs tests/blood-render.test.mjs tests/blood-regalia.test.mjs
+      - name: Validate full WebGL scene and capture art QA
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/cathedral-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-cathedral-smoke.mjs
+      - name: Save cathedral screenshot QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blood-cathedral-art-qa
+          path: artifacts/blood-cathedral/
+          if-no-files-found: warn
+          retention-days: 7

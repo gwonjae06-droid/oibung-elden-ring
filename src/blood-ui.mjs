@@ -12,7 +12,7 @@ export function createBloodUi({coarse=false,doc=globalThis.document}={}){
  $('boss-hud').style.maxWidth='90%';$('quit').textContent=$('change').textContent='메인으로';
  const cinema=createBloodCinematicUi(shell,doc);
  let disposed=false;const styles=loadBattleStyles(root,doc,['../style.css','../skills.css'].map(path=>new URL(path,import.meta.url))),ready=styles.ready.then(ok=>{if(!disposed)shell.style.visibility='';return ok;});doc.body.appendChild(d);
- function mode(value){$('menu').hidden=true;$('pause-screen').hidden=value!=='paused';$('result').hidden=value!=='result';for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;$('touch').hidden=!coarse||value!=='playing';$('pause').disabled=!['playing','paused'].includes(value);}
+ function mode(value){$('menu').hidden=true;$('menu').style.setProperty('display','none','important');$('pause-screen').hidden=value!=='paused';$('result').hidden=value!=='result';for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;$('touch').hidden=!coarse||value!=='playing';$('pause').disabled=!['playing','paused'].includes(value);}
  function render(g,sv,weaponName,lock){cinema.update(g);const b=g.boss,s=g.blood;renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});$('boss-hud').querySelector('h2').textContent=b.phase===2?R.phaseName:R.name;$('phase-label').textContent=b.phase===2?'두 번째 단계 · 피의 천사':'첫 번째 단계 · 불멸의 서약';$('boss-action').textContent='';$('boss-action').setAttribute('data-critical','');$('notice').textContent='';$('notice').classList.remove('visible');}
  return {d,root,shell,$,canvas:$('world'),ready,mode,render,dispose(){if(disposed)return;disposed=true;cinema.dispose();styles.dispose();if(d.open)d.close();d.remove();}};
 }
