@@ -34,6 +34,19 @@ export function awardPurificationFlame(profile){
  profile.earnedFlames=safeInt(profile.earnedFlames)+1;
  return true;
 }
+// Deliberate developer-only Easter egg. Not available outside the forge UI.
+export const FORGE_DEVELOPER_FLAMES=2;
+export function grantForgeDeveloperFlames(profile){
+ if(!profile||typeof profile!=='object'||flameBalance(profile)>MAX_FLAMES-FORGE_DEVELOPER_FLAMES)return 0;
+ profile.flames=flameBalance(profile)+FORGE_DEVELOPER_FLAMES;
+ profile.earnedFlames=Math.min(MAX_FLAMES,safeInt(profile.earnedFlames)+FORGE_DEVELOPER_FLAMES);
+ return FORGE_DEVELOPER_FLAMES;
+}
+export function isForgeDeveloperShortcut(event){
+ return (event?.code==='Semicolon'||event?.key===';')&&
+  !event.repeat&&!event.ctrlKey&&!event.altKey&&!event.metaKey&&!event.shiftKey&&
+  !event.target?.closest?.('input,textarea,select,[contenteditable="true"]');
+}
 export function forgeTier(profile,weapon,id){
  if(!EVOLUTIONS[weapon]?.some(e=>e.id===id))return 0;
  return sanitizeForge(profile?.forge)[weapon][id];
