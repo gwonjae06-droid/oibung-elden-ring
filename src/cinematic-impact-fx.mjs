@@ -18,6 +18,10 @@ export function createCinematicImpactFx(scene,{profile='kwon',coarse=false,reduc
  mesh.name='cinematic-physical-impact-fragments';mesh.frustumCulled=false;mesh.visible=false;
  mesh.castShadow=mesh.receiveShadow=false;scene.add(mesh);
  const origin=new THREE.Color(COLORS[profile]),tint=new THREE.Color(),dummy=new THREE.Object3D();
+ // Inactive instance transforms must never appear as giant origin fragments.
+ dummy.scale.setScalar(0);dummy.updateMatrix();
+ for(let i=0;i<count;i++)mesh.setMatrixAt(i,dummy.matrix);
+ mesh.instanceMatrix.needsUpdate=true;
  const particles=Array.from({length:count},()=>({alive:false,x:0,y:0,z:0,vx:0,vy:0,vz:0,
   size:0,life:0,total:0,spin:0}));
  let next=0,emitIndex=0,disposed=false,liveCount=0;
