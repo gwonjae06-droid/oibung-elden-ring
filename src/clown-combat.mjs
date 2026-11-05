@@ -1068,7 +1068,17 @@ function tickClown(g, dt) {
     if(c.pt<=lead){
       Object.assign(c.vis,clownPrecastPose(c.name,c.pt,lead));
     }else{
+      // Blend the windup into each show's own rig animation. Without this
+      // bridge, the drawn-back glove or crouching body would snap to idle on
+      // the exact first attack frame, even though collision timing was safe.
+      const channels=['crouch','glove','tilt','shake','juggle','stomp'];
+      for(const key of channels)c.vis[key]=0;
       RUN[c.name](g,c,previous,elapsed);
+      if(elapsed<.24){
+        const anticipation=clownPrecastPose(c.name,lead,lead);
+        const blend=smooth(elapsed/.24);
+        for(const key of channels)c.vis[key]=anticipation[key]*(1-blend)+c.vis[key]*blend;
+      }
     }
     c.punish =
       c.pt >= d.dur - d.recover &&
