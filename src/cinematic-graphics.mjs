@@ -3,10 +3,10 @@ import * as THREE from 'three';
 // Reusable realism direction for every current boss AND all future bosses.
 // 100% browser-native: no Blender, external GPU libraries or asset pipeline.
 export const CINEMATIC_PROFILES=Object.freeze({
- kwon:Object.freeze({exposure:1.14,reflection:.54,rim:0x8da9d7,fill:.56,defaultSurface:'stone'}),
- clown:Object.freeze({exposure:1.18,reflection:.64,rim:0xffc58e,fill:.46,defaultSurface:'velvet'}),
- dice:Object.freeze({exposure:1.12,reflection:.7,rim:0xffe0a1,fill:.44,defaultSurface:'wood'}),
- blood:Object.freeze({exposure:1.1,reflection:.73,rim:0xe3d8e6,fill:.56,defaultSurface:'marble'}),
+ kwon:Object.freeze({exposure:1.1,reflection:.6,rim:0xa5b9ca,fill:.62,defaultSurface:'stone'}),
+ clown:Object.freeze({exposure:1.08,reflection:.57,rim:0xf2c89f,fill:.58,defaultSurface:'velvet'}),
+ dice:Object.freeze({exposure:1.09,reflection:.64,rim:0xe6c8a1,fill:.58,defaultSurface:'wood'}),
+ blood:Object.freeze({exposure:1.07,reflection:.68,rim:0xdcd4d4,fill:.62,defaultSurface:'marble'}),
  gyuwon:Object.freeze({exposure:1.05,reflection:.58,rim:0xaab8d4,fill:.5,defaultSurface:'stone'}),
 });
 export const CINEMATIC_SURFACES=Object.freeze({
@@ -16,8 +16,8 @@ export const CINEMATIC_SURFACES=Object.freeze({
  wood:Object.freeze({roughness:.66,metalness:0,bump:.41}),
  metal:Object.freeze({roughness:.38,metalness:.78,bump:.19}),
  leather:Object.freeze({roughness:.75,metalness:0,bump:.35}),
- skin:Object.freeze({roughness:.61,metalness:0,bump:.13}),
- blood:Object.freeze({roughness:.18,metalness:.08,bump:.16}),
+ skin:Object.freeze({roughness:.58,metalness:0,bump:.14}),
+ blood:Object.freeze({roughness:.22,metalness:0,bump:.19}),
 });
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const frac=v=>v-Math.floor(v);
