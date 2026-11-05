@@ -7,7 +7,7 @@ import {createBloodParticles} from './blood-particles.mjs';
 import {createBloodSpellFx} from './blood-spell-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
-import {bloodTransformation,smooth} from './blood-transformation.mjs';
+import {bloodTransformation} from './blood-transformation.mjs';
 import {bloodStage} from './blood-stage.mjs';
 import {collectSceneResources} from './runtime/scene-resources.mjs';
 
@@ -15,7 +15,6 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const quality=bloodQuality({coarse}),fluid=createBloodFluid(quality);
  const stone=new THREE.MeshStandardMaterial({color:0xeeeae1,roughness:.64}),marble=new THREE.MeshStandardMaterial({color:0xdcdcd5,roughness:.48}),basalt=new THREE.MeshStandardMaterial({color:0x24202b,roughness:.88});
  const gold=new THREE.MeshStandardMaterial({color:0xc0a56b,metalness:.58,roughness:.4});
- const cloth=new THREE.MeshStandardMaterial({color:0x290e1d,roughness:.83});
  const glass=new THREE.MeshBasicMaterial({color:0xc5dfed,transparent:true,opacity:.62,side:THREE.DoubleSide});
  const scenery=[],windows=[],falls=[],lights=[];
  const mesh=(geo,mat,x=0,y=0,z=0,parent=scene)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);if(parent===scene&&y>2)scenery.push(m);return m;};
