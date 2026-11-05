@@ -20,7 +20,7 @@ export function createKwonTorsoMotion(){
   if(fresh){owner=b;values=[...goal];velocity=goal.map(()=>0);lastYaw=yaw;}
   if(h>0)lastYaw=yaw;
   if(!fresh&&h>0)for(let i=0;i<values.length;i++){const w=i<2?14:8,x=values[i]-goal[i],temp=(velocity[i]+w*x)*h,ex=Math.exp(-w*h);values[i]=goal[i]+(x+temp)*ex;velocity[i]=(velocity[i]-w*temp)*ex;}
-  clock=stamp;return {waistPitch:values[0],waistYaw:values[1],chestPitch:lean-values[0],chestYaw:sway*1.3-values[1],abdomenPitch:values[2]-values[0]*.5,abdomenYaw:values[3],abdomenRoll:values[4],waistRoll:values[4]*.28,chestRoll:values[5]-values[4]*.20};
+  clock=stamp;return {waistPitch:values[0],waistYaw:values[1],chestPitch:lean-values[0],chestYaw:sway*1.3-values[1],abdomenPitch:values[2]-values[0]*.5,abdomenYaw:values[3],abdomenRoll:values[4],waistRoll:values[4]*.28,chestRoll:values[5]};
  }
  return {update,reset};
 }
