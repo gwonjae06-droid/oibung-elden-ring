@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import {createBloodLegRig} from './blood-leg-rig.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
 // the spell system and all damage volumes remain independent of this visual rig.
 const TAU=Math.PI*2;
+const hemLift=a=>.45*Math.max(0,Math.cos(a))**4;
 const point=(x,y,z)=>new THREE.Vector3(x,y,z);
 const material=(color,metalness=0,roughness=.8,extra={})=>new THREE.MeshStandardMaterial({color,metalness,roughness,...extra});
 function attach(parent,geometry,mat,x=0,y=0,z=0){
@@ -14,11 +16,11 @@ function tube(parent,points,radius,mat,segments=24){
 function panelGeometry(angle,width,segments=12){
  const verts=[],ids=[],rows=8;
  for(let j=0;j<=rows;j++){
-  const t=j/rows,y=.08+t*2.38,r=1.52-t*.67;
+  const t=j/rows,y=.55+t*1.91,r=1.52-t*.67;
   for(let i=0;i<=segments;i++){
    const u=i/segments,a=angle+(u-.5)*width;
    const fold=1+.055*Math.cos(u*Math.PI*4)*(1-t)*Math.sin(Math.PI*t*.8);
-   verts.push(Math.sin(a)*r*fold,y,Math.cos(a)*r*fold);
+   verts.push(Math.sin(a)*r*fold,y+hemLift(a)*(1-t)**2,Math.cos(a)*r*fold);
   }
  }
  for(let j=0;j<rows;j++)for(let i=0;i<segments;i++){
@@ -73,17 +75,24 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const edge=material(0xd5ba88,.7,.28),skin=material(0xb38b80,0,.85);
  const vein=material(0x790a2c,.16,.29,{emissive:0x310612,emissiveIntensity:.5});
  const bone=material(0xb8a8a0,.16,.44),ashes=material(0x26131f,.2,.6);
+ const legRig=createBloodLegRig(actor,{dark,metal,edge});
  const torso=new THREE.Group();actor.add(torso);
  // The inner robe is one continuous lathed volume, rather than a flat cone.
- const outline=[new THREE.Vector2(1.28,.1),new THREE.Vector2(1.43,.22),new THREE.Vector2(1.25,.8),new THREE.Vector2(.98,1.65),new THREE.Vector2(.73,2.48),new THREE.Vector2(.89,3.15),new THREE.Vector2(.68,3.48)];
+ const outline=[new THREE.Vector2(1.28,.55),new THREE.Vector2(1.43,.65),new THREE.Vector2(1.25,1.02),new THREE.Vector2(.98,1.65),new THREE.Vector2(.73,2.48),new THREE.Vector2(.89,3.15),new THREE.Vector2(.68,3.48)];
  const robe=attach(torso,new THREE.LatheGeometry(outline,coarse?20:40),dark);
+ // The front of the hem clears the boots while the back retains its long fall.
+ const robePos=robe.geometry.attributes.position;
+ for(let i=0;i<robePos.count;i++){const y=robePos.getY(i),a=Math.atan2(robePos.getX(i),robePos.getZ(i));robePos.setY(i,y+hemLift(a)*Math.max(0,1-(y-.55)/1.91)**2);}
+ robePos.needsUpdate=true;robe.geometry.computeVertexNormals();
  const drapes=[];
  const count=coarse?8:12;
  for(let i=0;i<count;i++){
   const m=attach(torso,panelGeometry(i*TAU/count,TAU/count*.9,coarse?6:12),i%3===0?red:wine);
   m.userData.rest=i*TAU/count;drapes.push(m);
  }
- const hem=attach(torso,new THREE.TorusGeometry(1.47,.044,8,64),edge,0,.19,0);hem.rotation.x=Math.PI/2;
+ const hemGeo=new THREE.TorusGeometry(1.47,.044,8,64).rotateX(Math.PI/2),hemPos=hemGeo.attributes.position;
+ for(let i=0;i<hemPos.count;i++)hemPos.setY(i,hemPos.getY(i)+hemLift(Math.atan2(hemPos.getX(i),hemPos.getZ(i))));
+ hemGeo.computeVertexNormals();attach(torso,hemGeo,edge,0,.64,0);
  const waist=attach(torso,new THREE.TorusGeometry(1.07,.085,8,40),metal,0,2.05,0);waist.rotation.x=Math.PI/2;
  const sash=attach(torso,new THREE.BoxGeometry(.27,.47,.12),edge,0,2.08,.99);sash.rotation.z=Math.PI/4;
  // Layered breastplate with a raised sternum, bevelled plates and engraved filigree.
@@ -149,7 +158,8 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   for(const {arm,forearm,hand,fingers,thorn,side}of arms){
    const gesture=pose.arms?.[side<0?0:1];
    const raise=gesture?.raise??cast,open=gesture?.open??cast;
-   arm.rotation.x=-raise*.88+(reduced?0:Math.sin(time*1.2+side)*.018);
+   const stride=pose.walk?.moving?((pose.walk.feet[0]||0)-(pose.walk.feet[1]||0))*.14:0;
+   arm.rotation.x=-raise*.88+side*stride+(reduced?0:Math.sin(time*1.2+side)*.018);
    arm.rotation.z=side*(.17+open*.32);
    arm.rotation.y=(pose.body?.twist||0)*.14;
    forearm.rotation.x=-(gesture?.elbow||0)*.62-cast*.05;
@@ -167,5 +177,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,growth,dispose(){}};
+ return {update,arms,drapes,growth,legs:legRig.legs,plantFeet:legRig.update,dispose(){}};
 }

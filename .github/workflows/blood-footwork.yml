@@ -1,0 +1,26 @@
+name: Blood boss footwork and pattern variety
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - run: node --test tests/blood-footwork-patterns.test.mjs tests/blood.test.mjs tests/blood-stage.test.mjs tests/blood-attack-animation.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-regalia.test.mjs tests/blood-render.test.mjs tests/blood-airborne-projectiles.test.mjs tests/blood-siphon.test.mjs tests/blood-spectacle.test.mjs tests/arena-startup-guard.test.mjs
+      - run: node scripts/blood-footwork-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blood-footwork
+          path: qa-output/blood-footwork/
+          retention-days: 7

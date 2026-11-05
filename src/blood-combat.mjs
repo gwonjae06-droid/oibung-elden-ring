@@ -1,6 +1,8 @@
+import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
+import {createBloodWalk,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
-import {BLOOD_RULES as R,BLOOD_PATTERNS,bloodPool,hazardContains} from './blood-data.mjs';
+import {BLOOD_RULES as R,BLOOD_PATTERNS,hazardContains} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -20,11 +22,11 @@ export function bloodProjectileGroundHeight(projectile){
 }
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
-export function createBloodGame(weapon='sword'){
+export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
 }
 export function actBlood(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
@@ -48,7 +50,7 @@ function hit(g,amount,source,projectile=false){
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};g.blood.hazards.push(h);return h;}
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>23?23/d:1;return {x:x*n,z:z*n};};
@@ -73,7 +75,7 @@ export function startBloodPattern(g,id){
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }
-function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
+function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.walk=null;s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
 export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=R.transition;return true;}
 function hurt(g,h){
  const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
@@ -81,24 +83,24 @@ function hurt(g,h){
  h.hit=true;const before=p.hp;p.hp=Math.max(0,p.hp-h.damage);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount:h.damage});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
+function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
- if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2);if(s.t>=R.transition){b.state='recovery';s.recover=2.8;s.elevation=0;s.t=0;emit(g,'blood-land');}return;}
+ if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,2.8);s.t=0;emit(g,'blood-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
   if(s.phasePending){beginPhase(g);return;}
-  // Land close enough to offer every melee weapon a real counterattack window.
-  const dx=g.player.x-b.x,dz=g.player.z-b.z,d=Math.hypot(dx,dz);if(d>4){const speed=Math.min(9,(d-4)/dt);b.x+=dx/d*speed*dt;b.z+=dz/d*speed*dt;clampArena(b);}
-  s.recover-=dt;if(s.recover<=0){const pool=bloodPool(b.phase);startBloodPattern(g,pool[s.index++%pool.length]);}return;
+  if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
+  s.walk.t+=dt;const step=sampleBloodWalk(s.walk);b.x=step.x;b.z=step.z;b.yaw=step.yaw;
+  s.recover-=dt;if(s.recover<=0){s.index++;startBloodPattern(g,nextBloodPattern(s.deck,b.phase));}return;
  }
  s.t+=dt;const spec=BLOOD_PATTERNS[s.pattern];
- s.elevation=spec.air?Math.min(8,s.t*7):0;
- if(s.pattern==='dive'&&s.t>=s.strikeAt){b.x=s.target.x;b.z=s.target.z;s.elevation=0;}
- if(s.pattern==='pursuit'&&s.t>=s.strikeAt){const u=Math.min(1,(s.t-s.strikeAt)/.75);b.x=s.origin.x+(s.target.x-s.origin.x)*u;b.z=s.origin.z+(s.target.z-s.origin.z)*u;}
+ s.elevation=spec.air?bloodFlightHeight(s.pattern,s.t,spec.duration,s.strikeAt):0;
+ if(spec.air){const pos=bloodFlightPosition(s.pattern,s.t,s.origin,s.target,s.strikeAt);b.x=pos.x;b.z=pos.z;}
  for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
- if(s.t>=spec.duration){s.hazards.length=0;b.state='recovery';s.recover=spec.recover;s.elevation=0;emit(g,'blood-land');}
+ if(s.t>=spec.duration){s.hazards.length=0;beginRecovery(g,spec.recover);emit(g,'blood-land');}
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);

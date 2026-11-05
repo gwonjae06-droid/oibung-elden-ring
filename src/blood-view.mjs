@@ -1,3 +1,4 @@
+import {sampleBloodWalk} from './blood-footwork.mjs';
 import {createCameraVisibility} from './camera-visibility.mjs';
 import * as THREE from 'three';
 import {createBloodHead} from './blood-head.mjs';
@@ -46,13 +47,14 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   const energyGoal=(({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0)+(s.siphon?.active?0.7:0);energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
   // Choreography is tied to the actual spell clock, never an independent visual timer.
-  actor.position.y=(reduced?0:Math.sin(g.time*1.8)*.06)+motion.body.bob;
+  const walk=s.walk&&b.state==='recovery'?sampleBloodWalk(s.walk):null;
+  actor.position.y=(s.elevation>.45&&!reduced?Math.sin(g.time*1.8)*.035:0)+motion.body.bob+(walk?.moving?walk.bob:0);
   actor.rotation.y=motion.body.twist*.25;
   // Arms: raise while preparing, snap at the start, hold while running, lower when done, and ease back slowly while returning.
   const castGoal=({ready:.25+.5*stage.progress,start:1.05,run:.9,done:.5,return:.5*(1-stage.progress)})[stage.id]??0;
   cast+=(castGoal-cast)*(1-Math.exp(-dt*(({ready:5,start:18,run:6,done:4,return:2.2})[stage.id]||4)));
-  actor.rotation.x=motion.body.lean-cast*.025;
-  regalia.update(g,c,dt,cast,motion);portrait.update(g,c,dt,{cast,pose:motion});
+  actor.rotation.x=motion.body.lean-cast*.025+(walk?.moving ? .035 : 0);
+  regalia.update(g,c,dt,cast,{...motion,walk});portrait.update(g,c,dt,{cast,pose:motion});
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
   wings.update(g,c,dt,motion);
@@ -67,6 +69,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});hitRoll=reduced?0:.055;}
   else hitRoll*=Math.exp(-dt*13);
   actor.rotation.z=motion.body.roll+hitRoll;lastHp=b.hp;
+  regalia.plantFeet(g,fade*1.25);
   // The blood spell scene reads the same hazards as damage calculations; no floor hitbox meshes.
   spells.update(g,dt);siphonFx.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.siphon?.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   projectiles.update(g);

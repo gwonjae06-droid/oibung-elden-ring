@@ -32,7 +32,7 @@ test('every real pattern shows prepare, start, run, finish and return in order',
 });
 test('blood visuals never change the authoritative combat state',()=>{
  for(const id of ['rain','pulse','tide']){
-  const spec=BLOOD_PATTERNS[id],plain=createBloodGame(),shown=createBloodGame(),scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true});
+  const spec=BLOOD_PATTERNS[id],plain=createBloodGame('sword',{seed:741}),shown=structuredClone(plain),scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true});
   for(const g of [plain,shown]){g.boss.phase=spec.phase;g.player.hp=g.player.maxHp=1e6;startBloodPattern(g,id);}
   for(let t=0;t<spec.duration+1;t+=.05){stepBlood(plain,.05);stepBlood(shown,.05);view.update(shown,.05);}
   assert.equal(JSON.stringify([shown.blood,shown.boss,shown.player]),JSON.stringify([plain.blood,plain.boss,plain.player]),id);
