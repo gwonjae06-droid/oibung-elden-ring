@@ -45,7 +45,7 @@ test('phase two changes glass and shafts without repainting ivory architecture',
  assert.notEqual(initial,window.material.color.getHex());
  assert.equal(cathedral.stats().windows,8,'mobile lowers pane count but not the floor or altar');
  assert.equal(cathedral.stats().beams,6);
- assert.ok(countMeshes(cathedral.root)<600,'mobile draw-call budget');
+ assert.ok(countMeshes(cathedral.root)<360,'mobile must retain the full architectural silhouette with a reduced draw-call budget');
  cathedral.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
 test('white cathedral is static throughout the fourteen attacks, transformation and restart',()=>{
