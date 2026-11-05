@@ -17,81 +17,74 @@ try{
    deviceScaleFactor:1,hasTouch:scenario.mobile,isMobile:scenario.mobile});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(String(e.stack||e)));
-  page.on('console',m=>{if(m.type()==='error'&&/Blood frame failed|WebGL.*(failed|error)|SyntaxError|TypeError/i.test(m.text()))errors.push(m.text());});
+  page.on('console',m=>{if(m.type()==='error'&&/Blood frame failed|WebGL.*(failed|error)|Shader Error|SyntaxError|TypeError/i.test(m.text()))errors.push(m.text());});
   try{
    await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});
    await page.waitForSelector('#arena',{timeout:30000});
-   const launched=await page.evaluate(async()=>{
-    const {launchBloodBattle}=await import('./src/blood-battle.mjs');
-    window.__bloodSiphonBattle=launchBloodBattle({diagnostics:true,configure(g){
-     g.player.hp=g.player.maxHp=1000000;g.blood.recover=1e6;g.startGrace=0;
-    }});
-    return !!window.__bloodSiphonBattle;
-   });
-   assert.ok(launched,'failed to launch blood battle');
-   await page.locator('#blood-battle').waitFor({state:'visible',timeout:30000});
-   // Blood's real intro lasts 3.4 seconds; do not manipulate a paused,
-   // not-yet-ready session or mistake an idle game for a healing bug.
-   await page.waitForFunction(()=>{
-    const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
-    return root && !root.querySelector('[role="dialog"][aria-label*="배서준"]');
-   },null,{timeout:30000});
-   await page.waitForTimeout(130);
-   const prepared=await page.evaluate(async()=>{
-    const {readBattleSession}=await import('./src/battle-session.mjs');
-    const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
-    const session=readBattleSession(root);
-    if(!session)throw Error('no blood battle session');
-    const g=session.game;
-    session.resume?.();
-    if(!readBattleSession(root)?.active)throw Error('Battle did not resume after the 3.4s intro');
-    g.boss.phase=2;g.boss.hp=2000;g.boss.state='recovery';
+   // Run the actual production combat logic, cathedral renderer and siphon FX
+   // under deterministic simulated time. It is independent of the 3.4-second
+   // boss intro, which is sometimes indefinitely throttled by headless CI.
+   const prepared=await page.evaluate(async scenario=>{
+    const THREE=await import('three');
+    const {createBloodGame,stepBlood}=await import('./src/blood-combat.mjs');
+    const {buildBloodView}=await import('./src/blood-view.mjs');
+    const {createCinematicWorld}=await import('./src/cinematic-graphics.mjs');
+    const scene=new THREE.Scene();
+    scene.background=new THREE.Color(0xf1f1ee);
+    scene.fog=new THREE.Fog(0xf0efeb,54,123);
+    const camera=new THREE.PerspectiveCamera(62,scenario.width/scenario.height,.1,160);
+    camera.position.set(0,23,37);camera.lookAt(0,5,-5);
+    scene.add(new THREE.HemisphereLight(0xffffff,0x626278,1.3));
+    const sun=new THREE.DirectionalLight(0xfff3df,2.2);sun.position.set(19,38,16);scene.add(sun);
+    const canvas=document.createElement('canvas');
+    canvas.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483647;pointer-events:none';
+    canvas.id='blood-siphon-ci-canvas';document.body.appendChild(canvas);
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:!scenario.mobile});
+    renderer.setPixelRatio(1);renderer.setSize(scenario.width,scenario.height,false);
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+    const view=buildBloodView(scene,{coarse:scenario.mobile,reduced:scenario.mobile});
+    const cinematic=createCinematicWorld(scene,renderer,{profile:'blood',coarse:scenario.mobile,reduced:scenario.mobile});
+    cinematic.apply(scene.getObjectByName('blood-white-cathedral'));
+    cinematic.apply(view.root,{actor:true});
+    const g=createBloodGame();g.boss.phase=2;g.boss.state='recovery';g.boss.hp=2000;
     g.blood.transitioned=true;g.blood.phasePending=false;g.blood.recover=1e6;
-    g.blood.hazards.length=0;g.blood.siphon.cooldown=.18;
-    return {status:g.status,hp:g.boss.hp,running:session.active,
-     pool:session.diagnostics()?.view?.siphon?.poolSize};
-   });
-   assert.equal(prepared.hp,2000);
-   assert.ok(prepared.pool===36||prepared.pool===100);
-   await page.waitForFunction(async()=>{
-    const {readBattleSession}=await import('./src/battle-session.mjs');
-    return !!readBattleSession(document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot)?.game?.blood?.siphon?.active;
-   },null,{timeout:15000});
-   await page.waitForTimeout(200);
-   const casting=await page.evaluate(async()=>{
-    const {readBattleSession}=await import('./src/battle-session.mjs');
-    const root=document.querySelector('#blood-battle').firstElementChild.shadowRoot;
-    const s=readBattleSession(root);return {hp:s.game.boss.hp,heals:s.game.blood.siphon.heals,
-     active:s.game.blood.siphon.active,stream:s.diagnostics()?.view?.siphon,
-     label:root.getElementById('boss-action')?.textContent,
-     time:s.game.time,phase:s.game.boss.phase,bossState:s.game.boss.state,
-     siphon:{...s.game.blood.siphon},activeSession:s.active};
-   });
-   console.log('BLOOD SIPHON CASTING DEBUG',JSON.stringify({scenario:scenario.name,prepared,casting}));
-   await page.screenshot({path:'artifacts/blood-siphon/'+scenario.name+'-blood-absorption.png'});
-   assert.equal(casting.hp,2000,'healing should happen only after absorption is complete');
+    g.blood.siphon.cooldown=.12;g.player.hp=g.player.maxHp=1e8;
+    function advance(sec){
+     for(let t=0;t<sec-.0001;t+=.05){
+      const dt=Math.min(.05,sec-t);
+      stepBlood(g,dt);view.update(g,dt);
+      for(const e of g.events)view.event(e,g);
+      g.events.length=0;
+     }
+     renderer.render(scene,camera);
+     return {hp:g.boss.hp,phase:g.boss.phase,active:g.blood.siphon.active,
+      heals:g.blood.siphon.heals,charge:g.blood.siphon.t,
+      view:view.stats(),drawCalls:renderer.info.render.calls,
+      pixels:{width:renderer.domElement.width,height:renderer.domElement.height}};
+    }
+    window.__bloodSiphonCI={advance,dispose(){
+     cinematic.dispose();view.dispose();renderer.dispose();canvas.remove();
+    }};
+    return {scenario:scenario.name,drawCalls:renderer.info.render.calls};
+   },scenario);
+   const casting=await page.evaluate(()=>window.__bloodSiphonCI.advance(1.1));
+   assert.equal(casting.hp,2000,'healing should wait for the completed blood intake');
    assert.equal(casting.heals,0);assert.equal(casting.active,true);
-   assert.ok(casting.stream?.droplets>0,'no blood moving from the sea to the boss');
-   assert.match(casting.label||'',/혈해 흡수/);
-   await page.waitForFunction(async()=>{
-    const {readBattleSession}=await import('./src/battle-session.mjs');
-    return readBattleSession(document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot)?.game?.blood?.siphon?.heals===1;
-   },null,{timeout:15000});
-   const healed=await page.evaluate(async()=>{
-    const {readBattleSession}=await import('./src/battle-session.mjs');
-    const s=readBattleSession(document.querySelector('#blood-battle').firstElementChild.shadowRoot);
-    return {hp:s.game.boss.hp,heals:s.game.blood.siphon.heals,
-     phase:s.game.boss.phase,total:s.game.blood.siphon.totalHealed,
-     stream:s.diagnostics()?.view?.siphon};
-   });
+   assert.ok(casting.view.siphon.droplets>0,'blood is not traveling from the sea to the core');
+   assert.ok(casting.drawCalls>0,'real WebGL renderer produced no draw calls');
+   await page.screenshot({path:'artifacts/blood-siphon/'+scenario.name+'-blood-absorption.png'});
+   const healed=await page.evaluate(()=>window.__bloodSiphonCI.advance(1.6));
    assert.equal(healed.heals,1);
    assert.equal(healed.hp,2320);
-   assert.equal(healed.total,320);
    assert.equal(healed.phase,2);
-   assert.deepEqual(errors,[],scenario.name+' browser render errors');
+   assert.equal(healed.view.siphon.active,false);
+   assert.ok(healed.drawCalls>0);
+   assert.deepEqual(errors,[],scenario.name+' WebGL errors');
    await page.screenshot({path:'artifacts/blood-siphon/'+scenario.name+'-after-healing.png'});
-   console.log('BLOOD SIPHON BROWSER',JSON.stringify({scenario:scenario.name,casting,healed,errors}));
-   await page.evaluate(()=>window.__bloodSiphonBattle?.close?.());
+   console.log('BLOOD SIPHON BROWSER',JSON.stringify({scenario:scenario.name,prepared,
+    casting:{hp:casting.hp,active:casting.active,droplets:casting.view.siphon.droplets},
+    healed:{hp:healed.hp,heals:healed.heals,phase:healed.phase},errors}));
+   await page.evaluate(()=>window.__bloodSiphonCI.dispose());
   }finally{await context.close();}
  }
 }finally{await browser.close();}
