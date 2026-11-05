@@ -143,7 +143,5 @@ test('developer shortcut accepts only a non-repeating, unmodified semicolon key 
  assert.equal(isForgeDeveloperShortcut({...event,code:'KeyA',key:'a'}),false);
  assert.equal(isForgeDeveloperShortcut({...event,target:{closest:()=>({tagName:'INPUT'})}}),false);
  const html=forgeScreen(freshProfile(),'sword',view);
- assert.match(html,/개발자용 이스터에그/);
- assert.match(html,/data-forge-dev-easter-egg="true"/);
- assert.match(html,/<kbd>;<\/kbd>/);
+ assert.doesNotMatch(html,/개발자용 이스터에그|data-forge-dev-easter-egg|<kbd>;<\/kbd>|j-forge-dev-result/,'hidden shortcut must not be advertised in forge markup');
 });
