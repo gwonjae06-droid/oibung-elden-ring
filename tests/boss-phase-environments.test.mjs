@@ -111,8 +111,8 @@ test('Kwon original sanctuary and its existing swords coexist with the royal ext
  assert.ok(get(scene,'resonating-greatsword'));
  assert.ok(get(scene,'kwon-ruined-sword-throne'));
  assert.ok(get(scene,'kwon-royal-seal-runes').isInstancedMesh);
- s.update(g,.016);g.boss.phase=2;g.time=1;
- s.update(g,1);
+ s.update(g,.016);g.boss.phase=2;
+ for(let i=0;i<65;i++){g.time+=.04;s.update(g,.04);}
  assert.ok(s.royal.stats().morph>.5);
  assert.deepEqual(disposeScene(scene).errors,[]);
 });
