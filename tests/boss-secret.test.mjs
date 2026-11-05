@@ -12,9 +12,14 @@ test('five rapid title taps unlock, with timeout and explicit reset',()=>{
  s.tap(500);s.tap(600);s.reset();for(let i=0;i<4;i++)assert.equal(s.tap(800+i*100),false);
  assert.equal(s.tap(3000),false);
 });
-test('secret wins and losses cannot add kills, memories or full-run records',()=>{
- const p=freshProfile(),before=JSON.stringify(p);p.run={...newRun(),stage:2,secret:true};
- assert.equal(finishAttempt(p,{won:true,time:10}),'secret-won');assert.equal(finishAttempt(p,{won:false,time:10}),'secret-lost');
- const data=new Map(),storage={setItem:(k,v)=>data.set(k,v),getItem:k=>data.get(k)};saveProfile(storage,p);assert.equal(JSON.stringify(loadProfile(storage)),before);
- p.run=newRun();assert.equal(finishAttempt(p,{won:true,time:10}),'reward');assert.deepEqual(p.defeated,['kwon']);
+test('hidden fights earn repeatable flames but do not add memories or official clears',()=>{
+ const p=freshProfile();p.run={...newRun(),stage:2,secret:true};
+ assert.equal(finishAttempt(p,{won:true,time:10}),'secret-won');
+ assert.equal(finishAttempt(p,{won:true,time:10}),null);
+ assert.equal(p.flames,1);
+ const data=new Map(),storage={setItem:(k,v)=>data.set(k,v),getItem:k=>data.get(k)};saveProfile(storage,p);
+ const loaded=loadProfile(storage);assert.equal(loaded.flames,1);assert.deepEqual(loaded.defeated,[]);
+ assert.deepEqual(loaded.memories,[]);assert.equal(loaded.clears,0);assert.equal(loaded.run,null);
+ p.run=newRun();assert.equal(finishAttempt(p,{won:true,time:10}),'flame');
+ assert.deepEqual(p.defeated,['kwon']);assert.equal(p.flames,2);
 });
