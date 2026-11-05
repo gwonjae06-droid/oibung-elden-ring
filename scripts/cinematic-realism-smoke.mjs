@@ -22,6 +22,21 @@ try{
   try{
    await page.goto('http://127.0.0.1:8000/spider-combat.html',
     {waitUntil:'domcontentloaded',timeout:60000});
+   // Checking for a canvas was insufficient: failed bootstraps leave it in the DOM.
+   // Await the real production bootstrap before testing any boss.
+   const boot=await page.evaluate(async()=>{
+    const script=[...document.querySelectorAll('script[type="module"]')]
+      .map(s=>s.textContent||'').find(s=>s.includes('bootstrap.mjs?v='));
+    const version=script?.match(/bootstrap\.mjs\?v=([\w-]+)/)?.[1];
+    if(!version)throw Error('Missing production bootstrap version');
+    const {bootstrapGame}=await import('./src/bootstrap.mjs?v='+version);
+    const app=await bootstrapGame();
+    return {arena:!!app.arena,running:!!app.arena?.running,
+     startEnabled:document.getElementById('start')?.disabled===false};
+   });
+   assert.equal(boot.arena,true,boss+': the first arena failed to initialize');
+   assert.equal(boot.running,true,boss+': the first arena runtime never started');
+   assert.equal(boot.startEnabled,true,boss+': the start button never enabled');
    await page.waitForSelector('#arena',{timeout:30000});
    const state=await page.evaluate(async boss=>{
     // Isolate each real battle module in a fresh browser tab; never reuse a
