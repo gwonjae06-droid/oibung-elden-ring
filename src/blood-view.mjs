@@ -6,6 +6,7 @@ import {bloodQuality,createBloodFluid} from './blood-fluid.mjs';
 import {createBloodParticles} from './blood-particles.mjs';
 import {createBloodSpellFx} from './blood-spell-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
+import {bloodAttackMotion} from './blood-attack-motion.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
 import {bloodStage} from './blood-stage.mjs';
@@ -56,22 +57,24 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const wings=createBloodWings(actor,fluid,quality,{reduced});
  const birthWave=mesh(new THREE.TorusGeometry(1,.06,5,64),new THREE.MeshBasicMaterial({color:0xf04e65,transparent:true,opacity:.3,depthWrite:false}),0,.35,0,fxRoot);birthWave.rotation.x=Math.PI/2;birthWave.visible=false;
  const shots=new Map(),shotGeo=new THREE.SphereGeometry(.15,6,6),shotMat=new THREE.MeshBasicMaterial({color:0xffdd95});
- let disposed=false,deathTime=0,lastHp=R.hp,lastBirth=0,shake=0,visualTime=0,dripTime=0,cast=0,energy=0;
+ let disposed=false,deathTime=0,lastHp=R.hp,lastBirth=0,shake=0,visualTime=0,dripTime=0,cast=0,energy=0,hitRoll=0;
  // Spells, rising blood and the cathedral environment replace precise red danger decals.
  function update(g,dt){
-  if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
+  if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=bloodAttackMotion(g),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
   const energyGoal=({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0;energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade);
-  // Coat, fingers and portrait share the combat simulation clock.
-  actor.position.y=reduced?0:Math.sin(g.time*1.8)*.06;
+  // Choreography is tied to the actual spell clock, never an independent visual timer.
+  actor.position.y=(reduced?0:Math.sin(g.time*1.8)*.06)+motion.body.bob;
+  actor.rotation.y=motion.body.twist*.25;
   // Arms: raise while preparing, snap at the start, hold while running, lower when done, and ease back slowly while returning.
   const castGoal=({ready:.25+.5*stage.progress,start:1.05,run:.9,done:.5,return:.5*(1-stage.progress)})[stage.id]??0;
-  cast+=(castGoal-cast)*(1-Math.exp(-dt*(({ready:5,start:18,run:6,done:4,return:2.2})[stage.id]||4)));actor.rotation.x=reduced?0:-cast*.05;
-  regalia.update(g,c,dt,cast);portrait.update(g,c,dt,{cast});
+  cast+=(castGoal-cast)*(1-Math.exp(-dt*(({ready:5,start:18,run:6,done:4,return:2.2})[stage.id]||4)));
+  actor.rotation.x=motion.body.lean-cast*.025;
+  regalia.update(g,c,dt,cast,motion);portrait.update(g,c,dt,{cast,pose:motion});
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
-  wings.update(g,c,dt);
+  wings.update(g,c,dt,motion);
   const env=cathedral.update(g,c,dt);heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));glass.color.setHex(b.phase===2?0xe98b99:0xc5dfed);glass.opacity=(b.phase===2?.68:.62)*(1-c.darkness*.7)*fade;
   lights.forEach((l,i)=>{l.intensity=16*env.light*(reduced?1:1+Math.sin(g.time*7+i)*.05);});
   scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight)o.intensity=1.45*env.light+.35;});
@@ -80,7 +83,9 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,4+s.elevation,b.z,{count:quality.low?28:64,power:10});
   lastBirth=c.active?c.t:0;dripTime+=dt;if(c.wings>.9&&dripTime>.2&&!dead){dripTime=0;const a=b.yaw;for(const side of [-1,1])particles.burst(b.x+Math.cos(a)*side*5.8,5+s.elevation,b.z-Math.sin(a)*side*5.8,{count:reduced?1:2,power:.5});}
   birthWave.visible=c.active&&c.wave>0&&c.wave<1;birthWave.position.set(b.x,.35,b.z);birthWave.scale.setScalar(.1+c.wave*28);birthWave.material.opacity=(1-c.wave)*.28;
-  if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});actor.rotation.z=reduced?0:.055;}else actor.rotation.z*=Math.exp(-dt*13);lastHp=b.hp;
+  if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});hitRoll=reduced?0:.055;}
+  else hitRoll*=Math.exp(-dt*13);
+  actor.rotation.z=motion.body.roll+hitRoll;lastHp=b.hp;
   // The blood spell scene reads the same hazards as damage calculations; no floor hitbox meshes.
   spells.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   const live=new Set();for(const q of g.projectiles){live.add(q.id);let m=shots.get(q.id);if(!m){m=new THREE.Mesh(shotGeo,shotMat);shots.set(q.id,m);scene.add(m);}m.position.set(q.x,1.3+s.elevation,q.z);}for(const[id,m]of shots)if(!live.has(id)){scene.remove(m);shots.delete(id);}
@@ -88,9 +93,9 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  }
  const ray=new THREE.Raycaster(),from=new THREE.Vector3(),to=new THREE.Vector3(),direction=new THREE.Vector3();
  function occlude(camera,g){for(const m of scenery)m.visible=true;scene.updateMatrixWorld(true);from.copy(camera.position);for(const point of [{x:g.player.x,y:1,z:g.player.z},{x:g.boss.x,y:3+g.blood.elevation,z:g.boss.z}]){to.set(point.x,point.y,point.z);const distance=from.distanceTo(to);direction.subVectors(to,from).normalize();ray.set(from,direction);ray.far=Math.max(0,distance-1);for(const hit of ray.intersectObjects(scenery,false))hit.object.visible=false;}}
- function clear(){for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();deathTime=lastBirth=shake=cast=energy=0;lastHp=R.hp;portrait.clear();}
+ function clear(){for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();wings.clear();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
   event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;clear();portrait.dispose();particles.dispose();cathedral.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
+  dispose(){if(disposed)return;disposed=true;clear();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
 }

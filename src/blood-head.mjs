@@ -127,15 +127,15 @@ export function createBloodHead({coarse=false,reduced=false}={}){
   };
   image.onerror=()=>{};image.src=new URL('../assets/baeseojun.png',import.meta.url).href;
  }
- function update(g,c,dt,{cast=0}={}){
+ function update(g,c,dt,{cast=0,pose={}}={}){
   const t=Math.max(0,Number.isFinite(dt)?dt:0),b=g.boss;
   if(lastHp!=null&&b.hp<lastHp&&t>0)hurt=Math.min(.6,hurt+(lastHp-b.hp)/350);
   lastHp=b.hp;hurt*=Math.exp(-t*8);
   const clock=g.time||0,breath=reduced?0:Math.sin(clock*1.7)*.018;
   const prayer=c.prayer||0;
-  group.rotation.x=breath-cast*.035-prayer*.12+hurt*.22;
-  group.rotation.y=reduced?0:Math.sin(clock*.8)*.025;
-  group.rotation.z=reduced?0:Math.sin(clock*1.05)*.014-hurt*.12;
+  group.rotation.x=breath-cast*.02-prayer*.12+hurt*.22+(pose.head?.pitch||0);
+  group.rotation.y=(reduced?0:Math.sin(clock*.8)*.025)+(pose.head?.yaw||0);
+  group.rotation.z=(reduced?0:Math.sin(clock*1.05)*.014)-hurt*.12+(pose.head?.roll||0);
  }
  function clear(){lastHp=null;hurt=0;group.rotation.set(0,0,0);}
  function dispose(){
