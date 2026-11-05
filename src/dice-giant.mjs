@@ -3,6 +3,7 @@ import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
 import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-giant-motion.mjs';
 import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
+import {giantReadableWarning} from './attack-readability.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락'];
@@ -46,7 +47,7 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
  ];
  // Thrown table props (chips, dice, coin, chess pieces) fly 10% slower; palm attacks and the berserk phase are untouched.
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h));
- return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...h,id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
+ return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
  const x=clamp(player.x,-45,45),z=clamp(player.z,-45,45),slot=index%FERAL_NAMES.length;let hazards=[];
@@ -81,7 +82,7 @@ function feralPattern(index,player,healthRatio=1){
     .55+i*2.05,.9,42),
   headSlam:true,rapid:true,active:.5
  }));
- return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...h,id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
+ return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
 export function giantPropType(s,h){
