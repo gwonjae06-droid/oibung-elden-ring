@@ -8,7 +8,7 @@ import {
 } from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
-import {KWON_WAVE} from './kwon-wave-data.mjs';
+import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -420,6 +420,7 @@ export function startPattern(g, name) {
   b.t = 0;
   b.hit = false;
   b.waveFired = false;
+  if(name==='wave')b.waveVariant=nextKwonWaveVariant(b.waveVariant);
   b.attackId++;
   b.punishable = false;
   b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
@@ -735,9 +736,10 @@ export function step(g, dt, input = {}) {
       b.waveFired = true;
       const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
       g.bossShots.push({id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw:b.yaw,
-        radius:KWON_WAVE.radius,speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,
+        variant:b.waveVariant,radius:KWON_WAVE.radius,
+        speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,
         life:KWON_WAVE.lifetime,age:0,damage:cfg.damage});
-      emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind});
+      emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
     }
     if (b.pattern === 'rush') moveBoss(b, b.phase === 2 ? 31 : 23, dt);
     else if (b.pattern === 'thrust') moveBoss(b, 19, dt);
