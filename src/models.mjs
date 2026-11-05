@@ -3,6 +3,7 @@ import * as BASE_THREE from 'three';
 const THREE=BASE_THREE;
 import {SWORD} from './combat.mjs';
 import {legPlan,gait,walkPose,capeSway,ellipsoidPoint,ringAt,onSphere} from './model-data.mjs';
+import {buildKwonLeg,poseKwonLeg} from './kwon-leg-rig.mjs';
 
 const V=a=>new THREE.Vector3(a[0],a[1],a[2]);
 
@@ -203,12 +204,7 @@ export function buildBoss(){
   }
   const clawMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.4});
   const legs=[];
-  for(const plan of legPlan()){
-    const g=new THREE.Group();g.position.set(...plan.root);g.rotation.y=plan.yaw;g.add(tube(plan.points,.22,.07,carapace,28,THREE));
-    for(let i=1;i<4;i++){const j=new THREE.Mesh(new THREE.SphereGeometry(i===3?.07:.17-.03*i,10,8),joint);j.position.set(...plan.points[i]);j.castShadow=true;g.add(j);}
-    const claw=new THREE.Mesh(new THREE.ConeGeometry(.07,.38,6),clawMat);claw.rotation.x=Math.PI;claw.position.set(plan.points[3][0],plan.points[3][1]+.12,plan.points[3][2]);g.add(claw);
-    model.add(g);legs.push({g,plan,baseYaw:plan.yaw,baseY:plan.root[1]});
-  }
+  for(const plan of legPlan()){const L=buildKwonLeg(THREE,plan,carapace,joint,clawMat);model.add(L.g);legs.push(L);}
   const boneMat=new THREE.MeshStandardMaterial({color:0xd8d0b6,roughness:.45,emissive:0x000000});
   const swordGroup=new THREE.Group();swordGroup.rotation.order='YXZ';model.add(swordGroup);
   const fallbackBlade=new THREE.Mesh(new THREE.ConeGeometry(.5,SWORD.length,4).rotateX(Math.PI/2).translate(0,0,SWORD.length/2),boneMat);
@@ -217,6 +213,6 @@ export function buildBoss(){
 
  });
 }
-export function poseLegs(legs,phase,speed){for(const L of legs){const g=gait(L.plan,phase,speed);L.g.rotation.y=L.baseYaw+g.yaw;L.g.position.y=L.baseY+g.lift;}}
+export function poseLegs(legs,phase,speed){for(const L of legs){if(L.articulated){poseKwonLeg(L,phase,speed);continue;}const g=gait(L.plan,phase,speed);L.g.rotation.y=L.baseYaw+g.yaw;L.g.position.y=L.baseY+g.lift;}}
 export function posePlayer(parts,phase,speed){const w=walkPose(phase,speed);parts.legs.L.rotation.x=w.legL;parts.legs.R.rotation.x=w.legR;parts.arms.L.rotation.x=w.armL;parts.arms.R.rotation.x=w.armR;return w;}
 export function swayCape(parts,time,speed){parts.capeParts.forEach((seg,i)=>{seg.rotation.x=-capeSway(i,time,speed);});}

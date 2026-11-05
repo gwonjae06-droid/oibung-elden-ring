@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {solveKwonLeg,kwonStepPoint} from '../src/kwon-leg-rig.mjs';
+const rest=[[0,0,0],[1.6,1.2,.5],[3.2,-.5,1],[3.9,-2,1.3]],dist=(a,b)=>Math.hypot(...a.map((v,i)=>v-b[i]));
+const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-5,a+' != '+b);
+test('IK preserves all three link lengths and the hip anchor',()=>{for(let i=0;i<100;i++){const target=[3.3+Math.sin(i)*.6,-1.8+Math.cos(i)*.2,1.3+Math.sin(i*.3)],p=solveKwonLeg(rest,target);assert.deepEqual(p[0],rest[0]);for(let j=0;j<3;j++)near(dist(p[j],p[j+1]),dist(rest[j],rest[j+1]));assert.ok(dist(p[3],target)<.002);}});
+test('IK clamps unreachable targets without stretching',()=>{const p=solveKwonLeg(rest,[100,-20,70]);for(let j=0;j<3;j++)near(dist(p[j],p[j+1]),dist(rest[j],rest[j+1]));assert.ok(p.flat().every(Number.isFinite));});
+test('IK mirrored legs retain mirrored joints',()=>{const a=solveKwonLeg(rest,[3.4,-1.6,.9]),b=solveKwonLeg(rest.map(([x,y,z])=>[-x,y,z]),[-3.4,-1.6,.9]);for(let i=0;i<4;i++){near(a[i][0],-b[i][0]);near(a[i][1],b[i][1]);near(a[i][2],b[i][2]);}});
+test('IK leaves source plans unchanged and rejects invalid targets',()=>{const before=structuredClone(rest);solveKwonLeg(rest,[4,-1,2]);assert.deepEqual(rest,before);assert.deepEqual(solveKwonLeg(rest,[NaN,0,0]),rest);});
+test('IK foot swing begins and ends exactly at ground anchors',()=>{const a=[0,0,0],b=[1,0,2];assert.deepEqual(kwonStepPoint(a,b,0,.4),a);assert.ok(dist(kwonStepPoint(a,b,1,.4),b)<1e-9);assert.ok(kwonStepPoint(a,b,.5,.4)[1]>.39);});
+test('IK foot lift never goes underground along a flat step',()=>{for(let i=0;i<=100;i++)assert.ok(kwonStepPoint([0,0,0],[2,0,1],i/100,.5)[1]>=-1e-9);});
