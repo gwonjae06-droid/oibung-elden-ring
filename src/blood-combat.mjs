@@ -1,4 +1,5 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
+import {bloodReadableWarning} from './attack-readability.mjs';
 import {createBloodWalk,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
@@ -49,7 +50,7 @@ function hit(g,amount,source,projectile=false,impact=null){
  if(!damage)return 0;
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }
-function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};g.blood.hazards.push(h);return h;}
+function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn);g.blood.hazards.push(h);return h;}
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
  const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
