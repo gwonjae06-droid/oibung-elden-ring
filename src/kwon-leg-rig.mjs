@@ -21,13 +21,13 @@ export function solveKwonSupportLeg(rest,target){
 }
 export function kwonSwingWindow(phase,plan){const group=(plan.k+(plan.side>0?1:0))%2,u=phase/(Math.PI*2)+group*.5;return u-Math.floor(u)>=KWON_SUPPORT.stance;}
 export function kwonStepPoint(from,to,u,height){const t=ease(u);return from.map((v,i)=>v+(to[i]-v)*t+(i===1?Math.sin(Math.PI*t)*height:0));}
-function poseBones(L,points){const {T,pivots,lengths}=L,parent=new T.Quaternion(),absolute=new T.Quaternion(),up=new T.Vector3(0,1,0),dir=new T.Vector3();for(let i=0;i<3;i++){dir.set(...points[i+1]).sub(L.v.set(...points[i])).normalize();absolute.setFromUnitVectors(up,dir);pivots[i].quaternion.copy(parent).invert().multiply(absolute);if(i)pivots[i].position.set(0,lengths[i-1],0);parent.copy(absolute);}L.tip.quaternion.copy(parent).invert().multiply(absolute.setFromUnitVectors(up,dir.set(0,-1,0)));L.solved=points;}
+function poseBones(L,points,toePitch=0){const {T,pivots,lengths}=L,parent=new T.Quaternion(),absolute=new T.Quaternion(),up=new T.Vector3(0,1,0),dir=new T.Vector3();for(let i=0;i<3;i++){dir.set(...points[i+1]).sub(L.v.set(...points[i])).normalize();absolute.setFromUnitVectors(up,dir);pivots[i].quaternion.copy(parent).invert().multiply(absolute);if(i)pivots[i].position.set(0,lengths[i-1],0);parent.copy(absolute);}L.tip.quaternion.copy(parent).invert().multiply(absolute.setFromUnitVectors(up,dir.set(0,-1,0)));L.tip.quaternion.multiply(L.toeQuat.setFromAxisAngle(L.toeAxis,toePitch));L.solved=points;}
 export function buildKwonLeg(T,plan,carapace,joint,clawMat){
  const g=new T.Group();g.name='kwon-articulated-leg-'+plan.index;g.position.set(...plan.root);g.rotation.y=plan.yaw;
  const rest=plan.points.map(v=>[...v]),lengths=rest.slice(1).map((v,i)=>distance(v,rest[i])),pivots=[],radii=[.3,.235,.16,.095];let parent=g;
  for(let i=0;i<3;i++){const pivot=new T.Group();pivot.name='kwon-leg-'+plan.index+'-joint-'+i;parent.add(pivot);const segment=new T.Mesh(new T.CylinderGeometry(radii[i+1],radii[i],lengths[i],14).translate(0,lengths[i]/2,0),carapace);segment.castShadow=true;pivot.add(segment);const ball=new T.Mesh(new T.SphereGeometry(radii[i]*1.1,12,10),joint);ball.castShadow=true;pivot.add(ball);pivots.push(pivot);parent=pivot;}
  const tip=new T.Group();tip.position.y=lengths[2];parent.add(tip);const claw=new T.Mesh(new T.ConeGeometry(.095,.38,8),clawMat);claw.position.y=-.12;claw.castShadow=true;tip.add(claw);
- const L={T,g,plan,baseYaw:plan.yaw,baseY:plan.root[1],rest,lengths,pivots,tip,v:new T.Vector3(),state:null,articulated:true};poseBones(L,rest);return L;
+ const L={T,g,plan,baseYaw:plan.yaw,baseY:plan.root[1],rest,lengths,pivots,tip,toeAxis:new T.Vector3(1,0,0),toeQuat:new T.Quaternion(),v:new T.Vector3(),state:null,articulated:true};poseBones(L,rest);return L;
 }
 export function poseKwonLeg(L,phase,speed){if(!Number.isFinite(phase)||!Number.isFinite(speed))return;L.pending={phase,speed};if(!L.deferKwonLeg)finishKwonLeg(L);}
 export function finishKwonLeg(L,point=null,amount=0,grip=false,frozen=false){
@@ -43,7 +43,9 @@ export function finishKwonLeg(L,point=null,amount=0,grip=false,frozen=false){
  const error=Math.hypot(nominal[0]-s.anchor[0],nominal[2]-s.anchor[2]),need=speed>.25||error>(amount>0?.45:KWON_SUPPORT.replant);
  if(!frozen&&!s.swing&&need&&kwonSwingWindow(s.phase,L.plan)){const lead=root.map((x,i)=>(x-s.root[i])*.06/dt);lead[1]=0;const d=Math.hypot(...lead),k=d>.35?.35/d:1;s.from=[...s.foot];s.to=nominal.map((x,i)=>i===1?KWON_SUPPORT.ground:x+lead[i]*k);s.begin=s.phase;s.end=s.phase+KWON_SUPPORT.swing*Math.PI*2;s.swing=true;}
  s.foot=s.swing?kwonStepPoint(s.from,s.to,(s.phase-s.begin)/(s.end-s.begin),KWON_SUPPORT.lift+clamp(speed,0,14)*KWON_SUPPORT.liftSpeed):[...s.anchor];s.root=root;
- const local=L.g.worldToLocal(L.v.set(...s.foot)).toArray();poseBones(L,solveKwonSupportLeg(L.rest,local));
+ const local=L.g.worldToLocal(L.v.set(...s.foot)).toArray();
+ const stepProgress=s.swing?clamp((s.phase-s.begin)/(s.end-s.begin),0,1):0;
+ poseBones(L,solveKwonSupportLeg(L.rest,local),s.swing?Math.sin(Math.PI*stepProgress)*.23:0);
 }
 export function kwonStanceWeights(standing,reach,detach,dead=false){const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;return {rear:unit(standing),front:dead?1:Math.max(unit(reach),unit(detach))};}
 export function blendKwonLimbTarget(from,to,amount){const k=ease(Number.isFinite(amount)?amount:0);return from.map((v,i)=>v+(to[i]-v)*k);}
