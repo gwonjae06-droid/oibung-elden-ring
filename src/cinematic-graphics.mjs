@@ -153,7 +153,7 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
      if(!m.roughnessMap)m.roughnessMap=maps.roughnessMap;
      if(!m.metalness||m.metalness<.2)m.metalness=surface.metalness;
      m.roughness=clamp(m.roughness*.48+surface.roughness*.52,.13,.97);
-     if(m.normalScale)m.normalScale.set(surface.bump,surface.bump);
+     if(generatedNormal&&m.normalScale)m.normalScale.set(surface.bump,surface.bump);
      m.envMapIntensity=(m.envMapIntensity??1)*(coarse?.75:1);
      m.needsUpdate=true;applied.add(m);changed++;
     }
