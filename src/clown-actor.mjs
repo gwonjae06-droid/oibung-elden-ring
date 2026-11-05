@@ -5,6 +5,7 @@ import {headPose} from './clown-morph.mjs';
 import {headFrame} from './clown-visual-data.mjs';
 import {cartoonPose} from './clown-cartoon.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
+import {createClownArmRig} from './clown-arm-rig.mjs';
 import {createClownCollapse} from './clown-collapse.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
@@ -27,11 +28,12 @@ export function createClownActor(){
  for(const s of[-1,1])for(let i=0;i<2;i++){const p=mesh(patchGeo,s<0?white:purple,s*.48,2+i*.6,.68);p.rotation.z=Math.PI/4;}
  const smearGeo=new THREE.SphereGeometry(.4,10,8),smearMat=new THREE.MeshBasicMaterial({color:0xffe9bc,transparent:true,opacity:.16,depthWrite:false});
  for(const L of limbs){L.puff=mesh(puffGeo,L.s<0?purple:white,L.s*.95,3,0);mesh(puffGeo,red,0,0,.4,L.shoe).scale.set(.7,.8,1.4);for(let i=0;i<3;i++)mesh(beadGeo,white,(i-1)*.17,0,.34,L.glove).scale.set(1,1.3,1);L.cuff=mesh(cuffGeo,gold,0,0,0);L.cuff.rotation.x=Math.PI/2;L.smear=mesh(smearGeo,smearMat,0,0,0);L.smear.visible=false;}
- const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),h=new THREE.Vector3(),target=new THREE.Vector3();let first=true;
+ for(const L of limbs)L.arm=createClownArmRig(THREE,body,L);
+ const up=new THREE.Vector3(0,1,0),a=new THREE.Vector3(),b=new THREE.Vector3(),h=new THREE.Vector3(),target=new THREE.Vector3();
  function link(m,A,B){a.set(...A);b.set(...B);m.position.copy(a).add(b).multiplyScalar(.5);const d=b.sub(a);m.scale.set(1,Math.max(.01,d.length()),1);m.quaternion.setFromUnitVectors(up,d.normalize());}
  function update(g,dt=1/60){
   const death=collapse.update(g,dt,Boolean(globalThis.document?.hidden));
-  const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0),alpha=first?1:1-Math.exp(-24*Math.max(0,dt));if(F.inflate!==null)p.inflate=F.inflate;
+  const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0);if(F.inflate!==null)p.inflate=F.inflate;
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
@@ -50,9 +52,10 @@ export function createClownActor(){
    if(!grip&&boss.state!=='transition'){hand[0]=hand[0]*A.arms+s*A.armSpread;hand[2]+=(A.arms-1)*.65;}
    if(A.clapClose!==null){const palm=.4*(1+gloveCue*1.7)*A.glove;hand=[s*(palm+(1-gloveCue)*A.armSpread),2.5,3.2+(A.arms-1)*.25];}
    if(A.cameraGrip)hand=[s*1.7,2.5,2.9];
-   const shoulder=[s*.9,3-crouch*.25,0],elbow=[s*(1.4+size*.1),2.4+(hand[1]-2.1)*.45,.3+(hand[2]-.4)*.45];link(L.upper,shoulder,elbow);L.glove.position.lerp(target.set(...hand),alpha);hand=[L.glove.position.x,L.glove.position.y,L.glove.position.z];link(L.lower,elbow,hand);L.elbow.position.set(...elbow);L.glove.scale.set((1+gloveCue*1.7)*A.glove,(1+gloveCue)*A.glove,(1+gloveCue*1.4)*A.glove);L.puff.position.set(...shoulder);L.cuff.position.copy(L.glove.position);L.cuff.scale.setScalar(Math.sqrt(A.glove));L.smear.visible=A.smear>.1;L.smear.position.copy(L.glove.position);L.smear.position.z-=.8;L.smear.scale.set(1,A.smear+1,1+A.smear*5);
+   const shoulder=[s*.9,3-crouch*.25,0],locked=Boolean(A.cameraGrip||A.clapClose!==null&&A.clapClose>.97||grip&&F.pose==='hold'||boss.state==='transition'),arm=L.arm.pose(shoulder,hand,dt,locked,g);hand=arm.hand;
+   L.glove.scale.set((1+gloveCue*1.7)*A.glove,(1+gloveCue)*A.glove,(1+gloveCue*1.4)*A.glove);L.puff.position.set(...shoulder);L.cuff.scale.setScalar(Math.sqrt(A.glove));L.smear.visible=A.smear>.1;L.smear.position.set(...hand);L.smear.position.z-=.8;L.smear.scale.set(1,A.smear+1,1+A.smear*5);
    const hip=[s*.45,1.25,0],knee=[s*.55,.65,.1+crouch*.4],foot=[s*.55,.1,.25];link(L.thigh,hip,knee);link(L.shin,knee,foot);L.knee.position.set(...knee);L.shoe.position.set(...foot);L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
-  }first=false;
+  }
  }
  return {root,update,head};
  });
