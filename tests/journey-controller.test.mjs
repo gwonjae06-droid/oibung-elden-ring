@@ -37,7 +37,7 @@ test('controller grants four repeatable flames, replaces relic choices, and reco
  await f.click('memory-next');await f.click('flame-next');
  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);
  assert.match(f.dialog.html,/성혈 대성당/);
- await f.click('next');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.blood.maxHp);
+ await f.click('next');assert.equal(f.game().boss.maxHp,5820);
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/영원하지 못한 생명/);
  await f.click('memory-next');assert.match(f.dialog.html,/정화의 불꽃을 획득했습니다/);
  await f.click('flame-next');assert.match(f.dialog.html,/네 지배자를 넘어섰다/);
@@ -121,7 +121,7 @@ test('flame selection can be cancelled and only a successful trial start spends 
  await f.click('new');assert.doesNotMatch(f.dialog.html,/선택됨/);await f.click('home');
  await f.click('skip-toggle');await f.click('new');await f.click('weapon',{weapon:'bow'});
  assert.match(f.dialog.html,/불꽃 1개로 선택한 무기 출정/);
- await f.click('begin');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);
+ await f.click('begin');assert.equal(f.game().boss.maxHp,6390);
  assert.deepEqual(f.game().evolutions,['twin-arrow']);assert.equal(saved().flames,2);
  const first=f.game();await f.click('begin');assert.equal(f.game(),first);assert.equal(saved().flames,2);
  first.status='lost';await f.poll();assert.doesNotMatch(f.dialog.html,/data-j="revive"/);
@@ -154,7 +154,7 @@ test('last unlocked boss skip earns only its own memory and a separate completio
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice'];
  profile.records=[{weapon:'sword',time:100,deaths:0,bossCount:4,startStage:0}];profile.clears=1;
  const f=rig({savedProfile:profile});await f.click('skip-toggle');await f.click('new');await f.click('begin');
- assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.blood.maxHp);
+ assert.equal(f.game().boss.maxHp,5820);
  f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
  assert.match(f.dialog.html,/마지막 시련을 넘어섰다/);assert.match(f.dialog.html,/별도로 기록/);
  const saved=JSON.parse(f.data.get(SAVE_KEY));assert.equal(saved.flames,2);assert.equal(saved.earnedFlames,3);

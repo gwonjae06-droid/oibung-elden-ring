@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {newRun,freshProfile,configureJourney} from '../src/journey-state.mjs';
+import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
+import {journeyBossHp,journeyWeaknessMultiplier} from '../src/journey-balance.mjs';
+import {createDicePlayerGame,diceFaceDamageMultiplier} from '../src/dice-player.mjs';
+import {createBloodGame} from '../src/blood-combat.mjs';
+const story=(game,stage)=>{const r=newRun('sword');r.stage=stage;configureJourney(game,r,freshProfile());return game;};
+test('story health is based on campaign HP, not standalone HP',()=>{
+ assert.equal(journeyBossHp('dice',BOSS_REGISTRY.dice.maxHp),6390);
+ assert.equal(journeyBossHp('blood',BOSS_REGISTRY.blood.maxHp),5820);
+ const dice=story(createDicePlayerGame(),2),blood=story(createBloodGame(),3);
+ assert.equal(dice.boss.maxHp,6390);assert.equal(blood.boss.maxHp,5820);
+ assert.equal(dice.boss.hp,6390);assert.equal(blood.boss.hp,5820);
+ const hidden=newRun();hidden.stage=2;hidden.secret=true;
+ const secret=createDicePlayerGame();configureJourney(secret,hidden,freshProfile());
+ assert.equal(secret.boss.maxHp,BOSS_REGISTRY.dice.maxHp);
+ assert.equal(secret.journeyBalance,undefined);
+});
+test('weakness values affect story fights only',()=>{
+ const photo={face:0},armor={face:1};
+ const normal=createDicePlayerGame(),dice=story(createDicePlayerGame(),2);
+ assert.equal(diceFaceDamageMultiplier(normal,photo),1);
+ assert.equal(diceFaceDamageMultiplier(dice,photo),1.5);
+ assert.equal(diceFaceDamageMultiplier(dice,armor),.5);
+ assert.equal(journeyWeaknessMultiplier(normal,'dice',2.8),2.8);
+ assert.equal(journeyWeaknessMultiplier(dice,'dice',2.8),1.5);
+ assert.equal(journeyWeaknessMultiplier(story(createBloodGame(),3),'blood',1.6),1.3);
+ assert.equal(journeyWeaknessMultiplier(createBloodGame(),'blood',1.6),1.6);
+ const hidden=newRun();hidden.stage=3;hidden.secret=true;
+ const secret=createBloodGame();configureJourney(secret,hidden,freshProfile());
+ assert.equal(journeyWeaknessMultiplier(secret,'blood',1.6),1.6);
+});

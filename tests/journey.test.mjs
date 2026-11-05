@@ -1,3 +1,4 @@
+import {createBloodGame} from '../src/blood-combat.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {freshProfile,newRun,newFlameRun,latestUnlockedStage,consumeFlameSkip,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY,BOSSES} from '../src/journey-state.mjs';
@@ -100,15 +101,15 @@ test('invalid saves recover and unavailable storage never crashes',()=>{
  assert.throws(()=>newRun('invalid'));
 });
 test('real boss engines receive the registry health curve, grace and forged upgrades',()=>{
- const factories=[w=>createGame(w,{register:false}),w=>createClownGame(w,{register:false}),createDicePlayerGame];
+ const factories=[w=>createGame(w,{register:false}),w=>createClownGame(w,{register:false}),createDicePlayerGame,createBloodGame];
  const p=freshProfile();p.flames=2;buyForgeTier(p,'sword','blade-wave');
- let last=0;
  factories.forEach((make,stage)=>{
   const r=newRun('sword');r.stage=stage;const g=make('sword');
   configureJourney(g,r,p);
   assert.equal(g.player.potions,3);
-  assert.equal(g.boss.maxHp,BOSS_REGISTRY[BOSSES[stage]].maxHp);
-  assert.ok(g.boss.maxHp>last);last=g.boss.maxHp;
+  const id=BOSSES[stage],baseHp=BOSS_REGISTRY[id].maxHp;
+  assert.equal(g.boss.maxHp,Math.round(baseHp*(id==='dice'?1.5:id==='blood'?1.3:1)/10)*10);
+  assert.deepEqual(g.journeyBalance,{mode:'story',boss:id});
   assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.startGrace,1.6);
   assert.deepEqual(g.evolutions,['blade-wave']);
  });

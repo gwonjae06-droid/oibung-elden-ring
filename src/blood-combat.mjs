@@ -1,4 +1,5 @@
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
+import {journeyWeaknessMultiplier} from './journey-balance.mjs';
 import {BLOOD_RULES as R,BLOOD_PATTERNS,bloodPool,hazardContains} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
@@ -40,7 +41,7 @@ export function damageBlood(g,amount){
 }
 function hit(g,amount,source,projectile=false){
  const s=g.blood;if(bloodBossAirborne(g))return 0;
- const damage=damageBlood(g,amount*(g.boss.phase===2&&g.boss.state==='recovery'?1.6:1));
+ const damage=damageBlood(g,amount*(g.boss.phase===2&&g.boss.state==='recovery'?journeyWeaknessMultiplier(g,'blood',1.6):1));
  if(!damage)return 0;
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }

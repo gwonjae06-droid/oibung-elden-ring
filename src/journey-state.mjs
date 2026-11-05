@@ -1,6 +1,7 @@
 import {rememberBoss} from './chapter-story.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {BOSS_REGISTRY,PLAYABLE_BOSSES} from './boss-registry.mjs';
+import {journeyBossHp} from './journey-balance.mjs';
 import {forgeInventory,normalizeFlameProfile,awardPurificationFlame,forgedEvolutions,flameBalance} from './purification-forge.mjs';
 export const BOSSES=PLAYABLE_BOSSES;
 export const BOSS_NAMES=BOSSES.map(id=>BOSS_REGISTRY[id].name);
@@ -93,6 +94,9 @@ export function advanceJourney(run){
 export function configureJourney(game,run,profile){
  game.evolutions=forgedEvolutions(profile,run.weapon);
  game.startGrace=1.6;
- game.boss.maxHp=BOSS_REGISTRY[BOSSES[run.stage]].maxHp;
+ const bossId=BOSSES[run.stage],baseHp=BOSS_REGISTRY[bossId].maxHp,story=!run.secret;
+ game.boss.maxHp=story?journeyBossHp(bossId,baseHp):baseHp;
  game.boss.hp=game.boss.maxHp;
+ if(story)game.journeyBalance={mode:'story',boss:bossId};
+ else delete game.journeyBalance;
 }
