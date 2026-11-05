@@ -8,7 +8,7 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
  const p={legL:walk,legR:-walk,kneeL:.06+Math.max(0,-walk)*.85,kneeR:.06+Math.max(0,walk)*.85,ankleL:-walk*.20,ankleR:walk*.20,
   armL:-walk*.42-.08,armR:walk*.20-.12,armZL:.10,armZR:-.10,elbowL:.16,elbowR:.27,pivotX:-.86,pivotY:0,pivotZ:-.10,
   twist:Math.sin(phase)*.035*moving,sway:Math.sin(phase)*.018*moving,lean:.055*moving*forward,lift:Math.abs(Math.sin(phase))*.025*moving,
-  bob:breathing*.009*(1-moving),headX:0,headY:0,pull:0,draw:0,trail:false,spin:0,strideX:side*.035*moving,strideZ:0,support:0,heal:0,charge:0,grip:0,handX:.03,handY:.55,handZ:.22,grounded:true,locomotion:true};
+  bob:breathing*.009*(1-moving)+Math.cos(phase*2)*.009*moving,headX:-Math.sin(phase)*.015*moving,headY:-side*.022*moving,pull:0,draw:0,trail:false,spin:0,strideX:side*.035*moving,strideZ:0,support:0,heal:0,charge:0,grip:0,handX:.03,handY:.55,handZ:.22,grounded:true,locomotion:true};
  p.legZL=p.legZR=-side*.13*moving;
   if(weapon==='hammer'){p.pivotX=-.48;p.armR=-.22;p.elbowR=.44;p.armL=-.24;p.handY=.46;}
   if(weapon==='bow'){p.pivotX=0;p.pivotZ=0;p.armL=-.30;p.elbowL=.35;p.armR=-.15;}
@@ -46,6 +46,14 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
    p.armR=curve(-.32,-.94,-1.08);p.elbowR=curve(.35,1.05,.12);p.pivotX=curve(-.12,-.50,.06);p.pivotZ=curve(.14,-.70,.48);p.pivotY=curve(0,-.30,.24);
    p.twist=curve(0,-.24,.26);p.armL=curve(-.08,-.50,-.16);p.trail=false;
   }
+  // Short-lived bracing and shoulder/head counter-movement follows the
+  // authoritative attack timeline. All offsets return to zero at the end.
+  const bodyWeight=Math.sin(Math.PI*ease(t/Math.max(.001,a.total||1)));
+  p.headX-=bodyWeight*(weapon==='hammer'?.060:weapon==='sword'?.042:.028);
+  p.headY+=bodyWeight*(weapon==='bow'?.025:-.014);
+  p.sway+=bodyWeight*(weapon==='hammer'?.022:.013);
+  p.kneeL+=bodyWeight*(weapon==='hammer'?.045:.020);
+  p.kneeR+=bodyWeight*(weapon==='hammer'?.038:.016);
  }else if(a.kind==='roll'){
   p.grounded=false;
   const tuck=ease(Math.min(u/.17,(1-u)/.17));p.legL=p.legR=-.70*tuck;p.kneeL=p.kneeR=tuck;p.armL=p.armR=-.38*tuck;p.elbowL=p.elbowR=.90*tuck;
@@ -53,7 +61,7 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
  }else if(a.kind==='heal'){
   const raise=ease(Math.min(u/.25,(1-u)/.22));p.armL=-1.92*raise;p.elbowL=.92*raise;p.armR=-.18;p.pivotX=-1.04;p.headX=.13*raise;p.heal=raise;p.lift=-.04*raise;
  }else if(a.kind==='hurt'){
-  const k=(1-ease(u))*(.7+.3*Math.cos(u*Math.PI*3));p.lean=-.30*k;p.twist=.14*k;p.armL=.35*k;p.armR=.25*k;p.elbowL=p.elbowR=.65*k;p.kneeL=p.kneeR=.22*k;p.lift=-.12*k;
+  const k=(1-ease(u))*(.7+.3*Math.cos(u*Math.PI*3));p.headX=-.14*k;p.headY=.045*k;p.sway=.035*k;p.lean=-.30*k;p.twist=.14*k;p.armL=.35*k;p.armR=.25*k;p.elbowL=p.elbowR=.65*k;p.kneeL=p.kneeR=.22*k;p.lift=-.12*k;
  }
  return p;
 }
