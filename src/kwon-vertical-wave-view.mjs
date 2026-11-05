@@ -34,7 +34,7 @@ export function createKwonVerticalWaveView(scene,{reduced=false}={}){
       [mid,ember,.02,0],[core,white,.05,0]]){
    const m=new THREE.Mesh(geo,material);m.position.z=z;m.rotation.y=ry;m.frustumCulled=false;g.add(m);
   }
-  const ring=new THREE.Mesh(ringGeo,groundMat);ring.position.y=.06;ring.scale.set(KWON_WAVE.radius,KWON_WAVE.radius*.55,1);g.add(ring);
+  const ring=new THREE.Mesh(ringGeo,groundMat);ring.position.y=.06;ring.scale.set(KWON_WAVE.radius,1,KWON_WAVE.radius*.55);g.add(ring);
   root.add(g);return g;
  }
  function update(shots){
