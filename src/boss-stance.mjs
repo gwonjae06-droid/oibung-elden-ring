@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {bodyPose,bodyPoint,cinematicPose,handPoint,BOSS_SCALE} from './combat.mjs';
 import {createCollapseClock} from './boss-collapse.mjs';
 import {bossMotion} from './boss-motion-data.mjs';
+import {kwonStanceWeights,poseKwonLegTarget} from './kwon-leg-rig.mjs';
 
 export function createBossStance(B){
   const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
@@ -28,15 +29,6 @@ export function createBossStance(B){
   for(let i=0;i<5;i++){
     const tooth=new THREE.Mesh(new THREE.ConeGeometry(.08,.45+(i%2)*.15,5),gold);tooth.position.set((i-2)*.22,.9,.1);headRig.add(tooth);
   }
-  const unit=new THREE.CylinderGeometry(1,1,1,10),jointGeo=new THREE.SphereGeometry(.18,10,8),up=new THREE.Vector3(0,1,0),v=new THREE.Vector3();
-  function chain(count,material,radii){
-    const g=new THREE.Group();B.model.add(g);
-    const bones=radii.map(r=>{const m=new THREE.Mesh(unit,material);m.userData.r=r;g.add(m);return m;});
-    const joints=Array.from({length:count},()=>{const m=new THREE.Mesh(jointGeo,gold);g.add(m);return m;});return {g,bones,joints};
-  }
-  function solve(c,points){for(let i=0;i<c.bones.length;i++){const a=points[i],b=points[i+1],m=c.bones[i];v.set(b.x-a.x,b.y-a.y,b.z-a.z);m.position.set(a.x+v.x/2,a.y+v.y/2,a.z+v.z/2);m.scale.set(m.userData.r,v.length(),m.userData.r);m.quaternion.setFromUnitVectors(up,v.normalize());c.joints[i].position.set(b.x,b.y,b.z);}}
-  const supports=B.legs.filter(L=>L.plan.k===3).map(L=>({L,...chain(3,armour,[.34,.28,.2])}));
-  const arms=B.legs.filter(L=>L.plan.k===0).map(L=>({L,...chain(2,armour,[.28,.23])}));
   const cinema=document.createElement('div');cinema.setAttribute('aria-live','polite');
   Object.assign(cinema.style,{position:'absolute',inset:'0',pointerEvents:'none',zIndex:'15',display:'none',borderTop:'7vh solid #000',borderBottom:'7vh solid #000'});
   const caption=document.createElement('p');Object.assign(caption.style,{position:'absolute',bottom:'8%',width:'100%',maxWidth:'none',textAlign:'center',fontSize:'24px',color:'#e9d3a0',textShadow:'0 2px 5px #000'});cinema.appendChild(caption);document.getElementById('arena').appendChild(cinema);
@@ -45,7 +37,7 @@ export function createBossStance(B){
   return {update(b){
     const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;
     const death=collapse.step(b,dt,document.hidden);
-    const q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b);pivot.rotation.x=q.angle+m.lean;pivot.position.y=(1.5+q.lift+m.sink)*S;
+    const q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b),weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));pivot.rotation.x=q.angle+m.lean;pivot.position.y=(1.5+q.lift+m.sink)*S;
     B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);
     const shouldDetach=c.detach>0;
     if(shouldDetach&&!detached){pivot.remove(headRig);B.swordGroup.add(headRig);detached=true;}
@@ -54,14 +46,18 @@ export function createBossStance(B){
     else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(B.HEAD.x,B.HEAD.y-1.5,B.HEAD.z+1.5);}
     cinema.style.display=b.state==='transition'?'block':'none';
     if(b.state==='transition')caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?'내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';
-    for(const L of B.legs){const p=bodyPoint(b,{x:L.plan.root[0],y:L.plan.root[1],z:L.plan.root[2]});L.g.position.set(p.x,p.y,p.z);L.g.scale.setScalar(S);L.g.rotation.x=-.45*q.standing;L.g.rotation.z=-L.plan.side*1.15*q.standing;if(L.plan.k!==3)L.g.rotation.y=L.baseYaw*(1-q.standing)+L.plan.side*.65*q.standing;}
-    for(const R of supports){const s=q.standing,side=R.L.plan.side;R.g.visible=s>0;R.L.g.visible=s===0;const root=bodyPoint(b,{x:side*1.15,y:2,z:-1.6});solve(R,[root,{x:side*2.2,y:2.2,z:-1.4},{x:side*1.9,y:.9,z:-2.8},{x:side*1.8,y:.06,z:-3.5}]);}
     const head=bodyPoint(b,B.HEAD);
-    for(const R of arms){const side=R.L.plan.side;R.g.visible=!!death||c.reach>0;R.L.g.visible=!death&&c.reach===0;
-      const shoulder=bodyPoint(b,{x:side*1.4,y:2.6,z:1.1}),grip=handPoint(b,side);
-      const reach={x:head.x+side*.55,y:head.y-.3,z:head.z+.4},rest={x:shoulder.x+side*.8,y:shoulder.y-1.2,z:shoulder.z+.5};
-      const target=death?{x:side*.8,y:1.1,z:3.6}:lerp(lerp(rest,reach,c.reach),grip,c.detach);
-      solve(R,[shoulder,{x:shoulder.x+side*1.0,y:(shoulder.y+target.y)/2-.55,z:(shoulder.z+target.z)/2-.5},target]);
+    for(const L of B.legs){
+      const side=L.plan.side,front=L.plan.k===0,rear=L.plan.k===3,weight=rear?weights.rear:front?weights.front:0,shoulder=front?bodyPoint(b,{x:side*1.4,y:2.6,z:1.1}):null;
+      let p=bodyPoint(b,{x:L.plan.root[0],y:L.plan.root[1],z:L.plan.root[2]});if(front)p=lerp(p,shoulder,weight);
+      L.g.visible=true;L.g.position.set(p.x,p.y,p.z);L.g.scale.setScalar(S);L.g.rotation.x=-.45*q.standing*(1-weight);L.g.rotation.z=-side*1.15*q.standing*(1-weight);
+      L.g.rotation.y=rear?L.baseYaw:L.baseYaw*(1-q.standing)+side*.65*q.standing;
+      if(rear&&weight>0)poseKwonLegTarget(L,[side*1.8,.06,-3.5],weight);
+      if(front&&weight>0){
+        const grip=handPoint(b,side),reach={x:head.x+side*.55,y:head.y-.3,z:head.z+.4},rest={x:shoulder.x+side*.8,y:shoulder.y-1.2,z:shoulder.z+.5};
+        const target=death?{x:side*.8,y:1.1,z:3.6}:lerp(lerp(rest,reach,c.reach),grip,c.detach);
+        poseKwonLegTarget(L,[target.x,target.y,target.z],weight);
+      }
     }
   }};
 }

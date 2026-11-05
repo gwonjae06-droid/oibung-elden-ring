@@ -37,3 +37,10 @@ export function poseKwonLeg(L,phase,speed){
  s.foot=s.swing?kwonStepPoint(s.from,s.to,(s.progress-s.begin)/Math.max(.001,s.end-s.begin),.22+clamp(speed,0,14)*.02):[...s.anchor];s.root=root;
  const local=L.g.worldToLocal(L.v.set(...s.foot)).toArray();poseBones(L,solveKwonLeg(L.rest,local));
 }
+export function kwonStanceWeights(standing,reach,detach,dead=false){const unit=v=>Number.isFinite(v)?clamp(v,0,1):0;return {rear:unit(standing),front:dead?1:Math.max(unit(reach),unit(detach))};}
+export function blendKwonLimbTarget(from,to,amount){const k=ease(Number.isFinite(amount)?amount:0);return from.map((v,i)=>v+(to[i]-v)*k);}
+export function poseKwonLegTarget(L,point,amount){
+ if(!L.articulated||!(amount>0)||!point?.every(Number.isFinite))return;
+ L.g.updateWorldMatrix(true,false);L.v.set(...point);L.g.parent.localToWorld(L.v);const local=L.g.worldToLocal(L.v).toArray(),base=(L.solved||L.rest).at(-1);
+ poseBones(L,solveKwonLeg(L.rest,blendKwonLimbTarget(base,local,amount)));
+}
