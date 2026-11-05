@@ -82,16 +82,34 @@ test('a failing boss cinematic is disabled and next boss still launches after fl
 });
 test('closing during the victory animation still preserves the defeated boss but never the active run',async()=>{const f=rig();await f.click('new');await f.click('begin');f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,['kwon']);assert.equal(saved.flames,1);assert.equal(saved.run,null);f.release();});
 
-test('hidden title route launches selected boss and retries without journey rewards or records',async()=>{
- const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/봉인 밖의 문/);
- await f.click('secret-weapon',{weapon:'bow'});await f.click('secret-enter',{boss:'dice'});assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);assert.deepEqual(f.game().evolutions,[]);
- f.game().status='won';await f.poll();assert.match(f.dialog.html,/같은 보스 재도전/);assert.doesNotMatch(f.dialog.html,/무기 진화 선택/);
- await f.click('secret-retry');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);f.game().status='lost';await f.poll();assert.match(f.dialog.html,/다른 보스로 이동/);
- await f.click('secret-menu');assert.match(f.dialog.html,/봉인 밖의 문/);await f.click('secret-enter',{boss:'clown'});assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.clown.maxHp);
- f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,[]);assert.deepEqual(saved.memories,[]);assert.equal(saved.clears,0);assert.equal(saved.flames,2);assert.equal(saved.run,null);f.release();
+test('five title taps award exactly two persistent flames instead of opening boss travel',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(let i=0;i<4;i++){await f.click('secret-tap');assert.equal(saved().flames,0,'partial taps do not pay');}
+ await f.click('secret-tap');
+ assert.equal(saved().flames,2);assert.equal(saved().earnedFlames,2);
+ assert.match(f.dialog.html,/정화의 불꽃 \+2개 · 보유 2개/);
+ assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|바로 이동|육체 강탈부터/);
+ assert.deepEqual(saved().defeated,[]);assert.deepEqual(saved().memories,[]);assert.equal(saved().clears,0);
+ for(let i=0;i<5;i++)await f.click('secret-tap');
+ assert.equal(saved().flames,4,'each complete set of five taps grants two more');
+ assert.equal(saved().earnedFlames,4);
+ await f.click('secret-enter',{boss:'blood'});
+ await f.click('secret-phase',{boss:'dice',phase:'2'});
+ assert.equal(saved().run,null,'retired secret navigation actions cannot launch combat');
+ await f.api.dispose();f.release();
+ const reload=rig({savedProfile:saved()});
+ assert.match(reload.dialog.html,/정화의 불꽃 4개/);
+ assert.doesNotMatch(reload.dialog.html,/봉인 밖의 문/);
+ await reload.api.dispose();reload.release();
 });
-
-test('hidden shortcut starts a boss in a later phase, keeps it on retry and does not affect journey records',async()=>{const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/육체 강탈부터/);await f.click('secret-phase',{boss:'dice',phase:'2'});assert.equal(f.lastLaunch().startPhase,2);f.game().status='lost';await f.poll();await f.click('secret-retry');assert.equal(f.lastLaunch().startPhase,2);await f.api.dispose();assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);f.release();});
+test('old hidden ODEN key path no longer opens a boss selector or mints flames',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(const code of ['KeyO','KeyD','KeyE','KeyN'])f.key(code,{key:code.at(-1).toLowerCase()});
+ assert.equal(saved().flames,0);
+ assert.equal(saved().run,null);
+ assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|보스에게 이동하세요/);
+ await f.api.dispose();f.release();
+});
 
 test('main-menu forge invests permanent points and can refund across weapons',async()=>{
  const profile=freshProfile();profile.flames=4;profile.earnedFlames=4;
