@@ -1,5 +1,6 @@
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {BLOOD_RULES as R,BLOOD_PATTERNS,bloodPool,hazardContains} from './blood-data.mjs';
+import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
@@ -12,7 +13,7 @@ export function createBloodGame(weapon='sword'){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0}};
+  blood:{pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
 }
 export function actBlood(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
@@ -61,7 +62,7 @@ export function startBloodPattern(g,id){
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }
-function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.t=0;s.index=0;s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
+function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
 export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=R.transition;return true;}
 function hurt(g,h){
  const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
@@ -104,6 +105,7 @@ export function stepBlood(g,dt,input={}){
   const h=Math.min(1/120,left);g.time+=h;
   if(g.boss.state==='transition'){g.player.action=null;g.projectiles.length=0;tickBoss(g,h);}
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
+  if(g.status==='playing')tickBloodSiphon(g,h);
   left-=h;
  }
 }

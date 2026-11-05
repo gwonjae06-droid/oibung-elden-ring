@@ -1,0 +1,34 @@
+name: Baeseojun phase-two blood siphon regeneration
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blood-siphon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install graphics and browser testing dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify timed regeneration, phase boundary, game rules and visual resources
+        run: node --test tests/blood-siphon.test.mjs tests/blood.test.mjs tests/blood-render.test.mjs tests/blood-cathedral-sea.test.mjs
+      - name: Render actual healing on PC and mobile landscape
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/blood-siphon-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-siphon-smoke.mjs
+      - name: Save real battle absorption screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baeseojun-blood-siphon-healing-screenshots
+          path: artifacts/blood-siphon/
+          if-no-files-found: warn
+          retention-days: 7
