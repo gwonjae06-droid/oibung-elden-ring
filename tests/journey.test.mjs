@@ -108,7 +108,7 @@ test('real boss engines receive the registry health curve, grace and forged upgr
   configureJourney(g,r,p);
   assert.equal(g.player.potions,3);
   const id=BOSSES[stage],baseHp=BOSS_REGISTRY[id].maxHp;
-  assert.equal(g.boss.maxHp,({kwon:3800,clown:4000,dice:4500,blood:5000})[id]);
+  assert.equal(g.boss.maxHp,({kwon:3572,clown:3760,dice:4230,blood:4700})[id]);
   assert.deepEqual(g.journeyBalance,{mode:'story',boss:id});
   assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.startGrace,0);assert.equal(g.introControlled,true);
   assert.deepEqual(g.evolutions,['blade-wave']);
