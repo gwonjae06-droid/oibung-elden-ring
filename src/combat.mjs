@@ -149,6 +149,8 @@ export const PHASE_ONE = {
   skewer: ['jab', 'sweep'],
 };
 export const SWORD = {x: 0, y: 2.3, z: 2.8, length: 8.55, width: 0.78};
+// Match the broad visible torso rather than relying on a small, arbitrary point hitbox.
+export const kwonBodyHitRadius=b=>b?.phase===2?3.45:3.05;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z),
   toward = (a, b) => Math.atan2(b.x - a.x, b.z - a.z),
   mix = (a, b, t) => a + (b - a) * t;
@@ -646,7 +648,7 @@ export function step(g, dt, input = {}) {
       p.z += Math.cos(a.yaw) * 10 * dt;
     },
     melee: (a) => {
-      const range = a.skill ? 6.8 : w.range + 2.5;
+      const range = a.skill ? Math.max(6.8,w.range+kwonBodyHitRadius(b)) : w.range + kwonBodyHitRadius(b);
       if (
         dist(p, b) <= range &&
         Math.abs(angleDelta(a.yaw, toward(p, b))) < 1.25
@@ -664,7 +666,7 @@ export function step(g, dt, input = {}) {
       g.bossShots = g.bossShots.filter((s) => segmentDistance(s, old, q) > 1.8);
       if (g.bossShots.length < n) emit(g, 'skill-pierce', {flavor: 'bow'});
     }
-    if (q.life > 0 && !q.bossHit && segmentDistance(b, old, q) < 2.8) {
+    if (q.life > 0 && !q.bossHit && segmentDistance(b, old, q) < kwonBodyHitRadius(b)) {
       q.bossHit = true;
       if (!q.piercing) q.life = 0;
       landHit(g, q.damage, q.poise, q.source);
