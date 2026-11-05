@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,act,step,rolling,startPattern,swordSegment,segmentDistance,WEAPONS,patternConfig,kwonBodyHitRadius} from '../src/combat.mjs';
+import {createGame,act,step,rolling,startPattern,swordSegment,segmentDistance,WEAPONS,patternConfig,kwonVisibleHurtShapes} from '../src/combat.mjs';
 const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
 test('four weapons and invalid weapon guard',()=>{assert.equal(Object.keys(WEAPONS).length,4);assert.throws(()=>createGame('bad'));});
 test('attack consumes stamina once and cannot cancel itself',()=>{const g=createGame();assert.ok(act(g,'light'));assert.equal(g.player.stamina,84.7);assert.equal(act(g,'roll'),false);assert.equal(g.player.stamina,84.7);});
@@ -48,10 +48,10 @@ test('melee connects at the visible edge of Kwon torso rather than an undersized
 test('physical ranged shots register near the visible torso rim in both phases',()=>{
  for(const phase of [1,2]){
   const g=createGame('bow',{register:false});g.boss.phase=phase;g.boss.wait=99;
-  const radius=kwonBodyHitRadius(g.boss);
-  assert.ok(radius>2.8,'new radius includes the broad physical torso');
+  const abdomen=kwonVisibleHurtShapes(g.boss).find(s=>s.id==='abdomen');
+  assert.ok(abdomen&&abdomen.rx>2.8,'large abdomen uses its displaced visible centre');
   const before=g.boss.hp;
-  g.projectiles.push({id:982,x:radius-.12,z:g.boss.z,yaw:0,speed:0,life:1,damage:22,poise:0,source:{basic:true},bossHit:false});
+  g.projectiles.push({id:982,x:abdomen.x+abdomen.rx-.17,z:abdomen.z,yaw:0,speed:0,life:1,damage:22,poise:0,source:{basic:true},bossHit:false});
   step(g,1/120);
   assert.equal(before-g.boss.hp,22,phase+' rim shot lands once');
   assert.equal(g.stats.hits,1);
