@@ -57,7 +57,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   const env=cathedral.update(g,c,dt);architecture.update(g,c,env);
   heart.visible=b.phase===2||c.active;
   heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));
-  scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight)o.intensity=1.45*env.light+.35;});
+  scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight&&o.name!=='cinematic-boss-silhouette-fill')o.intensity=1.45*env.light+.35;});
 
   if(c.active&&c.t>=1.8&&lastBirth<1.8)particles.burst(b.x,4+s.elevation,b.z,{count:20,power:4});
   if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,4+s.elevation,b.z,{count:quality.low?28:64,power:10});
