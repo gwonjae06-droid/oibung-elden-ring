@@ -28,16 +28,20 @@ function hit(g,amount,action,impact){
  const multiplier=diceFaceDamageMultiplier(g,impact);
  if(!multiplier){g.dice.blockFlash=.12;g.events.push({type:'dice-blocked',face:impact.face});return;}
  const dealt=g.dice.giant?(impact.part==='hand'?strikeGiantHand(g,impact.index,amount):amount*journeyWeaknessMultiplier(g,'dice',2.8)):amount*multiplier;
- const damage=damageDice(g,dealt);if(!damage)return;
+ const damage=damageDice(g,dealt,impact.point);if(!damage)return;
  settlePlayerHit(g,damage,action,{canStun:g.status==='playing',stun:duration=>{g.dice.stun=duration;}});
 }
 function melee(g,weapon,action){
- const p=g.player,range=(g.dice.giant?0:R.edge/2)+(action.skill?4:weapon.range);
- const impact=(g.dice.giant?(a,b)=>giantImpact(g,a,b):diceSegmentImpact)({x:p.x,y:1.2,z:p.z},{x:p.x+Math.sin(action.yaw)*range,y:1.2,z:p.z+Math.cos(action.yaw)*range},g.dice.pose);
+ const p=g.player,range=action.skill?3.75:g.weapon==='hammer'?3.05:2.85;
+ const impact=(g.dice.giant?(a,b)=>giantImpact(g,a,b):diceSegmentImpact)({x:p.x,y:1.75,z:p.z},
+  {x:p.x+Math.sin(action.yaw)*range,y:1.75,z:p.z+Math.cos(action.yaw)*range},g.dice.pose);
  if(impact){action.hit=true;hit(g,weapon.damage*action.mult,action,impact);}
 }
 function projectiles(g,dt){
- for(const q of g.projectiles){const previous=advancePlayerProjectile(q,dt);if(q.hit||q.life<=0)continue;const impact=g.dice.giant?giantImpact(g,previous,q):diceSegmentImpact(previous,q,g.dice.pose);if(impact){q.hit=true;hit(g,q.damage,q.source,impact);if(!q.piercing||!diceFaceDamageable(g,impact))q.life=0;}}
+ for(const q of g.projectiles){const previous=advancePlayerProjectile(q,dt);if(q.hit||q.life<=0)continue;
+  const to={x:q.x,y:Number.isFinite(q.y)?q.y:1.2,z:q.z};
+  const from={x:previous.x,y:Number.isFinite(previous.y)?previous.y:to.y,z:previous.z};
+  const impact=g.dice.giant?giantImpact(g,from,to):diceSegmentImpact(from,to,g.dice.pose);if(impact){q.hit=true;hit(g,q.damage,q.source,impact);if(!q.piercing||!diceFaceDamageable(g,impact))q.life=0;}}
  g.projectiles=g.projectiles.filter(q=>q.life>0);
 }
 export function stepDicePlayer(g,dt,input={}){
