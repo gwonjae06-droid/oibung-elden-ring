@@ -27,7 +27,13 @@ test('all 14 spell pools settle to a fixed resource count across repeated fights
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),g=createBloodGame();g.player.hp=1e6;const sizes=[];
  for(let round=0;round<3;round++){
   for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){g.boss.phase=spec.phase;g.boss.state='recovery';g.blood.phasePending=false;startBloodPattern(g,id);for(let t=0;t<spec.duration+.1;t+=.05){stepBlood(g,.05);view.update(g,.05);}}
-  view.clear();sizes.push(collectSceneResources(scene).size);assert.deepEqual(view.stats(),{drops:0,puddles:0,hazards:0});
+  view.clear();sizes.push(collectSceneResources(scene).size);
+  // The view also reports decorative sea/siphon metadata on current builds.
+  // Verify the actual runtime resource counters instead of an old exact shape.
+  const state=view.stats();
+  assert.deepEqual([state.drops,state.puddles,state.hazards],[0,0,0]);
+  assert.equal(state.bloodSea.damageSources,0);
+  assert.equal(state.siphon.collidable,false);
  }
  assert.equal(sizes[1],sizes[0]);assert.equal(sizes[2],sizes[1]);view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
