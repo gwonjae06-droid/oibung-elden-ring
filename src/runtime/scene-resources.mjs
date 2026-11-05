@@ -9,6 +9,8 @@ export function collectSceneResources(scene,extras=[]) {
   }
   scene.traverse(node=>{
     if(node.geometry)resources.add(node.geometry);
+    // GPU skinning may allocate a bone texture; retire it with the scene.
+    if(node.isSkinnedMesh&&node.skeleton)resources.add(node.skeleton);
     for(const material of node.material?Array.isArray(node.material)?node.material:[node.material]:[]){resources.add(material);for(const value of Object.values(material))textures(value);}
     if(node.shadow?.map)resources.add(node.shadow.map);
     if(node.shadow?.mapPass)resources.add(node.shadow.mapPass);
