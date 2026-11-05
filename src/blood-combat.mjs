@@ -62,7 +62,9 @@ export function startBloodPattern(g,id){
  if(id==='fountain')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6,p.z-Math.sin(aim)*(i-2)*6);circle(q.x,q.z,1.2+i*.45,4);}
  if(id==='burst')circle(b.x,b.z,1.6,14,{damage:38,life:.5});
  if(id==='orbs')for(let i=-2;i<=2;i++){const a=aim+i*.23;circle(b.x,b.z,1.2,1.8,{vx:Math.sin(a)*15,vz:Math.cos(a)*15,life:2.3,damage:22,yaw:a});}
- if(id==='chain'){circle(p.x,p.z,1.1,3.8,{slow:.65,damage:12});circle(p.x,p.z,2.8,5,{damage:28});}
+ // The old 5m follow-up depended on an anomalous 18m/s player dodge.
+  // Keep a full 10m/s shared dodge viable with a slightly tighter ring.
+  if(id==='chain'){circle(p.x,p.z,1.1,3.8,{slow:.65,damage:12});circle(p.x,p.z,2.8,4.25,{damage:28});}
  if(id==='orbit')hazard(g,'ring',{r:3,width:1.4,grow:10,warn:1.2,life:2.1,damage:26});
  if(id==='vortex')circle(p.x,p.z,1.6,7.5,{life:1.6,damage:30});
  if(id==='lances')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6.5,p.z-Math.sin(aim)*(i-2)*6.5);circle(q.x,q.z,1.4+i*.5,4.5,{damage:27,life:.65});}
