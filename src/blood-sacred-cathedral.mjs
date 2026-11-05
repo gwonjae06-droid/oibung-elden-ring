@@ -215,7 +215,7 @@ export function createSacredCathedral(scene,{coarse=false,reduced=false,radius=2
     ledge.receiveShadow=true;
    }
    // Column clusters and springers create a real aisled silhouette in perspective.
-   if(b<5){
+   if(b<bays.length-1){
     const archGroup=new THREE.Group();archGroup.position.set(side*31,0,0);sideRoot.add(archGroup);
     const mid=(z+bays[b+1])/2,span=(bays[b+1]-z)*.5;
     const pts=[];
