@@ -6,7 +6,7 @@ import {createBloodRegalia} from '../src/blood-regalia.mjs';
 import {createBloodGame} from '../src/blood-combat.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
 
-test('Kwon's pelvis/shoulder roll is small and leaves authoritative lean intact',()=>{
+test("Kwon's pelvis/shoulder roll is small and leaves authoritative lean intact",()=>{
  const rig=createKwonTorsoMotion(),boss={state:'active',pattern:'slam',phase:1,t:0,wait:0,x:0,z:0,yaw:0,stun:0};
  rig.update(boss,{lean:0,sway:0},0);
  let pose;
