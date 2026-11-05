@@ -92,3 +92,7 @@
  #arena .hud{top:50px}
  #arena .boss-hud{top:8px}
 }
+
+/* Fixed 16:9 projection; empty space belongs to the surrounding viewport. */
+body:has(>#arena){background:#050608;overflow:hidden}
+#arena .hud{max-width:42%}#arena .boss-hud{max-width:88%}

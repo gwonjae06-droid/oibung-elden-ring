@@ -42,16 +42,16 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  });
  // Cards and chips thrown into the air when the table is violently abandoned.
  const debris=Array.from({length:coarse?18:36},(_,i)=>{const card=i%3!==0,m=mesh(card?box:cylinder,card?ivory:gold,[0,0,0],card?[3.6,.18,5.4]:[2.2,.5,2.2]);m.visible=false;return {m,a:i*2.399963,speed:18+(i*7%13)*3,lift:30+(i*5%11)*4,spin:3+i%5};});
- const half=250;
+ const half=330;
  for(let side=0;side<4;side++){
   const wall=new T.Group();wall.rotation.y=side*Math.PI/2;root.add(wall);
   mesh(box,wood,[0,0,-half],[half*2,180,3],wall);mesh(box,gold,[0,68,-half+2],[half*2,1,1],wall);
   for(let i=0;i<(coarse?3:5);i++){const x=(i-2)*45;mesh(box,suit,[x,-35,-half+12],[23,47,15],wall);mesh(box,gold,[x,-25,-half+20],[19,26,1],wall);mesh(box,neon,[x,-25,-half+21],[17,23,.5],wall);}
   for(const x of [-100,100])mesh(box,strobe,[x,52,-half+6],[34,4,3],wall);
  }
- for(const x of [-75,75]){mesh(cylinder,gold,[x,110,0],[.5,80,.5]);mesh(sphere,neon,[x,70,0],[18,3,18]);}
+ for(const x of [-280,280]){mesh(cylinder,gold,[x,110,0],[.5,80,.5]);mesh(sphere,neon,[x,70,0],[18,3,18]);}
  const hoop=new T.TorusGeometry(16,.65,6,coarse?20:40),crystal=new T.OctahedronGeometry(1.8),glass=new T.MeshStandardMaterial({color:0xeadcc0,metalness:.25,roughness:.2}),chandeliers=[];
- for(const x of [-75,75]){const ring=mesh(hoop,gold,[x,68,0],[1,1,1]);chandeliers.push(ring);ring.rotation.x=Math.PI/2;for(let i=0;i<(coarse?8:16);i++){const a=i/(coarse?8:16)*Math.PI*2;mesh(crystal,glass,[x+Math.sin(a)*16,64-(i%3)*2,Math.cos(a)*16],[1,2,1]);}}
+ for(const x of [-280,280]){const ring=mesh(hoop,gold,[x,68,0],[1,1,1]);chandeliers.push(ring);ring.rotation.x=Math.PI/2;for(let i=0;i<(coarse?8:16);i++){const a=i/(coarse?8:16)*Math.PI*2;mesh(crystal,glass,[x+Math.sin(a)*16,64-(i%3)*2,Math.cos(a)*16],[1,2,1]);}}
  const theatre=buildCasinoPhaseTheatre(T,root,{coarse,reduced});
  root.userData.decorativeOnly=true;
  const clock=createChapterClock(),warm=new T.Color(0xe6b35e),alarm=new T.Color(0x682333),darkGold=new T.Color(0x90613a);

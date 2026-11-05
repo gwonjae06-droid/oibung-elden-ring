@@ -14,7 +14,7 @@ export const BOSS_ATMOSPHERE_PROFILES=Object.freeze({
   accentHeight:12.5,particleStyle:'confetti',scale:1
  }),
  dice:Object.freeze({
-  name:'falling-golden-casino',radius:112,playRadius:67.5,plaques:18,
+  name:'falling-golden-casino',radius:280,playRadius:67.5,plaques:18,
   base:0x4b2836,accent:0xf3ce81,phase:0xd03754,particle:0xe4ba71,
   accentHeight:24,particleStyle:'chips',scale:3
  }),
@@ -108,14 +108,14 @@ export function createBossAtmosphere(scene,{
  emblems.instanceMatrix.needsUpdate=true;
  if(standards.instanceColor)standards.instanceColor.needsUpdate=true;
 
- const quantity=coarse?32:88,geo=particleGeometry(profile,coarse);
+ const quantity=profile==='dice'?0:coarse?32:88,geo=particleGeometry(profile,coarse);
  const dustMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.64,
   metalness:profile==='dice'?.56:.03,side:THREE.DoubleSide,
   transparent:true,opacity:coarse?.32:.48,depthWrite:false,
   emissive:profile==='blood'?0x24050a:0x0b0808,emissiveIntensity:.12});
  const dust=new THREE.InstancedMesh(geo,dustMat,quantity);
  dust.name='boss-atmosphere-ambient-'+cfg.particleStyle;
- dust.frustumCulled=false;root.add(dust);
+ dust.frustumCulled=false;if(quantity)root.add(dust);else{geo.dispose();dustMat.dispose();}
  const particles=Array.from({length:quantity},(_,i)=>{
   const a=hash(i,13)*TAU,inner=profile==='dice'?25:profile==='blood'?17:9,
     outer=profile==='dice'?90:profile==='blood'?39:profile==='clown'?29:34,
@@ -201,7 +201,7 @@ export function createBossAtmosphere(scene,{
   if(h===0)return;
   // A single draw call for every particle; no new objects each frame.
   const updateParticles=reduced?time-lastMatrixTime>1/15:true;
-  if(updateParticles){
+  if(quantity&&updateParticles){
    lastMatrixTime=time;
    for(let i=0;i<quantity;i++){
     const p=particles[i],speed=reduced?.05:1,drift=time*speed,

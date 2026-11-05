@@ -1,7 +1,9 @@
+import {createCameraVisibility} from './camera-visibility.mjs';
+import {resizeBattleViewport} from './battle-viewport.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import {consumeBattleGrace,installChargeInput} from './weapon-evolution.mjs';
 import {actPlayer} from './player-combat.mjs';
-import {qualityPixelRatio,reducedMotion} from './display-preferences.mjs';
+import {reducedMotion} from './display-preferences.mjs';
 import {runBattleStartup} from './runtime/battle-startup.mjs';
 import {renderSharedHud} from './battle-hud.mjs';
 import {createEventScope} from './runtime/event-scope.mjs';
@@ -38,7 +40,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  return runBattleStartup(startup=>{
  if(document.getElementById('clown-battle'))return;weapon=selectedWeapon(weapon);
  const source=document.getElementById('arena'),originalBoss=document.getElementById('boss-hud');if(!source||!originalBoss)throw new Error('Missing original game UI');
- const d=document.createElement('dialog');startup.own('Clown dialog',()=>d.remove());d.id='clown-battle';d.style.cssText='position:fixed;inset:0;margin:0;padding:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:#43303a;color:inherit';d.setAttribute('aria-label','광대 오슬우 전투');
+ const d=document.createElement('dialog');startup.own('Clown dialog',()=>d.remove());d.id='clown-battle';d.style.cssText='position:fixed;inset:0;margin:0;padding:0;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;background:#050608;color:inherit';d.setAttribute('aria-label','광대 오슬우 전투');
  const host=document.createElement('div');host.style.height='100%';d.appendChild(host);
  const shadow=host.attachShadow({mode:'open'}),shell=source.cloneNode(true);shell.setAttribute('aria-label','플레이어와 광대 오슬우의 전투');shell.style.visibility='hidden';shell.querySelector('#menu')?.remove();shell.querySelectorAll('script,.bt-chain,.boss-name-bind').forEach(x=>x.remove());
  if(!shell.querySelector('#boss-hud'))shell.appendChild(originalBoss.cloneNode(true));shell.querySelectorAll('.bt-chain,.boss-name-bind').forEach(x=>x.remove());
@@ -46,7 +48,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const $=id=>shadow.getElementById(id),canvas=$('world');$('damage-layer').replaceChildren();$('notice').textContent='';$('notice').classList.remove('visible');$('hit-flash').classList.remove('visible');
  for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion();$('touch').hidden=!coarse;$('pause-screen').hidden=$('result').hidden=true;$('pause').disabled=false;
  $('boss-hud').querySelector('h2').textContent='광대 오슬우';$('boss-hud').setAttribute('aria-label','광대 오슬우 상태');shell.querySelector('.brand span').textContent='전투 실험실 · 02';$('quit').textContent='광대전 무기 선택으로';$('change').textContent='광대전 무기 재선택';$('retry').textContent='같은 무기로 광대전 재도전';
- const renderer=new THREE.WebGLRenderer({canvas,antialias:true});startup.own('Clown renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;renderer.outputColorSpace=THREE.SRGBColorSpace;d.showModal();
+ const renderer=new THREE.WebGLRenderer({canvas,antialias:true});startup.own('Clown renderer',()=>renderer.dispose());renderer.setPixelRatio(1);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;renderer.outputColorSpace=THREE.SRGBColorSpace;d.showModal();
  const eventScope=createEventScope(window);startup.own('Battle callbacks',()=>eventScope.dispose());
  const scene=new THREE.Scene();startup.own('Battle scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x43303a);scene.fog=new THREE.Fog(0x574047,53,125);const camera=new THREE.PerspectiveCamera(58,1,.1,145);scene.add(new THREE.HemisphereLight(0xfff2d8,0x6d536b,1.65));
  const sun=new THREE.DirectionalLight(0xffe1b1,2.25);sun.position.set(8,20,15);sun.castShadow=true;sun.shadow.mapSize.set(coarse?512:1024,coarse?512:1024);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:80});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0005;scene.add(sun);
@@ -130,8 +132,9 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  function frame(now,dt){if(closed)return;if(ready&&!paused&&g.status==='playing'&&!consumeBattleGrace(g,dt)){const v=input();if(queued){if(now>queued.until)queued=null;else if(!g.player.action&&act(g,queued.type)){if(queued.type==='roll'&&!v.x&&!v.z)g.player.action.yaw=g.player.yaw+Math.PI;queued=null;}}for(let left=dt;left>1e-6;){const h=Math.min(left,1/60);stepClown(g,h,v);left-=h;}}events();const h=ready&&!paused?dt:0;impact.update(h);cinematic.update(g,h);contactFx.update(h);atmosphere.update(g,h);g.clown.flash=Math.max(0,(g.clown.flash||0)-h);for(let i=particles.length-1;i>=0;i--){const o=particles[i];o.life-=h;o.vy-=9*h;o.m.position.x+=o.vx*h;o.m.position.y+=o.vy*h;o.m.position.z+=o.vz*h;o.m.rotation.x+=h*4;if(o.life<=0){scene.remove(o.m);particles.splice(i,1);}}sync(h);fx.update(h,g);
   if(g.status==='won'){if(winAt===null){winAt=now;winBinding=bindBossName($('boss-hud'));}winBinding?.update(clamp((now-winAt)/900,0,1),clamp((now-winAt-900)/900,0,1));}
   if(g.status!=='playing'&&$('result').hidden&&(g.status!=='won'||now-winAt>=1800)){$('result').hidden=false;$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'광대 오슬우 토벌':'쓰러졌습니다';$('result-text').textContent=g.status==='won'?'끝나지 않던 공연이 마침내 끝났습니다.':'광대전부터 다시 도전할 수 있습니다.';$('result-stats').textContent='적중 '+g.stats.hits+'회 · 회피 '+g.stats.dodges+'회 · '+g.time.toFixed(1)+'초';$('retry').focus();if(g.status==='won'&&!practice){try{sessionStorage.setItem('oibung.clown.clear','1');}catch(e){}}$('result').dispatchEvent(new Event('oibung:result-ready'));}
-  const w=canvas.clientWidth||innerWidth,hc=canvas.clientHeight||innerHeight;if(w!==width||hc!==height){width=w;height=hc;renderer.setSize(w,hc,false);camera.aspect=w/hc;camera.updateProjectionMatrix();}atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);
+  const viewport=resizeBattleViewport(renderer,camera,canvas);width=viewport.width;height=viewport.height;atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);
  }
+ const cameraVisibility=createCameraVisibility(scene,{roots:[circus.root,atmosphere.root],targets:()=>[{x:g.player.x,y:1.4,z:g.player.z},{x:g.boss.x,y:CLOWN_CAMERA.target,z:g.boss.z,radius:5}]});startup.own('Clown camera visibility',()=>cameraVisibility.dispose());eventScope.add(()=>cameraVisibility.dispose());
  installChargeInput(shadow,{getGame:()=>g,isActive:()=>ready&&!paused&&g.status==='playing',listen:(...args)=>eventScope.listen(...args),act:actPlayer});eventScope.ownHandlers(shadow);eventScope.add(()=>{clearMovement(keys,stick);queued=null;drag=false;releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickId);});eventScope.listen(window,'pagehide',event=>{if(!event.persisted)close();});reset();const battleLoop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Battle frame failed',error);close();}});startup.own('Battle loop',()=>battleLoop.dispose());const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!paused&&g.status==='playing',pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),close}));startup.own('Battle session',unbindSession);battleLoop.start();return {close,dispose:close,get closed(){return closed;}};
  });
 }

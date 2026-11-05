@@ -20,7 +20,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const mesh=(geo,mat,x=0,y=0,z=0,parent=scene)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);return m;};
  // White limestone nave and sacred altar are entirely outside the damage arena.
  const architecture=createWhiteCathedral(scene,{coarse,reduced,radius:R.radius});
- let focusGame=null;const visibility=createCameraVisibility(scene,{roots:[architecture.root],targets:()=>focusGame?[{x:focusGame.player.x,y:1.4,z:focusGame.player.z},{x:focusGame.boss.x,y:4+focusGame.blood.elevation,z:focusGame.boss.z}]:[]});
+ let focusGame=null;const visibility=createCameraVisibility(scene,{roots:()=>[architecture.root,...scene.children.filter(o=>o.name.startsWith('boss-atmosphere-'))],targets:()=>focusGame?[{x:focusGame.player.x,y:1.4,z:focusGame.player.z},{x:focusGame.boss.x,y:4+focusGame.blood.elevation,z:focusGame.boss.z,radius:5}]:[]});
  const heart=new THREE.Group();scene.add(heart);heart.position.set(0,34,-38);
  for(const side of [-1,1])mesh(fluid.sphere,fluid.material,side,0,0,heart).scale.set(1.6,1.9,1.5);
  const tip=mesh(fluid.sphere,fluid.material,0,-1.5,0,heart);tip.scale.set(1.8,2,1.3);

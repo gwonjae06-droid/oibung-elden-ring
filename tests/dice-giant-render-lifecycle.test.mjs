@@ -29,3 +29,16 @@ test('real Three.js casino scene and giant meshes render-update through every po
   }
  }finally{giant.dispose();}
 });
+
+test('palm and finger visibility protects the player without fading the giant torso or ray tests',()=>{
+ const scene=new THREE.Scene(),giant=buildDiceGiant(scene),g=createDicePlayerGame();
+ damageDice(g,1500);skipGiant(g);giant.update(g,1/60);
+ const camera=new THREE.PerspectiveCamera(64,16/9,.1,650);camera.position.set(g.player.x+12,22,g.player.z+26);camera.lookAt(g.player.x,1.4,g.player.z);
+ const hand=giant.root.getObjectByName('sungwon-hand-0-palm'),saved=new Map();
+ giant.root.traverse(o=>{if(o.isMesh){saved.set(o,o.material);o.raycast=()=>{throw Error('visibility must not raycast the hand');};}});
+ giant.occlude(camera,g.player);scene.onBeforeRender(null,scene,camera);
+ let protectedParts=0;hand.traverse(o=>{if(o.isMesh){assert.notEqual(o.material,saved.get(o));assert.equal(o.material.alphaHash,true);protectedParts++;}});
+ assert.ok(protectedParts>=5,'palm and individual fingers need coverage');
+ scene.onAfterRender(null,scene,camera);for(const[o,m]of saved)assert.equal(o.material,m);
+ giant.dispose();
+});

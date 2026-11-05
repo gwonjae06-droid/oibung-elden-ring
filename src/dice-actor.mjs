@@ -27,7 +27,6 @@ const root=new THREE.Group();root.name='park-sungwon-dice';const e=R.edge,box=ne
  });
 }
 function carpetTexture(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#14060a';g.fillRect(0,0,128,128);g.strokeStyle='rgba(212,168,59,.22)';g.lineWidth=2;g.beginPath();g.moveTo(64,6);g.lineTo(122,64);g.lineTo(64,122);g.lineTo(6,64);g.closePath();g.stroke();g.fillStyle='rgba(212,168,59,.3)';g.beginPath();g.arc(64,64,4,0,Math.PI*2);g.fill();const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(36,36);t.colorSpace=THREE.SRGBColorSpace;return t;}
-function sparkTexture(){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d'),gr=g.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#ffffffff');gr.addColorStop(.4,'#ffffffaa');gr.addColorStop(1,'#ffffff00');g.fillStyle=gr;g.fillRect(0,0,32,32);return new THREE.CanvasTexture(c);}
 export function buildDiceBoard(scene){
  return runThreeStartup(THREE,(THREE,own)=>{
 const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);const coarse=Boolean(globalThis.matchMedia?.('(pointer:coarse)').matches),C=CASINO_COLORS,reduced=reducedMotion();
@@ -47,11 +46,6 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  cs.forEach((c,i)=>{m4.makeScale(1,c.height,1).setPosition(c.x,c.height/2,c.z);chipMesh.setMatrixAt(i,m4);chipMesh.setColorAt(i,col.setHex(C.chips[c.color]));});
  chipMesh.instanceMatrix.needsUpdate=true;chipMesh.instanceColor.needsUpdate=true;chipMesh.castShadow=true;root.add(chipMesh);
  const lights=[];for(let i=0;i<(coarse?2:4);i++){const L=new THREE.PointLight(C.neon[i%2],coarse?3500:5000,220,2);L.position.set(i<2?-110:110,26,i%2?-110:110);L.userData.base=L.intensity;root.add(L);lights.push(L);}
- const sparkN=coarse?40:100,field=createAmbientField({count:sparkN,radius:80}),sGeo=new THREE.BufferGeometry(),sPos=new Float32Array(sparkN*3),sCol=new Float32Array(sparkN*3);
- sGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));sGeo.setAttribute('color',new THREE.BufferAttribute(sCol,3));
- const sparks=new THREE.Points(sGeo,new THREE.PointsMaterial({size:.7,map:sparkTexture(),vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));sparks.frustumCulled=false;root.add(sparks);
- const mood={a:[1,.85,.4],b:[1,.35,.65],rise:.35,sway:.7,speed:1,alpha:.9};let lastT=null;
- function updateSparks(g){const t=Number.isFinite(g.time)?g.time:0,dt=lastT===null?0:t-lastT;lastT=t;stepAmbientField(field,dt,t,mood);for(let i=0;i<field.particles.length;i++){const q=field.particles[i];sPos[i*3]=q.x;sPos[i*3+1]=q.y+1;sPos[i*3+2]=q.z;for(let j=0;j<3;j++)sCol[i*3+j]=(mood.a[j]*(1-q.tint)+mood.b[j]*q.tint)*q.alpha;}sGeo.attributes.position.needsUpdate=true;sGeo.attributes.color.needsUpdate=true;}
  function updateNeon(g){const t=Number.isFinite(g.time)?g.time:0;ringMat.color.setScalar(.75+.25*Math.sin(t*2.2));lights.forEach((L,i)=>{L.color.setHex(g.dice.giant?0xc83732:C.neon[i%2]);L.intensity=L.userData.base*(g.status==='won'?.16:1)*(1+.12*Math.sin(t*3.1+i*1.7));});}
  // A small projected body shadow replaces the full coloured target tile.
   const warning=new THREE.Mesh(new THREE.CircleGeometry(2.5,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0x171116,transparent:true,opacity:.26,depthWrite:false}));warning.position.y=.07;root.add(warning);
@@ -64,7 +58,7 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  function updatePips(g){const pp=g.dice.pips,time=Number.isFinite(g.time)?g.time:0;for(let i=0;i<6;i++){const m=pipTiles[i],dot=pipDots[i];if(!pp||i>=pp.tiles.length){m.visible=dot.visible=false;continue;}const t=DICE_BOARD[pp.tiles[i]],f=pp.flash>0?Math.min(1,pp.flash/.4):0,prog=g.dice.state==='pip-warning'?Math.min(1,g.dice.t/pp.warn):1;m.visible=false;dot.visible=true;dot.position.set(t.x,.12,t.z);
    // Dice-pip glints (not the square's damaging footprint) are the floor omen.
    dot.material.opacity=f>0?f:.28+.65*prog;dot.scale.setScalar(f>0?1+.6*(1-f):.7+.45*prog);}}
- return {root,update(g,dt){room.update(g.time,g,dt);if(rouletteWheel)rouletteWheel.rotation.y=g.dice.giant&&!reduced?Math.sin(g.time*6)*.003:0;chipMesh.rotation.z=g.dice.giant&&!reducedMotion()?Math.sin(g.time*9)*.008:0;updatePips(g);updateNeon(g);updateSparks(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.08+.24*Math.min(1,g.dice.t/R.warning);
+ return {root,update(g,dt){room.update(g.time,g,dt);if(rouletteWheel)rouletteWheel.rotation.y=g.dice.giant&&!reduced?Math.sin(g.time*6)*.003:0;chipMesh.rotation.z=g.dice.giant&&!reducedMotion()?Math.sin(g.time*9)*.008:0;updatePips(g);updateNeon(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.08+.24*Math.min(1,g.dice.t/R.warning);
   const v=diceTelegraphView(g,R.edge,R.playerRadius);
   landingShadow.visible=v?.kind==='circle'&&g.dice.state==='jump-warning';
   if(landingShadow.visible){landingShadow.position.set(v.x,.09,v.z);

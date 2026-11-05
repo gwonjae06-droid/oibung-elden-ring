@@ -23,10 +23,10 @@ test('all four identity-specific stage profiles live wholly outside their actual
   assert.equal(s.realLights,0);
   assert.equal(s.soundGenerators,0);
   assert.equal(s.standards,cfg.plaques);
-  assert.ok(s.particles>=80);
+  assert.ok(profile==='dice'?s.particles===0:s.particles>=80);
   assert.equal(stage.root.userData.decorativeOnly,true);
   assert.ok(found(scene,'boss-atmosphere-silent-standards')?.isInstancedMesh);
-  assert.ok(found(scene,'boss-atmosphere-ambient-'+cfg.particleStyle)?.isInstancedMesh);
+  assert.equal(Boolean(found(scene,'boss-atmosphere-ambient-'+cfg.particleStyle)),profile!=='dice');
   assert.equal(found(scene,'boss-atmosphere-gilded-banner-rails').count,cfg.plaques*2);
   assert.equal(found(scene,'boss-atmosphere-phase-emblems').count,cfg.plaques);
   const banners=found(scene,'boss-atmosphere-silent-standards');
@@ -89,7 +89,7 @@ test('mobile/reduced motion is sparse, pulse-free and entirely silent',()=>{
  for(const profile of ['kwon','clown','dice','blood']){
   const scene=new THREE.Scene(),stage=createBossAtmosphere(scene,{profile,coarse:true,reduced:true});
   const {particles,contactWaves,standards,realLights,soundGenerators}=stage.stats();
-  assert.equal(particles,32);assert.equal(contactWaves,2);
+  assert.equal(particles,profile==='dice'?0:32);assert.equal(contactWaves,2);
   assert.equal(standards,BOSS_ATMOSPHERE_PROFILES[profile].plaques);
   assert.equal(realLights,0);assert.equal(soundGenerators,0);
   const game={boss:{phase:2,hp:200},player:{hp:120}};

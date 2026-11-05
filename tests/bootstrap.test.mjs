@@ -17,7 +17,7 @@ test('HTML aliases cached legacy journey URLs and refreshes the bootstrap entry'
  const h=readFileSync(new URL('../spider-combat.html',import.meta.url),'utf8');
  const {imports}=JSON.parse(h.match(/<script type="importmap">([\s\S]*?)<\/script>/)[1]);
  assert.equal(imports['./src/journey.mjs?art=blood-boss-v1'],imports['./src/journey.mjs']);
- assert.match(h,/bootstrap\.mjs\?v=startup-cache-fix-/);
+ assert.match(h,/bootstrap\.mjs\?v=[\w-]+/);
 });
 test('optional loading failure does not disable other features',async()=>{const f=bootRig({fail:'./boss-music.mjs'}),r=await bootstrapGame(f);assert.equal(r.features.find(x=>x.name==='Boss music').ready,false);assert.ok(r.features.find(x=>x.name==='Dice chain').ready);assert.ok(f.log.includes('warning:Boss music'));});
 test('required arena failure disposes the entry controller and does not install transition UI',async()=>{const f=bootRig({fail:'./arena.mjs'});await assert.rejects(bootstrapGame(f),/load failed/);assert.ok(f.log.includes('dispose:installClownEntry'));assert.ok(!f.log.includes('installBossTransition'));assert.ok(!f.log.includes('installCoopMenu'));});

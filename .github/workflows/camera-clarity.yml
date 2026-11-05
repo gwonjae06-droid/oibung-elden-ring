@@ -1,0 +1,26 @@
+name: Camera clarity and fixed viewport
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clarity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - run: node --test tests/camera-visibility.test.mjs tests/circus-occlusion.test.mjs tests/battle-viewport.test.mjs tests/casino-clearance.test.mjs tests/boss-atmosphere.test.mjs tests/dice-giant-render-lifecycle.test.mjs
+      - run: node scripts/camera-clarity-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: camera-clarity
+          path: qa-output/clarity/
+          retention-days: 7

@@ -16,9 +16,10 @@ test('production bootstrap uses a fresh arena import and exposes real errors ins
  const mapMatch=page.match(/<script type="importmap">([\s\S]*?)<\/script>/);
  assert.ok(mapMatch,'import map not found');
  const imports=JSON.parse(mapMatch[1]).imports;
- for(const key of ['./src/arena.mjs','./src/arena.mjs?visual=chapter-one-v3'])
-  assert.match(imports[key],/arena-startup-boolean-fix-20261105/);
- assert.match(page,/bootstrap\.mjs\?v=arena-startup-boolean-fix-20261105/);
+ const version=new URL(imports['./src/arena.mjs'],'https://game.test').searchParams.get('v');
+ assert.ok(version&&version!=='chapter-one-v3');
+ assert.equal(imports['./src/arena.mjs?visual=chapter-one-v3'],imports['./src/arena.mjs']);
+ assert.ok(page.includes('bootstrap.mjs?v='+version));
  assert.match(page,/초기화 오류:/);
  assert.doesNotMatch(page,/WebGL 2 지원을 확인한 뒤/,'do not misreport code exceptions as WebGL errors');
 });
