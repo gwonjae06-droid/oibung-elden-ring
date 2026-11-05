@@ -10,6 +10,8 @@ export const BLOOD_PATTERNS=Object.freeze({
  vortex:{name:'피의 소용돌이',phase:1,duration:3.6,recover:2.4},
  lances:{name:'순교자의 혈창',phase:1,duration:4.8,recover:2.8},
  cross:{name:'성혈의 십자',phase:1,duration:5,recover:2.8},
+ bloodScissors:{name:'혈홍 가위날',phase:1,duration:4.8,recover:2.45},
+ heartCage:{name:'심장의 가시우리',phase:1,duration:5.5,recover:2.6},
  dive:{name:'혈익 강하',phase:2,duration:3.2,recover:3,air:true},
  eclipse:{name:'피의 일식',phase:2,duration:4.4,recover:3,air:true},
  rain:{name:'혈우',phase:2,duration:4.9,recover:2.8,air:true},
@@ -19,6 +21,8 @@ export const BLOOD_PATTERNS=Object.freeze({
  tide:{name:'종말의 혈조',phase:2,duration:5,recover:3.2,air:true},
  judgement:{name:'천상의 혈검',phase:2,duration:4.9,recover:3,air:true},
  ritual:{name:'대성당의 붉은 세례',phase:2,duration:6.6,recover:3.6,air:true},
+ wingShear:{name:'혈익 교차참',phase:2,duration:5.1,recover:2.5},
+ rosary:{name:'붉은 묵주의 행렬',phase:2,duration:5.7,recover:2.75},
 });
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
