@@ -150,8 +150,6 @@ export const PHASE_ONE = {
   skewer: ['jab', 'sweep'],
 };
 export const SWORD = {x: 0, y: 2.3, z: 2.8, length: 8.55, width: 0.78};
-// Legacy bounding-radius helper. Precise damage uses the transformed anatomy below.
-export const kwonBodyHitRadius=b=>b?.phase===2?3.45:3.05;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z),
   toward = (a, b) => Math.atan2(b.x - a.x, b.z - a.z),
   mix = (a, b, t) => a + (b - a) * t;
