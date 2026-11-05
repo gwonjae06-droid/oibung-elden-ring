@@ -8,6 +8,7 @@ import {
 } from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
+import {KWON_WAVE} from './kwon-wave-data.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {registerEncounter} from './encounter-state.mjs';
@@ -69,7 +70,7 @@ export const PATTERNS = {
     recover: 0.9,
     damage: 0,
   },
-  wave: {name: '월광 파', wind: 0.65, active: 0.2, recover: 1.0, damage: 27},
+  wave: {name: '월광 파', wind: 1.05, active: 0.42, recover: 1.0, damage: 27},
   stomp: {name: '지축 강타', wind: 0.7, active: 0.26, recover: 1.0, damage: 26},
   backsweep: {
     name: '배후 후려치기',
@@ -218,7 +219,7 @@ export function patternConfig(b) {
     whirl: 0.68,
     rise: 0.3,
     retreat: 0.52,
-    wave: 0.36,
+    wave: 1.12,
     leap: 0.8,
     sweep: 0.3,
     stomp: 0.6,
@@ -393,8 +394,9 @@ function poseParams(pattern, stand, carry, cut) {
       lp = ep = 0.15;
       break;
     case 'wave':
-      lp = -0.8;
-      ep = 0.85;
+      // Hold the blade above the head before a forceful vertical cut.
+      lp = -1.4;
+      ep = 1.18;
       break;
   }
   return {ly, ey, lp, ep, back};
@@ -417,6 +419,7 @@ export function startPattern(g, name) {
   b.pattern = name;
   b.t = 0;
   b.hit = false;
+  b.waveFired = false;
   b.attackId++;
   b.punishable = false;
   b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
@@ -473,7 +476,8 @@ export function swordPose(b) {
     pitch = carry,
     offset = 0;
   if (b.state === 'windup') {
-    const t = ease(b.t / cfg.wind);
+    // First raise the blade, then hold it overhead for a readable anticipation.
+    const t = ease(b.pattern === 'wave' ? Math.min(1,b.t/(cfg.wind*.6)) : b.t/cfg.wind);
     yaw = mix(from.yaw, ly, t);
     pitch = mix(from.pitch, lp, t);
     offset = mix(from.offset, -back, t);
@@ -663,9 +667,10 @@ export function step(g, dt, input = {}) {
     const old = {x: q.x, z: q.z};
     q.x += Math.sin(q.yaw) * q.speed * dt;
     q.z += Math.cos(q.yaw) * q.speed * dt;
+    q.age = (q.age||0) + dt;
     q.life -= dt;
     if (Math.hypot(q.x, q.z) > 27) q.life = 0;
-    if (q.life > 0 && segmentDistance(p, old, q) < 0.9) {
+    if (q.life > 0 && segmentDistance(p, old, q) < (q.radius ?? 0.9)) {
       q.life = 0;
       hurtPlayer(g, q.damage);
     }
@@ -723,21 +728,17 @@ export function step(g, dt, input = {}) {
         b.yaw = b.aim;
         b.leapSpeed = dist(b, b.zone) / (cfg.active * 0.7);
       }
-      if (b.pattern === 'wave') {
-        for (const offset of b.phase === 2 ? [-0.14, 0, 0.14] : [0])
-          g.bossShots.push({
-            id: g.nextId++,
-            x: b.x + Math.sin(b.yaw) * 4,
-            z: b.z + Math.cos(b.yaw) * 4,
-            yaw: b.yaw + offset,
-            speed: b.phase === 2 ? 22 : 18,
-            life: 1.5,
-            damage: cfg.damage,
-          });
-        emit(g, 'boss-shot');
-      }
     }
   } else if (b.state === 'active') {
+    // One broad vertical slash leaves the sword at the midpoint of its fall.
+    if (b.pattern === 'wave' && !b.waveFired && b.t >= cfg.active*KWON_WAVE.releaseRatio) {
+      b.waveFired = true;
+      const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
+      g.bossShots.push({id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw:b.yaw,
+        radius:KWON_WAVE.radius,speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,
+        life:KWON_WAVE.lifetime,age:0,damage:cfg.damage});
+      emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind});
+    }
     if (b.pattern === 'rush') moveBoss(b, b.phase === 2 ? 31 : 23, dt);
     else if (b.pattern === 'thrust') moveBoss(b, 19, dt);
     else if (b.pattern === 'jab') moveBoss(b, 10, dt);
