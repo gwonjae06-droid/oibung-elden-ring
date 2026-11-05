@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {bloodVolumetricWaveGeometry} from './blood-volumetric-wave.mjs';
 
 // Authored surfaces: pleated liquid crests, fluted columns and hollow blades.
 // All positions share a normalized footprint; combat determines the world scale.
@@ -30,5 +31,5 @@ export function bloodSculptureGeometries(segments=20){
   const a=u*tau,shaft=v<.7?.13+.1*Math.sin(v*Math.PI*4)**2:(1-v)/.3*.68,r=shaft*(1+.18*Math.cos(a*4));
   return [Math.cos(a)*r,v,Math.sin(a)*r];
  });
- return {sphere,column,sheet,torus,tendril:strand(false),spiral:strand(true),blade:bloodFanGeometry(),lance,judgement:bloodFanGeometry(.5),ritual:bloodFanGeometry(.45,5.5/26)};
+ return {sphere,column,sheet,surge:bloodVolumetricWaveGeometry(segments),undertow:bloodVolumetricWaveGeometry(segments,{undertow:true}),torus,tendril:strand(false),spiral:strand(true),blade:bloodFanGeometry(),lance,judgement:bloodFanGeometry(.5),ritual:bloodFanGeometry(.45,5.5/26)};
 }
