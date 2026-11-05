@@ -17,6 +17,8 @@ jobs:
           node-version: '20'
       - name: Install Three.js for 3D lifecycle regression tests
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Focused Blood boss sculpture and animation tests
+        run: node --test tests/blood-attack-animation.test.mjs tests/blood-regalia.test.mjs tests/blood-head.test.mjs tests/blood-render.test.mjs
       - name: Run Node tests
         run: npm test
       - name: Smoke test browser boss battles
