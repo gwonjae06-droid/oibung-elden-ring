@@ -22,6 +22,10 @@ export const BLOOD_ATTACK_GESTURES=Object.freeze({
  pulse:   {style:'heartbeat',   lean:-.34,twist:0,   arms:[.6,.6],open:[.1,.1],elbow:[1,1],head:.3,wing:.8,fold:-.15,sweep:0,cape:.9},
  pursuit: {style:'predator',    lean:.64,twist:-.2,  arms:[1.4,1.55],open:[-.15,-.15],elbow:[-.6,-.6],head:-.26,wing:-.26,fold:.86,sweep:.2,cape:1.25},
  tide:    {style:'blood-tide',  lean:-.12,twist:.44, arms:[1.5,1.5],open:[1.1,1.1],elbow:[-.4,-.4],head:-.33,wing:.95,fold:-.16,sweep:.3,cape:1.15},
+ lances:  {style:'martyr-lances',lean:-.3,twist:.22,arms:[1.8,1.35],open:[.4,.9],elbow:[-.6,-.2],head:-.35,wing:0,fold:0,sweep:0,cape:.8},
+ cross:   {style:'part-the-nave',lean:.2,twist:.5,arms:[1.6,1.6],open:[1.3,1.3],elbow:[.1,.1],head:-.15,wing:0,fold:0,sweep:0,cape:1},
+ judgement:{style:'heavenly-execution',lean:.5,twist:-.6,arms:[1.9,.8],open:[.2,.8],elbow:[-.8,.5],head:-.3,wing:.9,fold:.2,sweep:.75,cape:1.3},
+ ritual:  {style:'cathedral-consecration',lean:-.4,twist:.25,arms:[1.85,1.85],open:[1.25,1.25],elbow:[-.45,-.45],head:-.45,wing:1.3,fold:-.3,sweep:.2,cape:1.3},
 });
 // All keyframe envelopes share actual hazard warning times from combat state.
 // Persistent marker snapshots are owned by the presentation controller because

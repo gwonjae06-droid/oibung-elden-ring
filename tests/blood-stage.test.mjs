@@ -24,7 +24,7 @@ test('every real pattern shows prepare, start, run, finish and return in order',
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.hp=g.player.maxHp=1e6;startBloodPattern(g,id);
   const seen=[];let last=-1;
   for(let t=0;t<spec.duration+spec.recover+1&&!(seen.includes('return')&&g.boss.state==='pattern');t+=.01){
-   stepBlood(g,.01);const s=bloodStage(g);if(s.index<0)continue;
+   stepBlood(g,.01);if(seen.includes('return')&&g.boss.state==='pattern')break;const s=bloodStage(g);if(s.index<0)continue;
    assert.ok(s.index>=last,id+' went backwards to '+s.id);assert.ok(s.progress>=0&&s.progress<=1);last=s.index;if(!seen.includes(s.id))seen.push(s.id);
   }
   assert.deepEqual(seen,['ready','start','run','done','return'],id);

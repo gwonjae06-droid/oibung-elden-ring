@@ -40,7 +40,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   if(disposed)return;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=motionDirector.update(g,dt),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
   const energyGoal=({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0;energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
-  root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade);
+  root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
   // Choreography is tied to the actual spell clock, never an independent visual timer.
   actor.position.y=(reduced?0:Math.sin(g.time*1.8)*.06)+motion.body.bob;
   actor.rotation.y=motion.body.twist*.25;
@@ -73,7 +73,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  function occlude(camera,g){for(const m of scenery)m.visible=true;scene.updateMatrixWorld(true);from.copy(camera.position);for(const point of [{x:g.player.x,y:1,z:g.player.z},{x:g.boss.x,y:3+g.blood.elevation,z:g.boss.z}]){to.set(point.x,point.y,point.z);const distance=from.distanceTo(to);direction.subVectors(to,from).normalize();ray.set(from,direction);ray.far=Math.max(0,distance-1);for(const hit of ray.intersectObjects(scenery,false))hit.object.visible=false;}}
  function clear(){for(const m of shots.values())scene.remove(m);shots.clear();spells.clear();wings.clear();motionDirector.reset();deathTime=lastBirth=shake=cast=energy=hitRoll=0;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active}),
-  event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
+  event(e,g){if(e.type==='blood-impact')shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
   dispose(){if(disposed)return;disposed=true;clear();portrait.dispose();wings.dispose();particles.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();shotGeo.dispose();shotMat.dispose();}};
 }

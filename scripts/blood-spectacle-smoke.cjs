@@ -1,0 +1,25 @@
+const fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),errors=[],reports=[];let browser;
+ const server=http.createServer(async(req,res)=>{try{const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(name==='/spectacle-qa.html'){let html=await fs.readFile(path.join(root,'spider-combat.html'),'utf8');html=html.replace(/<script type="module">[\s\S]*?<\/script>/g,'');res.setHeader('Content-Type','text/html');res.end(html);return;}const file=path.resolve(root,'.'+name);if(!file.startsWith(root+path.sep))throw Error('path');res.setHeader('Content-Type',({'.mjs':'text/javascript','.js':'text/javascript','.html':'text/html','.css':'text/css'})[path.extname(file)]||'application/octet-stream');res.end(await fs.readFile(file));}catch{res.writeHead(404);res.end('missing');}});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{
+  browser=await chromium.launch({executablePath:process.env.EDGE_PATH||'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const page=await browser.newPage({viewport:{width:1440,height:900}});page.on('pageerror',e=>errors.push(e.stack||e.message));page.on('console',m=>{if(m.type()==='error'&&/Blood frame failed|WebGL.*(error|failed)/i.test(m.text()))errors.push(m.text());});
+  await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/**',r=>r.fulfill({path:path.join(root,'node_modules/three',new URL(r.request().url()).pathname.split('/').at(-1)),contentType:'text/javascript'}));await page.route('https://fonts.**',r=>r.abort());
+  await page.goto('http://127.0.0.1:'+server.address().port+'/spectacle-qa.html',{waitUntil:'domcontentloaded'});
+  await page.evaluate(async()=>{localStorage.setItem('oibung-muted','1');document.getElementById('journey').close();window.__view=(await import('/src/blood-battle.mjs')).launchBloodBattle({diagnostics:true,configure:g=>{g.startGrace=0;g.player.hp=g.player.maxHp=1e7;g.blood.recover=1e6;}});});
+  await page.waitForFunction(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const root=document.querySelector('#blood-battle')?.firstElementChild.shadowRoot;return root&&readBattleSession(root)?.active;},{},{timeout:20000});
+  const ids=await page.evaluate(async()=>Object.keys((await import('/src/blood-data.mjs')).BLOOD_PATTERNS));assert.equal(ids.length,18);
+  await fs.mkdir(path.join(root,'artifacts/blood-spectacle'),{recursive:true});
+  for(const id of ids){
+   await page.evaluate(async id=>{const {readBattleSession}=await import('/src/battle-session.mjs'),{startBloodPattern}=await import('/src/blood-combat.mjs'),{BLOOD_PATTERNS}=await import('/src/blood-data.mjs');const root=document.querySelector('#blood-battle').firstElementChild.shadowRoot;root.getElementById('retry').click();const s=readBattleSession(root),g=s.game;s.pause();g.boss.phase=BLOOD_PATTERNS[id].phase;g.boss.state='recovery';g.blood.recover=1e6;g.blood.stun=0;g.player.x=0;g.player.z=14;g.boss.x=0;g.boss.z=-5;startBloodPattern(g,id);g.blood.t=Math.min(...g.blood.hazards.map(h=>h.warn))+.18;for(const h of g.blood.hazards)h.age=g.blood.t;g.blood.elevation=BLOOD_PATTERNS[id].air?8:0;g.time+=1;s.resume();},id);
+   await page.evaluate(async()=>{await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);});
+   const stats=await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const s=readBattleSession(document.querySelector('#blood-battle').firstElementChild.shadowRoot);s.pause();document.querySelector('#blood-battle').firstElementChild.shadowRoot.getElementById('pause-screen').style.visibility='hidden';return s.diagnostics();});reports.push({id,calls:stats.calls,triangles:stats.triangles,graphics:stats.graphics});
+   if(['wave','lances','judgement','ritual'].includes(id))await page.screenshot({path:path.join(root,'artifacts/blood-spectacle',id+'.png')});
+  }
+  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(200);await page.screenshot({path:path.join(root,'artifacts/blood-spectacle/mobile.png')});
+  const end=await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const s=readBattleSession(document.querySelector('#blood-battle').firstElementChild.shadowRoot);const b=s.game.blood.hazards.map(h=>h.age),t=s.game.time;await new Promise(r=>setTimeout(r,100));if(s.game.time!==t||JSON.stringify(b)!==JSON.stringify(s.game.blood.hazards.map(h=>h.age)))throw Error('pause advanced hazards');await window.__view.close();return document.querySelectorAll('#blood-battle').length;});assert.equal(end,0);assert.deepEqual(errors,[]);console.log(JSON.stringify({patterns:reports.length,reports,errors,closed:end}));
+ }finally{await browser?.close();await new Promise(r=>server.close(r));}
+})().catch(e=>{console.error(e);process.exitCode=1;});
