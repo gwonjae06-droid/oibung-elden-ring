@@ -12,7 +12,7 @@ test('bright circus constructs ivory-crimson floor, gold motifs and physical the
  const s=stage.stats();
  assert.equal(s.playableRadius,23);assert.equal(s.collidableProps,0);
  assert.ok(s.bulbs>=160);assert.ok(s.columns>=12);
- assert.equal(s.realSpotlights,2);
+ assert.equal(s.realSpotlights,5);assert.equal(s.wideSpotlights,3);
  assert.ok(CIRCUS_LAYOUT.columnsRadius>CIRCUS_LAYOUT.floorRadius);
  assert.ok(CIRCUS_LAYOUT.curtainsRadius>CIRCUS_LAYOUT.columnsRadius);
  for(const name of ['clown-radiant-nightmare-circus','circus-ivory-crimson-floor','circus-gold-floor-inlay',
@@ -20,7 +20,7 @@ test('bright circus constructs ivory-crimson floor, gold motifs and physical the
  'circus-pilaster-gold-capitals','circus-gilded-theatre-arch','circus-scalloped-velvet-curtain',
  'circus-curtain-gold-swag','circus-audience-tier','circus-silhouette-audience',
  'circus-instanced-marquee-bulbs','circus-marquee-lamp-halos','circus-gilded-chandelier',
- 'circus-gold-follow-spot','circus-second-follow-spot','circus-soft-theatrical-light-shaft'])get(scene,name);
+ 'circus-gold-follow-spot','circus-second-follow-spot','circus-soft-theatrical-light-shaft','circus-wide-spotlight-fixture','circus-wide-floor-spot-0','circus-wide-soft-spotlight-cone'])get(scene,name);
  assert.ok(named(scene,'circus-scalloped-velvet-curtain').length>=12);
  assert.equal(named(scene,'circus-gilded-chandelier').length,2);
  assert.ok(get(scene,'circus-ivory-crimson-floor').receiveShadow,'combatants must cast a visible shadow');
@@ -28,8 +28,11 @@ test('bright circus constructs ivory-crimson floor, gold motifs and physical the
  assert.ok(get(scene,'circus-instanced-marquee-bulbs').isInstancedMesh);
  assert.ok(get(scene,'circus-instanced-marquee-bulbs').instanceColor,'marquee must support phase coloration');
  const lamps=[];scene.traverse(x=>{if(x.isLight)lamps.push(x);});
- assert.equal(lamps.length,2,'do not simulate hundreds of real lamps');
+ assert.equal(lamps.length,5,'only five real spots; decorative bulbs remain batched');
  assert.ok(lamps.every(x=>!x.castShadow),'moving show spotlights must not allocate shadow maps');
+ assert.equal(named(scene,'circus-wide-spotlight-fixture').length,3);
+ assert.equal(named(scene,'circus-wide-soft-spotlight-cone').length,3);
+ for(const {light} of stage.lights.fill){assert.ok(light.angle>.5);assert.ok(light.position.y>=27&&light.intensity>=100);assert.ok(Math.hypot(light.target.position.x,light.target.position.z)<23);}
  stage.dispose();stage.dispose();
  assert.equal(named(scene,'clown-radiant-nightmare-circus').length,0);
  assert.deepEqual(disposeScene(scene).errors,[]);
@@ -54,7 +57,7 @@ test('light shows react to phase and attack events without touching the real bos
  bulb.getColorAt(3,c);
  assert.notEqual(c.getHex(),warmHex,'phase two should recolor marquee');
  assert.equal(stage.lights.left.color.getHex(),0xff9fcb);
- assert.equal(stage.lights.right.color.getHex(),0x8de5dc);
+ assert.equal(stage.lights.right.color.getHex(),0x8de5dc);assert.ok(stage.lights.fill.every(s=>s.light.color.getHex()===0xffd1ce));
  assert.equal(game.player.hp,before.player.hp);
  assert.equal(game.boss.hp,before.boss.hp);
  assert.deepEqual(game.events,before.events,'lighting is visual-only');
@@ -66,6 +69,10 @@ test('mobile builds fewer static props, keeps the same floor radius, disables ex
  const s=stage.stats();
  assert.equal(s.bulbs,96);assert.equal(s.columns,12);
  assert.equal(stage.lights.right.intensity,0);
+ assert.equal(s.realSpotlights,4);assert.equal(s.wideSpotlights,2);
+ assert.equal(named(scene,'circus-wide-soft-spotlight-cone').length,0,'mobile avoids expensive beam transparency');
+ assert.equal(named(scene,'circus-wide-floor-spot-0').length,1);
+ assert.equal(named(scene,'circus-wide-floor-spot-2').length,1);
  assert.equal(named(scene,'circus-soft-theatrical-light-shaft').length,0);
  assert.equal(named(scene,'circus-instanced-marquee-bulbs')[0].count,96);
  const game=createClownGame();

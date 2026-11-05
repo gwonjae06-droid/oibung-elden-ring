@@ -61,3 +61,20 @@ test('card buff flourish is presentation-only and the model returns to a stable 
  fx.update(.016,g);const before=JSON.stringify(g);fx.event({type:'skill-cast',flavor:'yellow'},g);assert.equal(JSON.stringify(g),before);
  g.time=.16;fx.update(.16,g);assert.equal(g.player.action,null);assert.ok(Math.abs(p.arms.R.rotation.x)>.3);fx.clear();fx.update(0,g);assert.equal(g.player.action,null);await fx.dispose();disposeScene(scene);
 });
+
+test('all weapons brace the helmet, shoulders and knees during attacks without extending hit windows',()=>{
+ for(const weapon of weapons){
+  const g=game(weapon),rest=samplePlayerMotion(g),action={kind:'attack',t:0,total:1,wind:.3,active:.2};g.player.action=action;
+  const unchanged=JSON.stringify(g);
+  action.t=.40;const strike=samplePlayerMotion(g);
+  assert.ok(Math.abs(strike.headX-rest.headX)>.01,weapon+' head inertia');
+  assert.ok(strike.kneeL>rest.kneeL,weapon+' leg bracing');
+  assert.ok(Number.isFinite(strike.headY)&&Number.isFinite(strike.sway));
+  assert.equal(strike.trail,(weapon==='sword'||weapon==='hammer'),weapon+' existing hit trail');
+  action.t=1;
+  const end=samplePlayerMotion(g);
+  assert.ok(Math.abs(end.headX-rest.headX)<1e-8&&Math.abs(end.headY-rest.headY)<1e-8,weapon+' returns to idle');
+  assert.ok(Math.abs(end.kneeL-rest.kneeL)<1e-8,weapon+' settles its leg');
+  assert.equal(g.player.x,0);assert.equal(g.player.z,0);assert.equal(g.boss.x,0);
+ }
+});

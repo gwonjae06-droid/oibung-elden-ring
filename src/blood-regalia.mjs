@@ -170,6 +170,11 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   cape.rotation.x=follow('cape:x',(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06,8);
   cape.rotation.z=follow('cape:z',(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55,9);
   drapes.forEach((p,i)=>{p.rotation.y=follow('drape:y:'+i,(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07,10);p.rotation.x=follow('drape:x:'+i,(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7),8);});
+  // The sternum compresses at the windup and releases behind the striking
+  // shoulders. This affects armor only, not flying blood or hitboxes.
+  const armorCompression=follow('armor:compress',(pose.anticipation||0)*.035-(pose.release||0)*.05+(pose.impact||0)*.03,14);
+  cuirass.position.y=2.96+armorCompression;
+  cuirass.rotation.y=follow('armor:twist',-(pose.body?.twist||0)*.075+(pose.impact||0)*.014,12);
   cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;
   cuirass.rotation.z=follow('chest:counter',-pelvisRoll*.68+(pose.body?.twist||0)*.025,13);waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
   for(const {arm,forearm,hand,fingers,thorn,side}of arms){
@@ -186,7 +191,8 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
    // Finger joints contract as energy gathers, uncurl at the impact and relax
    // after the wrist. No new geometry or IK allocation is needed per frame.
    const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
-   fingers.forEach((finger,i)=>{finger.rotation.x=-grip*(.38+i*.055);finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
+   fingers.forEach((finger,i)=>{const wanted=-grip*(.38+i*.055);finger.rotation.x=wanted*.86+follow('finger:curl:'+side+':'+i,wanted,22-i*2)*.14;
+    finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);
   }
   growth.visible=bloom>.004;growth.scale.set(1,Math.max(.001,bloom),1);
