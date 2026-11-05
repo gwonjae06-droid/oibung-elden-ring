@@ -914,6 +914,17 @@ export function choosePattern(g) {
     prefer = list.filter((k) =>
       d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,
     );
+  if(g.journeyBalance?.mode==='story'){
+    // Follow-ups are already-telegraphed performances with normal punish windows.
+    const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
+      spotlightSweep:'hornFan',ballCannon:'bounceChain',
+      ballRain:'ballSpin',bounceChain:'ballCannon'}[c.last];
+    if(follow&&follow!==c.last&&PATTERNS[follow]?.phases.includes(phase)&&
+      (c.used[follow]||0)<=min+1&&
+      (d>=5.5||close.has(follow))&&(d<=12||!close.has(follow))){
+      c.seq++;return follow;
+    }
+  }
   if (prefer.length) list = prefer;
   return list[c.seq++ % list.length];
 }
@@ -940,7 +951,8 @@ function finish(g) {
     state: 'idle',
     name: null,
     f: {},
-    wait: PRESSURE.wait[g.boss.phase === 2 ? 1 : 0],
+    wait: PRESSURE.wait[g.boss.phase === 2 ? 1 : 0] *
+      (g.journeyBalance?.mode==='story'?.88:1),
     punish: false,
     noSeparate: false,
   });

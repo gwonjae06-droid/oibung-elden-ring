@@ -85,6 +85,7 @@ export function beginFeral(g){
  if(!q||q.rageTriggered||q.state==='dead')return false;
  if(q.state==='transition'){q.pendingFeral=true;return true;}
  q.pendingFeral=false;q.rageTriggered=true;q.temperament='feral';q.rageBeat=GIANT.rageBeat;
+ q.pressureSlots=[];q.lastPressureSlot=null;
  q.state='recovery';q.t=-GIANT.rageBeat;q.hazards=[];
  q.hands=[GIANT.handHp,GIANT.handHp];q.destroyed=[false,false];q.disabledFor=[0,0];q.revive=[GIANT.handRecover,GIANT.handRecover];q.crumble=[0,0];
  g.player.action=null;if(g.projectiles)g.projectiles.length=0;
@@ -205,6 +206,19 @@ export function giantHeadExposed(g){
  return Boolean(s?.state==='attack'&&s.temperament==='feral'&&s.hazards?.some(h=>h.headSlam&&s.t>=h.start+h.warn&&s.t<=h.start+h.warn+h.active+.85));
 }
 export function giantAim(g){const s=g.dice.giant;if(!s)return g.dice.pose;if(giantHeadExposed(g))return giantHeadPose(g);const hands=[0,1].filter(i=>handCanAttack(s,i)).map(i=>giantHandPose(g,i));if(!hands.length)return giantHeadPose(g);return hands.sort((a,b)=>Math.hypot(a.x-g.player.x,a.z-g.player.z)-Math.hypot(b.x-g.player.x,b.z-g.player.z))[0];}
+// Choose all existing attacks once per cycle with proximity-aware priority.
+export function nextGiantPressureSlot(g){
+ const s=g.dice.giant,feral=s.temperament==='feral',total=feral?FERAL_NAMES.length:GIANT_NAMES.length;
+ if(!s.pressureSlots?.length)s.pressureSlots=Array.from({length:total},(_,i)=>i);
+ const near=Math.hypot(g.player.x,g.player.z+45)<30;
+ const favored=feral?(near?[7,2,9,0,5]:[8,6,1,4,3]):(near?[0,5,7,8]:[3,4,6,1,2]);
+ let index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot&&favored.includes(slot));
+ if(index<0)index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot);
+ if(index<0)index=0;
+ const [slot]=s.pressureSlots.splice(index,1);
+ s.lastPressureSlot=slot;
+ return slot;
+}
 export function stepGiant(g,dt,frozen=false){
  const q=g.dice.giant;if(!q||q.state==='dead')return;
  if(q.state==='transition'){
@@ -228,7 +242,8 @@ export function stepGiant(g,dt,frozen=false){
   }else q.revive[i]=Math.max(0,q.revive[i]-dt);
  }
  if(q.state==='recovery'&&q.t>=(q.temperament==='feral'?GIANT.feralRecovery:GIANT.recovery)){
-  const ordinal=q.ordinal++,pattern=giantPattern(ordinal,g.player,q.temperament,g.boss.hp/g.boss.maxHp);
+  const ordinal=q.ordinal++,slot=g.journeyBalance?.mode==='story'?nextGiantPressureSlot(g):ordinal,
+    pattern=giantPattern(slot,g.player,q.temperament,g.boss.hp/g.boss.maxHp);
   Object.assign(q,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:q.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});
   g.events.push({type:'dice-giant-warning',name:q.name});
  }

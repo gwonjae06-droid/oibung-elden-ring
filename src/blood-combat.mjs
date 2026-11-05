@@ -95,7 +95,12 @@ function tickBoss(g,dt){
   if(s.phasePending){beginPhase(g);return;}
   if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
   s.walk.t+=dt;const step=sampleBloodWalk(s.walk);b.x=step.x;b.z=step.z;b.yaw=step.yaw;
-  s.recover-=dt;if(s.recover<=0){s.index++;startBloodPattern(g,nextBloodPattern(s.deck,b.phase));}return;
+  s.recover-=dt;if(s.recover<=0){
+    s.index++;
+    const distance=Math.hypot(b.x-g.player.x,b.z-g.player.z);
+    startBloodPattern(g,nextBloodPattern(s.deck,b.phase,
+      g.journeyBalance?.mode==='story'?{distance}:{}));
+   }return;
  }
  s.t+=dt;const spec=BLOOD_PATTERNS[s.pattern];
  s.elevation=spec.air?bloodFlightHeight(s.pattern,s.t,spec.duration,s.strikeAt):0;

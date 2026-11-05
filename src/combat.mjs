@@ -476,6 +476,15 @@ export function chooseOpening(g) {
         : d < 5
           ? CLOSE[2]
           : ORDER[2];
+  if(g.journeyBalance?.mode==='story'&&g.player.action?.kind!=='heal'){
+    // Prioritize existing combos for close pursuit or distance denial.
+    if(d<6)list=b.phase===1?['hunt','skewer','backsweep','sweep']:
+      ['royalHunt','maelstrom','counter','trample'];
+    else if(d>11)list=b.phase===1?['siege','feint','hunt','thrust']:
+      ['requiem','crescent','execution','draw'];
+    else if(b.phase===2&&b.lastOpening==='crescent')
+      list=['royalHunt','counter','trample'];
+  }
   const i = b.sequence++;
   let pick = list[i % list.length];
   if (pick === b.lastOpening && list.length > 1)

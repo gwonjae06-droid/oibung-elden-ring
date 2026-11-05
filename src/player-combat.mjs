@@ -29,6 +29,10 @@ export function spawnPlayerProjectiles(
 ) {
   const count = game.weapon === 'cards' ? 3+2*evolutionCount(game,'wide-deck') : game.weapon==='bow'&&!action.skill?1+evolutionCount(game,'twin-arrow'):1,
     skill = Boolean(action.skill);
+  // All projectiles remain visible and keep their normal collision behavior.
+  // Only story-mode upgraded volleys soften per-projectile damage.
+  const volleyScale=game.journeyBalance?.mode==='story'&&count>1
+    ?Math.max(.78,1-.055*(count-1)):1;
   for (let i = 0; i < count; i++) {
     game.projectiles.push({
       id: game.nextId++,
@@ -38,7 +42,7 @@ export function spawnPlayerProjectiles(
       yaw: action.yaw + (i - (count - 1) / 2) * 0.075,
       speed: skill ? 36 : game.weapon === 'bow' ? 26+10*evolutionCount(game,'piercing-arrow') : 20,
       life: skill ? 2 : basicLifetime,
-      damage: weapon.damage * action.mult*(game.weapon==='bow'&&!skill?1+.3*evolutionCount(game,'piercing-arrow'):1),
+      damage: weapon.damage * action.mult*volleyScale*(game.weapon==='bow'&&!skill?1+.3*evolutionCount(game,'piercing-arrow'):1),
       poise: weapon.poise * (skill ? 2 : 1),
       kind: game.weapon,
       source: action,
@@ -68,7 +72,18 @@ export function tickPlayerAction(
       action.done = true;
       game.events.push({type: 'swing'});
       if (weapon.projectile)spawnPlayerProjectiles(game, action, weapon, {basicLifetime});
-      else if(action.basic){const rank=evolutionCount(game,game.weapon==='sword'?'blade-wave':'earth-wave');if(rank){spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*.6*rank},{basicLifetime:1.3});const q=game.projectiles.at(-1);q.kind='wave';q.speed=24;q.y=game.weapon==='hammer'?.25:1.2;}}
+      else if(action.basic){
+        const rank=evolutionCount(game,game.weapon==='sword'?'blade-wave':'earth-wave');
+        if(rank){
+          const hard=game.journeyBalance?.mode==='story';
+          // Charged melee may hit hard, but the accompanying free wave must
+          // not inherit a second full 3x+ charge multiplier.
+          const rankScale=hard?(rank===1?.55:.9):.6*rank;
+          const chargeScale=hard&&action.charged?Math.min(1,1.35/Math.max(1,action.mult)):1;
+          spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*rankScale*chargeScale},{basicLifetime:1.3});
+          const q=game.projectiles.at(-1);q.kind='wave';q.speed=24;q.y=game.weapon==='hammer'?.25:1.2;
+        }
+      }
     }
     if (
       !weapon.projectile &&
@@ -123,7 +138,17 @@ export function actPlayer(game, type) {
     weapon = WEAPONS[game.weapon],
     skill = player.skill;
   if(game.status!=='playing'||game.startGrace>0||playerIncapacitated(player))return false;
-  if(type==='charge-release'&&player.action?.kind==='charging'){const held=player.action.t;player.action=null;const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=playerStaminaCost(weapon.cost+10*u);if(player.stamina<cost)return false;player.stamina-=cost;player.regen=.85;player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,done:false,hit:false,basic:true,mult:1+(2+.5*Math.max(0,evolutionCount(game,'charged-blade')-1))*u,charged:u>0};emit(game,'attack-start');return true;}
+  if(type==='charge-release'&&player.action?.kind==='charging'){
+    const held=player.action.t;player.action=null;
+    const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=playerStaminaCost(weapon.cost+10*u);
+    if(player.stamina<cost)return false;
+    player.stamina-=cost;player.regen=.85;
+    const upgrade=Math.max(0,evolutionCount(game,'charged-blade')-1);
+    const bonus=game.journeyBalance?.mode==='story'?Math.min(2.2,2+.5*upgrade):2+.5*upgrade;
+    player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,
+      done:false,hit:false,basic:true,mult:1+bonus*u,charged:u>0};
+    emit(game,'attack-start');return true;
+  }
   if(type==='roll'&&player.action?.kind==='charging')player.action=null;
   if (
     game.status !== 'playing' ||
