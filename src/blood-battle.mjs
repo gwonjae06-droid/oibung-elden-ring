@@ -34,9 +34,12 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
  return runBattleStartup(startup=>{
   if(document.getElementById('blood-battle'))return null;
   const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion(),hud=createBloodUi({coarse}),{d,root,shell,$,canvas}=hud;startup.own('Blood HUD',()=>hud.dispose());
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});startup.own('Blood renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=!coarse;d.showModal();
-  const scope=createEventScope(window);startup.own('Blood callbacks',()=>scope.dispose());const scene=new THREE.Scene();startup.own('Blood scene',()=>disposeScene(scene));scene.background=new THREE.Color(0xe6e9e5);scene.fog=new THREE.Fog(0xe1e5e2,42,108);
-  scene.add(new THREE.HemisphereLight(0xfff5e5,0x929b9b,1.6));const sun=new THREE.DirectionalLight(0xfff0d9,1.8);sun.position.set(15,30,20);scene.add(sun);
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});startup.own('Blood renderer',()=>renderer.dispose());renderer.setPixelRatio(qualityPixelRatio(coarse?1.25:1.75));renderer.shadowMap.enabled=!coarse;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.17;d.showModal();
+  const scope=createEventScope(window);startup.own('Blood callbacks',()=>scope.dispose());const scene=new THREE.Scene();startup.own('Blood scene',()=>disposeScene(scene));scene.background=new THREE.Color(0xf1efec);scene.fog=new THREE.Fog(0xe5e3dc,55,155);
+  scene.add(new THREE.HemisphereLight(0xfff8ed,0x777b81,1.65));
+  const sun=new THREE.DirectionalLight(0xfff1db,2.6);sun.position.set(-25,47,18);sun.target.position.set(0,0,-10);scene.add(sun,sun.target);
+  sun.castShadow=!coarse;
+  if(!coarse){sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-43;sun.shadow.camera.right=43;sun.shadow.camera.top=43;sun.shadow.camera.bottom=-43;sun.shadow.camera.near=1;sun.shadow.camera.far=112;sun.shadow.bias=-.0003;sun.shadow.normalBias=.045;}
   const chapel=buildBloodView(scene,{coarse,reduced});startup.own('Blood view',()=>chapel.dispose());const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);const traitView=createBossHitTraitView(scene,player.body,shell,{reduced});startup.own('Blood trait view',()=>traitView.dispose());const camera=new THREE.PerspectiveCamera(62,1,.1,160);
   const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const ctx=new C();contexts.push(ctx);if(startup.pending)startup.own('Blood audio context',()=>ctx.close?.());return ctx;};
   const bloodSfx=createBossSfx();startup.own('Blood foley',()=>bloodSfx.dispose());
