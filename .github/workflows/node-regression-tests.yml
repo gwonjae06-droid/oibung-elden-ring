@@ -20,8 +20,19 @@ jobs:
       - name: Run Node tests
         run: npm test
       - name: Smoke test browser boss battles
+        if: ${{ !cancelled() }}
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/oibung-http.log 2>&1 &
           sleep 2
-          node scripts/dice-phase2-smoke.mjs
-          node scripts/clown-shows-smoke.mjs
+          status=0
+          node scripts/dice-phase2-smoke.mjs || status=1
+          node scripts/clown-shows-smoke.mjs || status=1
+          exit "$status"
+      - name: Save clown browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clown-show-screenshots
+          path: artifacts/clown-shows/
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {clownLensCue,updateClownLens} from '../src/clown-lens-gag.mjs';
+const game=(showKey,stageKey,pt=.3)=>({status:'playing',boss:{state:'clown'},clown:{state:'pattern',name:showKey==='offbeatClap'?'clap':showKey==='headReturn'?'laughBomb':'dash',showKey,stageKey,pt}});
+test('stale photo stage cannot rotate the next clap',()=>assert.equal(clownLensCue(game('offbeatClap','photo')).active,false));
+test('stale tilt stage cannot rotate a head routine',()=>assert.equal(clownLensCue(game('headReturn','tilt')).active,false));
+test('matching photo and tilt variants still animate',()=>{assert.equal(clownLensCue(game('headReturn','photo')).active,true);assert.equal(clownLensCue(game('runaway','tilt')).active,true);});
+test('second tilt window ends before its volley',()=>{assert.equal(clownLensCue(game('runaway','tilt',2.55)).active,true);assert.equal(clownLensCue(game('runaway','tilt',2.8)).active,false);});
+test('photo view is restored before first capture',()=>assert.equal(clownLensCue(game('headReturn','photo',1.2)).active,false));
+test('changing from photo to clap restores canvas styles',()=>{const canvas={style:{transform:'',transformOrigin:''}},doc={getElementById:()=>({firstElementChild:{shadowRoot:{getElementById:()=>canvas}}})},g=game('headReturn','photo');updateClownLens(g,doc);assert.notEqual(canvas.style.transform,'');g.clown.name='clap';g.clown.showKey='offbeatClap';updateClownLens(g,doc);assert.equal(canvas.style.transform,'');assert.equal(canvas.style.transformOrigin,'');});
