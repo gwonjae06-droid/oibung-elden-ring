@@ -33,6 +33,14 @@ export function bossFoleySpec(ev,g){
   default:return null;
  }}
  if(g.clown){const f=BOSS_FOLEY_FILES.clown;switch(type){
+  case 'clown-phase3':return cue(f.shatter,.31,1.42,.25,1.4,.73);
+  case 'clown-horror':{
+   const c=ev.cue;
+   if(c==='clap-delay'||c==='echo-final'||c==='echo')return cue('clap.mp3',.16,.55,.14,.36,.76);
+   if(c==='mask-fall'||c==='hatch-twist'||c==='teeth-end')return cue(f.glass,.18,.8,.17,.28,.71);
+   if(c==='fold'||c==='shadow'||c==='audience'||c==='double')return cue('clown-laugh.mp3',.18,1.1,.23,.85,.68);
+   return cue(f.drum,.14,.72,.14,.4,.75);
+  }
   case 'clown-shutter':return cue(f.shutter,.32,.32,.035,.13,1.15);
   case 'clown-telegraph':return cue(f.drum,.12,.4,.1,.35,.72);
   case 'clown-zone':return ev.warn>=.5?cue(f.ball,.12,.3,.08,.28,ev.shape==='cone'?1.1:.8):null;
