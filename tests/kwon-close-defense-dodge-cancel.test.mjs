@@ -65,7 +65,7 @@ test('accepted basic dodge cancels windup immediately in every weapon and keeps 
  for(const weapon of Object.keys(WEAPONS)){
   const g=createGame(weapon,{register:false,seed:14});
   assert.equal(actPlayer(g,'light'),true);
-  const original=g.player.action,cost=25*.85,stamina=g.player.stamina;
+  const original=g.player.action,stamina=g.player.stamina;
   assert.equal(original.kind,'attack');
   assert.equal(actPlayer(g,'roll'),true,weapon);
   assert.equal(g.player.action.kind,'roll',weapon);
