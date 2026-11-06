@@ -39,7 +39,8 @@ test('first see a small distant tsunami, return to the arena before the actual w
  assert.ok(filmFov<62);
  g.blood.t=2.58;fx.update(g);
  const near=fx.waveRoot.position.clone();
- assert.ok(near.distanceTo(g.boss)<far.distanceTo(g.boss),'the distant tsunami must close the gap');
+ const bossPosition=new THREE.Vector3(g.boss.x,0,g.boss.z);
+ assert.ok(near.distanceTo(bossPosition)<far.distanceTo(bossPosition),'the distant tsunami must close the gap');
  assert.equal(fx.pose(camera,target,g).active,false,'camera must be back before the first hit');
  assert.equal(bloodEpicKey(g),initialKey);
  assert.ok(g.blood.hazards.every(h=>h.age===0),'presentation must not advance actual attacks');
