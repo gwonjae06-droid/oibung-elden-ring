@@ -128,3 +128,8 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey .j-skip-target small{display:block;margin:0;font:10px/1.4 system-ui;color:#b6ae9e}
 #journey .j-skip-footnote{margin:9px 0 0}
 @media(max-width:430px){#journey .j-skip-offer{padding:10px}#journey .j-skip-head{gap:8px}#journey .j-skip-toggle{padding:9px;font-size:11px}#journey .j-skip-targets{gap:6px}}
+
+/* Keep the destructive journey exit in the top-left header, away from the
+   next-boss confirmation button. The mobile header stays in normal flow. */
+#journey[data-screen='ready'] .j-top .j-back{margin:0;padding:10px 14px;font:600 12px/1.4 system-ui;letter-spacing:0;background:#10151dcf;border-color:#a68b4966;white-space:nowrap}
+@media(max-width:650px){#journey[data-screen='ready'] .j-top .j-back{padding:9px 11px;font-size:11px}}
