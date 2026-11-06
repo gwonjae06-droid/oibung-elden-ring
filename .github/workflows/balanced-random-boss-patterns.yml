@@ -1,0 +1,52 @@
+name: Balanced random boss patterns
+
+on:
+  pull_request:
+    paths:
+      - 'src/pattern-shuffle.mjs'
+      - 'src/combat.mjs'
+      - 'src/clown-combat.mjs'
+      - 'src/dice-combat.mjs'
+      - 'src/dice-player.mjs'
+      - 'src/dice-giant.mjs'
+      - 'tests/boss-pattern-shuffle.test.mjs'
+      - 'tests/dice-patterns.test.mjs'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shuffle-bags:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install runtime test dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check all boss selectors
+        run: |
+          node --check src/pattern-shuffle.mjs
+          node --check src/combat.mjs
+          node --check src/clown-combat.mjs
+          node --check src/dice-combat.mjs
+          node --check src/dice-player.mjs
+          node --check src/dice-giant.mjs
+      - name: Verify every attack appears evenly across randomized attempts
+        run: >
+          node --test
+          tests/boss-pattern-shuffle.test.mjs
+          tests/patterns.test.mjs
+          tests/new-boss-patterns.test.mjs
+          tests/royal-pressure.test.mjs
+          tests/clown-patterns.test.mjs
+          tests/dice-patterns.test.mjs
+          tests/dice-pressure.test.mjs
+          tests/dice-chain-charge.test.mjs
+          tests/dice-giant-overhaul.test.mjs
+          tests/blood-footwork-patterns.test.mjs
