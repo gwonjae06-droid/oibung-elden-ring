@@ -79,6 +79,23 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
  surface.name='cathedral-blood-sea-surface';surface.position.y=CATHEDRAL_BLOOD_SEA.surfaceHeight;
  surface.receiveShadow=false;surface.castShadow=false;root.add(surface);
  // A narrow marble-and-crimson seam sells the depth of the flooded nave.
+ // Rebuild the world beyond the cathedral after the phase change. The
+ // horizon plane is deliberately much larger than the camera fog distance:
+ // no shoreline or square edge can appear in normal play.
+ const horizon=new THREE.Mesh(
+  new THREE.PlaneGeometry(1400,1400,coarse?24:64,coarse?24:64).rotateX(-Math.PI/2),water);
+ horizon.name='blood-sea-to-the-horizon';horizon.position.y=.068;
+ horizon.visible=false;horizon.frustumCulled=false;root.add(horizon);
+ // An expanding wash covers the previously dry battle disk during the cutscene.
+ // It is underneath the authoritative dark-danger/safe-red hazard overlay.
+ const floodMaterial=new THREE.MeshPhysicalMaterial({
+  color:0x570916,roughness:.19,metalness:.13,clearcoat:.85,
+  transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide
+ });
+ const flood=new THREE.Mesh(
+  new THREE.CircleGeometry(radius,coarse?48:96).rotateX(-Math.PI/2),floodMaterial);
+ flood.name='blood-sea-floods-cathedral-floor';flood.position.y=.087;
+ flood.visible=false;root.add(flood);
  const lipMat=new THREE.MeshStandardMaterial({color:0xe6dbd1,roughness:.54,metalness:.05,side:THREE.DoubleSide});
  const lip=new THREE.Mesh(new THREE.RingGeometry(radius-.08,radius+.18,coarse?64:128).rotateX(-Math.PI/2),lipMat);
  lip.position.y=.075;lip.name='cathedral-dry-marble-shoreline';root.add(lip);
@@ -112,9 +129,20 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
   if(disposed)return;
   const t=(Number.isFinite(game?.time)?Math.max(0,game.time):0)*timeScale;
   const phase=game?.boss?.phase===2?1:0;
+  const transition=game?.boss?.state==='transition';
+  const phaseTime=Math.max(0,game?.blood?.t||0);
+  const v=Math.max(0,Math.min(1,(phaseTime-1.7)/(4.4-1.7)));
+  const eased=v*v*(3-2*v),floodLevel=phase?(transition?eased:1):0;
   uniforms.time.value=t;uniforms.frenzy.value=phase;
+  const endless=floodLevel>.94;
+  horizon.visible=endless;surface.visible=!endless;
+  flood.visible=floodLevel>.01&&!endless;
+  flood.scale.setScalar(Math.max(.001,floodLevel));
+  floodMaterial.opacity=Math.min(.95,floodLevel*1.3);
+  lip.visible=!endless;shore.visible=!endless;
+  shoreMat.opacity=(1-floodLevel)*.54;
   water.emissiveIntensity=phase?.41:.33;
-  shoreMat.opacity=(phase?.57:.44)*(reduced?1:.94+.06*Math.sin(t*1.15));
+  shoreMat.opacity*=(reduced?1:.94+.06*Math.sin(t*1.15));
   if(lastTime>=0&&t-lastTime<1/35)return;
   lastTime=t;
   spots.forEach((p,i)=>{
@@ -134,14 +162,18 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
  }
  function dispose(){
   if(disposed)return;disposed=true;
-  for(const node of [surface,lip,shore,ripples,reflections]){
-   node.geometry.dispose();node.material.dispose();
+  const materials=new Set(),geometries=new Set();
+  for(const node of [surface,horizon,flood,lip,shore,ripples,reflections]){
+   geometries.add(node.geometry);materials.add(node.material);
   }
+  for(const geo of geometries)geo.dispose();
+  for(const material of materials)material.dispose();
   root.parent?.remove(root);
  }
  update({time:0,boss:{phase:1}});
- return {root,surface,water,shore,update,dispose,
+ return {root,surface,horizon,flood,water,shore,update,dispose,
   stats:()=>({radius,innerRadius:seaBounds(radius),halfWidth:CATHEDRAL_BLOOD_SEA.halfWidth,
-   halfLength:CATHEDRAL_BLOOD_SEA.halfLength,ripples:spots.length,reflections:glints.length,
+   halfLength:CATHEDRAL_BLOOD_SEA.halfLength,horizonRadius:700,unboundedSea:horizon.visible,
+   floodVisible:flood.visible,ripples:spots.length,reflections:glints.length,
    isDecorative:true,damageSources:0})};
 }
