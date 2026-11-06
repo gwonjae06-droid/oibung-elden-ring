@@ -1,4 +1,5 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
+import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
@@ -172,6 +173,10 @@ export function startBloodPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
  }
+ // The camera completes its reveal and returns well before the first actual
+ // collision. This adjusts the authoritative attack clock, not just visuals.
+ const lead=BLOOD_EPIC_CUTS[id]?.lead||0;
+ if(lead)for(const h of s.hazards)h.warn+=lead;
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }
