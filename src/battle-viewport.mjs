@@ -7,7 +7,11 @@ export function battleViewportSize(width,height){
 const state=new WeakMap();
 export function resizeBattleViewport(renderer,camera,canvas,renderScale=1){
  const win=canvas.ownerDocument.defaultView,shell=canvas.closest('#arena'),w=win.innerWidth,h=win.innerHeight;
- const scale=Number.isFinite(renderScale)?Math.max(.6,Math.min(1,renderScale)):1;
+ const quality=Number.isFinite(renderScale)?Math.max(.6,Math.min(1,renderScale)):1;
+ // Do not shade 1600x900 pixels on a smaller physical viewport. This was
+ // wasting fill-rate on 1280x720 browsers and software WebGL smoke tests.
+ const viewportScale=Math.max(.5,Math.min(1,w/1600,h/900));
+ const scale=Math.min(quality,viewportScale);
  const previous=state.get(canvas);
  if(previous?.w===w&&previous?.h===h&&previous.camera===camera&&previous.scale===scale)return previous.size;
  const size=battleViewportSize(w,h);

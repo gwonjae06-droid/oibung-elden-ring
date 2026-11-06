@@ -45,3 +45,16 @@ test('per-boss resolution policy favors full quality and lowers GPU pixels only 
  for(let i=0;i<300;i++)mobile.sample(1/60);
  assert.ok(mobile.scale>=reduced);
 });
+
+test('physical screen resolution caps internal WebGL pixels on smaller desktop and landscape screens',()=>{
+ const win={innerWidth:1280,innerHeight:720},shell={style:{}};
+ const canvas={ownerDocument:{defaultView:win},closest:()=>shell};
+ const values=[],renderer={setPixelRatio(){},setSize:(w,h)=>values.push([w,h])},camera={updateProjectionMatrix(){}};
+ resizeBattleViewport(renderer,camera,canvas,1);
+ assert.deepEqual(values[0],[1280,720]);
+ assert.equal(camera.aspect,16/9);
+ win.innerWidth=844;win.innerHeight=390;
+ resizeBattleViewport(renderer,camera,canvas,1);
+ assert.deepEqual(values[1],[800,450]);
+ assert.ok(values[1][0]<values[0][0]&&values[1][1]<values[0][1]);
+});

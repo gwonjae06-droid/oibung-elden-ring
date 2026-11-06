@@ -112,7 +112,7 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 
 
 /* Flame shortcut: a quiet, responsive boss destination chooser. */
-#journey .j-skip-offer{width:100%;margin:14px 0 16px;padding:12px 14px;border:1px solid #a88a534f;border-radius:9px;background:#0c1018c9;text-align:left}
+#journey .j-skip-offer{display:block;width:100%;margin:14px 0 16px;padding:12px 14px;border:1px solid #a88a534f;border-radius:9px;background:#0c1018c9;text-align:left}
 #journey .j-skip-head{display:flex;gap:14px;align-items:center;justify-content:space-between}
 #journey .j-skip-head>div{min-width:0;flex:1}
 #journey .j-skip-head strong{font-size:14px;color:#e6cc94;letter-spacing:.05em}
@@ -133,3 +133,14 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
    next-boss confirmation button. The mobile header stays in normal flow. */
 #journey[data-screen='ready'] .j-top .j-back{margin:0;padding:10px 14px;font:600 12px/1.4 system-ui;letter-spacing:0;background:#10151dcf;border-color:#a68b4966;white-space:nowrap}
 @media(max-width:650px){#journey[data-screen='ready'] .j-top .j-back{padding:9px 11px;font-size:11px}}
+
+/* An expanded flame shortcut is a vertical card, never a horizontal flex row.
+   Keep the chosen destination fully visible on ordinary desktop viewports. */
+#journey[data-screen='home'] .j-main{padding:22px 0 14px;align-items:safe center}
+#journey[data-screen='home'] .j-copy:has(.j-skip-selected){max-width:min(650px,100%)}
+#journey[data-screen='home'] .j-skip-selected .j-skip-targets{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:650px){
+ #journey[data-screen='home'] .j-copy:has(.j-skip-selected){max-width:300px}
+ #journey[data-screen='home'] .j-skip-selected .j-skip-targets{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey[data-screen='home'] .j-main{padding:48px 0;align-items:safe center}
+}
