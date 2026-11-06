@@ -35,16 +35,19 @@ test('all four story bosses gain exactly 35 percent HP without changing independ
  }
 });
 
-test('fully charged story sword keeps strong melee and limits its evolved wave burst',()=>{
- const g=story(createGame('sword',{register:false}),0);
- g.evolutions=['charged-blade','charged-blade','blade-wave','blade-wave'];
- assert.equal(actPlayer(g,'charge-start'),true);
- tickPlayerAction(g,.95,WEAPONS.sword);
- assert.equal(actPlayer(g,'charge-release'),true);
- assert.ok(Math.abs(g.player.action.mult-3.2)<1e-9);
- tickPlayerAction(g,.11,WEAPONS.sword);
- assert.equal(g.projectiles.length,1);
- assert.ok(Math.abs(g.projectiles[0].damage-WEAPONS.sword.damage*.9*1.35)<1e-8);
+test('story sword chooses either real doubled melee reach or safe bonus sword waves',()=>{
+ const long=story(createGame('sword',{register:false}),0);
+ long.evolutions=['charged-blade','charged-blade'];
+ assert.equal(actPlayer(long,'skill'),false);
+ assert.equal(actPlayer(long,'light'),true);
+ tickPlayerAction(long,.22,WEAPONS.sword);
+ assert.equal(long.projectiles.length,0);
+ const wave=story(createGame('sword',{register:false}),0);
+ wave.evolutions=['blade-wave','blade-wave'];
+ assert.equal(actPlayer(wave,'light'),true);
+ tickPlayerAction(wave,.22,WEAPONS.sword);
+ assert.equal(wave.projectiles.length,1);
+ assert.ok(wave.projectiles[0].damage<WEAPONS.sword.damage,'bonus wave cannot become another full melee hit');
 });
 
 test('upgraded story cards remain three and fire arrows remain one',()=>{
