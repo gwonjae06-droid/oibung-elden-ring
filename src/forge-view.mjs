@@ -3,10 +3,10 @@ import {flameBalance,forgeTier,investedFlames,FORGE_MAX_TIER} from './purificati
 
 export const FORGE_WEAPON_NAMES=Object.freeze({sword:'검',hammer:'망치',bow:'활',cards:'카드'});
 export const FORGE_TIER_NAMES=Object.freeze({
- 'blade-wave':['검기의 해방','월광의 증폭'],'charged-blade':['축적된 일격','응축된 파괴'],
- 'earth-wave':['대지의 울림','파동의 격류'],'blood-hammer':['피의 계약','붉은 수확'],
- 'twin-arrow':['화염 화살','잿불의 화살'],'piercing-arrow':['경쾌한 회피','질풍의 발걸음'],
- 'wide-deck':['세 색의 순환','운명의 연쇄'],'blood-deck':['생명의 도박','심홍의 대가']
+ 'blade-wave':['검기 발현','검기 증폭'],'charged-blade':['검의 영역 확장','장검의 위력'],
+ 'earth-wave':['막아내는 철벽','찰나의 재사용'],'blood-hammer':['철추의 귀환','회전력 증폭'],
+ 'twin-arrow':['후퇴 연사','민첩한 재발동'],'piercing-arrow':['화염의 시위','불꽃의 격화'],
+ 'wide-deck':['삼중 문양','문양 폭발 증폭'],'blood-deck':['생명의 도박','심홍의 흡수']
 });
 const safe=n=>String(Math.max(0,Math.floor(Number(n)||0)));
 const html=(...parts)=>parts.join('');

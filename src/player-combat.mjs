@@ -3,7 +3,8 @@ import {playerStaminaCost} from './balance.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {WEAPONS} from './weapon-data.mjs';
-import {createSkillState, consumeSkill, SKILLS} from './skills.mjs';
+import {createSkillState} from './skills.mjs';
+import {equippedAbility,abilityRank,isAbilityReady} from './weapon-specialization.mjs';
 import {completePlayerHeal} from './player-tick.mjs';
 
 export function createPlayerState({x = 0, z = 13, yaw = Math.PI, weapon = 'sword'} = {}) {
@@ -24,40 +25,25 @@ export function createPlayerState({x = 0, z = 13, yaw = Math.PI, weapon = 'sword
   };
 }
 
-export function spawnPlayerProjectiles(
-  game,
-  action,
-  weapon,
-  {basicLifetime = 1.7} = {},
-) {
-  const count = game.weapon === 'cards' ? 3 : 1,
-    skill = Boolean(action.skill);
-  // All projectiles remain visible and keep their normal collision behavior.
-  // Only story-mode upgraded volleys soften per-projectile damage.
-  const fireRank=game.weapon==='bow'&&!skill?evolutionCount(game,'twin-arrow'):0;
-  const volleyScale=game.journeyBalance?.mode==='story'&&count>1
-    ?Math.max(.78,1-.055*(count-1)):1;
-  for (let i = 0; i < count; i++) {
-    game.projectiles.push({
-      id: game.nextId++,
-      x: game.player.x,
-      z: game.player.z,
-      y: 1.2,
-      yaw: action.yaw + (i - (count - 1) / 2) * 0.075,
-      speed: skill ? 36 : game.weapon === 'bow' ? 26 : 20,
-      life: skill ? 2 : basicLifetime,
-      damage: weapon.damage * action.mult*volleyScale*(fireRank?1+.12*fireRank:1),
-      fireRank,
-      poise: weapon.poise * (skill ? 2 : 1),
-      kind: game.weapon,
-      source: action,
-      piercing: skill,
-      bossHit: false,
-      hit: false,
-      skill,
-    });
-  }
-  game.events.push({type: 'shot'});
+export function spawnPlayerProjectiles(game, action, weapon, {basicLifetime=1.7}={}){
+ const thrown=Boolean(action.throwHammer),leap=Boolean(action.leap);
+ const count=thrown?1:leap?2:game.weapon==='cards'?3:1;
+ const fireRank=game.weapon==='bow'&&!leap?abilityRank(game,'piercing-arrow'):0;
+ const volleyScale=game.journeyBalance?.mode==='story'&&count>1?Math.max(.78,1-.055*(count-1)):1;
+ for(let i=0;i<count;i++){
+  game.projectiles.push({
+   id:game.nextId++,x:game.player.x,z:game.player.z,y:thrown?1.35:1.2,
+   yaw:action.yaw+(i-(count-1)/2)*(leap?.09:.075),
+   speed:thrown?19:game.weapon==='bow'?26:20,
+   life:thrown?2.3:basicLifetime,
+   damage:weapon.damage*action.mult*volleyScale,fireRank,
+   poise:weapon.poise*(thrown?1.3:1),
+   kind:thrown?'hammer-throw':game.weapon,
+   source:action,piercing:thrown,bossHit:false,hit:false,skill:thrown||leap,
+   flight:0,originX:game.player.x,originZ:game.player.z
+  });
+ }
+ game.events.push({type:'shot'});
 }
 
 // Collision and movement belong to the encounter; action timing belongs to the player.
@@ -65,33 +51,33 @@ export function tickPlayerAction(
   game,
   dt,
   weapon,
-  {roll = () => {}, melee = () => {}, basicLifetime = 1.7} = {},
+  {roll = () => {}, melee = () => {}, leap = () => {}, basicLifetime = 1.7} = {},
 ) {
   const action = game.player.action;
   if (!action||playerIncapacitated(game.player)) return;
   action.t += dt;
   if (action.kind === 'roll') roll(action);
-  else if (action.kind === 'heal') completePlayerHeal(game, action);
+  else if (action.leap && action.t<=.55) leap(action);
+  if (action.kind === 'heal') completePlayerHeal(game, action);
   else if (action.kind === 'attack' || action.kind === 'skill') {
     if (action.t >= action.wind && !action.done) {
       action.done = true;
       game.events.push({type: 'swing'});
-      if (weapon.projectile)spawnPlayerProjectiles(game, action, weapon, {basicLifetime});
-      else if(action.basic){
-        const rank=evolutionCount(game,game.weapon==='sword'?'blade-wave':'earth-wave');
+      if (weapon.projectile||action.throwHammer)spawnPlayerProjectiles(game, action, weapon, {basicLifetime});
+      else if(action.basic&&game.weapon==='sword'){
+        const rank=evolutionCount(game,'blade-wave');
         if(rank){
           const hard=game.journeyBalance?.mode==='story';
           // Charged melee may hit hard, but the accompanying free wave must
           // not inherit a second full 3x+ charge multiplier.
           const rankScale=hard?(rank===1?.55:.9):.6*rank;
-          const chargeScale=hard&&action.charged?Math.min(1,1.35/Math.max(1,action.mult)):1;
-          spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*rankScale*chargeScale},{basicLifetime:1.3});
-          const q=game.projectiles.at(-1);q.kind='wave';q.speed=24;q.y=game.weapon==='hammer'?.25:1.2;
+          spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*rankScale},{basicLifetime:1.3});
+          const q=game.projectiles.at(-1);q.kind='wave';q.speed=24;q.y=1.2;
         }
       }
     }
     if (
-      !weapon.projectile &&
+      !weapon.projectile && !action.throwHammer &&
       !action.hit &&
       action.t >= action.wind &&
       action.t <= action.wind + action.active
@@ -102,39 +88,37 @@ export function tickPlayerAction(
     game.player.action = null;
 }
 
-export function advancePlayerProjectile(projectile, dt) {
-  const previous = {x: projectile.x, y: projectile.y, z: projectile.z};
-  projectile.x += Math.sin(projectile.yaw) * projectile.speed * dt;
-  projectile.z += Math.cos(projectile.yaw) * projectile.speed * dt;
-  projectile.life -= dt;
-  return previous;
+export function advancePlayerProjectile(projectile,dt,player=null){
+ const previous={x:projectile.x,y:projectile.y,z:projectile.z};
+ if(projectile.kind==='hammer-throw'){
+  projectile.flight=(projectile.flight||0)+dt;
+  if(projectile.flight<=.70){
+   projectile.x+=Math.sin(projectile.yaw)*projectile.speed*dt;
+   projectile.z+=Math.cos(projectile.yaw)*projectile.speed*dt;
+  }else{
+   projectile.returning=true;
+   const tx=player?.x??projectile.originX,tz=player?.z??projectile.originZ,
+    dx=tx-projectile.x,dz=tz-projectile.z,d=Math.hypot(dx,dz),
+    travel=Math.min(d,Math.max(20,d*4)*dt);
+   if(d>1e-6){projectile.x+=dx/d*travel;projectile.z+=dz/d*travel;}
+   if(d-travel<.8)projectile.life=0;
+  }
+ }else{
+  projectile.x+=Math.sin(projectile.yaw)*projectile.speed*dt;
+  projectile.z+=Math.cos(projectile.yaw)*projectile.speed*dt;
+ }
+ projectile.life-=dt;
+ return previous;
 }
 
 // Called only after the encounter accepts a hit and computes the actual damage.
-export function rewardPlayerHit(game, damage, action, {canStun, stun} = {}) {
-  if (damage <= 0) return;
-  const drain=action.basic?(evolutionCount(game,'blood-hammer')*.05+evolutionCount(game,'blood-deck')*.08):0;
-  if(drain){const gain=Math.min(game.player.maxHp-game.player.hp,damage*drain);game.player.hp+=gain;if(gain>0)game.events.push({type:'skill-heal',flavor:game.weapon,amount:gain});}
-  const skill = game.player.skill;
-  if (action.basic && game.weapon === 'hammer' && !action.credited) {
-    action.credited = true;
-    skill.hammerHits = Math.min(SKILLS.hammer.hits, skill.hammerHits + 1);
-    if (skill.hammerHits === SKILLS.hammer.hits)
-      game.events.push({type: 'skill-ready', flavor: 'hammer'});
-  }
-  if (action.stun && !action.stunUsed && canStun) {
-    action.stunUsed = true;
-    stun(action.autoStun||SKILLS.cards.stun);
-    game.events.push({type: 'skill-stun', flavor: 'yellow'});
-  }
-  if (action.skill && game.weapon === 'hammer') {
-    const gain = Math.min(
-      game.player.maxHp - game.player.hp,
-      damage * SKILLS.hammer.heal,
-    );
-    game.player.hp += gain;
-    game.events.push({type: 'skill-heal', flavor: 'hammer', amount: gain});
-  }
+export function rewardPlayerHit(game,damage,action){
+ if(!(damage>0)||!action)return;
+ const rank=game.weapon==='cards'?evolutionCount(game,'blood-deck'):0;
+ if(rank>0&&action.basic){
+  const gain=Math.min(game.player.maxHp-game.player.hp,damage*(rank>=2?.16:.08));
+  if(gain>0){game.player.hp+=gain;game.events.push({type:'skill-heal',flavor:'cards',amount:gain});}
+ }
 }
 
 const emit = (game, type, data = {}) => game.events.push({type, ...data});
@@ -143,29 +127,16 @@ export function actPlayer(game, type) {
     weapon = WEAPONS[game.weapon],
     skill = player.skill;
   if(game.status!=='playing'||game.startGrace>0||playerIncapacitated(player))return false;
-  if(type==='charge-release'&&player.action?.kind==='charging'){
-    const held=player.action.t;player.action=null;
-    const u=Math.min(1,Math.max(0,(held-.2)/.7)),cost=playerStaminaCost(weapon.cost+10*u);
-    if(player.stamina<cost)return false;
-    player.stamina-=cost;player.regen=.85;
-    const upgrade=Math.max(0,evolutionCount(game,'charged-blade')-1);
-    const bonus=game.journeyBalance?.mode==='story'?Math.min(2.2,2+.5*upgrade):2+.5*upgrade;
-    player.action={kind:'attack',t:0,total:.68,wind:.1,active:.18,yaw:player.yaw,
-      done:false,hit:false,basic:true,mult:1+bonus*u,charged:u>0};
-    emit(game,'attack-start');return true;
-  }
   // Basic attacks alone can be cancelled into a roll, including their
   // recovery. Specials, healing, stagger and hurt retain their commitments.
   // Never discard the attack unless the dodge stamina cost can be paid.
   const cancelBasic=type==='roll'&&player.action?.kind==='attack'&&player.action.basic===true;
-  if(type==='roll'&&player.action?.kind==='charging')player.action=null;
   if (
     game.status !== 'playing' ||
     (player.action&&!cancelBasic) ||
     game.boss.state === 'transition'
   )
     return false;
-  if(type==='charge-start'&&evolutionCount(game,'charged-blade')){player.action={kind:'charging',t:0,yaw:player.yaw};return true;}
   if (type === 'heal') {
     if (!player.potions || player.hp >= player.maxHp) return false;
     player.potions--;
@@ -185,65 +156,33 @@ export function actPlayer(game, type) {
     emit(game, 'roll');
     return true;
   }
-  if (type === 'skill') {
-    // With the cyclic forge upgrade the active skill is permanently folded
-    // into light attacks. No free additional cast through the skill key.
-    if(game.weapon==='cards'&&evolutionCount(game,'wide-deck'))return false;
-    const flavor = consumeSkill(skill, game.weapon);
-    if (!flavor) return false;
-    emit(game, 'skill-cast', {flavor});
-    if (game.weapon === 'hammer' || game.weapon === 'bow') {
-      const hammer = game.weapon === 'hammer';
-      player.action = {
-        kind: 'skill',
-        t: 0,
-        wind: hammer ? 0.5 : 0.3,
-        active: 0.12,
-        total: hammer ? 0.95 : 0.65,
-        yaw: player.yaw,
-        done: false,
-        hit: false,
-        basic: false,
-        mult: hammer ? SKILLS.hammer.multiplier : SKILLS.bow.multiplier,
-        skill: true,
-      };
-    }
-    return true;
+  if(type==='skill'){
+   const ability=equippedAbility(game);
+   if(!ability?.active||!isAbilityReady(game))return false;
+   skill.cooldown=ability.cooldown-(abilityRank(game,ability.id)>1?2:0);
+   emit(game,'skill-cast',{flavor:game.weapon,ability:ability.id});
+   if(ability.id==='earth-wave'){
+    player.action={kind:'guard',t:0,total:1.2,yaw:player.yaw,blocked:0};
+   }else if(ability.id==='blood-hammer'){
+    player.action={kind:'skill',t:0,total:1.05,wind:.38,active:.01,yaw:player.yaw,hit:false,done:false,mult:abilityRank(game,ability.id)>1?1.35:1.12,throwHammer:true,skill:true};
+   }else if(ability.id==='twin-arrow'){
+    player.action={kind:'skill',t:0,total:.65,wind:.17,active:.01,yaw:player.yaw,hit:false,done:false,mult:1,leap:true,skill:true};
+   }
+   return true;
   }
   const attackCost=playerStaminaCost(weapon.cost+(game.journey?.cost??0));
   if (type !== 'light' || player.stamina < attackCost) return false;
   player.stamina -= attackCost;
   player.regen = 0.85;
-  const rate = (skill.haste > 0 ? SKILLS.sword.rate : 1)/(game.journey?.speed??1);
-  const wind = weapon.wind / rate,
-    active = weapon.active / rate,
-    end = weapon.end / rate;
-  // One automatic colour per accepted light attack, never one per
-  // projectile. Card hand size stays at three.
-  const cyclicRank=game.weapon==='cards'?evolutionCount(game,'wide-deck'):0;
-  const autoCard=cyclicRank?['blue','red','yellow'][(skill.autoCardCycle++||0)%3]:null;
-  if(autoCard==='blue'){skill.blue=Math.max(skill.blue,cyclicRank===2?2:1.5);skill.blueMultiplier=cyclicRank===2?1.32:1.22;emit(game,'skill-cast',{flavor:'blue',automatic:true});}
-  if(autoCard==='red')emit(game,'skill-cast',{flavor:'red',automatic:true});
-  if(autoCard==='yellow')emit(game,'skill-cast',{flavor:'yellow',automatic:true});
-  player.action = {
-    kind: 'attack',
-    t: 0,
-    total: wind + active + end,
-    wind,
-    active,
-    yaw: player.yaw,
-    done: false,
-    hit: false,
-    basic: true,
-    mult: (skill.nextRed ? SKILLS.cards.redDamage : 1)*(autoCard==='red'?(cyclicRank===2?1.25:1.18):1)*(game.journey?.damage??1),
-    stun: skill.nextYellow||autoCard==='yellow',
-    autoCard,
-    autoStun:autoCard==='yellow'?(cyclicRank===2?.48:.32):0,
-    stunUsed: false,
-    credited: false,
+  const rate=1/(game.journey?.speed??1);
+  const wind=weapon.wind/rate,active=weapon.active/rate,end=weapon.end/rate;
+  const saved=game.weapon==='hammer'&&evolutionCount(game,'earth-wave')?Math.max(0,skill.storedDamage||0):0;
+  if(saved>0)skill.storedDamage=0;
+  player.action={
+   kind:'attack',t:0,total:wind+active+end,wind,active,
+   yaw:player.yaw,done:false,hit:false,basic:true,
+   mult:game.journey?.damage??1,bonusDamage:saved
   };
-  skill.nextRed = false;
-  skill.nextYellow = false;
   emit(game, 'attack-start');
   return true;
 }

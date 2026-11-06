@@ -1,15 +1,15 @@
 const emit=(g,type,data={})=>g.events.push({type,...data});
-export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null}={}){
+export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
  if(g?.status!=='playing'||!Number.isFinite(amount)||amount<=0||!Number.isFinite(poise)||poise<0||!Number.isFinite(b?.hp)||b.hp<=0||b.state==='transition')return 0;
  const damage=Math.min(b.hp,amount*(!developer&&b.state==='stagger'?1.25:1)),big=developer||damage>=150;
  b.hp-=damage;
- if(g.stats){g.stats.damage+=damage;g.stats.hits++;}
- if(!developer)b.poise+=poise;
+ if(g.stats){g.stats.damage+=damage;if(!dot)g.stats.hits++;}
+ if(!developer&&!dot)b.poise+=poise;
  const impact=point&&[point.x,point.y,point.z].every(Number.isFinite)
   ?{x:point.x,y:point.y,z:point.z,part:point.part}:{};
- emit(g,'boss-hit',{amount:Math.round(damage),big,...impact,...(developer?{developer:true}:{})});
- if(!developer)g.hitstop=Math.max(g.hitstop||0,big?.09:.035);
+ if(!dot)emit(g,'boss-hit',{amount:Math.round(damage),big,...impact,...(developer?{developer:true}:{})});
+ if(!developer&&!dot)g.hitstop=Math.max(g.hitstop||0,big?.09:.035);
  if(b.hp<=0){
   b.hp=0;b.state='dead';b.queue=[];g.status='won';g.projectiles=[];g.bossShots=[];
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'defeated'});

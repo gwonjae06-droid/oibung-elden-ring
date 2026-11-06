@@ -35,18 +35,21 @@ test('all four story bosses gain exactly 35 percent HP without changing independ
  }
 });
 
-test('fully charged story sword keeps strong melee and limits its evolved wave burst',()=>{
+test('story sword chooses exactly one new specialization: wave or double reach',()=>{
  const g=story(createGame('sword',{register:false}),0);
- g.evolutions=['charged-blade','charged-blade','blade-wave','blade-wave'];
- assert.equal(actPlayer(g,'charge-start'),true);
- tickPlayerAction(g,.95,WEAPONS.sword);
- assert.equal(actPlayer(g,'charge-release'),true);
- assert.ok(Math.abs(g.player.action.mult-3.2)<1e-9);
- tickPlayerAction(g,.11,WEAPONS.sword);
+ g.evolutions=['blade-wave','blade-wave'];
+ assert.equal(actPlayer(g,'charge-start'),false);
+ assert.equal(actPlayer(g,'skill'),false);
+ assert.equal(actPlayer(g,'light'),true);
+ tickPlayerAction(g,.22,WEAPONS.sword);
  assert.equal(g.projectiles.length,1);
- assert.ok(Math.abs(g.projectiles[0].damage-WEAPONS.sword.damage*.9*1.35)<1e-8);
+ assert.ok(Math.abs(g.projectiles[0].damage-WEAPONS.sword.damage*.9)<1e-8);
+ const reach=story(createGame('sword',{register:false}),0);
+ reach.evolutions=['charged-blade'];
+ assert.equal(actPlayer(reach,'skill'),false);
+ assert.equal(actPlayer(reach,'light'),true);
+ assert.equal(reach.player.action.mult,1);
 });
-
 test('upgraded story cards remain three and fire arrows remain one',()=>{
  for(const [weapon,upgrade,count] of [['cards','wide-deck',3],['bow','twin-arrow',1]]){
   const g=story(createGame(weapon,{register:false}),0);

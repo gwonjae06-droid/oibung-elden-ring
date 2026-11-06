@@ -53,3 +53,11 @@ export function buildPlayerWeapons(T,m){
  details.cards={fan};
  return {weapons,details};
 }
+
+// Applied to the actual held weapon mesh in every boss arena. Sword hit
+// reach is changed by the same forge rank in the encounter physics.
+export function syncWeaponSpecializationVisuals(parts,game){
+ const rigs=parts?.weaponRigs;if(!rigs||!game)return;
+ if(rigs.sword)rigs.sword.scale.z=game.weapon==='sword'&&game.evolutions?.includes('charged-blade')?2:1;
+ if(rigs.hammer)rigs.hammer.visible=game.weapon==='hammer'&&!game.projectiles?.some(q=>q.kind==='hammer-throw'&&q.life>0);
+}

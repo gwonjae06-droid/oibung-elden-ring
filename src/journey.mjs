@@ -14,7 +14,7 @@ import {createMenuTheme} from './menu-theme.mjs';
 import {AUDIO_CHANNELS,readAudioVolume,writeAudioVolume} from './audio-preferences.mjs';
 import {MOBILE_LANDSCAPE_GATE_HTML} from './mobile-landscape.mjs';
 const WEAPONS={sword:'검',hammer:'망치',bow:'활',cards:'카드'};
-const DESCRIPTIONS={sword:'짧은 틈을 가르는 질풍검',hammer:'네 번의 적중, 흡혈의 강타',bow:'거리를 지배하는 관통 화살',cards:'세 가지 색으로 바꾸는 운명'};
+const DESCRIPTIONS={sword:'검기 또는 사거리 확장',hammer:'피해 흡수 강화 또는 철추 투척',bow:'후퇴 연사 또는 지속 화염',cards:'삼중 문양 폭발 또는 흡혈'};
 const AUDIO_LABELS={master:'전체 음량',music:'BGM',effects:'효과음',ambient:'환경음',ui:'UI 음량'};
 const statPercent=v=>Math.round(v*100)+'%';
 export function weaponStatLabel(id){const s=weaponStats(id);return `HP ${s.maxHp} · 받는 피해 ${statPercent(s.incomingDamage)} · 이동 ${statPercent(s.walkSpeed)} · 회피 ${statPercent(s.rollDistance)} · 기력 회복 ${statPercent(s.staminaRegen)}`;}

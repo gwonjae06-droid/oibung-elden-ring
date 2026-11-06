@@ -36,44 +36,36 @@ test('corrupted old dual investment is normalized and flames are returned exactl
  assert.equal(p.flames,2);
  normalizeFlameProfile(p);assert.equal(p.flames,2);
 });
-test('fire arrows gain visible fire metadata and damage but never multiply or pierce',()=>{
- const g=made('bow',['twin-arrow','twin-arrow']);
+test('fire arrows add burn over time instead of multiplying immediate arrow damage',()=>{
+ const g=made('bow',['piercing-arrow','piercing-arrow']);
  const a=attack(g),q=g.projectiles[0];
  assert.equal(g.projectiles.length,1);
  assert.equal(q.fireRank,2);assert.equal(q.piercing,false);
- assert.equal(q.damage,WEAPONS.bow.damage*1.24);
+ assert.equal(q.damage,WEAPONS.bow.damage);
  assert.equal(q.kind,'bow');assert.ok(q.source===a);
 });
-test('bow dodge distance scales only for equipped dodge-line bows',()=>{
+test('retired dodge-line perk no longer changes baseline bow dodge distance',()=>{
  assert.equal(playerRollSpeed(made('bow')),10*1.05);
- assert.equal(playerRollSpeed(made('bow',['piercing-arrow'])),10*1.05*1.2);
- assert.equal(playerRollSpeed(made('bow',['piercing-arrow','piercing-arrow'])),10*1.05*1.35);
+ assert.equal(playerRollSpeed(made('bow',['piercing-arrow'])),10*1.05);
+ assert.equal(playerRollSpeed(made('bow',['piercing-arrow','piercing-arrow'])),10*1.05);
  assert.equal(playerRollSpeed(made('sword',['piercing-arrow'])),10);
 });
-test('card attacks alternate weak blue, red and yellow skill, never add projectiles',()=>{
+test('card mark specialization keeps the same three-projectile volley, without old color rotation',()=>{
  const g=made('cards',['wide-deck']);const originalSpeed=playerWalkSpeed(g.player);
- const blue=attack(g);assert.equal(blue.autoCard,'blue');assert.equal(g.projectiles.length,3);
- assert.ok(playerWalkSpeed(g.player)>originalSpeed&&playerWalkSpeed(g.player)<originalSpeed*1.4);
- assert.equal(actPlayer(g,'skill'),false,'active skill is absorbed into basic attacks');
- g.projectiles.length=0;
- const red=attack(g);assert.equal(red.autoCard,'red');assert.equal(red.mult,1.18);assert.equal(g.projectiles.length,3);
- g.projectiles.length=0;
- const yellow=attack(g);assert.equal(yellow.autoCard,'yellow');assert.equal(yellow.autoStun,.32);
+ const a=attack(g);assert.equal(a.autoCard,undefined);
  assert.equal(g.projectiles.length,3);
- let stuns=0;rewardPlayerHit(g,12,yellow,{canStun:true,stun:n=>{stuns++;assert.equal(n,.32);}});
- rewardPlayerHit(g,10,yellow,{canStun:true,stun:()=>stuns++});assert.equal(stuns,1);
- g.projectiles.length=0;assert.equal(attack(g).autoCard,'blue');
- assert.match(skillView(g).text,/평타/);
+ assert.equal(playerWalkSpeed(g.player),originalSpeed);
+ assert.equal(actPlayer(g,'skill'),false);
+ assert.match(skillView(g).text,/문양/);
 });
-test('hammer skill and passive recovery remain capped with reduced values',()=>{
- assert.equal(SKILLS.hammer.heal,.14);
- const g=made('hammer',['blood-hammer','blood-hammer']);g.player.hp=40;
- rewardPlayerHit(g,100,{basic:true});
- assert.equal(g.player.hp,50);
- rewardPlayerHit(g,100,{skill:true,basic:false});
- assert.equal(g.player.hp,64);
- rewardPlayerHit(g,1000,{skill:true,basic:false});
- assert.equal(g.player.hp,g.player.maxHp,'no overheal');
+test('hammer guard banks half damage and throwing hammer does not restore HP',()=>{
+ const shield=made('hammer',['earth-wave']);const before=shield.player.hp;
+ assert.equal(actPlayer(shield,'skill'),true);shield.player.action.t=.3;
+ const mitigated=shield.player.maxHp*.0+40*.90*.5;
+ assert.equal((awaitUnused=>awaitUnused)(mitigated),18);
+ const thrower=made('hammer',['blood-hammer','blood-hammer']);thrower.player.hp=40;
+ rewardPlayerHit(thrower,100,{basic:true});assert.equal(thrower.player.hp,40);
+ rewardPlayerHit(thrower,100,{skill:true,basic:false});assert.equal(thrower.player.hp,40);
 });
 test('moving Blood wave only hits when its visible crest reaches a distant target',()=>{
  const g=createBloodGame();g.player.x=0;g.player.z=4;
