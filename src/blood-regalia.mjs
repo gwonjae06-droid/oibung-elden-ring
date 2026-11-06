@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {createBloodLegRig} from './blood-leg-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
+import {createRecoilBank} from './animation-recoil.mjs';
 import {createWeightedJoint} from './joint-skinning.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
@@ -152,10 +153,10 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const ring=attach(growth,new THREE.TorusGeometry(.52,.04,6,32),edge,0,3.12,.73);
  // A restrained moving silhouette in phase one; violent structural bloom in phase two.
  let bloom=0,lastOwner=null,lastClock=-Infinity;
- const joints=createSpringBank();
+ const joints=createSpringBank(),recoil=createRecoilBank();
  function update(g,c,dt,cast=0,pose={}){
   const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;
-  if(lastOwner!==g||time<lastClock){joints.reset();lastOwner=g;}lastClock=time;
+  if(lastOwner!==g||time<lastClock){joints.reset();recoil.reset();lastOwner=g;}lastClock=time;
   const follow=(key,goal,frequency=15)=>joints.step(key,goal,t,frequency);
   const target=c.veins||0;bloom+=(target-bloom)*(1-Math.exp(-t*5));
   const sway=reduced?0:Math.sin(time*1.5)*.023;
@@ -175,7 +176,8 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   const armorCompression=follow('armor:compress',(pose.anticipation||0)*.035-(pose.release||0)*.05+(pose.impact||0)*.03,14);
   cuirass.position.y=2.96+armorCompression;
   cuirass.rotation.y=follow('armor:twist',-(pose.body?.twist||0)*.075+(pose.impact||0)*.014,12);
-  cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;
+  cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12+
+   recoil.step('cuirass:spell',(pose.impact||0)*1.15-(pose.anticipation||0)*.3+(pose.release||0)*.16,t,{strength:1.45,frequency:17,limit:.063});
   cuirass.rotation.z=follow('chest:counter',-pelvisRoll*.68+(pose.body?.twist||0)*.025,13);waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
   for(const {arm,forearm,hand,fingers,thorn,side}of arms){
    const gesture=pose.arms?.[side<0?0:1];
@@ -200,5 +202,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,jointSkins:[...arms.flatMap(a=>a.skins),...legRig.legs.flatMap(l=>l.skins)],plantFeet:legRig.update,resetPose(){joints.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();}};
+ return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,jointSkins:[...arms.flatMap(a=>a.skins),...legRig.legs.flatMap(l=>l.skins)],plantFeet:legRig.update,resetPose(){joints.reset();recoil.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();recoil.reset();}};
 }

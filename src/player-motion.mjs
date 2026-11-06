@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {springStep} from './secondary-physics.mjs';
+import {createRecoilBank} from './animation-recoil.mjs';
 import {solvePlayerFoot,playerFootTarget} from './player-foot-ik.mjs';
 const down=new THREE.Vector3(0,-1,0),axis=new THREE.Vector3(),bend=new THREE.Vector3(),elbow=new THREE.Vector3(),upper=new THREE.Vector3(),lower=new THREE.Vector3(),target=new THREE.Vector3();
 const armQ=new THREE.Quaternion(),lowerQ=new THREE.Quaternion(),bodyQ=new THREE.Quaternion(),parentQ=new THREE.Quaternion(),desired=new THREE.Quaternion(),angles=new THREE.Euler();
@@ -29,7 +30,7 @@ function alignGrip(parts,pose,weapon){
  parts.pivot.quaternion.copy(parentQ).invert().multiply(bodyQ).multiply(desired);
 }
 const leftHint=new THREE.Vector3(-1,-.15,-.45),rightHint=new THREE.Vector3(1,-.05,-.65);
-const clothTimes=new WeakMap(),clothStates=new WeakMap(),headStates=new WeakMap();
+const clothTimes=new WeakMap(),clothStates=new WeakMap(),headStates=new WeakMap(),helmetRecoil=new WeakMap();
 export function applyPlayerMotion(parts,p,weapon,time=0,speed=0){
  const body=parts.body;body.position.set(p.strideX,1+p.bob+p.lift,p.strideZ);body.rotation.set(p.spin||p.lean,p.twist,p.sway);
  for(let i=0;i<2;i++){
@@ -51,12 +52,14 @@ export function applyPlayerMotion(parts,p,weapon,time=0,speed=0){
  // weapon mount is moved by this visual follow-through.
  const neckGoalX=p.headX-Math.max(-.1,Math.min(.1,(p.lean||0)*.25));
  const neckGoalY=p.headY-Math.max(-.09,Math.min(.09,(p.twist||0)*.18));
- let neck=headStates.get(parts);
- if(!neck||time<neck.time||time-neck.time>.4)neck={time,x:neckGoalX,y:neckGoalY,vx:0,vy:0};
+ let neck=headStates.get(parts),inertia=helmetRecoil.get(parts);
+ if(!inertia){inertia=createRecoilBank();helmetRecoil.set(parts,inertia);}
+ if(!neck||time<neck.time||time-neck.time>.4){neck={time,x:neckGoalX,y:neckGoalY,vx:0,vy:0};inertia.reset();}
  const hNeck=Math.max(0,Math.min(.05,time-neck.time));
  const sx=springStep(neck.x,neck.vx,neckGoalX,hNeck,20),sy=springStep(neck.y,neck.vy,neckGoalY,hNeck,18);
  neck.x=sx.position;neck.vx=sx.velocity;neck.y=sy.position;neck.vy=sy.velocity;neck.time=time;
- headStates.set(parts,neck);parts.head.rotation.set(neck.x,neck.y,-(p.sway||0)*.06);
+ headStates.set(parts,neck);parts.head.rotation.set(neck.x,neck.y,-(p.sway||0)*.06+
+  inertia.step('helmet:balance',(p.lean||0)*1.1+(p.charge||0)*.25,hNeck,{strength:.78,frequency:19,limit:.032}));
  if(p.grounded){
   let lowest=Infinity;
   for(const ankle of parts.ankles)for(const z of [-.10,.26]){sole.set(0,-.10,z);ankle.localToWorld(sole);lowest=Math.min(lowest,sole.y);}
