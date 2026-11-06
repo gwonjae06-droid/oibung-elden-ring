@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {BEAST_PATTERNS} from './clown-beast-pose.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
@@ -1028,7 +1029,30 @@ const RUN = {
     }
   },
 };
-const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart});
+// A real moving body, using the same swept trajectory as the warning lane.
+function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage=26}={}){
+ if(t<start)return;
+ const b=g.boss,lane=once(c,key,()=>{
+  const yaw=toward(b,g.player),len=fitLen(b,yaw,reach);c.yaw=yaw;
+  zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*1.8,warn:anticipation,visual:true});
+  emit(g,'clown-horror',{cue:'reverse-crawl',x:b.x,z:b.z});
+  return {x:b.x,z:b.z,yaw,len,hit:false,done:false};
+ });
+ if(lane.done)return;
+ const u=t-start;c.vis.crouch=Math.max(c.vis.crouch,.9);
+ c.vis.stomp=u<anticipation?.2:Math.abs(Math.sin(u*15));
+ if(u<anticipation)return;
+ const k=smooth((u-anticipation)/travel),old={x:b.x,z:b.z};
+ const x=lane.x+Math.sin(lane.yaw)*lane.len*k,z=lane.z+Math.cos(lane.yaw)*lane.len*k;
+ b.x=x;b.z=z;c.odo+=Math.hypot(x-old.x,z-old.z);c.noSeparate=u<anticipation+travel;
+ const p=c.prevPlayer||g.player;
+ if(!lane.hit&&segmentGap({x:0,z:0},{x:old.x-p.x,z:old.z-p.z},
+  {x:x-g.player.x,z:z-g.player.z})<BODY_R*.94){
+  lane.hit=true;hurt(g,damage,'crawl'+key);
+ }
+ if(u>=anticipation+travel)lane.done=true;
+}
+const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart,crawlPart});
 Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export function choosePattern(g) {
@@ -1049,6 +1073,14 @@ export function choosePattern(g) {
  const horror=pool.filter(k=>HORROR_PATTERNS.includes(k));
  if(horror.length&&stage>=2&&c.seq%3===0)
   preferred=[...horror.filter(k=>c.last!==k),...preferred];
+ // Give the new physically distinctive beast patterns meaningful screen time.
+ if(phase===2&&stage>=2){
+  const beasts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&k!==c.last),
+   unseen=beasts.filter(k=>(c.used?.[k]||0)===0);
+  if(unseen.length&&(c.seq%2===0||!c.used?.feralSkitter))
+   preferred=[...unseen,...preferred];
+  else if(beasts.length&&c.seq%3===1)preferred=[...beasts,...preferred];
+ }
  if(g.journeyBalance?.mode==='story'){
   const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
    spotlightSweep:'hornFan',ballCannon:'bounceChain',
