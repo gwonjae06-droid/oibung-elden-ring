@@ -36,6 +36,7 @@ export const BLOOD_ATTACK_GESTURES=Object.freeze({
  bloodStatues:{style:'sculptor',lean:-.23,twist:.5,arms:[1.7,1.35],open:[1.1,1.1],elbow:[-.6,.3],head:-.33,wing:0,fold:0,sweep:.6,cape:.8},
  wingGenesis:{style:'scarlet-unfurl',lean:-.42,twist:.16,arms:[1.6,1.6],open:[1,1],elbow:[-.55,-.55],head:-.4,wing:1.5,fold:-.5,sweep:1.15,cape:1.3},
  heartFeast:{style:'heart-sacrament',lean:-.35,twist:.15,arms:[1.8,1.8],open:[1.15,1.15],elbow:[-.45,-.45],head:-.45,wing:.9,fold:-.15,sweep:.4,cape:1.1},
+ requiem:{style:'sea-requiem',lean:-.46,twist:.32,arms:[1.95,1.95],open:[1.3,1.3],elbow:[-.6,-.6],head:-.55,wing:1.48,fold:-.28,sweep:.52,cape:1.5},
 });
 // All keyframe envelopes share actual hazard warning times from combat state.
 // Persistent marker snapshots are owned by the presentation controller because
