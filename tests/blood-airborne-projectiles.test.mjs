@@ -106,9 +106,9 @@ test('real Three.js projectile meshes render at the SAME floor height as collisi
  stepBlood(g,.02);view.update(g,.02);
  const group=scene.getObjectByName('shared-player-projectiles');
  assert.ok(group);
- const flight=group.children.filter(c=>c.name!=='boss-card-mark-0'&&c.name!=='boss-card-mark-1'&&c.name!=='boss-card-mark-2');
- assert.equal(flight.length,1);
- const mesh=flight[0];
+ const flightModels=group.children.filter(c=>!c.name.startsWith('boss-card-mark-'));
+ assert.equal(flightModels.length,1);
+ const mesh=flightModels[0];
  assert.equal(mesh.position.y,BLOOD_PROJECTILE_GROUND_HEIGHT);
  assert.ok(view.root.position.y>BLOOD_AIRBORNE_HEIGHT);
  assert.equal(g.boss.hp,g.boss.maxHp);
