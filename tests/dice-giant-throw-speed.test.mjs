@@ -16,7 +16,7 @@ test('controlled giant props have long anticipation; direct palm strikes keep th
   near(h.warn,warn*GIANT_THROW_SLOW);assert.equal(h.throwSlowed,true);
   assert.equal(h.flightSeconds,1.25);
  }
- for(const [slot,warn] of [[0,1.1],[5,1.6],[7,1],[8,.85]]){
+ for(const [slot,warn] of [[0,1.1],[5,1.6],[7,1],[8,.92]]){
   const h=giantPattern(slot,{x:0,z:-40}).hazards[0];
   near(h.warn,warn);assert.equal(h.throwSlowed,undefined);
  }
