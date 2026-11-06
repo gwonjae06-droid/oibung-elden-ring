@@ -71,7 +71,7 @@ export function forgeTier(profile,weapon,id){
  return sanitizeForge(profile?.forge)[weapon][id];
 }
 export function buyForgeTier(profile,weapon,id){
- if(!EVOLUTIONS[weapon]?.some(e=>e.id===id))return false;
+ if(!EVOLUTIONS[weapon]?.some(e=>e.id===id)||!profile||typeof profile!=='object')return false;
  normalizeFlameProfile(profile);
  if(flameBalance(profile)<1||forgeTier(profile,weapon,id)>=FORGE_MAX_TIER)return false;
  // The opposite upgrade is unreachable through the UI and API.

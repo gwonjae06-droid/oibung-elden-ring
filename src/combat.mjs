@@ -13,6 +13,7 @@ import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
+import {evolutionCount} from './weapon-evolution.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {registerEncounter} from './encounter-state.mjs';
