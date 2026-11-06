@@ -8,6 +8,7 @@ import {actPlayer,tickPlayerAction} from '../src/player-combat.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 import {kwonCloseSituation,chooseKwonCloseDefense,KWON_CLOSE_DEFENSE} from '../src/kwon-close-defense.mjs';
 import {playerRolling} from '../src/player-movement-rules.mjs';
+import {playerStaminaCost} from '../src/balance.mjs';
 
 test('front/rear/flank and prolonged proximity choose distinct authored Kwon defenses',()=>{
  const b={x:0,z:0,yaw:0,state:'idle',stun:0,punishable:false,closeCooldown:0,hug:.85};
