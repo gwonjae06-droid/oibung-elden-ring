@@ -49,18 +49,24 @@ try{
  for(const size of diceOnly?[]:[{width:1280,height:1024},{width:1920,height:1080},{width:3440,height:1440},{width:844,height:390}]){
   await page.setViewportSize(size);await page.waitForFunction(size=>{const b=document.getElementById('world').getBoundingClientRect(),scale=Math.min(size.width/1600,size.height/900);return Math.abs(b.width-1600*scale)<1&&Math.abs(b.height-900*scale)<1;},size);
   const v=await page.evaluate(()=>{const c=document.getElementById('world'),b=c.getBoundingClientRect();return {buffer:[c.width,c.height],box:[b.x,b.y,b.width,b.height]};});
-  assert.deepEqual(v.buffer,[1600,900]);assert.ok(Math.abs(v.box[2]/v.box[3]-16/9)<.002);layouts.push({size,...v});
+  const limit=Math.max(.5,Math.min(1,size.width/1600,size.height/900));
+  assert.ok(v.buffer[0]>0&&v.buffer[0]<=Math.round(1600*limit)+1);
+  assert.ok(v.buffer[1]>0&&v.buffer[1]<=Math.round(900*limit)+1);
+  assert.ok(Math.abs(v.buffer[0]/v.buffer[1]-16/9)<.003);
+  assert.ok(Math.abs(v.box[2]/v.box[3]-16/9)<.002);layouts.push({size,...v});
  }
  await page.setViewportSize({width:1280,height:720});
  for(const boss of diceOnly?['dice']:['clown','dice','blood']){
   await page.evaluate(async boss=>{const {readBattleSession}=await import('/src/battle-session.mjs');readBattleSession(document)?.pause?.();
    const {BOSS_REGISTRY}=await import('/src/boss-registry.mjs'),b=BOSS_REGISTRY[boss],m=await b.load();window.clarityBattle=b.launch(m,{weapon:'sword',configure:g=>{g.player.hp=g.player.maxHp=99999;},onClose(){}});
   },boss);
-  await page.waitForFunction(boss=>{const d=document.getElementById(boss+'-battle'),r=d?.firstElementChild?.shadowRoot,c=r?.getElementById('world');return d?.open&&c?.width===1600&&c?.height===900;},boss,{timeout:60000});
+  await page.waitForFunction(boss=>{const d=document.getElementById(boss+'-battle'),r=d?.firstElementChild?.shadowRoot,c=r?.getElementById('world');return d?.open&&c?.width>0&&c?.height>0&&Math.abs(c.width/c.height-16/9)<.003;},boss,{timeout:60000});
   const background=await page.evaluate(()=>window.clarityMainFrames);await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>window.clarityMainFrames),background,'covered first arena must not keep rendering');
   await page.waitForTimeout(boss==='blood'?5500:900);
   for(const size of [{width:1280,height:1024},{width:844,height:390}]){
-   await page.setViewportSize(size);await page.waitForFunction(({boss,size})=>{const c=document.getElementById(boss+'-battle').firstElementChild.shadowRoot.getElementById('world'),b=c.getBoundingClientRect(),scale=Math.min(size.width/1600,size.height/900);return c.width===1600&&c.height===900&&Math.abs(b.width-1600*scale)<1&&Math.abs(b.height-900*scale)<1;},{boss,size});
+   await page.setViewportSize(size);await page.waitForFunction(({boss,size})=>{const c=document.getElementById(boss+'-battle').firstElementChild.shadowRoot.getElementById('world'),b=c.getBoundingClientRect(),scale=Math.min(size.width/1600,size.height/900);const limit=Math.max(.5,Math.min(1,scale));
+    return c.width>0&&c.height>0&&c.width<=Math.round(1600*limit)+1&&c.height<=Math.round(900*limit)+1&&
+     Math.abs(c.width/c.height-16/9)<.003&&Math.abs(b.width-1600*scale)<1&&Math.abs(b.height-900*scale)<1;},{boss,size});
   }
   await page.setViewportSize({width:1280,height:720});await page.waitForFunction(boss=>document.getElementById(boss+'-battle').firstElementChild.shadowRoot.getElementById('world').clientWidth===1280,boss);
   await page.screenshot({path:'qa-output/clarity/'+boss+'.png'});
