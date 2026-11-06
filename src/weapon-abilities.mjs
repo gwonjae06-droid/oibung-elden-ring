@@ -55,7 +55,7 @@ export function tickWeaponBurn(game,dt){
  let amount=0;
  for(const stack of stacks){
   const h=Math.min(dt,stack.left);
-  const full=stack.duration??(stack.duration=stack.left);
+  const full=stack.duration;
   amount+=stack.total*h/full;
   stack.left-=h;
  }
