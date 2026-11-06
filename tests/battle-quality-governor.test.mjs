@@ -55,6 +55,6 @@ test('physical screen resolution caps internal WebGL pixels on smaller desktop a
  assert.equal(camera.aspect,16/9);
  win.innerWidth=844;win.innerHeight=390;
  resizeBattleViewport(renderer,camera,canvas,1);
- assert.deepEqual(values[1],[800,450]);
+ assert.deepEqual(values[1],[693,390]);
  assert.ok(values[1][0]<values[0][0]&&values[1][1]<values[0][1]);
 });

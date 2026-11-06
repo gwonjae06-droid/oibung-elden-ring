@@ -6,7 +6,9 @@ export function battleViewportSize(width,height){
 }
 const state=new WeakMap();
 export function viewportRenderScale(width,height,quality=1){
- const fit=Math.max(.5,Math.min(1,Math.max(1,width)/1600,Math.max(1,height)/900));
+ // Never oversample the physical CSS canvas in low-profile landscape; a 390px
+ // tall screen should not allocate a 450px tall WebGL framebuffer.
+ const fit=Math.max(.2,Math.min(1,Math.max(1,width)/1600,Math.max(1,height)/900));
  const wanted=Number.isFinite(quality)?Math.max(.6,Math.min(1,quality)):1;
  return Math.min(wanted,fit);
 }
