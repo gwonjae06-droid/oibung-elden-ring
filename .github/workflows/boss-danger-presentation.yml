@@ -1,0 +1,58 @@
+name: Boss danger presentation and blood coil removal
+
+on:
+  push:
+    branches:
+      - main
+      - fix/blood-coils-circus-and-kwon-risk-cues-20261106
+    paths:
+      - 'src/blood-view.mjs'
+      - 'src/arena.mjs'
+      - 'src/kwon-danger-veil.mjs'
+      - 'src/clown-battle.mjs'
+      - 'src/clown-danger-spotlight.mjs'
+      - 'tests/boss-danger-presentation.test.mjs'
+      - 'tests/four-boss-signature-3d.test.mjs'
+      - '.github/workflows/boss-danger-presentation.yml'
+  pull_request:
+    paths:
+      - 'src/blood-view.mjs'
+      - 'src/arena.mjs'
+      - 'src/kwon-danger-veil.mjs'
+      - 'src/clown-battle.mjs'
+      - 'src/clown-danger-spotlight.mjs'
+      - 'tests/boss-danger-presentation.test.mjs'
+      - 'tests/four-boss-signature-3d.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  presentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install render dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check visual modules
+        run: |
+          node --check src/blood-view.mjs
+          node --check src/arena.mjs
+          node --check src/kwon-danger-veil.mjs
+          node --check src/clown-battle.mjs
+          node --check src/clown-danger-spotlight.mjs
+      - name: Test exact hitbox danger cues and visual regressions
+        run: >
+          node --test
+          tests/boss-danger-presentation.test.mjs
+          tests/four-boss-signature-3d.test.mjs
+          tests/environmental-telegraphs.test.mjs
+          tests/circus-lighting.test.mjs
+          tests/clown-patterns.test.mjs
+          tests/blood-render.test.mjs
+          tests/attack-readability.test.mjs
