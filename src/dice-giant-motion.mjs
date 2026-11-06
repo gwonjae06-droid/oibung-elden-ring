@@ -42,11 +42,18 @@ const finite=v=>Number.isFinite(v)?v:0;
 export function giantThrowTimeline(state,h){
  if(!state||!h||!(h.warn>0))return null;
  const index=h.handIndex,impact=h.start+h.warn;
- // A single palm has to finish releasing its previous object before collecting the next.
+ // Real multi-second ballistic flight, not the former 0.11-second blur.
+ // Schedule pickup after the previous release, not after its projectile lands:
+ // several objects may be in flight while only one is held by each hand.
+ const flight=Math.min(h.flightSeconds??.11,Math.max(.11,h.warn-.25));
  const preceding=(state.hazards||[]).filter(q=>q!==h&&q.handIndex===index&&!q.cancelled&&q.start<h.start)
-  .reduce((latest,q)=>Math.max(latest,q.start+q.warn*.64+.045),0);
- const ready=Math.min(impact-.23,Math.max(h.start,preceding));
- const release=Math.min(impact-.11,Math.max(ready+.14,h.start+h.warn*.64));
+  .reduce((latest,q)=>{
+   const duration=Math.min(q.flightSeconds??.11,Math.max(.11,q.warn-.25));
+   return Math.max(latest,q.start+q.warn-duration+.025);
+  },0);
+ const plannedRelease=impact-flight;
+ const ready=Math.min(plannedRelease-.13,Math.max(h.start,preceding));
+ const release=Math.max(ready+.13,plannedRelease);
  const pickupEnd=ready+Math.min(.19,(release-ready)*.31);
  return {ready,pickupEnd,release,impact,age:state.t-h.start,phase:state.t<ready?'rest':state.t<pickupEnd?'pickup':state.t<release?'grip':state.t<impact?'flight':'impact'};
 }
@@ -71,9 +78,12 @@ export function giantThrownPropPose(state,h,type,grip,launch){
  }
  if(state.t<timing.release)return {visible:true,phase:'grip',x:current.x,y:current.y,z:current.z,spin:0,flight:0};
  const start=launch||current,u=clamp01((state.t-timing.release)/(timing.impact-timing.release));
- const travel=Math.hypot(h.x-start.x,h.z-start.z),height=Math.min(19,Math.max(type==='chess'?7:5,travel*.23));
- const spin=(type==='coin'?Math.PI*6:type==='dice'?Math.PI*3.2:type==='chip'?Math.PI*2.3:Math.PI*1.2)*u;
- return {visible:true,phase:'flight',x:lerp(start.x,h.x,u),y:lerp(start.y,Math.max(1.4,type==='chess'?4:2),u)+Math.sin(u*Math.PI)*height,z:lerp(start.z,h.z,u),spin,flight:u};
+ const travel=Math.hypot(h.x-start.x,h.z-start.z),height=Math.min(19,Math.max(type==='chess'?7:5,travel*.19));
+ const spin=(type==='coin'?Math.PI*4:type==='dice'?Math.PI*2.5:type==='chip'?Math.PI*1.8:Math.PI)*u;
+ // Smooth horizontal acceleration/deceleration and a visibly arcing descent.
+ // Both endpoints are identical to the gameplay's actual launch/impact.
+ const flight=ease(u);
+ return {visible:true,phase:'flight',x:lerp(start.x,h.x,flight),y:lerp(start.y,Math.max(1.4,type==='chess'?4:2),u)+Math.sin(u*Math.PI)*height,z:lerp(start.z,h.z,flight),spin,flight:u};
 }
 // Grip -> shoulder wind-up -> release -> recoil. Pure curves; the hand collider uses
 // giantHandPose (same positional trajectory), while wrist and fingers follow this gesture.
