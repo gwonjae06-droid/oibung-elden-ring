@@ -18,7 +18,7 @@ export function createKwonNeckMotion(){
 }
 export function collectKwonMouthParts(T,children){return children.filter(o=>{if(o.isInstancedMesh||!o.geometry)return false;if(o.geometry.type==='ConeGeometry')return o.position.z>2&&o.position.y<2.6;if(o.geometry.type!=='TubeGeometry')return false;o.geometry.computeBoundingBox();return o.geometry.boundingBox?.getCenter(new T.Vector3()).z>2.4;});}
 export function createKwonNeckRig(T,torso,head,HEAD,model){
- const joint=new T.Group();joint.name='kwon-neck-rig';const rest=kwonNeckOffsets(torso.headPosition(HEAD)),motion=createKwonNeckMotion(),v=new T.Vector3();joint.position.set(...rest.pivot);torso.chest.add(joint);joint.add(head);head.position.set(...rest.head);
+ const joint=new T.Group();joint.name='kwon-neck-rig';const rest=kwonNeckOffsets(torso.headPosition(HEAD)),motion=createKwonNeckMotion(),recoil=createRecoilBank(),v=new T.Vector3();let lastOwner=null;joint.position.set(...rest.pivot);torso.chest.add(joint);joint.add(head);head.position.set(...rest.head);
  return {joint,headOffset:rest.head,update(b,m,dt,frozen){const p=motion.update(b,m,dt,frozen);joint.rotation.set(p.pitch,p.yaw,p.roll);},point(){head.getWorldPosition(v);model.worldToLocal(v);return {x:v.x,y:v.y,z:v.z};}};
 }
 // Visual motion updates are scoped to this rig.
