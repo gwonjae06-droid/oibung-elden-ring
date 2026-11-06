@@ -3,7 +3,7 @@ import {bloodReadableWarning} from './attack-readability.mjs';
 import {createBloodWalk,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
-import {BLOOD_RULES as R,BLOOD_PATTERNS,hazardContains} from './blood-data.mjs';
+import {BLOOD_RULES as R,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -180,7 +180,7 @@ function tickBoss(g,dt){
  s.t+=dt;const spec=BLOOD_PATTERNS[s.pattern];
  s.elevation=spec.air?bloodFlightHeight(s.pattern,s.t,spec.duration,s.strikeAt):0;
  if(spec.air){const pos=bloodFlightPosition(s.pattern,s.t,s.origin,s.target,s.strikeAt);b.x=pos.x;b.z=pos.z;}
- for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
+ for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(bloodHazardContactReady(h)&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
  if(s.t>=spec.duration){
   if(s.pattern==='heartFeast'){

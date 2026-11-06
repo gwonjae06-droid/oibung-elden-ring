@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {hazardPosition,bloodHazardFootprint,BLOOD_RULES,BLOOD_SAFE_GROUND_PATTERNS} from './blood-data.mjs';
+import {hazardPosition,bloodHazardFootprint,bloodHazardContactReady,BLOOD_RULES,BLOOD_SAFE_GROUND_PATTERNS} from './blood-data.mjs';
 export {BLOOD_SAFE_GROUND_PATTERNS} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
@@ -25,7 +25,7 @@ export function bloodFloorField(g){
   hazards:hazards.slice(0,BLOOD_FLOOR_MAX_HAZARDS).map(h=>({
    ...bloodHazardFootprint(h),
    strength:h.hit?.06:h.age>=h.warn?1:.3+.65*Math.min(1,h.age/Math.max(.01,h.warn)),
-   active:h.age>=h.warn&&!h.hit
+   active:bloodHazardContactReady(h)&&!h.hit
   }))};
 }
 function createBloodFloor(parent){
