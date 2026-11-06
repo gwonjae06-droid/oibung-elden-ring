@@ -31,14 +31,15 @@ try{
  assert.equal(errors.length,0,'render error in sacred white cathedral: '+errors.join(' / '));
  const desktop=await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
+  const {BLOOD_RULES}=await import('./src/blood-data.mjs');
   const root=document.querySelector('#blood-battle')?.firstElementChild?.shadowRoot;
   const canvas=root?.querySelector('canvas'),session=readBattleSession(root);
   const rect=canvas?.getBoundingClientRect();
   if(!session||!rect||rect.width<400||rect.height<200)throw Error('blood renderer canvas invalid');
-  return {canvas:{width:rect.width,height:rect.height},graphics:session.diagnostics()?.graphics,sea:session.diagnostics()?.view?.bloodSea,phase:session.game.boss.phase};
+  return {canvas:{width:rect.width,height:rect.height},graphics:session.diagnostics()?.graphics,sea:session.diagnostics()?.view?.bloodSea,combatRadius:BLOOD_RULES.radius,phase:session.game.boss.phase};
  });
  assert.equal(desktop.phase,1);
- assert.equal(desktop.sea?.radius,28,'crimson sea should wrap the actual movement boundary');
+ assert.equal(desktop.sea?.radius,desktop.combatRadius,'crimson sea should wrap the actual movement boundary');
  assert.equal(desktop.sea?.damageSources,0,'decorative sea must never inflict damage');
  assert.ok(desktop.sea?.ripples>=20,'blood sea lost its animated detail');
  await page.screenshot({path:'artifacts/blood-cathedral/phase-one-white-nave.png'});
