@@ -167,7 +167,7 @@ function updateCamera(dt){const p=game.player,b=game.boss,dx=b.x-p.x,dz=b.z-p.z,
 const focus=lock&&game.status==='playing'?stance?.cameraFocus({x:p.x,y:0,z:p.z}):null;
 if(focus)camera.lookAt(focus.x,focus.y,focus.z);
 else camera.lookAt(p.x+dx*k,1.6+elevation,p.z+dz*k);}
-function updateHud(){const p=game.player,b=game.boss;renderSharedHud(document,game,skillView(game),{weaponName:WEAPONS[game.weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q',round:Math.round});setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');setText('boss-action','');$('boss-action').toggleAttribute('data-critical',/압사|즉사|경직|기절|약점/.test(line));if(mode!=='playing'||!lock||b.state==='dead')$('reticle').hidden=true;}
+function updateHud(){const p=game.player,b=game.boss;renderSharedHud(document,game,skillView(game),{weaponName:WEAPONS[game.weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q',round:Math.round});setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');setText('boss-action','');$('boss-action').removeAttribute('data-critical');if(mode!=='playing'||!lock||b.state==='dead')$('reticle').hidden=true;}
 const quality=createEncounterQuality({coarse,onChange:scale=>resizeBattleViewport(renderer,camera,canvas,scale)});
 warmup=createBattleVisualWarmup({renderer,scene,camera});startup.own('Kwon visual warmup',()=>warmup.dispose());
 let drewArena=false;
