@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {hazardPosition} from './blood-data.mjs';
+import {hazardPosition,bloodHazardFootprint,BLOOD_RULES} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
 import {bloodWaveVisualPose} from './blood-volumetric-wave.mjs';
@@ -11,8 +11,58 @@ const clamp01=v=>Math.max(0,Math.min(1,v));
 const easeOut=u=>1-Math.pow(1-clamp01(u),3);
 const smooth=u=>{u=clamp01(u);return u*u*(3-2*u);};
 const reach=(h,c)=>h.shape==='lane'?Math.max(1.8,h.width*1.2):h.shape==='cone'?Math.max(2.5,h.r*.4):h.shape==='ring'?Math.max(1.5,h.width*1.5):Math.max(1.2,c.r);
+export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
+ 'burst','vortex','dive','eclipse','tide','ritual','judgement',
+ 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross'
+]);
+export const BLOOD_FLOOR_MAX_HAZARDS=12;
+// Render the precise padded collision footprint, including moving blood walls.
+// Safe red is shown for broad attacks; future warnings already mark their
+// target, and every live hazard in a combination contributes to the dark union.
+export function bloodFloorField(g){
+ if(g?.status!=='playing'||g?.boss?.state!=='pattern'||!g?.blood?.hazards?.length)return null;
+ const hazards=g.blood.hazards.filter(h=>h.damage>0&&h.age<h.warn+h.life);
+ if(!hazards.length)return null;
+ return {safety:BLOOD_SAFE_GROUND_PATTERNS.has(g.blood.pattern),
+  hazards:hazards.slice(0,BLOOD_FLOOR_MAX_HAZARDS).map(h=>({
+   ...bloodHazardFootprint(h),
+   strength:h.hit?.06:h.age>=h.warn?1:.3+.65*Math.min(1,h.age/Math.max(.01,h.warn)),
+   active:h.age>=h.warn&&!h.hit
+  }))};
+}
+function createBloodFloor(parent){
+ const N=BLOOD_FLOOR_MAX_HAZARDS,uniforms={
+  uTime:{value:0},uCount:{value:0},uSafe:{value:0},
+  uFootA:{value:Array.from({length:N},()=>new THREE.Vector4())},
+  uFootB:{value:Array.from({length:N},()=>new THREE.Vector4())},
+  uFootC:{value:Array.from({length:N},()=>new THREE.Vector4())}
+ };
+ const material=new THREE.ShaderMaterial({uniforms,transparent:true,depthTest:true,
+  depthWrite:false,side:THREE.DoubleSide,
+  vertexShader:"varying vec2 vPos;\nvoid main(){vPos=position.xz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
+  fragmentShader:"precision highp float;\nvarying vec2 vPos;\nuniform float uTime,uSafe;\nuniform int uCount;\nuniform vec4 uFootA[12],uFootB[12],uFootC[12];\nfloat sdf(vec2 p,vec4 a,vec4 b,vec4 c){\n vec2 d=p-a.xy;float r=length(d);\n if(a.w<1.5)return r-a.z;\n if(a.w<2.5)return abs(r-a.z)-b.x;\n if(a.w<3.5){float si=sin(b.z),co=cos(b.z);\n  return max(abs(d.x*co-d.y*si)-b.x,abs(d.x*si+d.y*co)-b.y);\n }\n float ang=atan(d.x,d.y)-b.z;\n return max(max(r-a.z,b.w-r),(abs(atan(sin(ang),cos(ang)))-c.x)*max(.1,r));\n}\nvoid main(){\n float arena=1.0-smoothstep(26.65,27.02,length(vPos));\n if(arena<=0.0)discard;\n float danger=0.0,rim=0.0;\n for(int i=0;i<12;i++){\n  if(i>=uCount)break;\n  float d=sdf(vPos,uFootA[i],uFootB[i],uFootC[i]);\n  danger=max(danger,(1.0-smoothstep(-.24,.24,d))*uFootC[i].y);\n  rim=max(rim,(1.0-smoothstep(0.0,.40,abs(d)))*uFootC[i].y);\n }\n if(danger<.005&&uSafe<.5)discard;\n float flow=sin(vPos.x*1.26+vPos.y*.44-uTime*.7+.34*sin(vPos.y*.8+uTime*.2));\n float swirl=sin(length(vPos)*.6-uTime*.4+flow*.3);\n float sheen=.5+.5*sin(vPos.y*.36-vPos.x*.23+uTime*.33);\n vec3 safeBlood=vec3(.83,.21,.25)*(.9+.09*sheen);\n vec3 darkBlood=vec3(.115,.008,.033)*(.94+.16*swirl);\n vec3 color=mix(safeBlood,darkBlood,smoothstep(.07,.77,danger));\n color+=vec3(.16,.024,.029)*rim*.52;\n float base=uSafe>.5?.35:0.0;\n float opacity=base+(1.0-base)*danger*.90;\n gl_FragColor=vec4(color,min(.93,opacity*arena));\n}"});
+ const geometry=new THREE.PlaneGeometry(BLOOD_RULES.radius*2,BLOOD_RULES.radius*2).rotateX(-Math.PI/2);
+ const mesh=new THREE.Mesh(geometry,material);
+ mesh.name='blood-hazard-dark-and-safe-liquid';mesh.position.y=.10;
+ mesh.visible=false;mesh.renderOrder=3;mesh.frustumCulled=false;parent.add(mesh);
+ function update(g,time){
+  const field=bloodFloorField(g);mesh.visible=Boolean(field);
+  if(!field){uniforms.uCount.value=0;return;}
+  uniforms.uCount.value=field.hazards.length;uniforms.uTime.value=time;
+  uniforms.uSafe.value=field.safety?1:0;
+  field.hazards.forEach((h,i)=>{
+   uniforms.uFootA.value[i].set(h.x,h.z,h.r,h.kind);
+   uniforms.uFootB.value[i].set(h.halfWidth,h.halfLength,h.yaw||0,h.inner);
+   uniforms.uFootC.value[i].set(h.arc,h.strength,h.active?1:0,0);
+  });
+ }
+ function clear(){mesh.visible=false;uniforms.uCount.value=0;}
+ return {update,clear,mesh};
+}
+
 export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=false}={}){
  const live=new Map(),ghosts=new Set(),pool=new Map();let stamp=0,clock=0;
+ const bloodFloor=createBloodFloor(parent);
  const sprayDummy=new THREE.Object3D(),sprayCount=(reduced||coarse)?8:20;
  const mesh=(geo,group)=>{const m=new THREE.Mesh(geo,fluid.material);group.add(m);return m;};
  function acquire(pattern){
@@ -102,7 +152,7 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     parts[1].scale.set(c.r*.6,(pattern==='rain'||pattern==='rosary')?1:height*.8,c.r*.6);parts[1].position.set(c.r*.25,(pattern==='rain'||pattern==='rosary')?(1-charge)*15:height*.65,0);parts[1].rotation.z=.18;
     parts[2].scale.set(c.r*.65,.3,c.r*.65);parts[2].position.y=height;break;
    }
-   case 'burst':{const r=active?c.r*(.4+.6*easeOut(t/(h.life*.9))):1.8*charge;parts[0].position.y=active?.45:2;parts[0].scale.set(r,active?.4:r*.8,r);parts[1].rotation.x=Math.PI/2;parts[1].scale.setScalar(active?r:charge*2);break;}
+   case 'burst':{const r=active?c.r:Math.max(1.8,c.r)*charge*.93;parts[0].position.y=active?.45:2;parts[0].scale.set(r,active?.4:r*.8,r);parts[1].rotation.x=Math.PI/2;parts[1].scale.setScalar(active?r:charge*2);break;}
    case 'orbs':{parts[0].position.y=1.25;parts[0].scale.set(c.r*p,c.r*p*(1+Math.sin(swirl)*.08),c.r*p);parts[1].position.set(0,1.1,-c.r*1.4);parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.6,3*p,.6);break;}
    case 'chain':case 'heartCage':case 'bloodStatues':case 'heartFeast':{for(let i=0;i<2;i++){const m=parts[i];m.position.set(Math.sin(swirl+i*Math.PI)*c.r*.4,1.2,Math.cos(swirl+i*Math.PI)*c.r*.4);m.rotation.z=Math.sin(swirl+i)*.4;m.scale.set(.35,3.5*p,.35);}parts[2].rotation.x=Math.PI/2;parts[2].scale.set(c.r*.8,c.r*.8,1);break;}
    case 'orbit':case 'pulse':{for(let i=0;i<2;i++){parts[i].rotation.set(Math.PI/2+i*.08,0,swirl*(i?-1:1));parts[i].position.y=.25+i*.35;parts[i].scale.set(c.r,c.r,h.width*3);}if(parts[2]){parts[2].position.y=.45;parts[2].scale.set(.7,.2,.7);}break;}
@@ -161,11 +211,11 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
   item.post=.0001;ghosts.add(item);
  }
  function update(g,dt=0){
-  stamp++;clock+=dt;
+  stamp++;clock+=dt;bloodFloor.update(g,clock);
   for(const h of g.blood.hazards){let item=live.get(h.id);if(!item){item=acquire(g.blood.pattern);live.set(h.id,item);}item.stamp=stamp;item.h=h;pose(item,h,g,0);}
   for(const[id,item]of live)if(item.stamp!==stamp){live.delete(id);settle(item);}
   for(const item of ghosts){item.post+=dt;if(item.post>=TAIL){ghosts.delete(item);release(item);continue;}pose(item,item.h,g,item.post);}
  }
- function clear(){for(const item of live.values())release(item);live.clear();for(const item of ghosts)release(item);ghosts.clear();particles.clear();}
- return {update,clear,get active(){return live.size;},get settling(){return ghosts.size;}};
+ function clear(){bloodFloor.clear();for(const item of live.values())release(item);live.clear();for(const item of ghosts)release(item);ghosts.clear();particles.clear();}
+ return {update,clear,get active(){return live.size;},get settling(){return ghosts.size;},get clarityFloor(){return bloodFloor.mesh;}};
 }
