@@ -78,7 +78,7 @@ test('Clown story links its existing performance after ball cannon',()=>{
 
 test('Giant story offers distinct slots in its weighted controlled and feral cycles',()=>{
  const g={player:{x:0,z:-40},dice:{patternShuffle:createPatternShuffle(2026),giant:{temperament:'controlled'}}};
- for(const [feral,total] of [[false,14],[true,16]]){
+ for(const [feral,total] of [[false,GIANT_NAMES.length],[true,FERAL_NAMES.length]]){
   g.dice.giant={temperament:feral?'feral':'controlled'};
   const chosen=Array.from({length:total},()=>nextGiantPressureSlot(g));
   assert.equal(new Set(chosen).size,total);

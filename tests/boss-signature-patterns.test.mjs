@@ -43,7 +43,7 @@ for(const name of clownNew)test('Clown '+name+' has bodily warning, bounded dang
 });
 
 test('Park Sungwon controlled and feral stages include four distinct articulated attacks',()=>{
- assert.equal(GIANT_NAMES.length,14);assert.equal(FERAL_NAMES.length,16);
+ assert.equal(GIANT_NAMES.length,16);assert.equal(FERAL_NAMES.length,16);
  for(const [feral,indices]of [[false,[9,10]],[true,[10,11]]]){
   for(const slot of indices){
    const p=giantPattern(slot,{x:8,z:-41},feral?'feral':'controlled',.23);

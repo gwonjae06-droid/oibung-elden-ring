@@ -541,7 +541,8 @@ export function chooseOpening(g) {
  const signature=phase===1?['spiderPrison','skyJudge','counterDancer']
   :['graveSword','livingSword','lastStance','doubleMoon'];
  const eligible=signature.filter(id=>pool.includes(id)&&
-  (!distant||KWON_RANGE_PRESSURE.openings[phase].includes(id)));
+  (!distant||KWON_RANGE_PRESSURE.openings[phase].includes(id))&&
+  (g.journeyBalance?.mode!=='story'||preferred.includes(id)));
  if(b.openingCounts[phase]<(phase===1?2:3)&&eligible.length)
   preferred=eligible;
  b.openingCounts[phase]++;b.sequence++;
