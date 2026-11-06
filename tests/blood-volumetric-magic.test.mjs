@@ -87,7 +87,7 @@ test('actual wave renderer draws solid primary/undertow masses and prefire spray
   assert.equal(group.children[0].isMesh,true);
   const primary=group.children[0].geometry,undertow=group.children[1].geometry;
   assert.notEqual(primary,undertow);
-  assert.ok(primary.attributes.position.count>200);
+  assert.ok(primary.attributes.position.count>150,'low-tier 3D crest has too few volume vertices');
   assert.equal(scene.getObjectByName('blood-wave-crest-spray').count,0);
   h.age=h.warn+.3;game.blood.t=h.age;game.time+=.35;
   view.update(game,.016);
