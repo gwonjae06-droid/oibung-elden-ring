@@ -1031,10 +1031,10 @@ const RUN = {
   },
 };
 // A real moving body, using the same swept trajectory as the warning lane.
-function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage=26}={}){
+function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage=26,angleOffset=0}={}){
  if(t<start)return;
  const b=g.boss,lane=once(c,key,()=>{
-  const yaw=toward(b,g.player),len=fitLen(b,yaw,reach);c.yaw=yaw;
+  const yaw=toward(b,g.player)+angleOffset,len=fitLen(b,yaw,reach);c.yaw=yaw;
   zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*1.8,warn:anticipation,visual:true});
   emit(g,'clown-horror',{cue:'reverse-crawl',x:b.x,z:b.z});
   return {x:b.x,z:b.z,yaw,len,hit:false,done:false};

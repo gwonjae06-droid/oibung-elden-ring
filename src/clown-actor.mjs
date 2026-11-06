@@ -84,7 +84,9 @@ export function createClownActor({coarse=false}={}){
   if(M?.visible){mount.group.position.set(0,M.y+rise-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6*A.headScale,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
   head.group.visible=F.bodyHead;h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
   if(F.bodyHead&&v.neckTarget&&v.neck>0){target.set(v.neckTarget.x,1.2+Math.max(0,A.headScale-1)*1.1,v.neckTarget.z);body.worldToLocal(target);h.lerp(target,v.neck);}
-  if(F.bodyHead){head.group.position.copy(h);head.group.rotation.x=Q.active?Q.headCounter:v.neck*Math.PI;head.group.rotation.z=soft.headRoll;head.setMorph(p,time);}
+  if(F.bodyHead){head.group.position.copy(h);head.group.rotation.x=Q.active?Q.headCounter+v.neck*.20:v.neck*Math.PI;
+    head.group.rotation.y=Q.active?Math.sin(time*3.8+v.tilt*3)*.12+v.tilt*.78:0;
+    head.group.rotation.z=soft.headRoll;head.setMorph(p,time);}
   link(neck,[0,3.45+elongation*.15-crouch*.25,0],F.bodyHead?[h.x,h.y-Math.min(.8,size*.8)*Math.cos(v.neck*Math.PI),h.z]:[0,3.72+elongation*.15-crouch*.25,0]);neck.scale.x=neck.scale.z=A.neckWidth;
   for(const L of limbs){const s=L.s,grip=A.cameraGrip||(F.bodyHead&&['inflate','hold'].includes(F.pose)),gloveCue=A.clapClose??v.glove,pulse=Math.max(0,...c.bombs.map(q=>q.kind!=='ball'&&q.t<.3?Math.sin(q.t/.3*Math.PI):0));let hand=[s*1.9,2.1+Math.sin(time*3+s)*.08,.45];
    if(grip)hand=[s*size*.7,h.y-.25,Math.max(.4,size*.45)];if(pulse>0)hand=[s*(1.9-pulse),2.8,1+pulse*3];if(gloveCue>0)hand=[s*1.9*(1-gloveCue),2.5,1+gloveCue*1.9];if(v.juggle)hand=[s*1.8,2.7+Math.sin(time*9+s)*.8,.8];if(v.neck>0)hand=[s*.7,.2,.7];
