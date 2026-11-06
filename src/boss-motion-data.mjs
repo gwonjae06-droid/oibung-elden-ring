@@ -3,6 +3,10 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(Number.isFinite(t)?t:0,0,1);return t*t*(3-2*t);};
 const ZERO={lean:0,sink:0,sway:0};
 export const MOTION_STYLE={
+ spiderPrison:[{lean:-.18,sink:-.43,sway:-.06},{lean:.17,sink:-.12,sway:.10}],
+ graveSword:[{lean:-.27,sink:.22,sway:-.03},{lean:.22,sink:-.49,sway:.06}],
+ livingSword:[{lean:-.19,sink:-.16,sway:.16},{lean:.21,sink:-.06,sway:-.12}],
+ lastStance:[{lean:-.18,sink:-.3,sway:-.16},{lean:.24,sink:-.1,sway:.18}],
  sweep:[{lean:-.06,sink:-.1,sway:-.08},{lean:.08,sink:0,sway:.1}],
  reverse:[{lean:-.05,sink:-.1,sway:.08},{lean:.08,sink:0,sway:-.1}],
  thrust:[{lean:-.18,sink:-.3,sway:0},{lean:.2,sink:-.1,sway:0}],

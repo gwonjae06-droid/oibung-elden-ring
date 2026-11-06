@@ -27,6 +27,11 @@ export const HUG_RANGE = 3.3;
 export const HUG_TIME = 2.2;
 export const WEAPONS = PLAYER_WEAPONS;
 export const PATTERNS = {
+  // Signature skills retain the same readable windup/active/recovery contract.
+  spiderPrison: {name:'거미의 봉쇄',wind:1.25,active:.52,recover:1.7,damage:26},
+  graveSword: {name:'검의 묘비',wind:1.42,active:.42,recover:1.65,damage:38},
+  livingSword: {name:'살아 있는 턱검',wind:1.12,active:.46,recover:1.48,damage:28},
+  lastStance: {name:'왕의 최후 자세',wind:1.12,active:.66,recover:2.1,damage:34},
   sweep: {
     name: '왕검 횡단',
     wind: 0.48,
@@ -98,6 +103,7 @@ export const ORDER = {
     'skewer',
     'counterDancer',
     'skyJudge',
+    'spiderPrison',
   ],
   2: [
     'draw',
@@ -115,6 +121,9 @@ export const ORDER = {
     'jawSnare',
     'doubleMoon',
     'windParry',
+    'graveSword',
+    'livingSword',
+    'lastStance',
   ],
 };
 export const CLOSE = {
@@ -152,8 +161,12 @@ export const SEQUENCES = {
   jawSnare: ['rush', 'backsweep', 'rise'],
   doubleMoon: ['wave', 'retreat', 'rush', 'slam'],
   windParry: ['jab', 'reverse', 'whirl'],
+  graveSword: ['graveSword','slam'],
+  livingSword: ['livingSword','rush'],
+  lastStance: ['lastStance','reverse','cross','slam'],
 };
 export const PHASE_ONE = {
+  spiderPrison: ['spiderPrison','backsweep'],
   rush: ['rush'],
   sweep: ['sweep', 'reverse'],
   thrust: ['thrust'],
@@ -284,6 +297,8 @@ export function attackZone(b) {
     active = b.state === 'active',
     base = {kind: 'danger', shape: 'circle', x: b.x, z: b.z, progress, active};
   if (b.pattern === 'stomp') return {...base, r: 6.5};
+  if (b.pattern === 'spiderPrison') return {...base, r: 5.4};
+  if (b.pattern === 'lastStance') return {...base, shape:'cone', r:7.5, yaw:b.yaw,half:.72};
   if (b.pattern === 'shove') return {...base, kind: 'push', r: 4.8};
   if (b.pattern === 'backsweep')
     return {
@@ -293,12 +308,12 @@ export function attackZone(b) {
       yaw: b.yaw + Math.PI,
       half: Math.PI - 1.2,
     };
-  if (['slam', 'leap'].includes(b.pattern) && b.zone)
+  if (['slam', 'leap','graveSword'].includes(b.pattern) && b.zone)
     return {
       ...base,
       x: b.zone.x,
       z: b.zone.z,
-      r: b.pattern === 'leap' ? 5.2 : 3.2,
+      r: b.pattern === 'leap' ? 5.2 : b.pattern==='graveSword'?4.4:3.2,
     };
   return null;
 }
@@ -463,7 +478,7 @@ export function startPattern(g, name) {
   b.punishable = false;
   b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
   b.aim = b.yaw;
-  b.zone = ['slam', 'leap'].includes(name)
+  b.zone = ['slam', 'leap','graveSword'].includes(name)
     ? {x: g.player.x, z: g.player.z}
     : null;
   emit(g, 'telegraph', {name: PATTERNS[name].name});
@@ -497,12 +512,14 @@ export function chooseOpening(g) {
         : d < 5
           ? CLOSE[2]
           : ORDER[2];
+  if(b.phase===2&&b.hp/b.maxHp<.3&&g.player.action?.kind!=='heal'&&b.sequence%5===0)
+    return b.lastOpening==='lastStance'?'graveSword':'lastStance';
   if(g.journeyBalance?.mode==='story'&&g.player.action?.kind!=='heal'){
     // Prioritize existing combos for close pursuit or distance denial.
     if(d<6)list=b.phase===1?['hunt','skewer','counterDancer','skyJudge','backsweep']:
       ['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
-    else if(d>11)list=b.phase===1?['siege','skyJudge','feint','hunt','thrust']:
-      ['requiem','doubleMoon','falseExecution','crescent','execution','draw'];
+    else if(d>11)list=b.phase===1?['siege','spiderPrison','skyJudge','feint','hunt','thrust']:
+      ['requiem','livingSword','graveSword','doubleMoon','falseExecution','crescent','execution','draw'];
     else if(b.phase===2&&b.lastOpening==='crescent')
       list=['royalHunt','counter','windParry','trample'];
   }
@@ -518,7 +535,7 @@ export function swordPose(b) {
     stand = q.standing,
     carry = mix(0.25, -0.6, stand),
     cut = mix(0.25, 0.72, stand),
-    {ly, ey, lp, ep, back} = poseParams(b.pattern, stand, carry, cut),
+    {ly, ey, lp, ep, back} = poseParams(({spiderPrison:'stomp',graveSword:'slam',livingSword:'wave',lastStance:'whirl'})[b.pattern]||b.pattern, stand, carry, cut),
     from = b.from || {yaw: 0, pitch: carry, offset: 0};
   let yaw = 0,
     pitch = carry,
@@ -727,6 +744,7 @@ export function step(g, dt, input = {}) {
   if (g.status !== 'playing' || b.state === 'transition') return;
   for (const q of g.bossShots) {
     const old = {x: q.x, z: q.z};
+    if(q.turnRate){const delta=angleDelta(q.yaw,toward(q,p));q.yaw+=clamp(delta,-q.turnRate*dt,q.turnRate*dt);}
     q.x += Math.sin(q.yaw) * q.speed * dt;
     q.z += Math.cos(q.yaw) * q.speed * dt;
     q.age = (q.age||0) + dt;
@@ -793,6 +811,25 @@ export function step(g, dt, input = {}) {
     }
   } else if (b.state === 'active') {
     // One broad vertical slash leaves the sword at the midpoint of its fall.
+    if(['spiderPrison','graveSword','livingSword','lastStance'].includes(b.pattern)&&!b.waveFired&&b.t>=cfg.active*.38){
+      b.waveFired=true;
+      const kind=b.pattern, count=kind==='spiderPrison'?7:kind==='graveSword'?3:kind==='lastStance'?2:1;
+      const baseYaw=b.yaw, gap=kind==='spiderPrison'?Math.PI/5:0;
+      for(let i=0;i<count;i++){
+        const yaw=kind==='spiderPrison'?baseYaw+(i-3)*gap:
+          kind==='graveSword'?baseYaw+(i-1)*.31:
+          kind==='lastStance'?baseYaw+(i?-.37:.37):baseYaw;
+        const origin=kind==='graveSword'&&b.zone?b.zone:b;
+        const x=origin.x+Math.sin(yaw)*1.7,z=origin.z+Math.cos(yaw)*1.7;
+        const shot={id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw,
+          variant:b.waveVariant,radius:kind==='livingSword'?1.1:1.05,
+          speed:kind==='spiderPrison'?9:kind==='graveSword'?8:kind==='livingSword'?11:17,
+          life:kind==='spiderPrison'?1.65:2.0,age:0,damage:kind==='spiderPrison'?16:kind==='graveSword'?22:26};
+        if(kind==='livingSword')shot.turnRate=.65;
+        g.bossShots.push(shot);
+        emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
+      }
+    }
     if (b.pattern === 'wave' && !b.waveFired && b.t >= cfg.active*KWON_WAVE.releaseRatio) {
       b.waveFired = true;
       const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
@@ -808,7 +845,7 @@ export function step(g, dt, input = {}) {
     else if (b.pattern === 'retreat') moveBoss(b, -9, dt);
     else if (b.pattern === 'leap' && b.t < cfg.active * 0.7)
       moveBoss(b, b.leapSpeed, dt);
-    else if (b.pattern === 'whirl') b.yaw += (TAU / cfg.active) * dt;
+    else if (b.pattern === 'whirl'||b.pattern==='lastStance') b.yaw += (TAU / cfg.active) * dt;
     const zone = attackZone(b);
     if (!b.hit && zone) {
       const ready =

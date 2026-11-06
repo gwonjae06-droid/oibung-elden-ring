@@ -329,6 +329,10 @@ const definitions = [
   ['trapdoorWaltz', '함정 무도회', 5.2, 1.5, [1, 2]],
   ['grandEncore', '세 번의 앙코르', 6.1, 1.6, [2]],
   ['invertedApplause', '거꾸로 박수', 6, 1.45, [2]],
+  ['puppetFuneral', '꼭두각시의 장례식', 5.8, 1.65, [1,2]],
+  ['laughContagion', '웃음의 전염', 5.4, 1.4, [1,2]],
+  ['stageCapsize', '무대 전복', 5.6, 1.7, [2]],
+  ['lastMagic', '마지막 마술', 6.4, 1.9, [2]],
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
@@ -795,6 +799,59 @@ const RUN = {
       emit(g, 'clown-stomp');
     }
   },
+  // Three hanging puppets swing along alternating lanes. Glove pulls precede every swing.
+  puppetFuneral(g,c,a,t){
+    const aim=once(c,'puppet-aim',()=>({yaw:toward(g.boss,g.player)})).yaw;
+    c.vis.glove=.25+.7*Math.abs(Math.sin(t*2.2));
+    c.vis.tilt=Math.sin(t*2.2)*.34;
+    c.vis.juggle=t<3.7?1:0;
+    for(let i=0;i<3;i++)if(cross(a,t,.25+i*1.12)){
+      const yaw=aim+(i-1)*.64;c.yaw=yaw;
+      zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw,
+        len:fitLen(g.boss,yaw,20),w:3.8,warn:1.05,
+        damage:25,blast:true,sound:'carousel'});
+      emit(g,'clown-juggle');
+    }
+  },
+  // The audience laughs from the perimeter in sequence; the last beat is a central clap.
+  laughContagion(g,c,a,t){
+    c.vis.glove=t<3.4?.5+.35*Math.sin(t*3):0;
+    c.vis.shake=t<3.4?.3*Math.abs(Math.sin(t*9)):0;
+    for(let i=0;i<6;i++)if(cross(a,t,.25+i*.5)){
+      const theta=i*Math.PI/3+c.seq*.37;
+      const q={x:Math.sin(theta)*17,z:Math.cos(theta)*17};
+      zone(g,{shape:'circle',...q,r:5.5,warn:1.15,damage:23,blast:true,sound:'laughBomb'});
+      emit(g,'clown-clap');
+    }
+    if(cross(a,t,2.85))zone(g,{shape:'circle',x:0,z:0,r:7,warn:1.05,damage:32,blast:true,sound:'lastClap'});
+  },
+  // A series of low, slanted blows sells the stage tipping rather than an unannounced global hit.
+  stageCapsize(g,c,a,t){
+    c.vis.crouch=t<1.5?smooth(t/1.5):.15;
+    c.vis.tilt=Math.sin(Math.min(t,4)*1.3)*.55;
+    c.vis.stomp=t>1.45&&t<4.1?Math.abs(Math.sin(t*4)):.0;
+    for(let i=0;i<4;i++)if(cross(a,t,.35+i*.72)){
+      const theta=c.yaw+(i%2?Math.PI/2:-Math.PI/2);
+      zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw:theta,
+        len:fitLen(g.boss,theta,22),w:5.2,warn:1.25,damage:28,
+        blast:true,sound:'trapdoorWaltz'});
+      emit(g,'clown-stomp');
+    }
+  },
+  // A head in a magic box: the swelling, fall and delayed side bursts are separate readable beats.
+  lastMagic(g,c,a,t){
+    const p=once(c,'magic-target',()=>target(g));
+    head(c,t<1.3?'inflate':t<3.2?'shrink':'regrow',
+      t<1.3?smooth(t/1.3):t<3.2?1:smooth((t-3.2)/2),'small');
+    c.vis.crouch=t<1.8?.75:Math.max(0,.75*(1-smooth((t-1.8)/2)));
+    c.vis.glove=t<3.6?.6+.3*Math.sin(t*3):0;
+    if(cross(a,t,1.05))bombAt(g,p,4.1,31,1.2,'head',.6);
+    for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.42)){
+      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,21);
+      zone(g,{shape:'circle',...q,r:2.9,warn:1,damage:24,blast:true,sound:'curtainCall'});
+    }
+    if(cross(a,t,4.6))emit(g,'clown-inflate');
+  },
   // An old-fashioned follow spotlight marks the player's last position,
   // then the clown turns his shoulders and relights the stage behind them.
   mirrorStage(g, c, a, t) {
@@ -988,6 +1045,8 @@ export function choosePattern(g) {
       'ballSpin',
       'trapdoorWaltz',
       'invertedApplause',
+      'puppetFuneral',
+      'lastMagic',
     ]),
     prefer = list.filter((k) =>
       d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,

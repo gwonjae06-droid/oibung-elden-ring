@@ -10,7 +10,7 @@ import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} fr
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,PLAYER_ROLL_SPEED,playerRolling} from './player-movement-rules.mjs';
-import {claimPlayerProjectileHit} from './player-projectile-data.mjs';
+import {claimPlayerProjectileHit,playerProjectileHitsCircle} from './player-projectile-data.mjs';
 import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {bloodHurtShapes} from './boss-hit-regions.mjs';
 
@@ -52,9 +52,23 @@ function hit(g,amount,source,projectile=false,impact=null){
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn);g.blood.hazards.push(h);return h;}
+// Attackable ritual channels cancel only their own future hazards and heal share.
+export function severHeartNode(g,amount,point){
+ const s=g.blood;
+ if(s.pattern!=='heartFeast'||g.boss.state!=='pattern'||!(amount>0))return false;
+ const n=s.heartNodes?.find(node=>node.hp>0&&Math.hypot(node.x-point.x,node.z-point.z)<node.r);
+ if(!n)return false;
+ n.hp=Math.max(0,n.hp-amount);
+ g.events.push({type:'blood-impact',pattern:'heartFeast',x:n.x,z:n.z});
+ if(n.hp===0){
+  for(const h of s.hazards)if(h.channel===n.id){h.hit=true;h.damage=0;}
+  g.events.push({type:'blood-channel-severed',x:n.x,z:n.z,channel:n.id});
+ }
+ return true;
+}
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>23?23/d:1;return {x:x*n,z:z*n};};
@@ -109,6 +123,32 @@ export function startBloodPattern(g,id){
   }
   circle(p.x,p.z,4.25,4.5,{life:.58,damage:32});
  }
+ // Reversing currents pull inward before a central eruption.
+ if(id==='reverseFlow'){
+  hazard(g,'ring',{x:p.x,z:p.z,r:17,width:2.3,grow:-6.4,warn:1.65,life:1.95,damage:22});
+  circle(p.x,p.z,3.95,5.8,{damage:35,life:.6});
+ }
+ // Two distinct humanoid blood forms condense before their delayed sweeps.
+ if(id==='bloodStatues')for(let i=0;i<2;i++){
+  const theta=aim+(i?1:-1)*.8,q=point(p.x+Math.sin(theta)*7,p.z+Math.cos(theta)*7);
+  circle(q.x,q.z,1.6+i*.82,3.7,{damage:26,life:.7});
+  hazard(g,'lane',{x:q.x,z:q.z,yaw:theta+(i?-.6:.6),width:4.1,length:12,
+   vx:Math.sin(theta)*8,vz:Math.cos(theta)*8,warn:2.7+i*.95,life:.7,damage:30});
+ }
+ if(id==='wingGenesis'){
+  for(let i=0;i<3;i++)hazard(g,'cone',{x:b.x,z:b.z,yaw:aim+[0,.8,-.8][i],arc:.6,
+    r:24,innerR:3,warn:2.0+i*1.12,life:.48,damage:31});
+  hazard(g,'ring',{x:b.x,z:b.z,r:11,width:1.4,grow:13,warn:4.4,life:.72,damage:24});
+ }
+ // Three tangible channels can be destroyed before the heart's final beat.
+ if(id==='heartFeast'){
+  for(let i=0;i<3;i++){
+   const theta=i*Math.PI*2/3+aim,q=point(b.x+Math.sin(theta)*9,b.z+Math.cos(theta)*9);
+   const n={id:i,x:q.x,z:q.z,r:2.6,hp:32};s.heartNodes.push(n);
+   circle(q.x,q.z,2.15+i*.76,3.8,{damage:28,life:.52,channel:i});
+  }
+  hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
+ }
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }
@@ -142,13 +182,23 @@ function tickBoss(g,dt){
  if(spec.air){const pos=bloodFlightPosition(s.pattern,s.t,s.origin,s.target,s.strikeAt);b.x=pos.x;b.z=pos.z;}
  for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
- if(s.t>=spec.duration){s.hazards.length=0;beginRecovery(g,spec.recover);emit(g,'blood-land');}
+ if(s.t>=spec.duration){
+  if(s.pattern==='heartFeast'){
+   const alive=s.heartNodes.filter(n=>n.hp>0).length;
+   const heal=Math.max(0,Math.min(b.maxHp*.025*alive/3,b.maxHp*.5-b.hp));
+   if(heal>0){b.hp+=heal;emit(g,'blood-siphon-heal',{amount:heal,x:b.x,z:b.z,y:4.7});}
+   s.heartNodes=[];
+  }
+  s.hazards.length=0;beginRecovery(g,spec.recover);emit(g,'blood-land');}
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
  tickPlayerAction(g,dt,w,{melee:a=>{
    if(bloodBossAirborne(g))return;
    const reach=g.weapon==='hammer'?3.05:2.85;
+   const n=g.blood.heartNodes?.find(q=>q.hp>0&&Math.hypot(q.x-p.x,q.z-p.z)<reach+q.r&&
+     Math.abs(Math.atan2(Math.sin(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw),Math.cos(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw)))<.6);
+   if(n&&severHeartNode(g,w.damage*a.mult,{x:n.x,z:n.z})){a.hit=true;return;}
    const impact=kwonMeleeContact(bloodHurtShapes(g),p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
    if(impact){a.hit=true;hit(g,w.damage*a.mult,a,false,impact);}
   }});
@@ -161,6 +211,8 @@ function tickPlayer(g,dt,input){
   if(q.hit||q.bossHit||q.life<=0)continue;
   // An airborne boss does not intercept, consume, reward or take damage from
   // a floor-level shot. It simply passes underneath until he lands.
+  const node=g.blood.heartNodes?.find(n=>n.hp>0&&playerProjectileHitsCircle(prev,q,n,n.r));
+  if(node&&claimPlayerProjectileHit(q)){severHeartNode(g,q.damage,{x:node.x,z:node.z});continue;}
   const prevY=Number.isFinite(prev.y)?prev.y:q.y;
   const impact=!bloodBossAirborne(g)?kwonProjectileContact(bloodHurtShapes(g),
    {x:prev.x,y:prevY,z:prev.z},{x:q.x,y:q.y,z:q.z}):null;
