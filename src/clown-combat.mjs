@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
@@ -336,6 +337,7 @@ const definitions = [
   ['laughContagion', '웃음의 전염', 5.4, 1.4, [1,2]],
   ['stageCapsize', '무대 전복', 5.6, 1.7, [2]],
   ['lastMagic', '마지막 마술', 6.4, 1.9, [2]],
+  ...HORROR_DEFINITIONS.map(([key,name,dur,recover,phases])=>[key,name,dur,recover,phases]),
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
@@ -1025,6 +1027,7 @@ const RUN = {
     }
   },
 };
+Object.assign(RUN,HORROR_RUN);
 export function choosePattern(g) {
  const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
  // The close-contact shove stays a situational defensive reaction, not an
@@ -1032,11 +1035,17 @@ export function choosePattern(g) {
  if(d<4&&c.shoveCd<=0&&c.seq>0&&c.seq%7===0&&c.last!=='shove'){
   c.seq++;return 'shove';
  }
- const pool=Object.keys(PATTERNS).filter(k=>k!=='shove'&&PATTERNS[k].phases.includes(phase));
+ const stage=g.clown.horrorStage||1;
+ const pool=Object.keys(PATTERNS).filter(k=>k!=='shove'&&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
  const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',
   'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
  let preferred=d<5.5?pool.filter(k=>close.has(k))
   :d>12?pool.filter(k=>!close.has(k)):[];
+ // Horror acts are real combat variety, not a rare one-off cutscene: prefer
+ // an unread nightmare cue while respecting the shuffled full-pattern deck.
+ const horror=pool.filter(k=>HORROR_PATTERNS.includes(k));
+ if(horror.length&&stage>=2&&c.seq%3===0)
+  preferred=[...horror.filter(k=>c.last!==k),...preferred];
  if(g.journeyBalance?.mode==='story'){
   const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
    spotlightSweep:'hornFan',ballCannon:'bounceChain',
@@ -1144,6 +1153,10 @@ function updateClown(g, dt) {
   c.time += dt;
   c.hug = dist(p, b) < HUG_DIST ? c.hug + dt : 0;
   c.shoveCd = Math.max(0, c.shoveCd - dt);
+  const nextStage=b.phase===2?(b.hp<=b.maxHp*.25?3:2):1;
+  if(nextStage!==c.horrorStage){c.horrorStage=nextStage;
+   if(nextStage===3)emit(g,'clown-phase3',{name:'막이 내린 뒤의 진짜 얼굴'});
+  }
   updateBombs(g, dt);
   updateZones(g, dt);
   updateWaves(g, dt);
@@ -1194,6 +1207,7 @@ export function createClownGame(weapon = 'sword', options) {
     time: 0,
     hits: [],
     vis: newVis(),
+    horrorStage:1,
   };
   return g;
 }
@@ -1261,8 +1275,8 @@ export function clownView(g) {
   else if (c.state === 'pattern') action = PATTERNS[c.name].name;
   return {
     name: '광대 오슬우',
-    sub: b.phase === 2 ? '끝나지 않는 앙코르' : '즐거운 공연',
-    phase: b.phase,
+    sub: c.horrorStage===3?'3막 · 무대의 악몽':b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',
+    phase: c.horrorStage||b.phase,
     hp: b.hp,
     maxHp: b.maxHp,
     action,
