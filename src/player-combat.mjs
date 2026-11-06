@@ -212,7 +212,7 @@ export function actPlayer(game, type) {
   // projectile. Card hand size stays at three.
   const cyclicRank=game.weapon==='cards'?evolutionCount(game,'wide-deck'):0;
   const autoCard=cyclicRank?['blue','red','yellow'][(skill.autoCardCycle++||0)%3]:null;
-  if(autoCard==='blue'){skill.blue=Math.max(skill.blue,cyclicRank===2?2:1.5);emit(game,'skill-cast',{flavor:'blue',automatic:true});}
+  if(autoCard==='blue'){skill.blue=Math.max(skill.blue,cyclicRank===2?2:1.5);skill.blueMultiplier=cyclicRank===2?1.32:1.22;emit(game,'skill-cast',{flavor:'blue',automatic:true});}
   if(autoCard==='red')emit(game,'skill-cast',{flavor:'red',automatic:true});
   if(autoCard==='yellow')emit(game,'skill-cast',{flavor:'yellow',automatic:true});
   player.action = {

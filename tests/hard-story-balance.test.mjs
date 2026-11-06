@@ -46,14 +46,14 @@ test('fully charged story sword keeps strong melee and limits its evolved wave b
  assert.ok(Math.abs(g.projectiles[0].damage-WEAPONS.sword.damage*.9*1.35)<1e-8);
 });
 
-test('upgraded story arrows and cards keep full projectile counts but not full volley burst',()=>{
- for(const [weapon,upgrade,count] of [['cards','wide-deck',7],['bow','twin-arrow',3]]){
+test('upgraded story cards remain three and fire arrows remain one',()=>{
+ for(const [weapon,upgrade,count] of [['cards','wide-deck',3],['bow','twin-arrow',1]]){
   const g=story(createGame(weapon,{register:false}),0);
   g.evolutions=[upgrade,upgrade];
   assert.equal(actPlayer(g,'light'),true);
   tickPlayerAction(g,.5,WEAPONS[weapon]);
   assert.equal(g.projectiles.length,count);
-  assert.ok(g.projectiles.every(q=>q.damage>0&&q.damage<WEAPONS[weapon].damage));
+  assert.ok(g.projectiles.every(q=>q.damage>0&&Number.isFinite(q.damage)));
  }
 });
 

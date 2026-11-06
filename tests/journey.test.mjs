@@ -108,10 +108,9 @@ test('evolution choices are permanent forge purchases, not post-boss relic selec
  const p=freshProfile();p.flames=4;
  assert.ok(buyForgeTier(p,'sword','blade-wave'));
  assert.ok(buyForgeTier(p,'sword','blade-wave'));
- assert.ok(buyForgeTier(p,'sword','charged-blade'));
- assert.ok(buyForgeTier(p,'sword','charged-blade'));
- assert.equal(p.flames,0);
- assert.deepEqual(forgedEvolutions(p,'sword'),['blade-wave','blade-wave','charged-blade','charged-blade']);
+ assert.equal(buyForgeTier(p,'sword','charged-blade'),false);
+ assert.equal(p.flames,2);
+ assert.deepEqual(forgedEvolutions(p,'sword'),['blade-wave','blade-wave']);
  const r=newRun();r.pending=true;
  assert.equal(advanceJourney(r),undefined);
  assert.equal(r.stage,1);

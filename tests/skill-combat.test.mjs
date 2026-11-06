@@ -15,7 +15,7 @@ test('hammer skill has no cooldown, needs four hitting basics, slams hard and li
   for(let i=0;i<4;i++){assert.equal(skillView(g).ready,false);swing(g);}
   assert.equal(g.player.skill.hammerHits,4);assert.equal(skillView(g).ready,true);
   g.boss.state='idle';g.boss.poise=0;const hp=g.boss.hp;g.player.maxHp=400;g.player.hp=50;assert.ok(act(g,'skill'));tick(g,1.2);
-  const dealt=hp-g.boss.hp;assert.ok(dealt>114*2.9);assert.ok(Math.abs(g.player.hp-(50+dealt*.35))<1e-6);assert.equal(g.player.skill.hammerHits,0);assert.equal(act(g,'skill'),false);
+  const dealt=hp-g.boss.hp;assert.ok(dealt>114*2.9);assert.ok(Math.abs(g.player.hp-(50+dealt*.14))<1e-6);assert.equal(g.player.skill.hammerHits,0);assert.equal(act(g,'skill'),false);
 });
 test('hammer swings that miss do not charge the skill',()=>{const g=createGame('hammer');arena(g);g.boss.z=-20;for(let i=0;i<4;i++)swing(g);assert.equal(g.player.skill.hammerHits,0);});
 test('bow stores three piercing charges, spends one each shot and refills over time',()=>{

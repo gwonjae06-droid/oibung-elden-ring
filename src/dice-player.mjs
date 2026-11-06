@@ -56,7 +56,7 @@ export function stepDicePlayer(g,dt,input={}){
   g.dice.blockFlash=Math.max(0,(g.dice.blockFlash||0)-h);
   if(g.dice.giant?.state==='transition'){p.action=null;g.projectiles.length=0;}
   tickPlayerResources(g,h);tickPlayerAction(g,h,weapon,{basicLifetime:2,melee:action=>melee(g,weapon,action)});projectiles(g,h);if(g.status!=='playing')break;
-  const action=p.action,movement=action?.kind==='roll'?{x:Math.sin(action.yaw),z:Math.cos(action.yaw),roll:true,rollSpeed:playerRollSpeed(g)}:action?{x:0,z:0}:{x:input.x||0,z:input.z||0,blue:p.skill.blue>0};
+  const action=p.action,movement=action?.kind==='roll'?{x:Math.sin(action.yaw),z:Math.cos(action.yaw),roll:true,rollSpeed:playerRollSpeed(g)}:action?{x:0,z:0}:{x:input.x||0,z:input.z||0,blue:p.skill.blue>0,blueSpeed:p.skill.blue>0?(p.skill.blueMultiplier||1.5):1};
   if(!action)p.yaw=Math.atan2(g.dice.pose.x-p.x,g.dice.pose.z-p.z);
   stepDice(g,h,{...movement,freezeBoss:g.dice.stun>0});g.dice.stun=Math.max(0,g.dice.stun-h);g.boss.x=g.dice.pose.x;g.boss.z=g.dice.pose.z;left-=h;
  }

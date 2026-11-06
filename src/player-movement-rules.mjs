@@ -9,7 +9,7 @@ export function playerRollSpeed(game){const rank=game?.weapon==='bow'?evolutionC
 export const ROLL_DODGE_START=.075;
 export const ROLL_DODGE_END=.35;
 export function playerWalkSpeed(player,slowFactor=1){
- return PLAYER_WALK_SPEED*(player?.skill?.blue>0?SKILLS.cards.blueSpeed:1)*slowFactor;
+ return PLAYER_WALK_SPEED*(player?.skill?.blue>0?(player.skill.blueMultiplier||SKILLS.cards.blueSpeed):1)*slowFactor;
 }
 export function playerRolling(player){
  const a=player?.action;
