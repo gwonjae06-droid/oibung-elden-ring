@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {cinematicLightCue} from './cinematic-light-cues.mjs';
 
 // Reusable realism direction for every current boss AND all future bosses.
 // 100% browser-native: no Blender, external GPU libraries or asset pipeline.
@@ -123,6 +124,11 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
  const rim=new THREE.DirectionalLight(settings.rim,coarse?0:settings.fill);
  rim.name='cinematic-boss-silhouette-fill';rim.position.set(-15,17,-19);rim.castShadow=false;
  scene.add(rim);
+ // One existing non-shadow rim changes subtly with attack pose and phase.
+ // Mobile keeps its zero-intensity light, even if an encounter enters phase 2.
+ const rimBase=new THREE.Color(settings.rim);
+ const rimSecond=new THREE.Color(({blood:0xe8a6b3,clown:0xe7b99f,dice:0xefb585,kwon:0xb3c7e6})[profile]||settings.rim);
+ let rimWarmth=0;
  const surfaces=new Map(),applied=new Set(),saved=new Map(),owned=new Set([env]);
  let closed=false;
  function texturePack(kind){
@@ -164,9 +170,16 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
  function update(game,dt=0){
   if(closed||!game)return;
   const phase=game?.boss?.phase||1,second=phase>1;
-  const target=settings.reflection*(second?.88:1);
   const h=clamp(Number.isFinite(dt)?dt:0,0,.05);
+  const cue=cinematicLightCue(game,profile);
+  const target=settings.reflection*(second?.88:1)*(1+cue.environment);
   scene.environmentIntensity+=(target-scene.environmentIntensity)*(1-Math.exp(-1.5*h));
+  if(!coarse){
+   const lightGoal=settings.fill*(1+cue.rim);
+   rim.intensity+=(lightGoal-rim.intensity)*(1-Math.exp(-8*h));
+   rimWarmth+=(cue.warmth-rimWarmth)*(1-Math.exp(-3*h));
+   rim.color.copy(rimBase).lerp(rimSecond,rimWarmth);
+  }
  }
  function dispose(){
   if(closed)return;closed=true;rim.parent?.remove(rim);

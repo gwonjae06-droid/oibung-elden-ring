@@ -1,7 +1,7 @@
 import {PATTERNS,patternConfig} from './combat.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(Number.isFinite(t)?t:0,0,1);return t*t*(3-2*t);};
-const ZERO={lean:0,sink:0,sway:0};
+const ZERO={lean:0,sink:0,sway:0,brace:0,strike:0,follow:0};
 export const MOTION_STYLE={
  spiderPrison:[{lean:-.18,sink:-.43,sway:-.06},{lean:.17,sink:-.12,sway:.10}],
  graveSword:[{lean:-.27,sink:.22,sway:-.03},{lean:.22,sink:-.49,sway:.06}],
@@ -37,5 +37,10 @@ export function bossMotion(b){
  else if(b.state==='active')m=mix(s[0],s[1],ease(t/cfg.active));
  else if(b.queue&&b.queue.length)m=s[1];
  else m=mix(s[1],ZERO,ease(t/Math.max(.01,b.recovery||cfg.recover)));
- return {lean:clamp(m.lean*power,-.35,.35),sink:clamp(m.sink*power,-.8,.5),sway:clamp(m.sway*power,-.2,.2)};
+ // The additional cues are visual-only and use the authoritative phase clocks.
+ const brace=b.state==='windup'?ease(t/Math.max(.01,cfg.wind)):0;
+ const strike=b.state==='active'?Math.sin(Math.PI*ease(t/Math.max(.01,cfg.active))):0;
+ const follow=b.state==='recovery'?1-ease(t/Math.max(.01,b.recovery||cfg.recover)):0;
+ return {lean:clamp(m.lean*power,-.35,.35),sink:clamp(m.sink*power,-.8,.5),
+  sway:clamp(m.sway*power,-.2,.2),brace,strike,follow};
 }

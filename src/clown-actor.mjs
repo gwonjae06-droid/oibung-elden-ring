@@ -9,6 +9,7 @@ import {createClownArmRig} from './clown-arm-rig.mjs';
 import {createClownCollapse} from './clown-collapse.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 import {createRecoilBank} from './animation-recoil.mjs';
+import {clownWeightAccent} from './boss-performance.mjs';
 import {createClownGait} from './clown-gait.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
@@ -39,19 +40,19 @@ export function createClownActor(){
   const death=collapse.update(g,dt,Boolean(globalThis.document?.hidden));
   const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0);if(F.inflate!==null)p.inflate=F.inflate;
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
-  const footMotion=gait.update(g,dt);
+  const footMotion=gait.update(g,dt),weightAccent=clownWeightAccent(g,A);
   if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
-  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+rise+A.lift+footMotion.bob-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13+footMotion.roll;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean+footMotion.lean+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
+  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+rise+A.lift+footMotion.bob-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13+footMotion.roll+weightAccent.roll;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean+footMotion.lean+weightAccent.pitch+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
   // Compress the decorative chest during claps and heavy throws, then relax
   // behind the arm motion; palm endpoints and damage volumes never move.
   const compression=balance.step('spine:compress',Math.min(1,Math.max(0,A.clapClose??0,(v.glove||0)*.65,(A.smear||0)*.15)),dt,15);
-  torso.scale.set(1-compression*.038,1.2+elongation*.18-compression*.065,.72+compression*.045);
+  torso.scale.set(1-compression*.038,1.2+elongation*.18-compression*.065-weightAccent.compression,.72+compression*.045);
   // The planted-shoe gait owns foot contacts. This offsets only the decorative
   // torso and leaves glove targets and gameplay hitboxes unchanged.
-  torso.rotation.y=balance.step('spine:y',-A.twist*.12,dt,12);
+  torso.rotation.y=balance.step('spine:y',-A.twist*.12+weightAccent.counterYaw,dt,12);
   torso.rotation.z=balance.step('spine:z',v.tilt*-.018+A.lean*.035,dt,10);
   torso.rotation.x=balance.step('spine:x',-compression*.09+A.lean*.05,dt,13);
   ball.visible=!M||M.ball>0;ball.material.opacity=M?M.ball:1;ball.position.z=(M?M.ballZ:0)+(death?.ballShift||0);ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025+(death?.ballShift||0)/2.6;
