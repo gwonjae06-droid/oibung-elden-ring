@@ -14,7 +14,16 @@ export const weaponStats=weapon=>Object.hasOwn(WEAPON_STATS,weapon)?WEAPON_STATS
 
 // Scale the delivered hit BEFORE applying HP clamps, invulnerability or boss
 // hit traits; return nonnegative finite damage and retain DOT precision.
-export function playerIncomingDamage(game,raw){
+export function playerIncomingDamage(game,raw,{dot=false}={}){
  if(!Number.isFinite(raw)||raw<=0)return 0;
- return raw*weaponStats(game?.weapon).incomingDamage;
+ const amount=raw*weaponStats(game?.weapon).incomingDamage;
+ const action=game?.player?.action;
+ if(!dot&&game?.weapon==='hammer'&&action?.kind==='guard'&&action.t<=1.2){
+  const blocked=amount*.5;
+  const s=game.player.skill;
+  s.storedDamage=Math.min(250,(s.storedDamage||0)+blocked);
+  game.events?.push({type:'hammer-absorbed',amount:blocked});
+  return amount-blocked;
+ }
+ return amount;
 }

@@ -41,8 +41,8 @@ export function applyWeaponHitEffects(game,damage,action,{stun}={}){
   // One arrow inflicts its *landed* initial damage again over time, not
   // an instant double-hit. Each arrow has a bounded independent burn pool.
   const stacks=game.weaponBurnStacks??=[];
-  stacks.push({left:evolutionCount(game,'piercing-arrow')>=2?3.2:2.8,
-   total:damage});
+  const duration=evolutionCount(game,'piercing-arrow')>=2?3.2:2.8;
+  stacks.push({left:duration,duration,total:damage});
   if(stacks.length>8)stacks.shift();
   game.weaponBurnStacks=stacks;
   game.events.push({type:'bow-burn-applied',amount:damage});
