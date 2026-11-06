@@ -79,3 +79,23 @@ test('hit animation never displaces the visible palm from the attackable pose',(
   assert.equal(view.root.getObjectByName('sungwon-wrist-sleeve-1').visible,true);
  }finally{assert.equal(view.dispose().errors.length,0);}
 });
+
+test('real giant palm attack hits at the falling hand, never at the edge of an obsolete rectangle',()=>{
+ const run=point=>{
+  const {g,s,p}=ready(7),h=p.hazards[0];g.player.x=point.x;g.player.z=point.z;g.player.hp=g.player.maxHp=600;
+  for(let i=0;i<Math.ceil((h.warn+.20)*120);i++)stepDice(g,1/120);
+  return {hp:g.player.hp,events:g.events.filter(e=>e.source==='giant')};
+ };
+ const hit=run({x:-28,z:-42}),miss=run({x:-28,z:-23.5});
+ assert.ok(hit.hp<600,'the hand should actually strike the table where it lands');
+ assert.equal(hit.events.length,1,'one impact must create only one hit');
+ assert.equal(miss.hp,600,'old rectangular corner must not deal invisible damage');
+});
+
+test('a huge chess floor marker never causes harm outside the visible piece landing',()=>{
+ const {g,s,p}=ready(4),h=p.hazards[0];
+ g.player.x=h.x;g.player.z=h.z-38;g.player.hp=g.player.maxHp=600;
+ assert.equal(hazardContains(h,g.player),true,'authored rectangle formerly damaged this point');
+ for(let i=0;i<Math.ceil((h.warn+.18)*120);i++)stepDice(g,1/120);
+ assert.equal(g.player.hp,600,'only the actual thrown piece is dangerous');
+});
