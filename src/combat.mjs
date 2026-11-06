@@ -28,7 +28,7 @@ export const angleDelta = (a, b) =>
 export const BOSS_SCALE = 1.4;
 export const CINEMATIC = 5.2;
 export const HUG_RANGE = 3.3;
-export const HUG_TIME = 2.2;
+export const HUG_TIME = 1.5;
 export const WEAPONS = PLAYER_WEAPONS;
 export const PATTERNS = {
   // Signature skills retain the same readable windup/active/recovery contract.
@@ -314,17 +314,13 @@ export function attackZone(b) {
     active = b.state === 'active',
     base = {kind: 'danger', shape: 'circle', x: b.x, z: b.z, progress, active};
   if (b.pattern === 'stomp') return {...base, r: 6.5};
-  if (b.pattern === 'spiderPrison') return {...base, r: 5.4};
-  if (b.pattern === 'lastStance') return {...base, shape:'cone', r:7.5, yaw:b.yaw,half:.72};
-  if (b.pattern === 'shove') return {...base, kind: 'push', r: 4.8};
-  if (b.pattern === 'backsweep')
-    return {
-      ...base,
-      shape: 'cone',
-      r: 8,
-      yaw: b.yaw + Math.PI,
-      half: Math.PI - 1.2,
-    };
+  // The prison fan and royal last stance have visible sword/projectile contact,
+  // not an invisible radial hit around the boss. Same for a rear sword sweep.
+  if (['spiderPrison', 'lastStance', 'backsweep'].includes(b.pattern)) return null;
+  // Hugging the boss triggers a telegraphed, forward-facing body shove,
+  // rather than a 360-degree invisible displacement.
+  if (b.pattern === 'shove')
+    return {...base, kind:'push', shape:'cone', yaw:b.yaw, r:4.8, half:1.0};
   if (['slam', 'leap'].includes(b.pattern) && b.zone)
     return {
       ...base,
@@ -632,6 +628,24 @@ export function bladeHits(p, {a, b}, width = SWORD.width) {
   const at = (t) => ({x: mix(a.x, b.x, t), z: mix(a.z, b.z, t)});
   return segmentDistance(p, at(lo), at(hi)) < width;
 }
+// Sweep only the actual 3D blade over the elapsed animation frame.
+// A fast rear slash or full turn can no longer become an invisible 360-degree
+// hitbox, while a player who really crosses the moving sword still gets hit.
+export function sweptBladeHits(player,previous,current,width=SWORD.width){
+ if(!previous||!current)return false;
+ const point=(a,b,t)=>({
+  x:a.x+(b.x-a.x)*t,
+  y:a.y+(b.y-a.y)*t,
+  z:a.z+(b.z-a.z)*t,
+ });
+ for(let i=0;i<=4;i++){
+  const t=i/4;
+  if(bladeHits(player,{a:point(previous.a,current.a,t),b:point(previous.b,current.b,t)},width))
+   return true;
+ }
+ return false;
+}
+
 function landHit(g, amount, poise, a,point=null) {
   const actual = bossDamage(g, amount, poise,{point}),
     b = g.boss;
@@ -830,6 +844,8 @@ export function step(g, dt, input = {}) {
       }
     }
   } else if (b.state === 'active') {
+    // Sample the actual blade before moving/turning this frame.
+    const previousSword=swordSegment({...b,t:Math.max(0,b.t-dt)});
     // One broad vertical slash leaves the sword at the midpoint of its fall.
     if(['spiderPrison','graveSword','livingSword','lastStance'].includes(b.pattern)&&!b.waveFired&&b.t>=cfg.active*.38){
       b.waveFired=true;
@@ -899,7 +915,7 @@ export function step(g, dt, input = {}) {
       // 4.4-unit ground zone and this sword sweep could deal invisible
       // instant damage before any traveling grave projectiles arrived.
       !['wave', 'retreat', 'graveSword'].includes(b.pattern) &&
-      bladeHits(p, swordSegment(b))
+      sweptBladeHits(p, previousSword, swordSegment(b))
     ) {
       b.hit = true;
       hurtPlayer(g, cfg.damage);
