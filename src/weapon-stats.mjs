@@ -10,7 +10,7 @@ export const WEAPON_STATS=Object.freeze({
 // Standalone dice simulations can have no equipped weapon. Default to
 // neutral multipliers so test-only game state remains usable unchanged.
 const NEUTRAL=Object.freeze({maxHp:120,incomingDamage:1,walkSpeed:1,rollDistance:1,staminaRegen:1});
-export const weaponStats=weapon=>WEAPON_STATS[weapon]||NEUTRAL;
+export const weaponStats=weapon=>Object.hasOwn(WEAPON_STATS,weapon)?WEAPON_STATS[weapon]:NEUTRAL;
 
 // Scale the delivered hit BEFORE applying HP clamps, invulnerability or boss
 // hit traits; return nonnegative finite damage and retain DOT precision.
