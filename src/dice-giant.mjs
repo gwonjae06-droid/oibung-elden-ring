@@ -5,8 +5,8 @@ import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-gi
 import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
 import {giantReadableWarning} from './attack-readability.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
-export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대'];
-export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락'];
+export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀'];
+export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
 export const HAND_REST=Object.freeze([{x:-22,y:2,z:-64},{x:22,y:2,z:-64}]);
 const sat=v=>Math.max(0,Math.min(1,v));
@@ -45,7 +45,23 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
   {...rect(25,z,21,29,.95,1.25),handIndex:1,damage:34},
   {...circle(x,z,9,2.05,1.2,38),handIndex:0}
  ];
- // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
+ // Three new controlled-phase sequences reuse real throwing/grasping palms.
+  // Every chip/coin has a pickup-and-release arc; a smashed hand cancels its own parts.
+  if(slot===11)hazards=Array.from({length:6},(_,i)=>({
+    ...rect(clamp(x+(i-2.5)*13,-46,46),clamp(z+(i%2?5:-5),-44,44),12,17,i*.65,1.32),
+    handIndex:i%2,damage:27,active:.28
+  }));
+  if(slot===12)hazards=Array.from({length:8},(_,i)=>{
+    const a=i*Math.PI/4,orbit=17;
+    return {...circle(clamp(x+Math.sin(a)*orbit,-44,44),clamp(z+Math.cos(a)*orbit,-44,44),7,i*.42,1.35,28),handIndex:i%2,active:.28};
+  });
+  // Opposing hands close in separately and strike only at their visible palm positions.
+  if(slot===13)hazards=[
+    {...circle(clamp(x-12,-46,46),z,10,0,1.9,32),handIndex:0,active:.32},
+    {...circle(clamp(x+12,-46,46),z,10,1.0,1.65,32),handIndex:1,active:.32},
+    {...circle(x,z,9,2.2,1.45,36),handIndex:0,active:.3}
+  ];
+  // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
@@ -71,6 +87,12 @@ function feralPattern(index,player,healthRatio=1){
  }
  if(slot===8)hazards=Array.from({length:6},(_,i)=>({...rect(-42+i*17,z+(i%2?9:-9),16,38,i*.3,.8),handIndex:i%2,active:.23,damage:34}));
  if(slot===9)hazards=Array.from({length:3},(_,i)=>({...circle(clamp(x+(i-1)*13,-26,26),clamp(z+(i%2?5:-5),-51,-34),14,.75+i*1.85,.72,42),headSlam:true,rapid:true,active:.34}));
+ // The giant pulls at opposite edges of the felt and pounds the opening fissure.
+ if(slot===12)hazards=[
+   {...rect(-33,z,24,49,.3,1.65),handIndex:0,damage:34,active:.4},
+   {...rect(33,z,24,49,1.05,1.65),handIndex:1,damage:34,active:.4},
+   {...circle(x,z,12,2.35,1.3,41),headSlam:true,active:1.5,hold:1.5}
+ ];
  // Torn felt: alternate palms across the table, leaving a shifting safe lane.
  if(slot===10)hazards=Array.from({length:5},(_,i)=>({
   ...rect(i%2?-28:28,clamp(z+(i%3-1)*11,-47,47),22,34,.15+i*.8,1.15),
@@ -90,15 +112,15 @@ export function giantPropType(s,h){
  if(!s||!h||h.headSlam||h.shape==='ring')return null;
  if(s.temperament==='feral')return s.slot===4?'chess':s.slot===1||(s.slot===6&&h.start<3)?'chip':null;
  if(s.slot===6)return h.start<2.7?null:h.start<5.1?'dice':'chip';
- return ({1:'chip',2:'dice',3:'coin',4:'chess',9:'chip'})[s.slot]||null;
+ return ({1:'chip',2:'dice',3:'coin',4:'chess',9:'chip',11:'chip',12:'coin'})[s.slot]||null;
 }
 // 'throw' = polite flick/lowering of a hand in front of the body, 'reach' = the hand goes to the target and slams.
 function handKind(s,h){
  if(h.headSlam||h.shape==='ring')return null;
  // Visible dice/chips/coins/chess pieces must be thrown, never mimicked by phantom palms.
  if(giantPropType(s,h))return 'throw';
- if(s.temperament==='feral')return [0,1,3,4,5,6,8,10].includes(s.slot)?'reach':null;
- return [0,5,6,7,8,10].includes(s.slot)?'reach':null;
+ if(s.temperament==='feral')return [0,1,3,4,5,6,8,10,12].includes(s.slot)?'reach':null;
+ return [0,5,6,7,8,10,13].includes(s.slot)?'reach':null;
 }
 export const handCanAttack=(s,i)=>Boolean(s&&!s.destroyed?.[i]&&!(s.revive?.[i]>0));
 export function beginGiant(g){
@@ -261,7 +283,7 @@ export function nextGiantPressureSlot(g){
  const s=g.dice.giant,feral=s.temperament==='feral',total=feral?FERAL_NAMES.length:GIANT_NAMES.length;
  if(!s.pressureSlots?.length)s.pressureSlots=Array.from({length:total},(_,i)=>i);
  const near=Math.hypot(g.player.x,g.player.z+45)<30;
- const favored=feral?(near?[11,7,2,9,0,5,10]:[10,8,6,1,4,3]):(near?[10,0,5,7,8]:[9,3,4,6,1,2]);
+ const favored=feral?(near?[12,11,7,2,9,0,5,10]:[12,10,8,6,1,4,3]):(near?[13,10,0,5,7,8]:[11,12,9,3,4,6,1,2]);
  let index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot&&favored.includes(slot));
  if(index<0)index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot);
  if(index<0)index=0;
