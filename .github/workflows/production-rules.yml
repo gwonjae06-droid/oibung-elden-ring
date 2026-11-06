@@ -1,0 +1,41 @@
+name: Odenring permanent production rules
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'spider-combat.html'
+      - 'tests/**'
+      - '.github/workflows/production-rules.yml'
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'spider-combat.html'
+      - 'tests/**'
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install renderer dependency
+        run: npm install --no-save --no-package-lock three@0.180.0
+      - name: Check syntax
+        run: |
+          for f in src/arena.mjs src/clown-battle.mjs src/clown-actor.mjs src/dice-ui.mjs src/dice-giant-model.mjs src/blood-battle.mjs src/blood-epic-cinematics.mjs src/gyuwon-battle.mjs src/gyuwon-actor.mjs src/gyuwon-spectacle.mjs src/runtime/performance-audit.mjs tests/boss-rules.test.mjs; do node --check "$f"; done
+      - name: Verify cinematic motion sculpture and performance rules
+        run: |
+          node --test \
+            tests/boss-rules.test.mjs \
+            tests/production-rules-regression.test.mjs \
+            tests/blood-epic-cinematics.test.mjs \
+            tests/gyuwon-sculpted-actor.test.mjs \
+            tests/boss-motion-rules.test.mjs \
+            tests/performance-audit.test.mjs \
+            tests/casino-giant-detail-lod.test.mjs \
+            tests/gyuwon-performance-readability.test.mjs \
+            tests/clown-sculpture-rules.test.mjs
