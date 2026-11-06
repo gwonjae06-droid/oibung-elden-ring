@@ -1,7 +1,10 @@
 import * as THREE from 'three';
+import {createGyuwonActor} from './gyuwon-actor.mjs';
+import {createGyuwonSpectacle} from './gyuwon-spectacle.mjs';
+import {hazardPosition} from './gyuwon-data.mjs';
 import {GYUWON_RULES as R} from './gyuwon-data.mjs';
 
-export function buildGyuwonView(scene,{reduced=false}={}){
+export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const stage=new THREE.Group();stage.name='gyuwon-study-room';scene.add(stage);
  const materials=new Map(),boxGeo=new THREE.BoxGeometry(1,1,1);
  function mat(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.8}));return materials.get(color);}
@@ -24,29 +27,29 @@ export function buildGyuwonView(scene,{reduced=false}={}){
  // Sparse stars are above the horizon, leaving the floor warnings uncluttered.
  const stars=[];for(let i=0;i<360;i++){const yaw=i*2.3999632297,y=.08+((i*73)%353)/353*.85,r=Math.sqrt(1-y*y);stars.push(Math.sin(yaw)*r*500,y*500,Math.cos(yaw)*r*500);}
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));const starfield=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9db2cb,size:.55,transparent:true,opacity:.55,fog:false,depthWrite:false}));stage.add(starfield);
- const root=new THREE.Group();root.name='gyuwon-student';stage.add(root);
- box(root,0,1.8,0,1.5,1.7,.8,0xd5d9dd);box(root,-.95,1.65,0,.35,1.6,.4,0xc8d0d6);box(root,.95,1.65,0,.35,1.6,.4,0xc8d0d6);
- box(root,-.42,.6,0,.5,1.2,.55,0x242c39);box(root,.42,.6,0,.5,1.2,.55,0x242c39);
- const head=new THREE.Group();head.position.y=3.2;root.add(head);box(head,0,0,0,1,1.1,.9,0xbfa98f);box(head,0,.48,0,1.08,.35,1,0x1b2029);
- box(head,-.22,.02,.46,.15,.07,.03,0x1b2029);box(head,.22,.02,.46,.15,.07,.03,0x1b2029);
- const halo=new THREE.Mesh(new THREE.TorusGeometry(.7,.035,6,48),new THREE.MeshBasicMaterial({color:0xe0ce99}));halo.position.y=3.4;root.add(halo);
+ const actor=createGyuwonActor(stage),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse});
+ const ghosts=[-1,1].map(side=>{const rig=root.clone(true);rig.name='gyuwon-contradiction';rig.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false;}});stage.add(rig);return {rig,side};});
  const warnings=new THREE.Group();stage.add(warnings);const meshes=new Map();
  const circleGeo=new THREE.CircleGeometry(1,48),laneGeo=new THREE.PlaneGeometry(1,1);
  let deathElapsed=0;
- function clear(){deathElapsed=0;for(const m of meshes.values()){warnings.remove(m);m.material.dispose();}meshes.clear();}
+ function clear(){deathElapsed=0;spectacle.clear();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
  function update(g,dt=0){
-  const b=g.boss,s=g.gyuwon;root.position.set(b.x,0,b.z);root.rotation.y=Math.atan2(g.player.x-b.x,g.player.z-b.z);
-  const transition=b.state==='transition',erase=b.phase===1?1:transition?Math.max(.001,1-s.t/R.transition):.001;
-  head.scale.setScalar(erase);head.visible=erase>.01;halo.visible=b.phase===2;halo.rotation.z=reduced?0:g.time*.3;
-  root.scale.y=g.status==='won'?Math.max(.08,1-(deathElapsed+=dt)):1;
-  starfield.material.opacity=b.phase===1?.35:.7;
+  const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed);
+  const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
+  const voidSpace=b.phase>=2||won;
+  sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!voidSpace;
+  for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
+  scene.background.setHex(white?0xffffff:voidSpace?0x010105:0x111b28);
+  scene.fog.color.copy(scene.background);floor.visible=!voidSpace;warnings.visible=!won;
+  spectacle.update(g,dt,deathElapsed);
+  for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);
-   if(!m){m=new THREE.Mesh(h.shape==='lane'?laneGeo:circleGeo,new THREE.MeshBasicMaterial({color:0xcce8f8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
-   m.position.set(h.x,.06,h.z);m.rotation.z=h.shape==='lane'?-h.yaw:0;
-   if(h.shape==='lane')m.scale.set(h.width*2,h.length,1);else m.scale.set(h.r,h.r,1);
-   const active=h.age>=h.warn;m.material.color.setHex(active?0xff6c67:s.pattern==='repeat'?0xe8c273:0xcce8f8);m.material.opacity=active?.85:.18+.35*Math.min(1,h.age/h.warn);
+   if(!m){const geometry=h.shape==='ring'?new THREE.RingGeometry(Math.max(.01,h.r-h.width),h.r+h.width,64):h.shape==='cone'?new THREE.CircleGeometry(h.r,40,-Math.PI/2-h.arc,h.arc*2):h.shape==='wave'?new THREE.PlaneGeometry(h.opening*2,42):h.shape==='lane'?laneGeo:circleGeo;m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xcce8f8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
+   const hp=hazardPosition(h);m.position.set(hp.x,.06,hp.z);m.rotation.z=['lane','cone'].includes(h.shape)?h.yaw:0;if(h.shape==='wave')m.position.set(h.gap,.06,0);
+   if(h.shape==='lane')m.scale.set(h.width*2,h.length,1);else if(h.shape==='circle')m.scale.set(h.r,h.r,1);else if(h.shape==='ring'){const pos=m.geometry.attributes.position;for(let i=0;i<pos.count;i++){const a=Math.atan2(pos.getY(i),pos.getX(i)),r=hp.r+(i<65?-h.width:h.width);pos.setXYZ(i,Math.cos(a)*r,Math.sin(a)*r,0);}pos.needsUpdate=true;}
+   const active=h.age>=h.warn;m.material.color.setHex(h.shape==='wave'?0x41bba1:active?0xff6c67:b.phase===3?0xc48c22:s.pattern==='repeat'?0xe8c273:white?0x24334a:0xcce8f8);m.material.opacity=active?.85:.18+.35*Math.min(1,h.age/h.warn);
   }
-  for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();meshes.delete(id);}
+  for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();meshes.delete(id);}
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'prototype',stats:()=>({warnings:meshes.size}),dispose(){clear();circleGeo.dispose();laneGeo.dispose();}};
+ return {root,update,clear,event(){},shake(){},occlude(){},quality:'prototype',stats:()=>({warnings:meshes.size}),dispose(){clear();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
 }
