@@ -7,10 +7,10 @@ const cross=(a,t,v)=>a<v&&t>=v;
 const yawTo=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 const bound=p=>{const d=Math.hypot(p.x,p.z),m=d>20?20/d:1;return {x:p.x*m,z:p.z*m};};
 export const HORROR_DEFINITIONS=Object.freeze([
- ['echoApplause','반 박자 늦은 박수',5.7,1.3,[1,2],1],
- ['wrongTwin','누가 진짜 광대일까요',5.5,1.5,[1,2],1],
- ['livingShadow','그림자가 먼저 웃는다',5.4,1.55,[1,2],1],
- ['hatchingBalloons','풍선은 터지지 않고 태어난다',6.2,1.55,[1,2],1],
+ ['echoApplause','반 박자 늦은 박수',5.7,1.3,[1],1],
+ ['wrongTwin','누가 진짜 광대일까요',5.5,1.5,[1],1],
+ ['livingShadow','그림자가 먼저 웃는다',5.4,1.55,[1],1],
+ ['hatchingBalloons','풍선은 터지지 않고 태어난다',6.2,1.55,[1],1],
  ['porcelainRain','관객의 얼굴이 떨어진다',6.3,1.7,[2],2],
  ['foldedCrawl','접힌 몸으로 기어오는 것',5.5,1.65,[2],2],
  ['emptyAudience','아무도 없는 객석의 박수',6.1,1.65,[2],2],

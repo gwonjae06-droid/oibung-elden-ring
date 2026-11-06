@@ -50,6 +50,44 @@ export function startGyuwonPattern(g,id){
  if(id==='negate')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*5,z:p.z,r:3,warn:1.4+i*.4});
  if(id==='contradiction')for(let i=-1;i<=1;i+=2)lane(p.x,p.z,i*.65,1.5+(i+1)*.3);
  if(id==='reverse'||id==='stop')for(let i=0;i<3;i++){lane((i-1)*6,0,0,1.2+i*.35);if(id==='reverse')lane((i-1)*6,0,0,3.4-i*.35);}
+ // Each second-phase action has its own floor-space language. Every hit
+ // resolves from the exact same lane/ring/cone shape displayed by the view.
+ if(id==='verdict'){
+  lane(p.x,p.z,0,1.35,{width:2.4,length:34,damage:28,visual:'verdict'});
+  for(const side of [-1,1])hazard(g,'cone',{
+   x:b.x,z:b.z,yaw:aim+side*.66,arc:.39,r:23,
+   warn:side<0?2.2:3.05,life:.42,damage:29,visual:'verdict-seal'
+  });
+ }
+ if(id==='mirror'){
+  const axis=Math.max(4,Math.min(15,Math.abs(p.x)+4));
+  for(const side of [-1,1])hazard(g,'circle',{
+   x:side*axis,z:p.z,r:3.3,warn:side<0?1.35:1.95,
+   life:.42,damage:26,visual:'mirror'
+  });
+  lane(p.x,p.z,Math.PI/2,3.2,{width:2.1,length:32,damage:29,visual:'mirror-cross'});
+ }
+ if(id==='axiom'){
+  hazard(g,'ring',{x:b.x,z:b.z,r:2.8,width:.9,grow:7,
+   warn:1.65,life:1.8,damage:30,visual:'axiom'});
+  for(const side of [-1,1])lane(p.x+side*6,p.z,0,side<0?2.3:3.1,
+   {width:1.8,length:35,damage:26,visual:'axiom-line'});
+ }
+ if(id==='paradox'){
+  lane(p.x,p.z,.72,1.3,{width:2.0,length:38,damage:27,visual:'paradox'});
+  lane(p.x,p.z,-.72,2.15,{width:2.0,length:38,damage:27,visual:'paradox'});
+  hazard(g,'ring',{x:p.x,z:p.z,r:2.9,width:1.0,grow:5,
+   warn:3.1,life:1.2,damage:30,visual:'paradox-ring'});
+ }
+ if(id==='erasure'){
+  for(let i=0;i<5;i++){
+   const theta=i*Math.PI*2/5;
+   hazard(g,'circle',{x:p.x+Math.sin(theta)*6,z:p.z+Math.cos(theta)*6,
+    r:3.0,warn:1.35+i*.58,life:.5,damage:28,visual:'erasure'});
+  }
+  hazard(g,'ring',{x:b.x,z:b.z,r:3,width:1,grow:6,
+   warn:3.95,life:1.25,damage:30,visual:'erasure-ring'});
+ }
  if(id==='sword'){lane(p.x,0,0,2,{width:2.8,length:900,life:.35,damage:36,visual:'sword'});lane(p.x,0,0,3.1,{width:2.8,length:900,damage:22});lane(0,p.z,Math.PI/2,4.4,{width:2.5,length:900,damage:30,visual:'sword'});}
  if(id==='circus'){
   for(let i=0;i<5;i++){const yaw=i*Math.PI/2;hazard(g,'circle',{x:Math.sin(yaw)*-60+(i===4?8:0),z:Math.cos(yaw)*-60,r:4.5,warn:1+i*.65,life:3.2,vx:Math.sin(yaw)*38,vz:Math.cos(yaw)*38,visual:'ball',damage:27});}
