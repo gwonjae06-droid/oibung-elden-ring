@@ -364,6 +364,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       wait: 0.8,
       pattern: 'sweep',
       sequence: 0,
+      openingCounts: {1:0,2:0},
       attackId: 0,
       hit: false,
       poise: 0,
@@ -533,9 +534,18 @@ export function chooseOpening(g) {
   else if(phase===2&&b.lastOpening==='crescent')
    preferred=['royalHunt','counter','windParry','trample'];
  }
- b.sequence++;
- // First prefer moves suitable for current distance, but never exclude the
- // remaining signatures: one full cycle visits EVERY phase-legal opening.
+ // Ensure distinctive sword styles actually appear before a short phase
+ // ends. Far-range openings remain limited to a visible projectile or
+ // gap-closing approach, never an unfair instant melee strike.
+ b.openingCounts ||= {1:0,2:0};
+ const signature=phase===1?['spiderPrison','skyJudge','counterDancer']
+  :['graveSword','livingSword','lastStance','doubleMoon'];
+ const eligible=signature.filter(id=>pool.includes(id)&&
+  (!distant||KWON_RANGE_PRESSURE.openings[phase].includes(id)));
+ if(b.openingCounts[phase]<(phase===1?2:3)&&eligible.length)
+  preferred=eligible;
+ b.openingCounts[phase]++;b.sequence++;
+ // The balanced bag still casts every legal sequence once per cycle.
  return drawPatternShuffle(g.patternShuffle,'kwon-'+phase,pool,{preferred,avoid:b.lastOpening});
 }
 export function swordPose(b) {

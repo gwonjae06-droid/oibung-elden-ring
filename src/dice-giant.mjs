@@ -158,7 +158,7 @@ function handKind(s,h){
 }
 export const handCanAttack=(s,i)=>Boolean(s&&!s.destroyed?.[i]&&!(s.revive?.[i]>0));
 export function beginGiant(g){
- g.boss.name='운명의 찬탈자 박성원';const d=g.dice;d.giant={state:'transition',t:0,ordinal:0,temperament:'controlled',rageTriggered:false,rageBeat:0,cinematicBeat:'still',hands:[GIANT.handHp,GIANT.handHp],destroyed:[false,false],disabledFor:[0,0],revive:[0,0],crumble:[0,0],smooth:HAND_REST.map(h=>({...h})),hazards:[],from:{...d.pose,rotation:[...d.pose.rotation]}};
+ g.boss.name='운명의 찬탈자 박성원';const d=g.dice;d.giant={state:'transition',t:0,ordinal:0,phaseCastCount:0,temperament:'controlled',rageTriggered:false,rageBeat:0,cinematicBeat:'still',hands:[GIANT.handHp,GIANT.handHp],destroyed:[false,false],disabledFor:[0,0],revive:[0,0],crumble:[0,0],smooth:HAND_REST.map(h=>({...h})),hazards:[],from:{...d.pose,rotation:[...d.pose.rotation]}};
  d.state='giant';d.telegraph=d.pips=d.groundSpikes=null;d.frenzyRemaining=d.chainCharges=0;d.stun=0;
  g.player.action=null;if(g.projectiles)g.projectiles.length=0;g.boss.phase2PendingDesign=false;g.events.push({type:'dice-possession',duration:GIANT.transition});
 }
@@ -166,7 +166,7 @@ export function beginFeral(g){
  const q=g.dice.giant;
  if(!q||q.rageTriggered||q.state==='dead')return false;
  if(q.state==='transition'){q.pendingFeral=true;return true;}
- q.pendingFeral=false;q.rageTriggered=true;q.temperament='feral';q.rageBeat=GIANT.rageBeat;
+ q.pendingFeral=false;q.rageTriggered=true;q.temperament='feral';q.rageBeat=GIANT.rageBeat;q.phaseCastCount=0;
  q.pressureSlots=[];q.lastPressureSlot=null;
  q.state='recovery';q.t=-GIANT.rageBeat;q.hazards=[];
  q.hands=[GIANT.handHp,GIANT.handHp];q.destroyed=[false,false];q.disabledFor=[0,0];q.revive=[GIANT.handRecover,GIANT.handRecover];q.crumble=[0,0];
@@ -352,9 +352,15 @@ export function nextGiantPressureSlot(g){
   :near?[6,12,13,10,0,5,7,8]:[6,12,11,9,3,4,1,2];
  g.dice.patternShuffle ||=createPatternShuffle();
  const slots=Array.from({length:total},(_,i)=>i);
- const slot=drawPatternShuffle(g.dice.patternShuffle,'giant-'+(feral?'feral':'controlled'),slots,
-  {preferred:favored,avoid:s.lastPressureSlot});
- s.lastPressureSlot=slot;return slot;
+ // A short fight must still feature the table-changing signature attacks.
+ // Limit the priority to the opening casts, then exhaust every remaining slot
+ // exactly once via the original seeded, phase-specific shuffle bag.
+ const signature=feral?[7,13,14,15]:[6,12,13];
+ const early=(s.phaseCastCount||0)<signature.length;
+ const selected=drawPatternShuffle(g.dice.patternShuffle,'giant-'+(feral?'feral':'controlled'),slots,
+  {preferred:early?signature:favored,avoid:s.lastPressureSlot});
+ s.phaseCastCount=(s.phaseCastCount||0)+1;s.lastPressureSlot=selected;
+ return selected;
 }
 export function stepGiant(g,dt,frozen=false){
  const q=g.dice.giant;if(!q||q.state==='dead')return;
