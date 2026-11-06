@@ -45,7 +45,7 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
   {...rect(25,z,21,29,.95,1.25),handIndex:1,damage:34},
   {...circle(x,z,9,2.05,1.2,38),handIndex:0}
  ];
- // Thrown table props (chips, dice, coin, chess pieces) fly 10% slower; palm attacks and the berserk phase are untouched.
+ // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
@@ -82,7 +82,7 @@ function feralPattern(index,player,healthRatio=1){
     .55+i*2.05,.9,42),
   headSlam:true,rapid:true,active:.5
  }));
- hazards=hazards.map(giantReadableWarning);
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(giantReadableWarning);
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
@@ -158,8 +158,32 @@ export function giantPosture(g){
  return {lean:0,bodyX:0,head:rest};
 }
 export function giantHeadPose(g){return giantPosture(g).head;}
-export function giantHazards(g){const s=g.dice.giant;if(s?.state!=='attack')return [];return s.hazards.filter(h=>!h.cancelled&&(h.handIndex==null||handCanAttack(s,h.handIndex))&&s.t>=h.start&&s.t<h.start+h.warn+h.active).map(h=>({...h,age:s.t-h.start,live:s.t>=h.start+h.warn,r:h.shape==='ring'?Math.max(0,(s.t-h.start-h.warn)/h.active)*62:h.r}));}
+// The damaging area follows the rendered palm, head or object, rather
+// than an old rectangular floor marker. Warnings retain authored positions.
+export function giantHazards(g){
+ const s=g.dice.giant;if(s?.state!=='attack')return [];
+ return s.hazards.filter(h=>!h.cancelled&&(h.handIndex==null||handCanAttack(s,h.handIndex))&&s.t>=h.start&&s.t<h.start+h.warn+h.active).map(h=>{
+  const age=s.t-h.start,live=age>=h.warn,base={...h,age,live,r:h.shape==='ring'?Math.max(0,(age-h.warn)/h.active)*62:h.r};
+  if(!live)return base;
+  const prop=giantPropType(s,h);
+  if(prop)return {...base,shape:'circle',r:prop==='coin'?3.8:prop==='dice'?4.3:prop==='chess'?3.4:3.1,contactKind:'prop'};
+  if(h.headSlam){const head=giantHeadPose(g);return {...base,shape:'circle',x:head.x,z:head.z,r:10.6,contactY:head.y,contactKind:'head'};}
+  if(h.handIndex!=null){const hand=giantHandPose(g,h.handIndex);
+   return {...base,shape:'palm',x:hand.x,z:hand.z+3.8,rx:8.7,rz:13.3,r:10.3,contactY:hand.y,contactKind:'palm'};
+  }
+  return {...base,contactKind:null};
+ });
+}
+export function giantContactBeat(h){
+ if(!h?.live||!h.contactKind)return false;
+ const after=h.age-h.warn;
+ if(after<0||after>.14)return false;
+ if(h.contactKind==='palm')return h.contactY<=14.5;
+ if(h.contactKind==='head')return h.contactY<=16;
+ return true;
+}
 export function hazardContains(h,p,pad=.42){
+ if(h.shape==='palm'){const dx=(p.x-h.x)/(h.rx+pad),dz=(p.z-h.z)/(h.rz+pad);return dx*dx+dz*dz<=1;}
  if(h.shape==='rect'||h.shape==='rotated-rect'){
   const x=p.x-h.x,z=p.z-h.z,a=h.shape==='rotated-rect'?h.yaw:0;
   const rx=x*Math.cos(a)+z*Math.sin(a),rz=-x*Math.sin(a)+z*Math.cos(a);
@@ -179,10 +203,10 @@ function handTarget(g,index){
  if(s.state!=='attack')return {x,y,z,fist};
  const mine=(s.hazards||[]).filter(h=>!h.cancelled&&handKind(s,h)&&h.handIndex===index).sort((a,b)=>a.start-b.start);
  // Each hand must actually collect the next object before performing its throw.
- const next=mine.find(h=>{
+ const next=mine.findLast(h=>{
   if(handKind(s,h)!=='throw')return false;
   const t=giantThrowTimeline(s,h);
-  return t&&s.t>=t.ready&&s.t<t.release+.1;
+  return t&&s.t>=t.ready&&s.t<t.release+.50;
  });
  if(next){
   const t=giantThrowTimeline(s,next),side=index?-1:1,
@@ -190,11 +214,11 @@ function handTarget(g,index){
    wind=ease((s.t-t.pickupEnd)/Math.max(.06,t.release-t.pickupEnd)),
    snap=ease((s.t-t.release+.12)/.12),
    released=ease((s.t-t.release)/.12),
-   recoil=ease((s.t-t.release)/.38);
+   recoil=ease((s.t-t.release)/.38),settle=1-ease((s.t-t.release)/.50);
   // Reach across the felt, grasp, pull the elbow back, flick, and recover.
-  x=rest.x+side*(3*pickup-5.3*wind+12*snap*(1-recoil));
-  z=rest.z+7*pickup-7*wind+13*snap*(1-recoil);
-  y=rest.y+2.4*pickup+10*Math.sin(Math.PI*wind*.65)+5*snap*(1-recoil);
+  x=rest.x+side*(3*pickup-5.3*wind+12*snap*(1-recoil))*settle;
+  z=rest.z+(7*pickup-7*wind+13*snap*(1-recoil))*settle;
+  y=rest.y+(2.4*pickup+10*Math.sin(Math.PI*wind*.65)+5*snap*(1-recoil))*settle;
   fist=sat((.92*pickup+.08*wind)*(1-released));
   return {x,y,z,fist};
  }
@@ -273,26 +297,31 @@ export function stepGiant(g,dt,frozen=false){
   Object.assign(q,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:q.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});
   g.events.push({type:'dice-giant-warning',name:q.name});
  }
+ // The visible smoothed palm position must advance BEFORE collision tests.
+ moveHands(g,dt);
  if(q.state==='attack'){
   // A unique visual beat for each real strike; damage remains owned by giantHazards().
+  const current=giantHazards(g);
   for(const h of q.hazards||[]){
    if(h.cancelled||h.impactAnnounced||q.t<h.start+h.warn)continue;
    if(h.handIndex!=null&&!handCanAttack(q,h.handIndex))continue;
+   const contact=current.find(c=>c.id===h.id);
+   if(!contact?.contactKind)continue;
    h.impactAnnounced=true;
-   if(h.headSlam)g.events.push({type:'dice-giant-head-impact',x:h.x,z:h.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
+   if(h.headSlam)g.events.push({type:'dice-giant-head-impact',x:contact.x,z:contact.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
    else g.events.push({type:giantPropType(q,h)?'dice-giant-prop-impact':'dice-giant-palm-impact',
-    x:h.x,z:h.z,handIndex:h.handIndex,slot:q.slot});
+    x:contact.x,z:contact.z,handIndex:h.handIndex,slot:q.slot});
   }
-  for(const h of giantHazards(g)){
+  for(const h of current){
    const original=q.hazards[h.id];
-   if(!h.live||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;
+   if(!giantContactBeat(h)||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;
    original.hit=true;if(diceInvulnerable(g.player))continue;
    const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});g.events.push({type:'player-hit',amount,source:'giant'});
    if(g.player.hp<=0){g.status='lost';q.hazards=[];g.events.push({type:'death'});return;}
   }
   if(q.t>=q.duration+.65){q.state='recovery';q.t=0;q.hazards=[];}
  }
- moveHands(g,dt);g.dice.pose=giantHeadPose(g);
+ g.dice.pose=giantHeadPose(g);
 }
 // Shattered palms cannot move or attack until their independent timer expires.
 export function strikeGiantHand(g,index,amount){

@@ -2,7 +2,9 @@ import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {groundContactFace,segmentSquareHit} from './dice-ground-face.mjs';
 import {diceTempo} from './dice-pressure.mjs';
-export const PORTRAIT_BARRAGE=Object.freeze({warning:.9,interval:.18,speed:20,life:3.2,half:.55,damage:18,cooldown:1.2});
+// Portrait cards are actual moving projectiles. Slower travel and a longer
+// lifetime preserve the same target reach across the full roulette table.
+export const PORTRAIT_BARRAGE=Object.freeze({warning:1.25,interval:.28,speed:6.8,life:11,half:.55,damage:18,cooldown:1.2});
 // Legacy storage keys preserve the existing engine's terminal cleanup contract.
 export function stepPortraitBarrage(g,dt,frozen=false,edge=12,limit=65,playerRadius=.42){
  const d=g.dice;if(g.status!=='playing'){d.groundSpikes=null;d.spikeCooldown=0;return;}
