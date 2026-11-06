@@ -121,7 +121,7 @@ export function buildDiceGiant(scene){
       wristRoll:originalGesture.wristRoll,curl:originalGesture.curl,
       elbowLift:originalGesture.elbowLift,elbowOut:originalGesture.elbowOut,
       anticipation:originalGesture.anticipation
-     },dt,{owner:s,time:g.time>0?g.time:s.t,rate:originalGesture.impact>.3?30:18})},destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
+     },dt,{owner:s,rate:originalGesture.impact>.3?30:18})},destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
    const hp=Math.max(0,Number(s.hands?.[i])||0);if(hp<handPrev[i])handPulse[i]=1;handPrev[i]=hp;handPulse[i]=Math.max(0,handPulse[i]-Math.max(0,dt)*5);
    // The arm always stays; only the hand shakes, shrinks and bursts into shards.
    upper.visible=forearm.visible=joint.visible=shoulderCap.visible=wristCap.visible=armsVisible;
