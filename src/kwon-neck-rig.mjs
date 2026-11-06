@@ -20,3 +20,4 @@ export function createKwonNeckRig(T,torso,head,HEAD,model){
  const joint=new T.Group();joint.name='kwon-neck-rig';const rest=kwonNeckOffsets(torso.headPosition(HEAD)),motion=createKwonNeckMotion(),v=new T.Vector3();joint.position.set(...rest.pivot);torso.chest.add(joint);joint.add(head);head.position.set(...rest.head);
  return {joint,headOffset:rest.head,update(b,m,dt,frozen){const p=motion.update(b,m,dt,frozen);joint.rotation.set(p.pitch,p.yaw,p.roll);},point(){head.getWorldPosition(v);model.worldToLocal(v);return {x:v.x,y:v.y,z:v.z};}};
 }
+// Visual motion updates are scoped to this rig.
