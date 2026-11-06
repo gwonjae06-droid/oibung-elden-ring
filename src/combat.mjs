@@ -708,7 +708,7 @@ export function step(g, dt, input = {}) {
     roll: (a) => {
       if (a.t <= dt * 1.1 && mag) a.yaw = Math.atan2(mx, mz);
       p.x += Math.sin(a.yaw) * playerRollSpeed(g) * dt;
-      p.z += Math.cos(a.yaw) * PLAYER_ROLL_SPEED * dt;
+      p.z += Math.cos(a.yaw) * playerRollSpeed(g) * dt;
     },
     melee: (a) => {
       const shapes=encounterBossHurtShapes(g);

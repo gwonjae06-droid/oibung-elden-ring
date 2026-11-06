@@ -46,10 +46,9 @@ export function bloodHazardFootprint(h){
   // before the rendered wave crest reached them. This is the shared 3D
   // floor-shader and actual collision footprint, so the fix stays in sync.
   const moving=Math.hypot(h.vx||0,h.vz||0)>.01;
-  const front=moving?3.0:h.length/2,rear=moving?Math.min(h.length/2,5.3):h.length/2;
-  const shift=(front-rear)/2;
-  return {kind:3,x:c.x+Math.sin(h.yaw)*shift,z:c.z+Math.cos(h.yaw)*shift,r:0,
-    halfWidth:h.width+pad,halfLength:(front+rear)/2+pad,yaw:h.yaw,inner:0,arc:0};
+  return {kind:3,x:c.x,z:c.z,r:0,halfWidth:h.width+pad,
+    halfLength:(moving?Math.min(h.length/2,3.0):h.length/2)+pad,
+    yaw:h.yaw,inner:0,arc:0};
  }
  if(h.shape==='cone')return {kind:4,x:c.x,z:c.z,r:h.r+pad,halfWidth:0,halfLength:0,yaw:h.yaw,inner:Math.max(0,(h.innerR||0)-pad),arc:h.arc};
  return {kind:1,x:c.x,z:c.z,r:c.r+pad,halfWidth:0,halfLength:0,yaw:0,inner:0,arc:0};

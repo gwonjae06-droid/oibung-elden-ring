@@ -12,7 +12,9 @@ test('each real pattern causes its defined damage when the player enters the act
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.hp=g.player.maxHp=1e6;startBloodPattern(g,id);
   const hazard=g.blood.hazards[0],expected=hazard.damage,hp=g.player.hp;
-  for(let t=0;t<hazard.warn+.025;t+=.005){const c=hazardPosition(hazard);const d=hazard.shape==='ring'?c.r:hazard.shape==='cone'?c.r*.65:0;g.player.x=c.x+(hazard.shape==='cone'?Math.sin(hazard.yaw)*d:d);g.player.z=c.z+(hazard.shape==='cone'?Math.cos(hazard.yaw)*d:0);stepBlood(g,.005);}
+  // Broad eruptions visibly charge for 0.22s after their telegraph;
+  // verify the real damage at contact, not on their first glow frame.
+  for(let t=0;t<hazard.warn+.27;t+=.005){const c=hazardPosition(hazard);const d=hazard.shape==='ring'?c.r:hazard.shape==='cone'?c.r*.65:0;g.player.x=c.x+(hazard.shape==='cone'?Math.sin(hazard.yaw)*d:d);g.player.z=c.z+(hazard.shape==='cone'?Math.cos(hazard.yaw)*d:0);stepBlood(g,.005);}
   assert.equal(hp-g.player.hp,expected,id);
  }
 });
