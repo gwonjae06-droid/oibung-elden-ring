@@ -17,6 +17,7 @@ import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 export const TAU = Math.PI * 2;
@@ -352,7 +353,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
     nextId: 0,
     patternShuffle: createPatternShuffle(seed),
     bossAutonomy: createBossAutonomy(seed??0x72a9c1),
-    player: createPlayerState(),
+    player: createPlayerState({weapon}),
     boss: {
       x: 0,
       z: -4,
@@ -652,10 +653,11 @@ function hurtPlayer(g, damage,cut=true) {
     emit(g, 'dodge');
     return;
   }
-  const before=p.hp;p.hp = Math.max(0, p.hp - damage);
+  const amount=Math.min(p.hp,playerIncomingDamage(g,damage));
+  const before=p.hp;p.hp = Math.max(0, p.hp - amount);
   p.invuln = 0.32;
   p.action = {kind: 'hurt', t: 0, total: 0.22};
-  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount: damage});
+  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount});
   freeze(g, 0.07);
   if (!p.hp) {
     g.status = 'lost';

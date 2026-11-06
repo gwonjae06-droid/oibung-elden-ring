@@ -1,4 +1,5 @@
-import test from 'node:test';import assert from 'node:assert/strict';
+import test from 'node:test';
+import {playerIncomingDamage} from '../src/weapon-stats.mjs';import assert from 'node:assert/strict';
 import {createDicePlayerGame,actDice,stepDicePlayer} from '../src/dice-player.mjs';
 import {createDiceGame,stepDice} from '../src/dice-combat.mjs';
 import {DICE_RULES as R,DICE_BOARD,diceRollPose,diceTouches} from '../src/dice-data.mjs';
@@ -13,6 +14,6 @@ test('armored hits cannot heal or apply yellow stun',()=>{const hammer=target('h
 test('piercing arrows stop on armor instead of damaging the hidden photo side',()=>{const g=target('bow',false);actDice(g,'skill');tick(g,.7);assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.projectiles.length,0);});
 test('yellow card applies one stun to its multi-projectile photo attack',()=>{const g=target('cards');g.player.skill.cycle=1.21;assert.equal(actDice(g,'skill'),true);assert.equal(actDice(g,'light'),true);tick(g,.6);assert.equal(g.events.filter(e=>e.type==='skill-stun').length,1);});
 test('stun freezes the boss without blocking player movement',()=>{const g=createDiceGame(),t=g.dice.t,x=g.player.x;stepDice(g,.05,{x:-1,freezeBoss:true});assert.equal(g.dice.t,t);assert.ok(g.player.x<x);});
-test('frozen contact pushes a player out instead of killing',()=>{const g=createDiceGame();g.player.x=g.dice.pose.x;g.player.z=g.dice.pose.z;stepDice(g,.01,{freezeBoss:true});assert.equal(g.status,'playing');assert.equal(g.player.hp,120);assert.equal(diceTouches(g.player,g.dice.pose),false);});
+test('frozen contact pushes a player out instead of killing',()=>{const g=createDiceGame();g.player.x=g.dice.pose.x;g.player.z=g.dice.pose.z;stepDice(g,.01,{freezeBoss:true});assert.equal(g.status,'playing');assert.equal(g.player.hp,g.player.maxHp);assert.equal(diceTouches(g.player,g.dice.pose),false);});
 test('projectiles hit the cube rather than empty space above it',()=>{const p=diceRollPose(DICE_BOARD[0],DICE_BOARD[1],0);assert.equal(diceSegmentHit({x:p.x-10,y:1.2,z:p.z},{x:p.x+10,y:1.2,z:p.z},p),true);assert.equal(diceSegmentHit({x:p.x-10,y:20,z:p.z},{x:p.x+10,y:20,z:p.z},p),false);});
-test('active roll invulnerability cannot block a real descending crush',()=>{const g=createDicePlayerGame();g.player.x=g.dice.to.x;g.player.z=g.dice.to.z;g.dice.state='rolling';g.dice.t=R.rollTime-1/120;assert.equal(actDice(g,'roll'),true);g.player.action.t=.1;g.player.invuln=999;stepDicePlayer(g,1/120);assert.equal(g.status,'playing');assert.equal(g.player.hp,76);assert.ok(g.player.traits.crush>0);});
+test('active roll invulnerability cannot block a real descending crush',()=>{const g=createDicePlayerGame();g.player.x=g.dice.to.x;g.player.z=g.dice.to.z;g.dice.state='rolling';g.dice.t=R.rollTime-1/120;assert.equal(actDice(g,'roll'),true);g.player.action.t=.1;g.player.invuln=999;stepDicePlayer(g,1/120);assert.equal(g.status,'playing');assert.equal(g.player.hp,g.player.maxHp-playerIncomingDamage(g,44));assert.ok(g.player.traits.crush>0);});

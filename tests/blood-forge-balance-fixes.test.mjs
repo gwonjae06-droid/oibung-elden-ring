@@ -45,9 +45,9 @@ test('fire arrows gain visible fire metadata and damage but never multiply or pi
  assert.equal(q.kind,'bow');assert.ok(q.source===a);
 });
 test('bow dodge distance scales only for equipped dodge-line bows',()=>{
- assert.equal(playerRollSpeed(made('bow')),10);
- assert.equal(playerRollSpeed(made('bow',['piercing-arrow'])),12);
- assert.equal(playerRollSpeed(made('bow',['piercing-arrow','piercing-arrow'])),13.5);
+ assert.equal(playerRollSpeed(made('bow')),10*1.05);
+ assert.equal(playerRollSpeed(made('bow',['piercing-arrow'])),10*1.05*1.2);
+ assert.equal(playerRollSpeed(made('bow',['piercing-arrow','piercing-arrow'])),10*1.05*1.35);
  assert.equal(playerRollSpeed(made('sword',['piercing-arrow'])),10);
 });
 test('card attacks alternate weak blue, red and yellow skill, never add projectiles',()=>{
@@ -73,7 +73,7 @@ test('hammer skill and passive recovery remain capped with reduced values',()=>{
  rewardPlayerHit(g,100,{skill:true,basic:false});
  assert.equal(g.player.hp,64);
  rewardPlayerHit(g,1000,{skill:true,basic:false});
- assert.equal(g.player.hp,120,'no overheal');
+ assert.equal(g.player.hp,g.player.maxHp,'no overheal');
 });
 test('moving Blood wave only hits when its visible crest reaches a distant target',()=>{
  const g=createBloodGame();g.player.x=0;g.player.z=4;

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {playerIncomingDamage} from '../src/weapon-stats.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createGame,startPattern,step,patternConfig} from '../src/combat.mjs';
@@ -43,7 +44,7 @@ test('both cross variants deal one hit, not two overlapped slash hits',()=>{
   shot.x=0;shot.z=0;shot.yaw=0;shot.speed=0;shot.life=1.5;shot.age=shot.minArmTime;
   g.player.x=KWON_WAVE.radius-.15;g.player.z=.1;g.player.invuln=0;
   const hp=g.player.hp;step(g,1/120);
-  assert.equal(hp-g.player.hp,patternConfig(g.boss).damage);
+  assert.ok(Math.abs(hp-g.player.hp-playerIncomingDamage(g,patternConfig(g.boss).damage))<1e-7);
   assert.equal(g.events.filter(e=>e.type==='player-hit').length,1);
   assert.equal(g.bossShots.length,0,'projectile consumed on the first hit');
  }

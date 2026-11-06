@@ -1,17 +1,20 @@
 import {playerIncapacitated} from './boss-hit-traits.mjs';
 import {playerStaminaCost} from './balance.mjs';
+import {weaponStats} from './weapon-stats.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createSkillState, consumeSkill, SKILLS} from './skills.mjs';
 import {completePlayerHeal} from './player-tick.mjs';
 
-export function createPlayerState({x = 0, z = 13, yaw = Math.PI} = {}) {
+export function createPlayerState({x = 0, z = 13, yaw = Math.PI, weapon = 'sword'} = {}) {
+  const stats=weaponStats(weapon);
   return {
+    weapon,
     x,
     z,
     yaw,
-    hp: 120,
-    maxHp: 120,
+    hp: stats.maxHp,
+    maxHp: stats.maxHp,
     stamina: 100,
     regen: 0,
     action: null,

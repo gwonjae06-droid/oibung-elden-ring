@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-data.mjs';
 import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-giant-motion.mjs';
@@ -407,7 +408,7 @@ export function stepGiant(g,dt,frozen=false){
    const original=q.hazards[h.id];
    if(!giantContactBeat(h)||original.hit||!(h.damage>0)||!hazardContains(h,g.player))continue;
    original.hit=true;if(diceInvulnerable(g.player))continue;
-   const amount=Math.min(g.player.hp,h.damage);g.player.hp-=amount;g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});g.events.push({type:'player-hit',amount,source:'giant'});
+   const amount=Math.min(g.player.hp,playerIncomingDamage(g,h.damage));g.player.hp-=amount;g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});g.events.push({type:'player-hit',amount,source:'giant'});
    if(g.player.hp<=0){g.status='lost';q.hazards=[];g.events.push({type:'death'});return;}
   }
   if(q.t>=q.duration+.65){q.state='recovery';q.t=0;q.hazards=[];}
