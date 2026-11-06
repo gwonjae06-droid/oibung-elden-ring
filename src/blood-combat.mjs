@@ -116,6 +116,19 @@ export function startBloodPattern(g,id){
  if(id==='pulse')for(let i=0;i<3;i++)hazard(g,'ring',{r:2,width:1.1,grow:18,warn:1.1+i*.75,life:1.7,damage:22});
  if(id==='pursuit'){lane(aim,1.4,{width:5,length:14,life:.75,damage:32,vx:Math.sin(aim)*28,vz:Math.cos(aim)*28});circle(p.x,p.z,3,6.5,{damage:28});}
  if(id==='tide')for(let i=0;i<4;i++)lane(i*Math.PI/2,1.4+i*.7,{x:0,z:0,length:13,width:5,life:1.3,damage:32});
+ // Sea-wide requiem: three enormous, individually telegraphed travelling
+ // crests followed by an expanding undertow. Each visible blood wall shares
+ // the exact authoritative hazard dimensions, warning and contact time.
+ if(id==='requiem'){
+  for(let i=0;i<3;i++){
+   const yaw=aim+(i-1)*.62,forwardX=Math.sin(yaw),forwardZ=Math.cos(yaw);
+   const q=point(b.x-forwardX*13,b.z-forwardZ*13);
+   lane(yaw,1.8+i*1.08,{x:q.x,z:q.z,length:13.5,width:5.2,
+    vx:forwardX*16,vz:forwardZ*16,life:1.25,damage:35});
+  }
+  hazard(g,'ring',{x:b.x,z:b.z,r:5,width:1.5,grow:14,
+   warn:5.52,life:1.2,damage:31});
+ }
  if(id==='judgement')for(let i=0;i<3;i++)hazard(g,'cone',{yaw:aim+[-.8,.8,0][i],arc:.5,r:23,warn:1.5+i*1.2,life:.55,damage:32});
  if(id==='ritual'){for(let beat=0;beat<2;beat++)for(let i=0;i<4;i++)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/2+beat*Math.PI/4,arc:.45,innerR:5.5,r:26,warn:2+beat*1.65,life:.65,damage:30});hazard(g,'ring',{x:0,z:0,r:2,width:1.1,grow:18,warn:4.9,life:1.4,damage:26});}
  // Three wing scythes are visible in the existing animated wing rig;
