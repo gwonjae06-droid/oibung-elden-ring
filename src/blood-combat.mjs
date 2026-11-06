@@ -9,7 +9,7 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
-import {playerWalkSpeed,PLAYER_ROLL_SPEED,playerRolling} from './player-movement-rules.mjs';
+import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {claimPlayerProjectileHit,playerProjectileHitsCircle} from './player-projectile-data.mjs';
 import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {bloodHurtShapes} from './boss-hit-regions.mjs';
@@ -219,7 +219,7 @@ function tickPlayer(g,dt,input){
   if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true,impact);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
- const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*PLAYER_ROLL_SPEED*dt;p.z+=Math.cos(a.yaw)*PLAYER_ROLL_SPEED*dt;}
+ const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*playerRollSpeed(g)*dt;p.z+=Math.cos(a.yaw)*PLAYER_ROLL_SPEED*dt;}
  else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=playerWalkSpeed(p,g.blood.slow>0?.65:1);p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);}
  clampArena(p);
 }
