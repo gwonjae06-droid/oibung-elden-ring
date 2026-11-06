@@ -124,9 +124,20 @@ export function giantFeralHeadMotion(state){
  const tremor=state.slot===7?ease(state.t/.65)*(1-ease((state.t-.72)/.55)):0;
  if(lean<.00001&&tremor<.00001)return null;
  const shake=Math.sin(state.t*76)*.85*tremor,poseLean=clamp01(lean);
- return {lean:poseLean+.13*tremor*(1-poseLean),weight:clamp01(weight),
-  bodyX:Math.max(-27,Math.min(27,bodyX+shake*.6)),
-  x:Math.max(-28,Math.min(28,x+shake*2)),
-  y:58-51*poseLean+Math.sin(state.t*98)*1.25*tremor,
-  z:Math.max(-106,Math.min(-30,z+Math.cos(state.t*70)*1.2*tremor))};
+ let poseX=Math.max(-28,Math.min(28,x+shake*2)),poseY=58-51*poseLean+Math.sin(state.t*98)*1.25*tremor,
+  poseZ=Math.max(-106,Math.min(-30,z+Math.cos(state.t*70)*1.2*tremor));
+ let poseBodyX=Math.max(-27,Math.min(27,bodyX+shake*.6)),poseWeight=clamp01(weight),poseMass=poseLean+.13*tremor*(1-poseLean);
+ // An outgoing slam may overlap the next anticipation. Aim the shared head
+ // precisely at its actual contact point instead of summing both target X/Z
+ // values and producing a visually displaced, invisible impact.
+ for(const h of state.hazards||[]){
+  if(!h.headSlam||h.cancelled)continue;
+  const impact=h.start+h.warn,age=state.t-impact;
+  if(age<-.14||age>.32)continue;
+  const align=ease((age+.14)/.14)*(1-ease((age-.10)/.22));
+  poseX=lerp(poseX,h.x,align);poseZ=lerp(poseZ,h.z,align);
+  poseY=lerp(poseY,7,align);poseBodyX=lerp(poseBodyX,h.x*.65,align);
+  poseMass=lerp(poseMass,1,align);poseWeight=lerp(poseWeight,.86,align);
+ }
+ return {lean:poseMass,weight:poseWeight,bodyX:poseBodyX,x:poseX,y:poseY,z:poseZ};
 }
