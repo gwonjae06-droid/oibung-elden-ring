@@ -49,11 +49,29 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
    for(let i=0;i<n;i++)vertices.push(vertices[i*3],vertices[i*3+1],vertices[i*3+2]-10);
    for(let i=0;i<front.length;i+=3)indices.push(front[i+2]+n,front[i+1]+n,front[i]+n);
    for(const {a,b,count}of edges.values())if(count===1)indices.push(a,b,a+n,b,b+n,a+n);
-   geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();const water=solid(g,geo);water.material=new THREE.MeshPhysicalMaterial({color:0x85122b,metalness:0,roughness:.21,clearcoat:.8,clearcoatRoughness:.12,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:true});const opening=solid(g,ring,h.gap,2.5,0,h.opening,2.7,1);opening.material=new THREE.MeshBasicMaterial({color:0xffedab});
+   geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
+   // Render the full 3D wave as a surface; vertex point-cloud overdraw cost
+   // thousands of fragments and obscured the physically recognizable crest.
+   const water=new THREE.Mesh(geo,new THREE.MeshPhysicalMaterial({color:0x85122b,metalness:0,roughness:.21,clearcoat:.8,clearcoatRoughness:.12,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:true}));water.name='gyuwon-gold-wave-surface';g.add(water);const opening=solid(g,ring,h.gap,2.5,0,h.opening,2.7,1);opening.material=new THREE.MeshBasicMaterial({color:0xffedab});
   }
   attacks.set(h.id,g);return g;
  }
- function clear(){for(const g of attacks.values()){g.removeFromParent();g.traverse(o=>{if(o.geometry&&![cube,sphere,cylinder,ring].includes(o.geometry))o.geometry.dispose();if(o.material&&o.material!==gold&&o.material!==dust)o.material.dispose();});}attacks.clear();}
+ const sharedGeometries=new Set([cube,sphere,cylinder,ring]),sharedMaterials=new Set([gold,dust]);
+ function releaseAttack(id,group){
+  group.removeFromParent();
+  const geometries=new Set(),materials=new Set();
+  group.traverse(o=>{
+   if(o.geometry&&!sharedGeometries.has(o.geometry))geometries.add(o.geometry);
+   if(o.material)for(const mat of Array.isArray(o.material)?o.material:[o.material])
+    if(!sharedMaterials.has(mat))materials.add(mat);
+  });
+  for(const geo of geometries)geo.dispose();
+  for(const mat of materials)mat.dispose();
+  attacks.delete(id);
+ }
+ function clear(){
+  for(const [id,group] of attacks)releaseAttack(id,group);
+ }
  return {update(g,dt,death){const s=g.gyuwon,b=g.boss,won=g.status==='won';root.visible=b.phase===3||won;for(const[name,v]of groups){v.visible=!won&&name===s.stageMemory;if(v.visible){const build=Math.min(1,Math.max(.08,s.stageTime)/.35);v.position.y=(1-build)*-5;v.traverse(o=>{if(o.userData.baseOpacity!==undefined)o.material.opacity=o.userData.baseOpacity*build;});}};if(writingShader)writingShader.uniforms.writing.value=Math.min(1,Math.max(.05,s.t/3));roll.rotation.y=g.time*.6;streamPoints.rotation.y=g.time*.04;streamPoints.position.y=won?death*10:0;streamPoints.visible=b.phase===3||won;
   const live=new Set();for(const h of s.hazards){if(!h.visual)continue;live.add(h.id);const v=attacks.get(h.id)||make(h),p=hazardPosition(h),active=h.age>=h.warn;v.visible=b.phase===3;
    v.position.set(p.x,0,p.z);v.rotation.y=h.yaw||0;
@@ -62,8 +80,8 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
    if(h.visual==='dice'){v.position.y=active?3.5:3.5+Math.max(0,1-h.age/h.warn)*100;v.rotation.set(g.time,g.time*.7,0);}
    if(h.visual==='wave'){v.position.set(0,0,h.z+Math.max(0,h.age-h.warn)*h.speed);}
   }
-  for(const[id,v]of attacks)if(!live.has(id)){v.visible=false;}
-  // Rebuild only at pattern boundaries; retained objects never grow across patterns.
-  if(!s.hazards.length)clear();
- },clear,dispose(){clear();tex.dispose();}};
+  // Expired hazards must release geometry immediately, even while another
+  // patterned strike is still active. Otherwise each pattern grows GPU memory.
+  for(const[id,v]of attacks)if(!live.has(id))releaseAttack(id,v);
+ },clear,stats:()=>({liveAttackGroups:attacks.size}),dispose(){clear();tex.dispose();}};
 }

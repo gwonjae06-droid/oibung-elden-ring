@@ -38,4 +38,5 @@ jobs:
             tests/performance-audit.test.mjs \
             tests/casino-giant-detail-lod.test.mjs \
             tests/gyuwon-performance-readability.test.mjs \
-            tests/clown-sculpture-rules.test.mjs
+            tests/clown-sculpture-rules.test.mjs \
+            tests/gyuwon-spectacle-resource.test.mjs

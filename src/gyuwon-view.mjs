@@ -47,9 +47,9 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
    if(!m){const geometry=h.shape==='ring'?new THREE.RingGeometry(Math.max(.01,h.r-h.width),h.r+h.width,64):h.shape==='cone'?new THREE.CircleGeometry(h.r,40,-Math.PI/2-h.arc,h.arc*2):h.shape==='wave'?new THREE.PlaneGeometry(h.opening*2,42):h.shape==='lane'?laneGeo:circleGeo;m=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:0xcce8f8,roughness:.64,metalness:.08,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
    const hp=hazardPosition(h);m.position.set(hp.x,.06,hp.z);m.rotation.z=['lane','cone'].includes(h.shape)?h.yaw:0;if(h.shape==='wave')m.position.set(h.gap,.06,0);
    if(h.shape==='lane')m.scale.set(h.width*2,h.length,1);else if(h.shape==='circle')m.scale.set(h.r,h.r,1);else if(h.shape==='ring'){const pos=m.geometry.attributes.position;for(let i=0;i<pos.count;i++){const a=Math.atan2(pos.getY(i),pos.getX(i)),r=hp.r+(i<65?-h.width:h.width);pos.setXYZ(i,Math.cos(a)*r,Math.sin(a)*r,0);}pos.needsUpdate=true;}
-   const active=h.age>=h.warn;m.material.color.setHex(h.shape==='wave'?0x41bba1:active?0xff6c67:b.phase===3?0xc48c22:s.pattern==='repeat'?0xe8c273:white?0x24334a:0xcce8f8);m.material.opacity=active?.85:.18+.35*Math.min(1,h.age/h.warn);
+   const active=h.age>=h.warn;m.material.color.setHex(h.shape==='wave'?0x41bba1:active?0xff6c67:b.phase===3?0xc48c22:s.pattern==='repeat'?0xe8c273:white?0x24334a:0xcce8f8);m.material.opacity=active?.85:.18+.35*Math.min(1,h.age/Math.max(.01,h.warn));
   }
   for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();meshes.delete(id);}
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'prototype',stats:()=>({warnings:meshes.size}),dispose(){clear();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
+ return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:meshes.size,stageFX:spectacle.stats()}),dispose(){clear();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
 }
