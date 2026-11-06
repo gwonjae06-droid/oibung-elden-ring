@@ -53,7 +53,7 @@ function hit(g,amount,source,projectile=false,impact=null){
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn);g.blood.hazards.push(h);return h;}
 // Attackable ritual channels cancel only their own future hazards and heal share.
-function severHeartNode(g,amount,point){
+export function severHeartNode(g,amount,point){
  const s=g.blood;
  if(s.pattern!=='heartFeast'||g.boss.state!=='pattern'||!(amount>0))return false;
  const n=s.heartNodes?.find(node=>node.hp>0&&Math.hypot(node.x-point.x,node.z-point.z)<node.r);
