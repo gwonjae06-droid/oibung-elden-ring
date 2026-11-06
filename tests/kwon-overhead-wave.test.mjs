@@ -44,7 +44,7 @@ test('each wave strike releases only one broad projectile with matching artwork 
 });
 test('the single wave deals only one hit across its visible collision width',()=>{
  const {g,cfg}=chargedWave(2);const shot=g.bossShots[0];
- shot.x=0;shot.z=0;shot.yaw=0;shot.life=1.5;shot.age=0;
+ shot.x=0;shot.z=0;shot.yaw=0;shot.life=1.5;shot.age=shot.minArmTime;
  g.player.x=KWON_WAVE.radius-.15;g.player.z=.8;g.player.invuln=0;
  const before=g.player.hp;step(g,1/30);
  assert.equal(before-g.player.hp,cfg.damage);

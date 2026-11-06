@@ -128,6 +128,19 @@ export const ORDER = {
     'lastStance',
   ],
 };
+// Above this distance Kwon's response should be a visible travelling sword
+// projectile or an actual gap-closing combo, not a stationary melee swing.
+// The adaptive shuffle bag still deals every legal opening once per cycle.
+export const KWON_RANGE_PRESSURE=Object.freeze({
+ farDistance:12,
+ chaseSpeed:Object.freeze({1:9.7,2:9.5}),
+ chaseWait:.44,
+ openings:Object.freeze({
+  1:Object.freeze(['spiderPrison','rush','hunt','leap','siege','skyJudge','feint']),
+  2:Object.freeze(['graveSword','livingSword','crescent','requiem','doubleMoon','lastStance',
+    'jawSnare','afterimage','widow','royalHunt','draw'])
+ })
+});
 export const CLOSE = {
   1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer', 'counterDancer', 'skyJudge'],
   2: [
@@ -504,10 +517,10 @@ export function chooseOpening(g) {
   return drawPatternShuffle(g.patternShuffle,'kwon-healing-'+phase,
    phase===1?['thrust','hunt']:['royalHunt','execution'],{avoid:b.lastOpening});
  }
- let preferred=d>13
-  ?phase===1?['thrust','leap','siege']:['crescent','draw','execution','requiem']
+ const distant=d>KWON_RANGE_PRESSURE.farDistance;
+ let preferred=distant?KWON_RANGE_PRESSURE.openings[phase]
   :d<5?CLOSE[phase]:ORDER[phase];
- if(g.journeyBalance?.mode==='story'){
+ if(g.journeyBalance?.mode==='story'&&!distant){
   if(d<6)preferred=phase===1
    ?['hunt','skewer','counterDancer','skyJudge','backsweep']
    :['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
@@ -768,9 +781,13 @@ export function step(g, dt, input = {}) {
   b.hug = dist(p, b) < HUG_RANGE ? (b.hug || 0) + dt : 0;
   if (b.state === 'idle') {
     b.punishable = false;
-    b.yaw += clamp(angleDelta(b.yaw, toward(b, p)), -dt * 2.7, dt * 2.7);
+    const gap=dist(p,b),far=gap>KWON_RANGE_PRESSURE.farDistance;
+    // While idle, visibly turn and pursue a fleeing player rather than
+    // opening a close-range stationary sword combo from across the arena.
+    const turnRate=far?4.0:2.7;
+    b.yaw += clamp(angleDelta(b.yaw, toward(b, p)), -dt * turnRate, dt * turnRate);
     b.aim = b.yaw;
-    if (dist(p, b) > 8) moveBoss(b, b.phase === 1 ? 6.8 : 6.5, dt);
+    if(gap>8)moveBoss(b,far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===1?6.8:6.5,dt);
     if (b.hug > HUG_TIME) {
       b.hug = 0;
       beginSequence(g, 'shove');
@@ -819,7 +836,9 @@ export function step(g, dt, input = {}) {
           variant:b.waveVariant,radius:kind==='livingSword'?1.1:1.05,
           speed:kind==='spiderPrison'?9:kind==='graveSword'?8:kind==='livingSword'?11:17,
           minArmTime:.3,
-          life:kind==='spiderPrison'?1.65:2.0,age:0,damage:kind==='spiderPrison'?16:kind==='graveSword'?22:26};
+          // The slow, visible ranged signature must have enough lifetime to
+           // reach a target near the arena rim without speeding up its projectile.
+           life:kind==='spiderPrison'?2.45:kind==='graveSword'?2.7:2.0,age:0,damage:kind==='spiderPrison'?16:kind==='graveSword'?22:26};
         if(kind==='livingSword')shot.turnRate=.65;
         g.bossShots.push(shot);
         emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
@@ -887,7 +906,10 @@ export function step(g, dt, input = {}) {
     else {
       b.state = 'idle';
       b.t = 0;
-      b.wait = b.phase === 2 ? 0.07 : 0.12;
+      // Recovery remains a full punish window. Only the next idle step
+      // gains time to run towards a distant target before attacking again.
+      b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
+        ?KWON_RANGE_PRESSURE.chaseWait:b.phase===2?.07:.12;
       b.punishable = false;
       b.from = null;
     }
