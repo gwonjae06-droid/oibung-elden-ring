@@ -73,7 +73,7 @@ test('close-range response is readable and pushes only in the boss facing direct
 
   const rear=encounter('shove',phase);rear.player.x=0;rear.player.z=-4;
   const initial=rear.player.z;step(rear,1/120);
-  assert.ok(Math.abs(rear.player.z-initial)<1,'only the normal body separation may move a player behind the boss');
+  assert.equal(rear.boss.hit,false,'rear player must not trigger the frontal shove collider');
   assert.equal(rear.player.hp,rear.player.maxHp);
  }
 });
