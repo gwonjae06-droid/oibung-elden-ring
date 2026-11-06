@@ -12,8 +12,13 @@ export function mountPose(time,transition=false){
 }
 export function bombPose(q,phase=1){
  const travel=q.travel||ROLL.travel,k=q.kind==='roll'?sat(q.t/travel):sat(q.t/q.fly),land=q.kind==='roll'||q.t>=q.fly,final=q.kind==='roll'?sat((q.t-travel)/Math.max(.01,q.warn-travel)):sat((q.t-q.fly)/Math.max(.01,q.warn-q.fly));
- const startY=phase===2?8.2+BODY_OFFSET:q.from.y+(q.kind==='head'?1.92:0);
+ const startY=phase===2?4.6:q.from.y+(q.kind==='head'?1.92:0);
  return {x:q.kind==='roll'?q.px:q.from.x+(q.x-q.from.x)*k,z:q.kind==='roll'?q.pz:q.from.z+(q.z-q.from.z)*k,y:q.kind==='roll'?2.1:startY*(1-k)+2.1*k+Math.sin(Math.PI*k)*4,land,final,inflate:q.kind==='ball'?.45:land?3.1+final*.6:3.1,stretch:land?-.25*(1-final):.2,spin:q.kind==='roll'?Math.hypot(q.x-q.from.x,q.z-q.from.z)*k/2.1:k*2};
 }
-export function headFrame(g){const c=g.clown,b=g.boss,v=c.vis,m=b.phase===2?mountPose(b.t,b.state==='transition'):null;return {pose:m&&m.bodyHead?'inflate':v.pose,k:m&&m.bodyHead?sat(b.t/1.6):v.k,inflate:m&&m.bodyHead?m.inflate:null,stretch:0,burst:false,bodyHead:m?m.bodyHead:true,mount:m};}
+export function headFrame(g){const c=g.clown,b=g.boss,v=c.vis,
+ feral=b.phase===2&&b.state!=='transition',
+ m=b.phase===2&&!feral?mountPose(b.t,true):null;
+ return {pose:m&&m.bodyHead?'inflate':v.pose,k:m&&m.bodyHead?sat(b.t/1.6):v.k,
+ inflate:m&&m.bodyHead?m.inflate:null,stretch:0,burst:false,
+ bodyHead:feral?true:m?m.bodyHead:true,mount:m};}
 export function selectedWeapon(weapon){return ['sword','hammer','bow','cards'].includes(weapon)?weapon:'sword';}

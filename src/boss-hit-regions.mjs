@@ -2,6 +2,7 @@
 // dimensions and the same phase/pose data used by its visual rig. No Three.js
 // dependency: combat and browser draw the same simulation-time silhouette.
 import {headFrame,mountPose} from './clown-visual-data.mjs';
+import {clownBeastPose} from './clown-beast-pose.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
 import {cartoonPose} from './clown-cartoon.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
@@ -18,9 +19,22 @@ const ellipsoid=(b,id,p,rx,ry,rz)=>{
 };
 export function clownHurtShapes(g){
  if(!g?.clown||!g.boss)return [];
- const b=g.boss,v=g.clown.vis||{},F=headFrame(g),M=F.mount,
+ const b=g.boss,v=g.clown.vis||{},F=headFrame(g),M=F.mount,Q=clownBeastPose(g),
   A=clownSpectaclePose(g,cartoonPose(g.clown.name,g.clown.pt,b.phase,g.clown.state==='pattern'&&b.state!=='transition'&&g.status==='playing')),
   jump=(v.jump||0)*1.1,shapes=[];
+ if(Q.active){
+  // The physical reach follows the ground-level pitch, so neither a
+  // floating torso nor the old head-ball can take invisible hits.
+  const sy=Math.cos(Q.pitch),sz=Math.sin(Q.pitch),base=Q.bodyHeight;
+  shapes.push(ellipsoid(b,'torso',{x:0,y:(base+2.25*sy+jump)*CLOWN_SCALE,z:2.25*sz*CLOWN_SCALE},
+   1.12*CLOWN_SCALE,1.02*CLOWN_SCALE,1.33*CLOWN_SCALE));
+  shapes.push(ellipsoid(b,'head',{x:0,y:(base+4.7*sy+jump)*CLOWN_SCALE,z:4.7*sz*CLOWN_SCALE},
+   .96*CLOWN_SCALE,1.05*CLOWN_SCALE,.94*CLOWN_SCALE));
+  for(const side of [-1,1])shapes.push(ellipsoid(b,side<0?'left-paw':'right-paw',
+   {x:side*1.65*CLOWN_SCALE,y:(.3+jump)*CLOWN_SCALE,z:4.4*CLOWN_SCALE},
+   .52*CLOWN_SCALE,.48*CLOWN_SCALE,.63*CLOWN_SCALE));
+  return shapes;
+ }
  if(!M||M.ball>.12){
   // Original balance ball: radius 2.6, centred 2.6m above the ground.
   shapes.push(ellipsoid(b,'ball',{x:0,y:(2.6+jump)*CLOWN_SCALE,z:M?.ballZ||0},
