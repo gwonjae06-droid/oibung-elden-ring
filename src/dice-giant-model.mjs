@@ -4,14 +4,14 @@ const shape=(T,pts)=>{const s=new T.Shape();pts.forEach(([x,y],i)=>i?s.lineTo(x,
 const extrude=(T,pts,depth)=>new T.ExtrudeGeometry(shape(T,pts),{depth,bevelEnabled:false});
 const lathe=(T,pts,seg)=>new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),seg);
 const solid=o=>{o.castShadow=true;o.receiveShadow=true;return o;};
-export function buildGentlemanTorso(T,m){
+export function buildGentlemanTorso(T,m,{coarse=false}={}){
  const group=new T.Group();
  const add=(geo,mat,parent,x=0,y=0,z=0,sx=1,sy=1,sz=1)=>{const o=solid(new T.Mesh(geo,mat));o.position.set(x,y,z);o.scale.set(sx,sy,sz);parent.add(o);return o;};
- const sphere=new T.SphereGeometry(1,32,20),box=new T.BoxGeometry(1,1,1);
+ const sphere=new T.SphereGeometry(1,coarse?24:48,coarse?16:32),box=new T.BoxGeometry(1,1,1);
  // Smooth chest and waist silhouette; z is squashed to the original 15-unit depth.
- add(lathe(T,[[.01,-30],[16,-30],[18.5,-24],[20,-14],[22.5,-4],[24.5,6],[25,12],[23.5,19],[19,24.5],[12,27.5],[7,29],[.01,29.5]],48),m.suit,group,0,0,0,1,1,.6);
+ add(lathe(T,[[.01,-30],[16,-30],[18.5,-24],[20,-14],[22.5,-4],[24.5,6],[25,12],[23.5,19],[19,24.5],[12,27.5],[7,29],[.01,29.5]],coarse?32:72),m.suit,group,0,0,0,1,1,.6);
  // Jacket skirt below the waist.
- add(lathe(T,[[16,-30],[19.4,-34],[19.8,-39],[.01,-39]],48),m.suit,group,0,0,0,1,1,.6);
+ add(lathe(T,[[16,-30],[19.4,-34],[19.8,-39],[.01,-39]],coarse?32:64),m.suit,group,0,0,0,1,1,.6);
  // Padded shoulders.
  for(const side of [-1,1])add(sphere,m.suit,group,side*21,19,3,7.5,6.4,7.2);
  // Everything on the front sits on a slightly reclined plate that follows the chest curve.
@@ -29,8 +29,8 @@ export function buildGentlemanTorso(T,m){
  const square=add(box,m.shirt,front,-14,5,1.5,3.4,2.4,.6);square.rotation.z=.35;
  return {group};
 }
-export function buildGentlemanHand(T,m,side){
- const group=new T.Group(),fingers=[],thumb=[],sphere=new T.SphereGeometry(1,16,12);
+export function buildGentlemanHand(T,m,side,{coarse=false}={}){
+ const group=new T.Group(),fingers=[],thumb=[],sphere=new T.SphereGeometry(1,coarse?14:24,coarse?10:16);
  const add=(geo,mat,parent)=>{const o=solid(new T.Mesh(geo,mat));parent.add(o);return o;};
  const palm=add(sphere,m.skin,group);palm.scale.set(7.8,2.5,8.6);palm.position.z=1;
  const knuckle=add(sphere,m.skin,group);knuckle.scale.set(7.2,2.2,2.2);knuckle.position.set(0,.5,7.4);
@@ -39,7 +39,7 @@ export function buildGentlemanHand(T,m,side){
   const joints=[];let parent=root;
   for(const [len,r] of specs){
    const joint=new T.Group();parent.add(joint);joints.push(joint);
-   add(new T.CylinderGeometry(r*.92,r,len,12).rotateX(Math.PI/2).translate(0,0,len/2),m.skin,joint);
+   add(new T.CylinderGeometry(r*.92,r,len,coarse?10:20).rotateX(Math.PI/2).translate(0,0,len/2),m.skin,joint);
    add(sphere,m.skin,joint).scale.setScalar(r);
    const next=new T.Group();next.position.z=len;joint.add(next);parent=next;
   }
