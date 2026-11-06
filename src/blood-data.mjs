@@ -28,6 +28,10 @@ export const BLOOD_PATTERNS=Object.freeze({
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
 });
+export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
+ 'burst','vortex','dive','eclipse','tide','ritual','judgement',
+ 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross'
+]);
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
 // The rendered blood footprint and authoritative player-centre collision
