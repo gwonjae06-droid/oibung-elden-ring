@@ -49,7 +49,7 @@ test('breathing scenery changes atmospheric colors but keeps bright physical are
  assert.ok(keyLight.intensity>1.4, 'keep player and spotlight telegraphs readable');
  let visiblePortals=0,visibleFace=0;world.root.traverse(o=>{
   if(o.name==='mirror-that-does-not-reflect'&&o.visible)visiblePortals++;
-  if(o.name==='gigantic-mask-on-distant-curtain'&&o.visible)visibleFace++;
+  if(o.name==='gigantic-mask-on-distant-curtain'&&o.visible&&o.parent?.visible)visibleFace++;
   assert.notEqual(o.userData?.collider,true);
  });
  assert.equal(visiblePortals,7);
