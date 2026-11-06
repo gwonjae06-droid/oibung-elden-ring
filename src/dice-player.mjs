@@ -9,16 +9,16 @@ import {actPlayer,createPlayerState,tickPlayerAction,advancePlayerProjectile} fr
 import {settlePlayerHit} from './player-hit.mjs';
 import {createDiceGame,stepDice,damageDice} from './dice-combat.mjs';
 import {DICE_BOARD,DICE_RULES as R} from './dice-data.mjs';
-export function createDicePlayerGame(weapon='sword'){
+export function createDicePlayerGame(weapon='sword',{seed}={}){
  if(!WEAPONS[weapon])throw new Error('Unknown weapon');
- const g=createDiceGame(),spawn=DICE_BOARD[3];
+ const g=createDiceGame({seed}),spawn=DICE_BOARD[3];
  Object.assign(g,{weapon,projectiles:[],nextId:0,stats:{hits:0,damage:0,dodges:0}});
  g.player=createPlayerState({x:spawn.x,z:spawn.z,yaw:-Math.PI/2});
  Object.assign(g.boss,{x:g.dice.pose.x,z:g.dice.pose.z,state:'dice',phase:1});
  g.dice.stun=0;g.dice.giantEnabled=true;
-  // Make the new count-revealing roulette the first special attack players see,
-  // rather than hiding it behind three long charge/jump/frenzy cycles.
-  g.dice.patternCount=3;return g;
+  // Each new attempt shuffles the full casino attack pool. Roulette is
+  // neither hard-coded to open nor buried at a predictable fixed index.
+  return g;
 }
 export function actDice(g,type,input={}){
  if(g.status!=='playing'||g.dice.giant?.state==='transition')return false;
