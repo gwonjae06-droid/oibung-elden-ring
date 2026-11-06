@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
@@ -91,7 +92,7 @@ export function hurt(g, damage, src) {
     emit(g, 'dodge');
     return false;
   }
-  damage = Math.round(damage * PRESSURE.damage[g.boss.phase === 2 ? 1 : 0]);
+  damage = Math.min(p.hp,playerIncomingDamage(g,Math.round(damage * PRESSURE.damage[g.boss.phase === 2 ? 1 : 0])));
   p.hp = Math.max(0, p.hp - damage);
   p.invuln = 0.32;
   applyBossHitTrait(g,damage,{boss:'clown'});
