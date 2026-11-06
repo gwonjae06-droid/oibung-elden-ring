@@ -737,6 +737,7 @@ export function step(g, dt, input = {}) {
       p.x += Math.sin(a.yaw) * playerRollSpeed(g) * dt;
       p.z += Math.cos(a.yaw) * playerRollSpeed(g) * dt;
     },
+    backstep: (a,seconds) => {p.x-=Math.sin(a.yaw)*9*seconds;p.z-=Math.cos(a.yaw)*9*seconds;},
     melee: (a) => {
       const shapes=encounterBossHurtShapes(g);
       // The sword is ~2m long beyond the character grip, NOT a radius

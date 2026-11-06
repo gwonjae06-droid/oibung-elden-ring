@@ -214,7 +214,7 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
- tickPlayerAction(g,dt,w,{melee:a=>{
+ tickPlayerAction(g,dt,w,{backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},melee:a=>{
    if(bloodBossAirborne(g))return;
    const reach=playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85);
    const n=g.blood.heartNodes?.find(q=>q.hp>0&&Math.hypot(q.x-p.x,q.z-p.z)<reach+q.r&&

@@ -19,7 +19,7 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
   const u=ease((a.t??0)/.45);p.pivotX=mix(-.86,-1.82,u);p.armR=-.42*u;p.elbowR=.45*u;p.twist=-.30*u;p.lean=-.09*u;p.kneeL=p.kneeR=.12*u;p.lift=-.055*u;p.charge=u;p.support=u;return p;
  }
  const u=sat(a.t/Math.max(.001,a.total||1)),pulse=Math.sin(Math.PI*u);
- if(a.kind==='attack'||a.kind==='skill'){
+ if(a.kind==='attack'||a.kind==='skill'||a.kind==='backshot'||a.kind==='throw'){
   const wind=Math.max(.001,a.wind??.2),active=Math.max(.001,a.active??.14),rest=Math.max(.001,a.total-wind-active),t=Math.max(0,a.t||0);
   const w=ease(t/wind),hit=ease((t-wind)/active),back=ease((t-wind-active)/rest);
   const curve=(idle,prepare,strike)=>t<wind?mix(idle,prepare,w):t<wind+active?mix(prepare,strike,hit):mix(strike,idle,back);
@@ -46,6 +46,8 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
    p.armR=curve(-.32,-.94,-1.08);p.elbowR=curve(.35,1.05,.12);p.pivotX=curve(-.12,-.50,.06);p.pivotZ=curve(.14,-.70,.48);p.pivotY=curve(0,-.30,.24);
    p.twist=curve(0,-.24,.26);p.armL=curve(-.08,-.50,-.16);p.trail=false;
   }
+  if(a.kind==='backshot'){p.lift=.16*Math.sin(Math.PI*u);p.lean=-.28*Math.sin(Math.PI*u);p.legL=-.30;p.legR=.35;}
+  if(a.kind==='throw'){p.armR=-1.2*Math.sin(Math.PI*u);p.pivotX=-1.0;p.support=0;}
   // Short-lived bracing and shoulder/head counter-movement follows the
   // authoritative attack timeline. All offsets return to zero at the end.
   const bodyWeight=Math.sin(Math.PI*ease(t/Math.max(.001,a.total||1)));
@@ -54,6 +56,9 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
   p.sway+=bodyWeight*(weapon==='hammer'?.022:.013);
   p.kneeL+=bodyWeight*(weapon==='hammer'?.045:.020);
   p.kneeR+=bodyWeight*(weapon==='hammer'?.038:.016);
+ }else if(a.kind==='guard'){
+  const brace=ease(Math.min(1,a.t/.22));p.pivotX=-1.26;p.armR=-.72*brace;p.armL=-.60*brace;
+  p.lean=-.22*brace;p.twist=-.14*brace;p.kneeL=.28*brace;p.kneeR=.28*brace;p.support=brace;
  }else if(a.kind==='roll'){
   p.grounded=false;
   const tuck=ease(Math.min(u/.17,(1-u)/.17));p.legL=p.legR=-.70*tuck;p.kneeL=p.kneeR=tuck;p.armL=p.armR=-.38*tuck;p.elbowL=p.elbowR=.90*tuck;

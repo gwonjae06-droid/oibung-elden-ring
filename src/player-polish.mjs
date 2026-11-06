@@ -49,7 +49,10 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
    const pose=playerPose(g,phase,g.boss.state==='transition'?0:speed,{variant,time:g.time||0,moveX:localX,moveZ:localZ,cast:castLeft>0?castAction:null});
    if(g.status==='lost'){deathTime+=Math.max(0,dt);const u=Math.min(1,deathTime/.85),k=u*u*(3-2*u);pose.lean=1.45*k;pose.lift=-.52*k;pose.kneeL=pose.kneeR=.85*k;pose.legL=pose.legR=-.30*k;pose.armL=pose.armR=-.5*k;pose.spin=pose.bob=0;pose.headX=.30*k;pose.trail=false;}
    if(g.status==='playing')balance.apply(pose,{dt:h,clock:g.time||0,phase,speed,moveX:localX,moveZ:localZ,action});
-   parts.rig.scale.y=1;applyPlayerMotion(parts,pose,g.weapon,(g.time||0)+deathTime,speed);modernFx.update(h,g,parts,pose);
+   parts.rig.scale.y=1;applyPlayerMotion(parts,pose,g.weapon,(g.time||0)+deathTime,speed);
+   parts.weapons.sword.scale.z=g.weapon==='sword'&&(g.evolutions||[]).includes('charged-blade')?2:1;
+   parts.weapons.hammer.visible=!(g.weapon==='hammer'&&g.projectiles?.some(q=>q.kind==='hammer-throw'&&q.life>0));
+   modernFx.update(h,g,parts,pose);
    const skill=p.skill||{},hurt=action?.kind==='hurt';
    const enchant=action?.stun||skill.nextYellow?0xf6d36e:skill.nextRed?0xe56c79:skill.blue>0?0x79bdf2:0;
    const gemColor=pose.heal>.05?0x95e9ba:enchant||PLAYER_COLORS[g.weapon]||0x90d8e1;
