@@ -20,7 +20,7 @@ export function rouletteFiringAngle(s,i){
  return s.aim+center+(s.kind==='jackpot'?(center<0?-.1:.1):0);
 }
 export function beginDiceRoulette(g,kind='count'){
- if(!g||g.status!=='playing'||g.dice.giant||!['count','jackpot'].includes(kind))return false;
+ if(!g||g.status!=='playing'||g.boss?.phase!==2||g.dice.giant||!['count','jackpot'].includes(kind))return false;
  const d=g.dice,turn=d.rouletteTurn||0,count=kind==='count'?2+turn%5:4+turn%3;
  d.rouletteTurn=turn+1;
  const origin={x:d.pose.x,z:d.pose.z},aim=Math.atan2(g.player.x-origin.x,g.player.z-origin.z);

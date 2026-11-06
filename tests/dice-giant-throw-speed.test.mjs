@@ -23,13 +23,14 @@ test('controlled giant props have long anticipation; direct palm strikes keep th
 });
 test('roulette mixed hazards and feral chip/chess throws are slowed exactly once',()=>{
  const p=giantPattern(6,{x:0,z:-40}),slowed=p.hazards.filter(h=>h.throwSlowed);
- assert.equal(slowed.length,10);
- near(slowed[0].warn,1.4*GIANT_THROW_SLOW);
- near(slowed.at(-1).warn,1.15*GIANT_THROW_SLOW);
- for(const h of p.hazards.filter(h=>!h.throwSlowed))near(h.warn,1.1);
+ assert.equal(slowed.length,2,'phase-two roulette reveals a 2–6 physical coin count');
+ near(slowed[0].warn,1.45*GIANT_THROW_SLOW);
+ near(slowed.at(-1).warn,1.45*GIANT_THROW_SLOW);
+ assert.ok(p.hazards.every(h=>h.rouletteCoin));
  const feralChip=giantPattern(1,{x:0,z:-40},'feral').hazards[0];
  const feralChess=giantPattern(4,{x:0,z:-40},'feral').hazards[0];
- for(const h of [feralChip,feralChess]){assert.equal(h.throwSlowed,true);assert.equal(h.flightSeconds,1.25);}
+ assert.equal(feralChip.throwSlowed,true);assert.equal(feralChip.flightSeconds,1.25);
+ assert.equal(feralChess.throwSlowed,undefined,'feral chessboard is smashed by real palms, not thrown');
  const head=giantPattern(2,{x:0,z:-40},'feral').hazards[0];assert.equal(head.throwSlowed,undefined);
 });
 test('every throw actually spends at least 1.2 seconds visible in the air',()=>{

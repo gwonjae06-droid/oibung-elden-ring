@@ -32,6 +32,8 @@ export function diceBossFxCue(event,game){
   case 'dice-giant-prop-impact':return {kind:'prop-slam',phase,...position(event.x,event.z,.7),power:phase===3?1.1:.8};
   case 'dice-giant-head-impact':return {kind:'head-slam',phase:3,...position(event.x,event.z,1.1),power:event.rapid?.83:1.6};
   case 'dice-giant-feral':return {kind:'feral',phase:3,...position(p.x,p.z,Math.max(5,p.y-3)),power:2.2};
+  case 'dice-table-omen':return {kind:'table-charge',phase:3,...position(0,0,1.4),power:1.5};
+  case 'dice-table-rupture':return {kind:'table-shatter',phase:3,...position(event.x||0,event.z||0,.8),power:event.slot===15?3.2:2.7};
   case 'boss-hit':return {kind:'boss-hit',phase,...position(p.x,p.z,Math.max(2,p.y)),power:.45};
   case 'player-hit':return {kind:'player-hit',phase,...position(g.player?.x,g.player?.z,1.1),power:.55};
   case 'victory':return {kind:'death',phase,...position(p.x,p.z,Math.max(3,p.y)),power:2.5};
@@ -163,6 +165,12 @@ export function createDiceBossFx(scene,{coarse=false,reduced=false}={}){
     burst(x,y,z,3,coarse?42:90,power,'shatter');
     wave(x,z,3,14,.56);wave(x,z,3,23,.85);wave(x,z,3,34,1.04);
     flash(x,y,z,3,2.4);break;
+   case 'table-charge':
+    burst(x,1,z,3,coarse?17:34,power,'aura');wave(x,z,3,12,.9);break;
+   case 'table-shatter':
+    burst(x,1,z,3,coarse?50:92,power,'shatter');
+    wave(x,z,3,18,.65);wave(x,z,3,32,.9);wave(x,z,3,54,1.15);
+    flash(x,y,z,3,2.9);break;
    case 'feral':
     burst(x,y,z,3,coarse?46:100,power,'aura');
     wave(x,z,3,25,1.15,y);wave(x,z,3,37,1.5,y+1.4);

@@ -9,6 +9,7 @@ import {createBloodGame,damageBlood} from '../src/blood-combat.mjs';
 import {createBloodPatternDeck,nextBloodPattern} from '../src/blood-pattern-director.mjs';
 import {bloodPool} from '../src/blood-data.mjs';
 import {nextGiantPressureSlot} from '../src/dice-giant.mjs';
+import {createPatternShuffle} from '../src/pattern-shuffle.mjs';
 import {actPlayer,tickPlayerAction} from '../src/player-combat.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 import {damageDice} from '../src/dice-combat.mjs';
@@ -73,12 +74,12 @@ test('Clown story links its existing performance after ball cannon',()=>{
 });
 
 test('Giant story offers distinct slots in its weighted controlled and feral cycles',()=>{
- const g={player:{x:0,z:-40},dice:{giant:{temperament:'controlled'}}};
- for(const [feral,total] of [[false,11],[true,12]]){
+ const g={player:{x:0,z:-40},dice:{patternShuffle:createPatternShuffle(2026),giant:{temperament:'controlled'}}};
+ for(const [feral,total] of [[false,14],[true,16]]){
   g.dice.giant={temperament:feral?'feral':'controlled'};
   const chosen=Array.from({length:total},()=>nextGiantPressureSlot(g));
   assert.equal(new Set(chosen).size,total);
-  assert.ok(chosen.every(n=>Number.isInteger(n)&&n>=0&&n<14),'only defined casino/bestial slots can be scheduled');
+  assert.ok(chosen.every(n=>Number.isInteger(n)&&n>=0&&n<total),'only defined casino/bestial slots can be scheduled');
  }
 });
 
