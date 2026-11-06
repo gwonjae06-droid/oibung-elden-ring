@@ -37,6 +37,9 @@ function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.bos
 export function startGyuwonPattern(g,id){
  const spec=GYUWON_PATTERNS[id];if(!spec||g.status!=='playing'||g.boss.state==='transition')return false;
  const b=g.boss,s=g.gyuwon,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ if(b.phase===3&&MEMORY_ORDER.includes(id)){
+  s.stageMemory=id;s.stageTime=0;emit(g,'memory-stage',{memory:id});
+ }
  const lane=(x,z,yaw,warn,extra={})=>hazard(g,'lane',{x,z,yaw,warn,width:1.15,length:42,life:.3,damage:24,...extra});
  if(id==='line')for(let i=-1;i<=1;i++)lane(p.x+i*5,p.z,0,1.1+Math.abs(i)*.22);
  if(id==='mark')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*4,z:p.z,r:2.5,warn:1.1+i*.5,damage:22});
@@ -126,7 +129,14 @@ function hurt(g,h){
 function tickBoss(g,dt){
  const b=g.boss,s=g.gyuwon;
  if(b.phase===2&&b.state!=='transition'){s.spaceTime+=dt;if(s.spaceTime>= (b.hp/b.maxHp>.45?12:8)&&b.state==='recovery'){s.space=s.space==='white'?'dark':'white';s.spaceTime=0;emit(g,'space');}}
- if(b.phase===3){s.stageTime+=dt;if(s.stageTime>=memoryInterval(b.hp/b.maxHp)){s.stageTime=0;s.stageMemory=MEMORY_ORDER[++s.stageIndex%5];emit(g,'memory-stage');}}
+ if(b.phase===3){
+  // The grand setting follows the actual memory being cast; old code could
+  // swap to a different boss's room in the middle of an attack.
+  s.stageTime+=dt;
+  if(b.state==='recovery'&&s.stageTime>=memoryInterval(b.hp/b.maxHp)){
+   s.stageTime=0;s.stageIndex++;emit(g,'memory-stage',{memory:s.stageMemory});
+  }
+ }
  s.slow=Math.max(0,s.slow-dt);
  if(b.state==='transition'){s.t+=dt;s.elevation=0;if(s.t>=R.transition){b.state='recovery';s.recover=2.8;s.elevation=0;s.t=0;emit(g,'gyuwon-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
