@@ -33,7 +33,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState()}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
    const dealt=damageBlood(game,amount,null,{dot});
@@ -187,7 +187,10 @@ function hurt(g,h){
 function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
- if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
+ if(b.state==='transition'){s.t+=dt;
+  if(s.t>=2.65&&!s.cathedralShattered){s.cathedralShattered=true;emit(g,'blood-cathedral-shatter');}
+  if(s.t>=3.85&&!s.seaCrashed){s.seaCrashed=true;emit(g,'blood-sea-crash');}
+  s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
