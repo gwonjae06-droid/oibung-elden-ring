@@ -10,12 +10,21 @@ export function nextBloodPattern(state,phase,{distance=null}={}){
  if(state.phase!==phase){state.phase=phase;state.queue=[];state.last=null;state.cycles=0;}
  if(!state.queue.length){
   if(phase===1){
-   const signature=shuffle(state,['lances','cross']),rest=shuffle(state,bloodPool(1).filter(id=>!signature.includes(id)));
-   state.queue=[signature[0],rest[0],rest[1],signature[1],...rest.slice(2)];
+   const signature=shuffle(state,['lances','cross']);
+   // The high-impact new blood sculptures and enclosing heart magic must be
+   // seen before the monarch is pushed into his second phase.
+   const rare=['bloodStatues','heartCage'];
+   const rest=shuffle(state,bloodPool(1).filter(id=>!signature.includes(id)&&!rare.includes(id)));
+   state.queue=[signature[0],rest[0],rare[0],signature[1],rest[1],rare[1],...rest.slice(2)];
   }else{
    const signature=shuffle(state,['judgement','ritual']),ground=shuffle(state,['wing','pulse']);
-   const air=shuffle(state,bloodPool(2).filter(id=>!signature.includes(id)&&!ground.includes(id)));
-   state.queue=[signature[0],ground[0],air[0],signature[1],air[1],ground[1],...air.slice(2)];
+   const showcase=['heartFeast','wingGenesis'];
+   const air=shuffle(state,bloodPool(2).filter(id=>
+    !signature.includes(id)&&!ground.includes(id)&&!showcase.includes(id)));
+   // Heart absorption previously fell anywhere in a thirteen-spell deck:
+   // many fights ended without ever displaying it or its healing effect.
+   state.queue=[signature[0],ground[0],showcase[0],signature[1],air[0],
+    ground[1],showcase[1],...air.slice(1)];
   }
   // Keep a full unique deck while avoiding a repeat across deck boundaries.
   if(state.queue[0]===state.last)[state.queue[0],state.queue[2]]=[state.queue[2],state.queue[0]];
