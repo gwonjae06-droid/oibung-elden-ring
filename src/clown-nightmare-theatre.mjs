@@ -71,15 +71,15 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
   clock+=h;pulse=Math.max(0,pulse-h*1.2);
   const c=g.clown||{},b=g.boss||{},name=c.name||'',age=Math.max(0,c.pt-(c.state==='pattern'? .7:0)),
    stage=c.horrorStage||1,live=g.status==='playing',evil=stage===3;
-  const ghostShow=live&&(name==='wrongTwin'||name==='foldedCrawl'),maskShow=live&&(name==='porcelainRain'||name==='clockOfTeeth'||name==='hatchingBalloons'),
-   seatShow=live&&(name==='emptyAudience'||evil),shadowShow=live&&(name==='livingShadow'||name==='wrongTwin');
+  const ghostShow=live&&(name==='wrongTwin'||name==='foldedCrawl'||name==='mouthOfTheAudience'),maskShow=live&&(name==='porcelainRain'||name==='clockOfTeeth'||name==='hatchingBalloons'||name==='stolenFace'),
+   seatShow=live&&(name==='emptyAudience'||name==='mouthOfTheAudience'||evil),shadowShow=live&&(name==='livingShadow'||name==='wrongTwin'||name==='stageRupture');
   const active=live?(evil?1:stage===2?.7:.35):0;
   phantomMat.opacity=(ghostShow?.34:seatShow?.28:0)*active;
   porcelain.opacity=(maskShow?.72:ghostShow?.36:0)*active;
   socket.opacity=(maskShow?.7:ghostShow?.65:0)*active;
   eye.opacity=seatShow?.52*active:0;
   shadowMat.opacity=shadowShow?.22*active:0;
-  curtainMat.opacity=live&&name==='curtainNightmare'?.64:evil?.18:0;
+  curtainMat.opacity=live&&(name==='curtainNightmare'||name==='stageRupture')?.64:evil?.18:0;
   for(let i=0;i<ghosts.length;i++){
    const q=ghosts[i];q.visible=ghostShow;
    if(!ghostShow)continue;
@@ -92,7 +92,8 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
   const zones=(c.zones||[]).filter(z=>z.state==='warn'&&
     (name==='porcelainRain'?z.sound==='porcelainRain':
      name==='clockOfTeeth'?z.sound==='clockOfTeeth':
-     name==='hatchingBalloons'?z.sound==='hatchingBalloons':false));
+     name==='hatchingBalloons'?z.sound==='hatchingBalloons':
+     name==='stolenFace'?z.sound==='stolenFace':false));
   for(let i=0;i<masks.length;i++){
    const m=masks[i],z=zones[i%Math.max(1,zones.length)];
    m.visible=maskShow&&Boolean(z)&&i<zones.length;
@@ -101,7 +102,7 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
    // The mask falls into the *same* spot whose light is warning the player.
    m.position.set(z.x,Math.max(2.8,11*(1-k)+2.8*k),z.z);
    m.rotation.set(!reduced?clock*.25:0,clock*.53+i*.3,Math.PI*sat((k-.63)/.35)*.3);
-   m.scale.setScalar(name==='clockOfTeeth'?.95:1.5);
+   m.scale.setScalar(name==='clockOfTeeth'?.95:name==='stolenFace'?2.05:1.5);
   }
   for(let i=0;i<spectators.length;i++){
    const q=spectators[i];q.visible=seatShow;
@@ -114,7 +115,7 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
    const m=shadows[i];m.visible=shadowShow;
    if(!shadowShow)continue;
    const a=lane?.yaw??(c.yaw||0),len=lane?.len??9,k=sat(age/1.55);
-   const stretch=name==='livingShadow'?len*(.15+.5*k):4.5;
+   const stretch=name==='livingShadow'?len*(.15+.5*k):name==='stageRupture'?6.2*(.3+k):4.5;
    m.position.set((lane?.x??b.x??0)+Math.sin(a)*(2+i*stretch*.27),
     .105+i*.002,(lane?.z??b.z??0)+Math.cos(a)*(2+i*stretch*.27));
    m.rotation.z=-a;

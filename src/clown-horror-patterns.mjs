@@ -16,6 +16,9 @@ export const HORROR_DEFINITIONS=Object.freeze([
  ['emptyAudience','아무도 없는 객석의 박수',6.1,1.65,[2],2],
  ['curtainNightmare','커튼 뒤의 무대',6.6,1.85,[2],3],
  ['clockOfTeeth','열두 개의 미소',6.5,1.8,[2],3],
+ ['stolenFace','내 얼굴 좀 가져가세요',6.1,1.65,[2],2],
+ ['mouthOfTheAudience','관객의 입이 열린다',6.3,1.7,[2],3],
+ ['stageRupture','무대는 아프지 않다고 했잖아요',6.8,1.85,[2],3],
 ]);
 export const HORROR_PATTERNS=Object.freeze(HORROR_DEFINITIONS.map(([key])=>key));
 export const horrorMinStage=key=>HORROR_DEFINITIONS.find(a=>a[0]===key)?.[5]??1;
@@ -147,7 +150,53 @@ function clockOfTeeth(g,c,a,t,api){
  }
  if(cross(a,t,4.4))api.emit(g,'clown-horror',{cue:'teeth-end'});
 }
+// A porcelain facial mask is physically thrown toward locked positions,
+// then remains there briefly before a fair, spotlighted explosion.
+function stolenFace(g,c,a,t,api){
+ tell(api,g,c,'face');
+ c.vis.neck=t<2.9?.68:Math.max(0,1-(t-2.9)*.7);
+ c.vis.glove=t<3.2?1:Math.max(0,1-(t-3.2)*.8);
+ c.vis.tilt=.29*Math.sin(t*5);
+ for(let i=0;i<3;i++)if(cross(a,t,.32+i*1.16)){
+  const anchor=bound(g.player);
+  const q=offset(anchor,c.seq*.42+i*TAU/3,i===0?0:4.8),r=i===0?3.3:2.8,warn=1.45;
+  const z=circle(api,g,q,r,warn,26+i*2,'stolenFace');
+  api.bomb(g,{kind:'head',...q,r,fly:.75,warn,zone:z.id});
+  api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});
+ }
+}
+// The clown opens an impossible mouth. A shoulder and jaw wind-up predicts
+// alternating cones; this is not an unavoidable 360-degree proximity attack.
+function mouthOfTheAudience(g,c,a,t,api){
+ tell(api,g,c,'mouth');
+ c.vis.neck=t<3.9?.8:Math.max(0,1-(t-3.9)*.8);
+ c.vis.crouch=.25+.32*Math.abs(Math.sin(t*3));
+ c.vis.glove=t<3.3?.64:0;
+ const look=api.once(c,'mouth-look',()=>yawTo(g.boss,g.player));
+ for(let i=0;i<3;i++)if(cross(a,t,.48+i*1.17)){
+  const yaw=look+[0,.9,-.9][i];
+  c.yaw=yaw;
+  api.cone(g,yaw,1.15,17,i===0?.58:.49,27+i*2,'mouthOfTheAudience');
+  api.emit(g,'clown-horror',{cue:i===0?'mouth':'teeth-end'});
+ }
+}
+// A tear in the set becomes three diagonal gashes; damage is attached only
+// to the lane silhouettes with full windup. The gaps stay traversable.
+function stageRupture(g,c,a,t,api){
+ tell(api,g,c,'stage-break');
+ c.vis.tilt=Math.sin(t*2.9)*.31;
+ c.vis.crouch=t<3.4?.4:0;
+ c.vis.glove=t<3.5?.83:0;
+ const look=api.once(c,'seam-look',()=>yawTo(g.boss,g.player));
+ for(let i=0;i<3;i++)if(cross(a,t,.43+i*1.22)){
+  const yaw=look+[.62,-.62,0][i],len=14;
+  api.zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw,len,w:2.6,
+   warn:1.3,damage:31,blast:true,major:true,sound:'stageRupture'});
+  api.emit(g,'clown-horror',{cue:'stage-break',x:g.boss.x,z:g.boss.z});
+ }
+}
 export const HORROR_RUN=Object.freeze({
  echoApplause,wrongTwin,livingShadow,hatchingBalloons,
- porcelainRain,foldedCrawl,emptyAudience,curtainNightmare,clockOfTeeth
+ porcelainRain,foldedCrawl,emptyAudience,curtainNightmare,clockOfTeeth,
+ stolenFace,mouthOfTheAudience,stageRupture
 });
