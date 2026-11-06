@@ -29,7 +29,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  for(const side of [-1,1])mesh(fluid.sphere,fluid.material,side,0,0,heart).scale.set(1.6,1.9,1.5);
  const tip=mesh(fluid.sphere,fluid.material,0,-1.5,0,heart);tip.scale.set(1.8,2,1.3);
  const fxRoot=new THREE.Group();scene.add(fxRoot);
- const particles=createBloodParticles(fxRoot,fluid,quality,{reduced}),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
+ const particles=createBloodParticles(fxRoot,fluid,quality,{reduced}),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced,coarse}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
  const grandRites=createGrandBloodRites(fxRoot,fluid,{coarse,reduced});
  const siphonFx=createBloodSiphonFx(fxRoot,{coarse,reduced});
  const root=new THREE.Group();scene.add(root);
