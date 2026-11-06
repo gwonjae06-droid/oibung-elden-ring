@@ -6,6 +6,7 @@ import {createFreeLookCamera} from './free-look-camera.mjs';
 import {createBattleVisualWarmup} from './runtime/battle-visual-warmup.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import {consumeBattleGrace,installChargeInput} from './weapon-evolution.mjs';
+import {syncWeaponSpecializationVisuals} from './player-weapons.mjs';
 import {actPlayer} from './player-combat.mjs';
 import {reducedMotion} from './display-preferences.mjs';
 import {runBattleStartup} from './runtime/battle-startup.mjs';
@@ -136,7 +137,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
     m.userData.spotlightUpdate(z);
    }for(const[id,m]of zones)if(!live.has(id)){releaseZone(m);zones.delete(id);}
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:headPool.acquire();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph&&o.group.visible)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){releaseBombVisual(o);bombs.delete(id);}
-  playerProjectiles.update(g);
+  playerProjectiles.update(g);syncWeaponSpecializationVisuals(P,g);
   nightmare.update(g,dt);livingWorld.update(g,dt);circus.update(g,dt);const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent=V.action;
   const big=(b.state==='transition'?2:c.vis.pose==='inflate'?c.vis.k*2.4:0)*CLOWN_SIZE,extra=Math.max(0,1/camera.aspect-1)*9,alpha=1-Math.exp(-5*dt);if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(b.x-p.x,b.z-p.z)-yaw),Math.cos(Math.atan2(b.x-p.x,b.z-p.z)-yaw))*Math.min(1,dt*7);const dist=CLOWN_CAMERA.distance+zoom+big+extra;camPos.set(p.x-Math.sin(yaw)*Math.cos(pitch)*dist,1.5+Math.sin(pitch)*dist+2+big*.4,p.z-Math.cos(yaw)*Math.cos(pitch)*dist);camTarget.set(p.x+(lock?(b.x-p.x)*.42:0),CLOWN_CAMERA.target+big*.4,p.z+(lock?(b.z-p.z)*.42:0));camera.position.lerp(camPos,alpha);aim.lerp(camTarget,alpha);if(!reduced&&dt>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}camera.lookAt(aim);impact.camera(camera);screen.set(b.x,CLOWN_CAMERA.reticle,b.z).project(camera);$('reticle').hidden=!lock||Math.abs(screen.z)>1||g.status!=='playing';$('reticle').style.left=((screen.x*.5+.5)*canvas.clientWidth-6)+'px';$('reticle').style.top=((-screen.y*.5+.5)*canvas.clientHeight-6)+'px';
  }
