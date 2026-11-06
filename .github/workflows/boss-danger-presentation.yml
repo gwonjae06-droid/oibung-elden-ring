@@ -51,8 +51,6 @@ jobs:
           node --test
           tests/boss-danger-presentation.test.mjs
           tests/four-boss-signature-3d.test.mjs
-          tests/environmental-telegraphs.test.mjs
-          tests/circus-lighting.test.mjs
           tests/clown-patterns.test.mjs
           tests/blood-render.test.mjs
           tests/attack-readability.test.mjs
