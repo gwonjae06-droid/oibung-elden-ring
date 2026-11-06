@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {playerIncomingDamage} from '../src/weapon-stats.mjs';
 import assert from 'node:assert/strict';
 import {createGame,startPattern,step,swordPose,PATTERNS,patternConfig} from '../src/combat.mjs';
 import {KWON_WAVE} from '../src/kwon-wave-data.mjs';
@@ -47,13 +48,13 @@ test('the single wave deals only one hit across its visible collision width',()=
  shot.x=0;shot.z=0;shot.yaw=0;shot.life=1.5;shot.age=shot.minArmTime;
  g.player.x=KWON_WAVE.radius-.15;g.player.z=.8;g.player.invuln=0;
  const before=g.player.hp;step(g,1/30);
- assert.equal(before-g.player.hp,cfg.damage);
+ assert.ok(Math.abs(before-g.player.hp-playerIncomingDamage(g,cfg.damage))<1e-7);
  assert.equal(g.bossShots.length,0,'projectile consumed on impact');
  // Bleed is a separate Kwon status effect; isolate projectile damage here.
  if(g.player.traits)g.player.traits.bleed=0;
  g.player.invuln=0;tick(g,30);
  assert.equal(g.events.filter(e=>e.type==='player-hit').length,1,'only one projectile contact');
- assert.equal(g.player.hp,before-cfg.damage,'the strike cannot deal three overlapping hits');
+ assert.equal(g.player.hp,before-playerIncomingDamage(g,cfg.damage),'the strike cannot deal three overlapping hits');
 });
 test('wave does not hit players outside its half-width',()=>{
  const {g}=chargedWave(2);const shot=g.bossShots[0];

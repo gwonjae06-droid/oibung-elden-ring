@@ -44,8 +44,8 @@ test('jackpot exposes a symmetric split pattern and freezes with the boss',()=>{
 test('roulette shot is harmless while emerging beside a melee fighter',()=>{
  const g=die();g.player.z=8.1;g.player.invuln=0;
  beginDiceRoulette(g,'count');advance(g,DICE_ROULETTE.spin+.12);
- assert.equal(g.player.hp,120);advance(g,.3);
- assert.equal(g.player.hp,120,'the new shot must travel before its hitbox arms');
+ assert.equal(g.player.hp,g.player.maxHp);advance(g,.3);
+ assert.equal(g.player.hp,g.player.maxHp,'the new shot must travel before its hitbox arms');
 });
 test('roulette coins are cleared on boss victory',()=>{
  const g=die();beginDiceRoulette(g,'count');advance(g,2);
@@ -62,10 +62,10 @@ test('grave sword at long range cannot deal target-locked or sword-segment damag
  assert.equal(g.boss.zone,null,'grave sword must never lock an invisible impact circle');
  const duration=patternConfig(g.boss).wind+patternConfig(g.boss).active+.4;
  for(let t=0;t<duration;t+=1/120)step(g,1/120);
- assert.equal(g.player.hp,120,'boss swing may not deal remote damage');
+ assert.equal(g.player.hp,g.player.maxHp,'boss swing may not deal remote damage');
  assert.equal(g.bossShots.length,3,'the three visible projectiles still exist');
  for(let t=duration;t<3.36;t+=1/120)step(g,1/120);
- assert.ok(g.player.hp<120,'a visible traveling wave still causes a legitimate hit');
+ assert.ok(g.player.hp<g.player.maxHp,'a visible traveling wave still causes a legitimate hit');
 });
 test('grave sword projectile-only behavior survives repeated casts and cannot inherit slam impact zones',()=>{
  const g=createGame('sword',{register:false});g.boss.phase=2;
