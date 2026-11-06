@@ -30,10 +30,21 @@ export const BLOOD_PATTERNS=Object.freeze({
 });
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
+// The rendered blood footprint and authoritative player-centre collision
+// both consume these exact dimensions. .55 is the existing edge allowance:
+// never hide it in the hit test while showing a smaller puddle.
+export const BLOOD_CONTACT_MARGIN=.55;
+export function bloodHazardFootprint(h){
+ const c=hazardPosition(h),pad=BLOOD_CONTACT_MARGIN;
+ if(h.shape==='ring')return {kind:2,x:c.x,z:c.z,r:c.r,halfWidth:h.width+pad,halfLength:0,yaw:0,inner:0,arc:0};
+ if(h.shape==='lane')return {kind:3,x:c.x,z:c.z,r:0,halfWidth:h.width+pad,halfLength:h.length/2+pad,yaw:h.yaw,inner:0,arc:0};
+ if(h.shape==='cone')return {kind:4,x:c.x,z:c.z,r:h.r+pad,halfWidth:0,halfLength:0,yaw:h.yaw,inner:Math.max(0,(h.innerR||0)-pad),arc:h.arc};
+ return {kind:1,x:c.x,z:c.z,r:c.r+pad,halfWidth:0,halfLength:0,yaw:0,inner:0,arc:0};
+}
 export function hazardContains(h,p){
- const c=hazardPosition(h),dx=p.x-c.x,dz=p.z-c.z;
- if(h.shape==='ring')return Math.abs(Math.hypot(dx,dz)-c.r)<=h.width+.55;
- if(h.shape==='lane'){const s=Math.sin(h.yaw),c=Math.cos(h.yaw);return Math.abs(dx*c-dz*s)<=h.width+.55&&Math.abs(dx*s+dz*c)<=h.length/2+.55;}
- if(h.shape==='cone'){const angle=Math.atan2(dx,dz)-h.yaw,d=Math.hypot(dx,dz);return d>=Math.max(0,(h.innerR||0)-.55)&&d<=h.r+.55&&Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)))<=h.arc;}
- return Math.hypot(dx,dz)<=c.r+.55;
+ const f=bloodHazardFootprint(h),dx=p.x-f.x,dz=p.z-f.z,d=Math.hypot(dx,dz);
+ if(f.kind===2)return Math.abs(d-f.r)<=f.halfWidth;
+ if(f.kind===3){const s=Math.sin(f.yaw),c=Math.cos(f.yaw);return Math.abs(dx*c-dz*s)<=f.halfWidth&&Math.abs(dx*s+dz*c)<=f.halfLength;}
+ if(f.kind===4){const angle=Math.atan2(dx,dz)-f.yaw;return d>=f.inner&&d<=f.r&&Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)))<=f.arc;}
+ return d<=f.r;
 }
