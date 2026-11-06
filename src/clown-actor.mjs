@@ -11,6 +11,7 @@ import {createSpringBank} from './secondary-physics.mjs';
 import {createRecoilBank} from './animation-recoil.mjs';
 import {clownWeightAccent} from './boss-performance.mjs';
 import {createClownGait} from './clown-gait.mjs';
+import {createClownNightmareAnatomy} from './clown-nightmare-anatomy.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
  return runThreeStartup(THREE,(THREE,own)=>{
@@ -26,6 +27,7 @@ export function createClownActor(){
  const tube=mat=>mesh(new THREE.CylinderGeometry(.18,.22,1,10),mat,0,0,0),joint=(r,mat)=>mesh(new THREE.SphereGeometry(r,12,10),mat,0,0,0);
  const limbs=[-1,1].map(s=>({s,upper:tube(s<0?red:white),lower:tube(s<0?white:red),elbow:joint(.25,white),glove:joint(.4,white),thigh:tube(s<0?white:red),shin:tube(s<0?white:red),knee:joint(.25,red),shoe:joint(.4,black)}));
  const neck=tube(white),head=createClownHead(),mount=createClownHead();body.add(head.group);root.add(mount.group);mount.group.visible=false;
+ const nightmare=createClownNightmareAnatomy(THREE,{body,head,mount});
  const collar=mesh(new THREE.TorusGeometry(.67,.16,8,24),white,0,3.4,0);collar.rotation.x=Math.PI/2;
  const beadGeo=new THREE.SphereGeometry(.14,10,8),ruffGeo=new THREE.ConeGeometry(.32,.65,4),patchGeo=new THREE.BoxGeometry(.26,.36,.04),cuffGeo=new THREE.TorusGeometry(.28,.08,6,16),puffGeo=new THREE.SphereGeometry(.38,12,10);
  for(let i=0;i<3;i++)mesh(beadGeo,gold,0,1.7+i*.55,.72);
@@ -39,11 +41,15 @@ export function createClownActor(){
  function update(g,dt=1/60){
   const death=collapse.update(g,dt,Boolean(globalThis.document?.hidden));
   const boss=g.boss,c=g.clown,v=c.vis,F=headFrame(g),M=F.mount,p={...headPose(F.pose,F.k)},time=c.time+(boss.state==='transition'?boss.t:0);if(F.inflate!==null)p.inflate=F.inflate;
+  const horror=c.horrorStage||1;
+  red.color.setHex(horror===3?0x471728:horror===2?0x741e36:0x981d38);
+  white.color.setHex(horror===3?0xc5b5a5:horror===2?0xd8c4af:0xe8d5ad);
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
   const footMotion=gait.update(g,dt),weightAccent=clownWeightAccent(g,A);
   if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
+  if(g.status==='playing'){p.jaw=(p.jaw||0)+(horror===3?.35:horror===2?.16:.03);p.wobble=(p.wobble||0)+(!reduced&&(horror>=2)? .07:0);}
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
   root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(M?M.bodyY+M.lift:5.2)+rise+A.lift+footMotion.bob-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13+footMotion.roll+weightAccent.roll;body.rotation.x=(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean+footMotion.lean+weightAccent.pitch+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
   // Compress the decorative chest during claps and heavy throws, then relax
@@ -72,6 +78,7 @@ export function createClownActor(){
    L.glove.scale.set((1+gloveCue*1.7)*A.glove,(1+gloveCue)*A.glove,(1+gloveCue*1.4)*A.glove);L.puff.position.set(...shoulder);L.cuff.scale.setScalar(Math.sqrt(A.glove));L.smear.visible=A.smear>.1;L.smear.position.set(...hand);L.smear.position.z-=.8;L.smear.scale.set(1,A.smear+1,1+A.smear*5);
    const {hip,knee,foot}=footMotion.legs[s<0?0:1];link(L.thigh,hip,knee);link(L.shin,knee,foot);L.knee.position.set(...knee);L.shoe.position.set(...foot);L.shoe.rotation.x=footMotion.legs[s<0?0:1].anklePitch;L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
   }
+  nightmare.update(g,time,reduced);
  }
  return {root,update,head};
  });
