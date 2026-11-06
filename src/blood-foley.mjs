@@ -26,11 +26,11 @@ export const BLOOD_ATTACK_SOUNDS=Object.freeze({
  wing:'hit3',
  pulse:'hit4',
  pursuit:'hit2',
- tide:'splash',lances:'hit5',cross:'splash',judgement:'hit3',ritual:'hit4',bloodScissors:'hit3',heartCage:'hit4',wingShear:'hit3',rosary:'splash',reverseFlow:'splash',bloodStatues:'hit3',wingGenesis:'splash',heartFeast:'hit4'
+ tide:'splash',lances:'hit5',cross:'splash',judgement:'hit3',ritual:'hit4',bloodScissors:'hit3',heartCage:'hit4',wingShear:'hit3',rosary:'splash',reverseFlow:'splash',bloodStatues:'hit3',wingGenesis:'splash',heartFeast:'hit4',requiem:'splash'
 });
-const WET_CHARGE=new Set(['wave','fountain','vortex','rain','tide','cross','ritual','heartCage','rosary','reverseFlow','bloodStatues','heartFeast']);
-const HEAVY=new Set(['burst','dive','eclipse','pursuit','tide','lances','judgement','ritual','bloodScissors','wingShear','wingGenesis','heartFeast']);
-const WET_HIT=new Set(['wave','fountain','vortex','rain','tide','reverseFlow','wingGenesis']);
+const WET_CHARGE=new Set(['wave','fountain','vortex','rain','tide','cross','ritual','heartCage','rosary','reverseFlow','bloodStatues','heartFeast','requiem']);
+const HEAVY=new Set(['burst','dive','eclipse','pursuit','tide','lances','judgement','ritual','bloodScissors','wingShear','wingGenesis','heartFeast','requiem']);
+const WET_HIT=new Set(['wave','fountain','vortex','rain','tide','reverseFlow','wingGenesis','requiem']);
 
 function cue(file,volume,duration,fade,minGap){
  return {file,rate:1,volume,duration,fade,minGap,natural:true};
