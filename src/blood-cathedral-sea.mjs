@@ -133,7 +133,9 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
   const phaseTime=Math.max(0,game?.blood?.t||0);
   const v=Math.max(0,Math.min(1,(phaseTime-1.7)/(4.4-1.7)));
   const eased=v*v*(3-2*v),floodLevel=phase?(transition?eased:1):0;
-  uniforms.time.value=t;uniforms.frenzy.value=phase;
+  const tempest=game?.boss?.state==='pattern'&&
+    ['tide','requiem','eclipse'].includes(game?.blood?.pattern)?1:0;
+  uniforms.time.value=t;uniforms.frenzy.value=phase+tempest*.65;
   const endless=floodLevel>.94;
   horizon.visible=endless;surface.visible=!endless;
   flood.visible=floodLevel>.01&&!endless;
