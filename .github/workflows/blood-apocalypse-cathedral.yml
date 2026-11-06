@@ -29,6 +29,7 @@ jobs:
         run: >-
           node --test
           tests/blood-apocalypse-cathedral.test.mjs
+          tests/blood-epic-cinematics.test.mjs
           tests/blood-white-cathedral.test.mjs
           tests/blood-cathedral-sea.test.mjs
           tests/blood-attack-animation.test.mjs
