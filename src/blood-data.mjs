@@ -20,14 +20,15 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  rain:{name:'혈우',phase:2,duration:4.9,recover:2.8,air:true},
  wing:{name:'붉은 날개 베기',phase:2,duration:2.9,recover:2.8},
  pulse:{name:'심장 파동',phase:2,duration:4.4,recover:2.6},
- pursuit:{name:'혈익 추격',phase:2,duration:4,recover:3,air:true},
- tide:{name:'종말의 혈조',phase:2,duration:5,recover:3.2,air:true},
- judgement:{name:'천상의 혈검',phase:2,duration:4.9,recover:3,air:true},
- ritual:{name:'대성당의 붉은 세례',phase:2,duration:6.6,recover:3.6,air:true},
+ pursuit:{name:'혈익 돌진',phase:2,duration:4,recover:3,air:true},
+ tide:{name:'혈해 범람',phase:2,duration:5,recover:3.2,air:true},
+ judgement:{name:'붉은 성창 낙하',phase:2,duration:4.9,recover:3,air:true},
+ ritual:{name:'성흔 심판',phase:2,duration:6.6,recover:3.6,air:true},
  wingShear:{name:'혈익 교차참',phase:2,duration:5.1,recover:2.5},
  rosary:{name:'붉은 묵주의 행렬',phase:2,duration:5.7,recover:2.75},
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
+ requiem:{name:'해일의 장송',phase:2,duration:7.4,recover:3.8},
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
@@ -37,7 +38,7 @@ export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
 ));
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
  'burst','vortex','dive','eclipse','tide','ritual','judgement',
- 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross'
+ 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross','requiem'
 ]);
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}

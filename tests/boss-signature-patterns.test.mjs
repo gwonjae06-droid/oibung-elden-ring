@@ -96,9 +96,9 @@ for(const phase of [1,2])for(const id of bloodNew[phase])test('Baeseojun '+id+' 
  assert.equal(g.blood.hazards.length,0);
  assert.equal(g.blood.elevation,0);
 });
-test('expanded Blood pools retain both signature openers and 13 unique attacks per phase',()=>{
+test('expanded Blood pools retain signature openers and 13/14 attacks by phase',()=>{
  for(const phase of [1,2]){
-  assert.equal(bloodPool(phase).length,13);
+  assert.equal(bloodPool(phase).length,phase===1?13:14);
   assert.ok(bloodNew[phase].every(id=>bloodPool(phase).includes(id)));
  }
 });

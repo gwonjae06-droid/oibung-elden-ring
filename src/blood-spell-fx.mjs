@@ -5,7 +5,7 @@ import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
 import {bloodWaveVisualPose} from './blood-volumetric-wave.mjs';
 
-export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite',bloodScissors:'crisscross-sanguine',heartCage:'caged-heart',wingShear:'winged-shears',rosary:'rosary-procession',reverseFlow:'undertow',bloodStatues:'living-statues',wingGenesis:'scarlet-unfurl',heartFeast:'heart-sacrament'});
+export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite',bloodScissors:'crisscross-sanguine',heartCage:'caged-heart',wingShear:'winged-shears',rosary:'rosary-procession',reverseFlow:'undertow',bloodStatues:'living-statues',wingGenesis:'scarlet-unfurl',heartFeast:'heart-sacrament',requiem:'sea-requiem-tsunami'});
 // Visual-only settle time after a hazard stops dealing damage: blood sinks and spreads instead of vanishing.
 const TAIL=1.4;
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -67,10 +67,10 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
   const free=pool.get(pattern)||[];pool.set(pattern,free);let item=free.pop();
   if(!item){
    const group=new THREE.Group();group.userData.spellForm=BLOOD_SPELL_FORMS[pattern];parent.add(group);const parts=[];
-   const forms={wave:['surge','undertow','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['surge','undertow','torus'],lances:['lance','torus','tendril'],cross:['surge','undertow','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril'],bloodScissors:['surge','undertow','tendril'],heartCage:['tendril','tendril','torus'],wingShear:['blade','blade'],rosary:['column','sphere','sphere'],reverseFlow:['spiral','spiral','sphere'],bloodStatues:['tendril','tendril','torus'],wingGenesis:['blade','blade'],heartFeast:['tendril','tendril','torus']}[pattern];
+   const forms={wave:['surge','undertow','sphere'],fountain:['column','column','sphere'],burst:['sphere','torus'],orbs:['sphere','column'],chain:['tendril','tendril','torus'],orbit:['torus','torus'],vortex:['spiral','spiral','sphere'],dive:['torus','column','column'],eclipse:['sphere','torus','torus'],rain:['column','sphere','sphere'],wing:['blade','blade'],pulse:['torus','torus','sphere'],pursuit:['sheet','column'],tide:['surge','undertow','torus'],lances:['lance','torus','tendril'],cross:['surge','undertow','tendril'],judgement:['lance','judgement','judgement'],ritual:['ritual','torus','tendril','tendril'],bloodScissors:['surge','undertow','tendril'],heartCage:['tendril','tendril','torus'],wingShear:['blade','blade'],rosary:['column','sphere','sphere'],reverseFlow:['spiral','spiral','sphere'],bloodStatues:['tendril','tendril','torus'],wingGenesis:['blade','blade'],heartFeast:['tendril','tendril','torus'],requiem:['surge','undertow','torus']}[pattern];
    for(const form of forms)parts.push(mesh(fluid[form],group));
     const omens=Array.from({length:3},()=>mesh(fluid.tendril,group));
-    const liquidWave=['wave','tide','cross','bloodScissors'].includes(pattern);
+    const liquidWave=['wave','tide','requiem','cross','bloodScissors'].includes(pattern);
     let spray=null;
     if(liquidWave){
      spray=new THREE.InstancedMesh(fluid.sphere,fluid.material,sprayCount);
@@ -103,14 +103,14 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
    });
   const swirl=reduced?0:g.time*2.4;
   switch(pattern){
-   case 'wave':case 'tide':case 'cross':case 'bloodScissors':{
+   case 'wave':case 'tide':case 'requiem':case 'cross':case 'bloodScissors':{
     // A real CLOSED 3D body, not a vertical sheet. The forward crest rolls
     // over a thick undertow, with spray riding just above the front lip.
-    const v=bloodWaveVisualPose(h,post,clock,{reduced,tide:pattern==='tide'});
+    const v=bloodWaveVisualPose(h,post,clock,{reduced,tide:pattern==='tide'||pattern==='requiem'});
     const main=parts[0],under=parts[1];
     main.position.set(0,.08,v.crestForward*.24);
     main.rotation.set(0,0,v.wobble);
-    main.scale.set(v.width*.54,v.height,(pattern==='tide'?3.65:2.95));
+    main.scale.set(v.width*.54,v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
     under.position.set(0,.08,-1.3-v.phase*.65);
     under.scale.set(v.width*.58,Math.max(1.3,v.height*.53),5.3);
     if(pattern==='wave'){

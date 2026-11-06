@@ -1,0 +1,37 @@
+name: Blood apocalypse cathedral and storm regression
+on:
+  pull_request:
+    paths:
+      - 'src/blood-*.mjs'
+      - 'tests/blood-*.test.mjs'
+      - 'tests/blood.test.mjs'
+      - '.github/workflows/blood-apocalypse-cathedral.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/blood-*.mjs'
+      - 'tests/blood-*.test.mjs'
+      - 'tests/blood.test.mjs'
+      - '.github/workflows/blood-apocalypse-cathedral.yml'
+permissions:
+  contents: read
+jobs:
+  cathedral-storm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Validate phase transition, endless sea, storm and patterns
+        run: >-
+          node --test
+          tests/blood-apocalypse-cathedral.test.mjs
+          tests/blood-white-cathedral.test.mjs
+          tests/blood-cathedral-sea.test.mjs
+          tests/blood-attack-animation.test.mjs
+          tests/blood-stage.test.mjs
+          tests/blood.test.mjs
+          tests/boss-signature-patterns.test.mjs

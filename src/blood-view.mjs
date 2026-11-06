@@ -14,6 +14,7 @@ import {createBloodWings} from './blood-wings.mjs';
 import {createBloodMotionDirector} from './blood-attack-motion.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
 import {createWhiteCathedral} from './blood-white-cathedral.mjs';
+import {createBloodApocalypseSky} from './blood-apocalypse-sky.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
 import {bloodStage} from './blood-stage.mjs';
 import {collectSceneResources} from './runtime/scene-resources.mjs';
@@ -24,6 +25,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const mesh=(geo,mat,x=0,y=0,z=0,parent=scene)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);parent.add(m);return m;};
  // White limestone nave and sacred altar are entirely outside the damage arena.
  const architecture=createWhiteCathedral(scene,{coarse,reduced,radius:R.radius});
+ const apocalypse=createBloodApocalypseSky(scene,{coarse,reduced});
  let focusGame=null;const visibility=createCameraVisibility(scene,{roots:()=>[architecture.root,...scene.children.filter(o=>o.name.startsWith('boss-atmosphere-'))],targets:()=>focusGame?[{x:focusGame.player.x,y:1.4,z:focusGame.player.z},{x:focusGame.boss.x,y:4+focusGame.blood.elevation,z:focusGame.boss.z,radius:5}]:[]});
  const heart=new THREE.Group();scene.add(heart);heart.position.set(0,34,-38);
  for(const side of [-1,1])mesh(fluid.sphere,fluid.material,side,0,0,heart).scale.set(1.6,1.9,1.5);
@@ -72,6 +74,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
   wings.update(g,c,dt,motion);
   const env=cathedral.update(g,c,dt);architecture.update(g,c,env);
+  apocalypse.update(g,c);
   heart.visible=b.phase===2||c.active;
   heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));
   scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight&&o.name!=='cinematic-boss-silhouette-fill')o.intensity=1.45*env.light+.35;});
@@ -91,7 +94,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  }
  function occlude(camera,g){focusGame=g;}
  function clear(){projectiles.clear();spells.clear();grandRites.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,siphon:siphonFx.stats()}),
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,storm:apocalypse.stats(),siphon:siphonFx.stats()}),
   event(e,g){if(e.type==='blood-impact'){
    shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2,reverseFlow:.12,wingGenesis:.16,heartFeast:.22})[g.blood.pattern]||.025);
    // Heavy phase-two blood waves throw a small secondary spray out toward
@@ -107,5 +110,5 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
    }
   }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }

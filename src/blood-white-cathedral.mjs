@@ -13,6 +13,7 @@ const TAU=Math.PI*2;
 const V=(x,y,z)=>new THREE.Vector3(x,y,z);
 const mat=(color,roughness=.75,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 const clamp01=x=>Math.max(0,Math.min(1,x));
+const smooth01=x=>{const a=clamp01(x);return a*a*(3-2*a);};
 function mesh(parent,geo,material,pos=[0,0,0],name=''){
  const o=new THREE.Mesh(geo,material);o.position.set(...pos);o.name=name;parent.add(o);return o;
 }
@@ -48,7 +49,7 @@ function vaultedCeilingSection(root,z0,z1,side,material,coarse){
 }
 function coloredRose(root,coarse,ivory,gold){
  const rose=new THREE.Group();rose.position.set(0,32,-46.85);rose.name='cathedral-rose-window';root.add(rose);
- const palette=[0x82b2cb,0xeabb71,0xba8fc7,0xe79b8e,0x8ebaa4,0xe9d69b];
+ const palette=[0x982b47,0xeb9a86,0xb3405a,0xf5cfac,0x791e47,0xd77869];
  const clear=new THREE.MeshBasicMaterial({color:0xfff1d4,side:THREE.DoubleSide,transparent:true,opacity:.76,depthWrite:false});
  const circle=mesh(rose,new THREE.CircleGeometry(6.3,coarse?32:64),clear,[0,0,0],'cathedral-rose-white-glow');
  circle.renderOrder=1;
@@ -208,7 +209,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   rib(parent,[[side*16,38,-45],[side*16,38,0],[side*16,38,45]],.12,moulding,coarse?14:36,'cathedral-vault-longitudinal-rib');
  }
  // 12 high pointed lancets. One instanced batch supplies all coloured panes.
- const palette=[0x9bbeda,0xf4be6f,0xf1d89b,0xc6a3db,0x92b3a7,0xe6a5a0,0xc1e0e3];
+ const palette=[0x9b213e,0xf3a98a,0xc55262,0x6f163a,0xf0bd92,0x9f3048,0xd65c63];
  const glazes=[];
  for(const side of [-1,1])for(const z of bayZ){
   const x=side*(wallX-.95);
@@ -248,10 +249,82 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
  materials.push(dustMaterial);
  const dust=new THREE.Points(dustGeometry,dustMaterial);dust.name='cathedral-sunlit-dust';parent.add(dust);
  // Exactly one modest local light in high quality, none in coarse/mobile.
- const altarLight=coarse?null:new THREE.PointLight(0xffe8bf,coarse?0:18,30,2);
+ const altarLight=coarse?null:new THREE.PointLight(0xffcfba,coarse?0:18,30,2);
  if(altarLight){altarLight.position.set(0,16,-42);parent.add(altarLight);}
+ // Keep the solid combat floor untouched. Every structural piece above it is
+ // grouped into cinematic-only layers that break apart progressively.
+ const groups=Object.fromEntries(['glass','vault','columns','masonry'].map(key=>{
+  const group=new THREE.Group();group.name='cathedral-collapse-'+key;return [key,group];
+ }));
+ const keep=new Set([floor,floorTile,aisle,bloodSea.root,dust,altarLight].filter(Boolean));
+ for(const obj of [...parent.children]){
+  if(keep.has(obj)||obj.name==='cathedral-gilded-aisle-inlay')continue;
+  const name=obj.name;
+  const group=/glass|rose|lancet|window-lead/.test(name)?groups.glass:
+   /vault|chandelier|arch-capital|keystone|longitudinal/.test(name)?groups.vault:
+   /column|capital|plinth/.test(name)?groups.columns:groups.masonry;
+  group.add(obj);
+ }
+ for(const group of Object.values(groups))parent.add(group);
+ // A few actual crimson waterfalls pour from cracked clerestories. Each
+ // curtain is instanced; it is not simulated as collidable fluid.
+ const bleedMaterial=new THREE.MeshBasicMaterial({color:0x8c1229,transparent:true,
+  opacity:.62,depthWrite:false,side:THREE.DoubleSide});
+ const bleedGeo=new THREE.PlaneGeometry(4.1,27);
+ const bleed=new THREE.InstancedMesh(bleedGeo,bleedMaterial,12);
+ bleed.name='cathedral-walls-bleed-during-rupture';bleed.frustumCulled=false;
+ const dummy=new THREE.Object3D();
+ for(let i=0;i<12;i++){
+  const side=i%2?1:-1,z=bayZ[Math.floor(i/2)];
+  dummy.position.set(side*40,15.7,z);
+  dummy.rotation.set(0,side*Math.PI/2,0);
+  dummy.scale.set(1,.6+(i%3)*.18,1);dummy.updateMatrix();bleed.setMatrixAt(i,dummy.matrix);
+ }
+ bleed.instanceMatrix.needsUpdate=true;parent.add(bleed);bleed.visible=false;
+ // Sunken cathedral islands and broken stained-glass plates float OUTSIDE
+ // radius 28. No physics surfaces, pickups, hitboxes, or extra arena obstacles.
+ const wreck=new THREE.Group();wreck.name='cathedral-sinking-ruins-on-blood-sea';parent.add(wreck);
+ wreck.userData.decorativeOnly=true;
+ const ruinStone=mat(0x76636a,.9),ruinGold=mat(0x94705a,.62,.22);
+ const glassRuin=new THREE.MeshBasicMaterial({color:0xb54c63,transparent:true,
+  opacity:.72,depthWrite:false,side:THREE.DoubleSide});
+ const slabs=[],columns=[],shards=[];
+ for(let i=0;i<(coarse?22:48);i++){
+  const angle=i*2.39996,rad=36+(i%11)*10.3;
+  const x=Math.sin(angle)*rad,z=Math.cos(angle)*rad;
+  slabs.push({p:[x,.25+(i%4)*.14,z],r:[.09*(i%3),angle,.14*Math.sin(i*1.3)],
+   s:[1+(i%4)*.24,.35+(i%3)*.15,1+(i%5)*.28]});
+  if(i%3===0)columns.push({p:[x+2,4.6,z-1],r:[.2*Math.sin(i),0,.28*Math.cos(i)],
+   s:[.7,1+(i%4)*.3,.7]});
+  if(i%2===0)shards.push({p:[x-1,.9,z+2],r:[-.4,angle,.2],
+   s:[1+(i%3)*.3,1+(i%4)*.3,1]});
+ }
+ batch(wreck,new THREE.BoxGeometry(4.8,.95,7.5),ruinStone,slabs,'cathedral-floating-broken-masonry');
+ batch(wreck,new THREE.CylinderGeometry(.9,1.35,9,coarse?6:9),
+  ruinGold,columns,'cathedral-submerged-ruined-spires');
+ batch(wreck,new THREE.PlaneGeometry(2.5,4),glassRuin,shards,'cathedral-floating-stained-glass');
+ wreck.visible=false;
+ let lastRupture=0;
  function update(g,c,env={}){
   bloodSea.update(g);
+  const rupture=clamp01(c?.rupture||0),flood=clamp01(c?.seaRise||0);
+  lastRupture=rupture;
+  // Pillars buckle, the roof falls, then the stained-glass nave separates.
+  // The ocean and external ruins persist after the cinematic is over.
+  groups.glass.visible=rupture<.72;
+  groups.glass.position.y=-12*smooth01((rupture-.22)/.5);
+  groups.glass.rotation.z=.14*smooth01((rupture-.2)/.5);
+  groups.vault.visible=rupture<.9;
+  groups.vault.position.y=-28*smooth01((rupture-.23)/.67);
+  groups.vault.rotation.x=.19*smooth01((rupture-.23)/.67);
+  groups.columns.visible=rupture<.99;
+  groups.columns.position.y=-26*smooth01((rupture-.32)/.66);
+  groups.columns.rotation.z=.12*smooth01((rupture-.32)/.66);
+  groups.masonry.visible=rupture<.995;
+  groups.masonry.position.y=-29*smooth01((rupture-.36)/.63);
+  bleed.visible=rupture>.08&&rupture<.92;
+  bleedMaterial.opacity=(1-smooth01((rupture-.65)/.27))*.65;
+  wreck.visible=flood>.22;wreck.position.y=reduced?0:Math.sin((g?.time||0)*.58)*.15;
   const shadow=clamp01(c?.darkness||0),phase=g?.boss?.phase||1;
   const light=clamp01(env.light??1);
   const strength=phase===2?.68:1;
@@ -259,7 +332,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   dustMaterial.opacity=(coarse?.22:.31)*Math.max(.25,light)*(1-shadow*.7);
   if(altarLight)altarLight.intensity=17*(1-shadow*.75)*(phase===2?.72:1);
   // Stained glass remains saturated and visible when phase 2 reddens the room.
-  glassMaterial.opacity=(phase===2?.9:.85)*(1-shadow*.3);
+  glassMaterial.opacity=(phase===2?.9:.85)*(1-shadow*.3)*(1-rupture*.75);
   if(!reduced)dust.rotation.y=(g?.time||0)*.002;
  }
  let disposed=false;
@@ -274,5 +347,5 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   parent.parent?.remove(parent);
  }
  return {root:parent,update,dispose,glassMaterial,occludables:[],
-  stats:()=>({tiles:tiles.length,windows:bayZ.length*2,panes:glazes.length,pews:pewSeat.length,roofPanels:(stations.length-1)*2,hasAltar:true,bloodSea:bloodSea.stats()})};
+  stats:()=>({tiles:tiles.length,windows:bayZ.length*2,panes:glazes.length,pews:pewSeat.length,roofPanels:(stations.length-1)*2,hasAltar:true,ruins:slabs.length,rupture:lastRupture,bloodSea:bloodSea.stats()})};
 }

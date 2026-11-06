@@ -14,7 +14,7 @@ const finite=o=>{
  if(typeof o==='number'){assert.ok(Number.isFinite(o));return;}
  if(o&&typeof o==='object')for(const value of Object.values(o))finite(value);
 };
-test('each of the twenty-six attacks has a distinct deterministic full-body silhouette',()=>{
+test('each of the twenty-seven attacks has a distinct deterministic full-body silhouette',()=>{
  const styles=new Set();
  assert.deepEqual(Object.keys(BLOOD_ATTACK_GESTURES).sort(),Object.keys(BLOOD_PATTERNS).sort());
  for(const [id,spec] of Object.entries(BLOOD_PATTERNS)){
@@ -37,7 +37,7 @@ test('each of the twenty-six attacks has a distinct deterministic full-body silh
   const tail=bloodAttackMotion(g);
   assert.ok(tail.weight<hit.weight,id+' does not ease out');
  }
- assert.equal(styles.size,26);
+ assert.equal(styles.size,27);
 });
 test('wing attack is asymmetric, dive folds and eclipse spreads, with distinct gestures',()=>{
  const pose=id=>{

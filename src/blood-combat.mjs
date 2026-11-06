@@ -33,7 +33,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState()}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
    const dealt=damageBlood(game,amount,null,{dot});
@@ -116,6 +116,19 @@ export function startBloodPattern(g,id){
  if(id==='pulse')for(let i=0;i<3;i++)hazard(g,'ring',{r:2,width:1.1,grow:18,warn:1.1+i*.75,life:1.7,damage:22});
  if(id==='pursuit'){lane(aim,1.4,{width:5,length:14,life:.75,damage:32,vx:Math.sin(aim)*28,vz:Math.cos(aim)*28});circle(p.x,p.z,3,6.5,{damage:28});}
  if(id==='tide')for(let i=0;i<4;i++)lane(i*Math.PI/2,1.4+i*.7,{x:0,z:0,length:13,width:5,life:1.3,damage:32});
+ // Sea-wide requiem: three enormous, individually telegraphed travelling
+ // crests followed by an expanding undertow. Each visible blood wall shares
+ // the exact authoritative hazard dimensions, warning and contact time.
+ if(id==='requiem'){
+  for(let i=0;i<3;i++){
+   const yaw=aim+(i-1)*.62,forwardX=Math.sin(yaw),forwardZ=Math.cos(yaw);
+   const q=point(b.x-forwardX*13,b.z-forwardZ*13);
+   lane(yaw,1.8+i*1.08,{x:q.x,z:q.z,length:13.5,width:5.2,
+    vx:forwardX*16,vz:forwardZ*16,life:1.25,damage:35});
+  }
+  hazard(g,'ring',{x:b.x,z:b.z,r:5,width:1.5,grow:14,
+   warn:5.52,life:1.2,damage:31});
+ }
  if(id==='judgement')for(let i=0;i<3;i++)hazard(g,'cone',{yaw:aim+[-.8,.8,0][i],arc:.5,r:23,warn:1.5+i*1.2,life:.55,damage:32});
  if(id==='ritual'){for(let beat=0;beat<2;beat++)for(let i=0;i<4;i++)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/2+beat*Math.PI/4,arc:.45,innerR:5.5,r:26,warn:2+beat*1.65,life:.65,damage:30});hazard(g,'ring',{x:0,z:0,r:2,width:1.1,grow:18,warn:4.9,life:1.4,damage:26});}
  // Three wing scythes are visible in the existing animated wing rig;
@@ -174,7 +187,10 @@ function hurt(g,h){
 function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
- if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
+ if(b.state==='transition'){s.t+=dt;
+  if(s.t>=2.65&&!s.cathedralShattered){s.cathedralShattered=true;emit(g,'blood-cathedral-shatter');}
+  if(s.t>=3.85&&!s.seaCrashed){s.seaCrashed=true;emit(g,'blood-sea-crash');}
+  s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);

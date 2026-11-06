@@ -8,6 +8,12 @@ export function bloodTransformation(g){
   dissolve:settled?1:active?smooth(1.9,3.1,t):0,
   darkness:active?smooth(0,.6,t)*(1-smooth(2.6,3.8,t)):0,
   wave:active?smooth(3.45,4.15,t):0,camera:active?smooth(0,.6,t)*(1-smooth(3.8,4.6,t)):0,
+  // Environment choreography: glass and vault fracture first, then the
+  // sanctuary floods, finally revealing an endless scarlet storm.
+  rupture:settled?1:active?smooth(1.35,3.75,t):0,
+  seaRise:settled?1:active?smooth(1.7,4.4,t):0,
+  sky:settled?1:active?smooth(2.4,4.3,t):0,
+  storm:settled?1:active?smooth(3.15,4.6,t):0,
   musicGain:active?1-smooth(0,.48,t):1,musicPhase:active&&t<3.8?1:g.boss.phase};
 }
 export function poseBloodCamera(camera,target,g,{reduced=false}={}){
