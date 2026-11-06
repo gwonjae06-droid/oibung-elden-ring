@@ -1,0 +1,50 @@
+name: Sungwon projectile and physical attack sync
+
+on:
+  pull_request:
+    paths:
+      - 'src/dice-giant.mjs'
+      - 'src/dice-giant-motion.mjs'
+      - 'src/dice-giant-view.mjs'
+      - 'src/dice-giant-throw-speed.mjs'
+      - 'src/dice-portrait-barrage.mjs'
+      - 'tests/dice-giant-contact-sync.test.mjs'
+      - 'tests/dice-giant-throw-speed.test.mjs'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  impact-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install visual test dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: JavaScript syntax
+        run: |
+          node --check src/dice-giant.mjs
+          node --check src/dice-giant-motion.mjs
+          node --check src/dice-giant-view.mjs
+          node --check src/dice-giant-throw-speed.mjs
+          node --check src/dice-portrait-barrage.mjs
+      - name: Giant throwing, collision, animation and casino checks
+        run: >
+          node --test
+          tests/dice-giant-contact-sync.test.mjs
+          tests/dice-giant-throw-speed.test.mjs
+          tests/dice-giant-throw.test.mjs
+          tests/dice-giant-continuity.test.mjs
+          tests/dice-giant-motion.test.mjs
+          tests/dice-giant.test.mjs
+          tests/dice-giant-overhaul.test.mjs
+          tests/dice-ground-spikes.test.mjs
+          tests/dice-player.test.mjs
+          tests/dice-giant-render-lifecycle.test.mjs
