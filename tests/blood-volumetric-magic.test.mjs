@@ -6,7 +6,8 @@ import {GRAND_BLOOD_PATTERNS,grandBloodRiteEnvelope,createGrandBloodRites} from 
 import {bloodQuality,createBloodFluid} from '../src/blood-fluid.mjs';
 import {bloodSculptureGeometries} from '../src/blood-sculpture.mjs';
 import {createBloodGame,startBloodPattern} from '../src/blood-combat.mjs';
-import {BLOOD_RULES,BLOOD_PATTERNS,hazardContains} from '../src/blood-data.mjs';
+import {BLOOD_RULES,BLOOD_PATTERNS,hazardContains,bloodHazardFootprint,BLOOD_CONTACT_MARGIN,hazardPosition} from '../src/blood-data.mjs';
+import {bloodFloorField,BLOOD_SAFE_GROUND_PATTERNS,BLOOD_FLOOR_MAX_HAZARDS} from '../src/blood-spell-fx.mjs';
 import {buildBloodView} from '../src/blood-view.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
 
@@ -162,5 +163,101 @@ test('full cathedral scene persists through every blood pattern without new dama
    assert.equal(rite.visible,false);
   }
   assert.equal(g.player.hp,originalHp);
+ }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
+});
+
+
+test('the authoritative liquid footprint agrees with every real blood hitbox at cast and motion times',()=>{
+ let samples=0;
+ const inside=(f,p)=>{
+  const dx=p.x-f.x,dz=p.z-f.z,r=Math.hypot(dx,dz);
+  if(f.kind===2)return Math.abs(r-f.r)<=f.halfWidth;
+  if(f.kind===3){const si=Math.sin(f.yaw),co=Math.cos(f.yaw);
+   return Math.abs(dx*co-dz*si)<=f.halfWidth&&Math.abs(dx*si+dz*co)<=f.halfLength;}
+  if(f.kind===4){const ang=Math.atan2(dx,dz)-f.yaw;
+   return r>=f.inner&&r<=f.r&&Math.abs(Math.atan2(Math.sin(ang),Math.cos(ang)))<=f.arc;}
+  return r<=f.r;
+ };
+ for(const [id,spec] of Object.entries(BLOOD_PATTERNS)){
+  const g=createBloodGame();g.boss.phase=spec.phase;
+  assert.equal(startBloodPattern(g,id),true);
+  for(const h of g.blood.hazards){
+   for(const age of [h.warn*.3,h.warn+.015,h.warn+h.life*.6]){
+    const hAt={...h,age},f=bloodHazardFootprint(hAt);
+    for(let x=-24;x<=24;x+=6)for(let z=-24;z<=24;z+=6){
+     const p={x,z};assert.equal(hazardContains(hAt,p),inside(f,p),
+      id+' '+h.shape+' '+age+' @ '+x+','+z);samples++;
+    }
+   }
+  }
+ }
+ assert.ok(samples>10000,'sample all attacks, including translated lanes and expanding rings');
+ assert.equal(BLOOD_CONTACT_MARGIN,.55);
+});
+test('the wet safety field includes simultaneous strikes, future warnings and their exact moving centres',()=>{
+ assert.ok(BLOOD_SAFE_GROUND_PATTERNS.has('eclipse'));
+ assert.ok(BLOOD_SAFE_GROUND_PATTERNS.has('tide'));
+ assert.ok(BLOOD_SAFE_GROUND_PATTERNS.has('ritual'));
+ assert.ok(BLOOD_SAFE_GROUND_PATTERNS.has('burst'));
+ for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
+  const g=createBloodGame();g.boss.phase=spec.phase;
+  startBloodPattern(g,id);
+  const before=bloodFloorField(g);
+  assert.equal(before.hazards.length,g.blood.hazards.length,id);
+  assert.equal(before.safety,BLOOD_SAFE_GROUND_PATTERNS.has(id));
+  assert.ok(before.hazards.length<=BLOOD_FLOOR_MAX_HAZARDS);
+  for(let i=0;i<g.blood.hazards.length;i++){
+   const h=g.blood.hazards[i],shade=before.hazards[i],p=bloodHazardFootprint(h);
+   assert.deepEqual(shade.x,p.x);
+   assert.deepEqual(shade.z,p.z);
+   assert.ok(shade.strength>0&&shade.strength<1);
+   h.age=h.warn+.2;
+   const shifted=bloodFloorField(g)?.hazards[i];
+   assert.ok(shifted?.active,id+' '+i);
+   const moved=hazardPosition(h);
+   assert.ok(Math.abs(shifted.x-moved.x)<1e-9&&Math.abs(shifted.z-moved.z)<1e-9);
+   h.age=0;
+  }
+  if(g.blood.hazards.length){
+   g.blood.hazards[0].hit=true;
+   assert.ok(bloodFloorField(g).hazards[0].strength<.1,'spent impact no longer dark');
+  }
+  g.status='won';assert.equal(bloodFloorField(g),null);
+ }
+});
+test('one GPU-rendered liquid sheet shows contrasting deep danger and bright safety without creating gameplay hazards',()=>{
+ const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),
+  g=createBloodGame();
+ try{
+  g.boss.phase=2;startBloodPattern(g,'eclipse');
+  const h=g.blood.hazards[0];h.age=h.warn*.5;g.time=h.age;view.update(g,.016);
+  const floor=scene.getObjectByName('blood-hazard-dark-and-safe-liquid');
+  assert.ok(floor&&floor.visible);
+  assert.equal(floor.geometry.attributes.position.count,4,'one plane, not per-hazard meshes');
+  assert.equal(floor.material.isShaderMaterial,true);
+  assert.equal(floor.material.depthWrite,false);
+  assert.equal(floor.material.uniforms.uSafe.value,1);
+  assert.equal(floor.material.uniforms.uCount.value,1);
+  assert.equal(floor.material.uniforms.uFootA.value[0].w,2,'ring is not displayed as a full disk');
+  assert.match(floor.material.fragmentShader,/darkBlood/);
+  assert.match(floor.material.fragmentShader,/safeBlood/);
+  assert.match(floor.material.fragmentShader,/uFootC/);
+  assert.ok(floor.material.uniforms.uFootC.value[0].y<1,'warning before hit');
+  h.age=h.warn+.01;view.update(g,.016);
+  assert.equal(floor.material.uniforms.uFootC.value[0].y,1,'full danger at actual damage onset');
+  view.clear();assert.equal(floor.visible,false);
+  assert.equal(floor.material.uniforms.uCount.value,0);
+ }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
+});
+test('the blood explosion does not visually grow from a tiny harmless puddle after lethal-radius contact begins',()=>{
+ const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),
+  g=createBloodGame();
+ try{
+  startBloodPattern(g,'burst');
+  const h=g.blood.hazards[0];h.age=h.warn+.002;g.time=h.age;view.update(g,.016);
+  const groups=[];scene.traverse(o=>{if(o.userData?.spellForm==='implosion')groups.push(o);});
+  assert.equal(groups.length,1);
+  const blood=groups[0].children[0];
+  assert.ok(blood.scale.x>=h.r*.94,'explosion volume must cover the first damaging frame');
  }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
 });
