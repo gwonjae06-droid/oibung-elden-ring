@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {createBloodLegRig} from './blood-leg-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 import {createRecoilBank} from './animation-recoil.mjs';
+import {bloodWeightAccent} from './boss-performance.mjs';
 import {createWeightedJoint} from './joint-skinning.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
@@ -160,15 +161,18 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   const follow=(key,goal,frequency=15)=>joints.step(key,goal,t,frequency);
   const target=c.veins||0;bloom+=(target-bloom)*(1-Math.exp(-t*5));
   const sway=reduced?0:Math.sin(time*1.5)*.023;
+  const weightAccent=bloodWeightAccent(pose);
   // When the boots trade support, the hips lead and the armored chest
   // counter-rotates. The face and all damage volumes remain authoritative.
   const feet=pose.walk?.feet||[],walkWeight=pose.walk?.moving?1:0;
   const balance=Math.max(-.055,Math.min(.055,((feet[0]||0)-(feet[1]||0))*.022*walkWeight));
   const pelvisRoll=follow('pelvis:roll',balance+(pose.body?.roll||0)*.035,11);
+  torso.position.x=follow('torso:step-lateral',weightAccent.lateral,12);
+  torso.position.y=follow('torso:cast-brace',-weightAccent.kneeBrace,14);
   torso.rotation.y=sway*.5+(pose.body?.twist||0)*.24;
-  torso.rotation.x=(pose.body?.lean||0)*.16;
-  torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023+pelvisRoll;
-  cape.rotation.x=follow('cape:x',(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06,8);
+  torso.rotation.x=(pose.body?.lean||0)*.16+weightAccent.pitch;
+  torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023+pelvisRoll+weightAccent.roll;
+  cape.rotation.x=follow('cape:x',(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06+weightAccent.capeKick,8);
   cape.rotation.z=follow('cape:z',(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55,9);
   drapes.forEach((p,i)=>{p.rotation.y=follow('drape:y:'+i,(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07,10);p.rotation.x=follow('drape:x:'+i,(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7),8);});
   // The sternum compresses at the windup and releases behind the striking
