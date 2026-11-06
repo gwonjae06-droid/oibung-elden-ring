@@ -710,7 +710,7 @@ export function step(g, dt, input = {}) {
     return;
   }
   tickBossHitTraits(g,dt);if(g.status!=='playing')return;tickPlayerResources(g, dt);
-  tickWeaponBurn(g,dt,amount=>bossDamage(g,amount,0));if(g.status!=='playing')return;
+  tickWeaponBurn(g,dt,amount=>bossDamage(g,amount,0,{dot:true}));if(g.status!=='playing')return;
   const mx = input.x || 0,
     mz = input.z || 0,
     mag = Math.hypot(mx, mz),

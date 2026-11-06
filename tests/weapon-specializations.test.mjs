@@ -68,11 +68,13 @@ test('hammer throw flies, gains exactly 1.3x poise and returns to the user',()=>
  const before=q.z;
  advancePlayerProjectile(q,.4,g.player);
  assert.notEqual(q.z,before);
- advancePlayerProjectile(q,.4,g.player);
- assert.equal(q.returning,true);
  const fake={weaponRigs:{hammer:{visible:true},sword:{scale:{z:1}}}};
  syncWeaponSpecializationVisuals(fake,g);
- assert.equal(fake.weaponRigs.hammer.visible,false);
+ assert.equal(fake.weaponRigs.hammer.visible,false,'hammer leaves the player while it is still flying');
+ advancePlayerProjectile(q,.4,g.player);
+ assert.equal(q.returning,true);
+ syncWeaponSpecializationVisuals(fake,g);
+ assert.equal(fake.weaponRigs.hammer.visible,true,'hammer reappears after automatic return');
 });
 test('bow backstep fires exactly two ordinary arrows and fire specialization leaves full damage DOT',()=>{
  const back=createGame('bow',{register:false});back.evolutions=['twin-arrow'];
