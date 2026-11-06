@@ -40,7 +40,7 @@ test('both cross variants deal one hit, not two overlapped slash hits',()=>{
   let shot=cast(g);
   if(variant==='x'){g.bossShots=[];shot=cast(g);}
   assert.equal(shot.variant,variant);
-  shot.x=0;shot.z=0;shot.yaw=0;shot.speed=0;shot.life=1.5;
+  shot.x=0;shot.z=0;shot.yaw=0;shot.speed=0;shot.life=1.5;shot.age=shot.minArmTime;
   g.player.x=KWON_WAVE.radius-.15;g.player.z=.1;g.player.invuln=0;
   const hp=g.player.hp;step(g,1/120);
   assert.equal(hp-g.player.hp,patternConfig(g.boss).damage);
