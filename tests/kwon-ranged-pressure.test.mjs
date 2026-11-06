@@ -83,6 +83,6 @@ test('finishing a distant sword combo gives Kwon a short visible pursuit interva
   assert.equal(b.state,'idle');
   if(range>KWON_RANGE_PRESSURE.farDistance)
    assert.equal(b.wait,KWON_RANGE_PRESSURE.chaseWait);
-  else assert.equal(b.wait,.12);
+  else assert.equal(b.wait,.68);
  }
 });
