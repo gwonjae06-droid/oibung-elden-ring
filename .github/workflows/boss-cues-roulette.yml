@@ -1,0 +1,20 @@
+name: Boss cue and roulette safety tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install THREE for camera integration
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify Kwon sword waves, roulette, clown shutter and curtains
+        run: node --test tests/boss-cues-roulette.test.mjs tests/clown-encore-shows.test.mjs tests/clown-lens-gag.test.mjs tests/clown-camera-rig.test.mjs tests/clown-camera-integration.test.mjs tests/dice-patterns.test.mjs
