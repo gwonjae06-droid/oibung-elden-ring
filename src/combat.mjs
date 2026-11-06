@@ -386,7 +386,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
     },
     stats: {hits: 0, dodges: 0, damage: 0},
   };
-  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,value:(amount,poise=0,opts={})=>bossDamage(game,amount,poise,opts)});
+  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,value:(amount,poise=0,opts={})=>bossDamage(game,amount,poise,opts)});
   return register ? registerEncounter(game) : game;
 }
 export function act(g, type) {
