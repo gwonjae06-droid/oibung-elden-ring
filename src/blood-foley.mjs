@@ -39,7 +39,12 @@ function cue(file,volume,duration,fade,minGap){
 // and a short blood strike only when a wet attack really damages the player.
 // The standard hit.mp3 plays separately for every player damage event.
 export function bloodFoleySpec(ev,g){
- if(!ev||!g?.blood||g.boss?.state==='transition')return null;
+ if(!ev||!g?.blood)return null;
+ if(ev.type==='blood-cathedral-shatter')
+  return cue('assets/sfx/dragon-studio-window-smash-sfx-382708.mp3',.48,1.5,.22,.7);
+ if(ev.type==='blood-sea-crash')
+  return cue(BLOOD_FOLEY.splash,.52,1.75,.24,.6);
+ if(g.boss?.state==='transition')return null;
  const id=ev.pattern||g.blood.pattern,key=BLOOD_ATTACK_SOUNDS[id];
  if(!key)return null;
  if(ev.type==='blood-warning')
