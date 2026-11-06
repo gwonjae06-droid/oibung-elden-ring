@@ -34,7 +34,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  let deathElapsed=0;
  function clear(){deathElapsed=0;spectacle.clear();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
  function update(g,dt=0){
-  const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed);
+  const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
   const voidSpace=b.phase>=2||won;
   sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!voidSpace;
