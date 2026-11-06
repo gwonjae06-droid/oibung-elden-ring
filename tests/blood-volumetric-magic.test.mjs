@@ -261,3 +261,21 @@ test('the blood explosion does not visually grow from a tiny harmless puddle aft
   assert.ok(blood.scale.x>=h.r*.94,'explosion volume must cover the first damaging frame');
  }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
 });
+
+test('projectiles and dive finish swelling before they are allowed to damage the player',()=>{
+ for(const id of ['orbs','vortex','dive']){
+  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),
+   g=createBloodGame();g.boss.phase=BLOOD_PATTERNS[id].phase;
+  try{
+   startBloodPattern(g,id);
+   const hazard=g.blood.hazards[0];
+   hazard.age=hazard.warn*.98;g.time=hazard.age;view.update(g,.016);
+   const groups=[];scene.traverse(o=>{if(o.userData?.spellForm)groups.push(o);});
+   const group=groups[0],base=group.children[0].scale.x;
+   hazard.age=hazard.warn+.001;g.time=hazard.age;
+   view.update(g,.016);
+   assert.ok(group.children[0].scale.x>=hazard.r*.93,id+' impact body is smaller than hit radius');
+   assert.ok(group.children[0].scale.x<=base*1.2,id+' volume snaps open only after the damage begins');
+  }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
+ }
+});
