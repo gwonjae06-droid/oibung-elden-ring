@@ -36,6 +36,7 @@ export function createClownLivingWorld(scene,{coarse=false,reduced=false,keyLigh
  const originalFog=scene.fog?.color?.clone?.()||null;
  const originalKey=keyLight?.intensity,originalAmbient=ambientLight?.intensity;
  const palette=new THREE.Color(),targetColor=new THREE.Color(),fogColor=new THREE.Color(),glowColor=new THREE.Color();
+ const blendedSky=new THREE.Color(NIGHTMARE_PALETTES.carnival.sky),blendedFog=new THREE.Color(NIGHTMARE_PALETTES.carnival.fog);
  const veil=new THREE.MeshBasicMaterial({color:0x6f3347,side:THREE.DoubleSide,transparent:true,opacity:0,depthWrite:false});
  const mirror=new THREE.MeshStandardMaterial({color:0x172439,metalness:.67,roughness:.26,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,emissive:0x121c2b,emissiveIntensity:.38});
  const ivory=new THREE.MeshStandardMaterial({color:0xcab0b2,roughness:.72,transparent:true,opacity:0,depthWrite:false});
@@ -99,6 +100,7 @@ export function createClownLivingWorld(scene,{coarse=false,reduced=false,keyLigh
  }
  function reset(){
   clock=0;pulse=0;mode='carnival';weight=0;stage=1;root.visible=true;
+  blendedSky.setHex(NIGHTMARE_PALETTES.carnival.sky);blendedFog.setHex(NIGHTMARE_PALETTES.carnival.fog);
   if(originalBackground&&scene.background?.isColor)scene.background.copy(originalBackground);
   if(originalFog&&scene.fog?.color)scene.fog.color.copy(originalFog);
   if(keyLight&&Number.isFinite(originalKey))keyLight.intensity=originalKey;
@@ -114,14 +116,16 @@ export function createClownLivingWorld(scene,{coarse=false,reduced=false,keyLigh
   mode=target.mode;
   const goal=live?target.exposure:0,blend=1-Math.exp(-h*(reduced?2.3:1.8));
   weight+=(goal-weight)*blend;
-  const c=NIGHTMARE_PALETTES[mode];targetColor.setHex(c.sky);
+  const c=NIGHTMARE_PALETTES[mode],fade=1-Math.exp(-h*(reduced?1.8:1.15));
+  targetColor.setHex(c.sky);blendedSky.lerp(targetColor,fade);
   if(scene.background?.isColor){
    const base=palette.setHex(NIGHTMARE_PALETTES.carnival.sky);
-   scene.background.lerpColors(base,targetColor,weight);
+   scene.background.lerpColors(base,blendedSky,weight);
   }
   if(scene.fog?.color){
-   fogColor.setHex(c.fog);targetColor.setHex(NIGHTMARE_PALETTES.carnival.fog);
-   scene.fog.color.lerpColors(targetColor,fogColor,weight*.82);
+   fogColor.setHex(c.fog);blendedFog.lerp(fogColor,fade);
+   targetColor.setHex(NIGHTMARE_PALETTES.carnival.fog);
+   scene.fog.color.lerpColors(targetColor,blendedFog,weight*.82);
   }
   glowColor.setHex(c.glow);rim.color.copy(glowColor);veil.color.copy(glowColor);
   const v=SMOOTH(weight),mirrored=mode==='mirror',upside=mode==='inversion',visage=mode==='void'||mode==='flesh';
