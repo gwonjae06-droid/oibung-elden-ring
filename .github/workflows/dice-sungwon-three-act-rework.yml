@@ -1,0 +1,19 @@
+name: Sungwon gentleman roulette and feral casino table
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  sungwon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify phase transfer, roulette counts, table hitboxes and visual resources
+        run: node --test tests/dice-sungwon-three-act-rework.test.mjs tests/dice-three-phases.test.mjs tests/dice-giant-overhaul.test.mjs tests/dice-giant-throw-speed.test.mjs tests/boss-cues-roulette.test.mjs tests/dice-boss-fx.test.mjs tests/novel-boss-patterns.test.mjs tests/boss-signature-patterns.test.mjs tests/hard-story-balance.test.mjs

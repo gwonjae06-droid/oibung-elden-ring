@@ -8,7 +8,7 @@ function advance(g,seconds,input={}){for(let left=seconds;left>1e-8;){const dt=M
 function die(){
  const g=createDiceGame();g.dice.pose={x:0,y:6,z:0,rotation:[0,0,0,1],angle:0,dx:1,dz:0};
  g.dice.from={x:0,z:0,index:60};g.dice.to={x:12,z:0,index:61};g.dice.index=60;
- g.player.x=0;g.player.z=24;g.player.invuln=0;return g;
+ g.player.x=0;g.player.z=24;g.player.invuln=0;g.boss.phase=2;return g;
 }
 test('Kwon grave sword releases from his blade, never the pre-locked player target',()=>{
  const g=createGame('sword',{register:false});g.boss.phase=2;
