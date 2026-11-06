@@ -84,7 +84,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   actor.rotation.z=motion.body.roll+hitRoll;lastHp=b.hp;
   regalia.plantFeet(g,fade*1.25);
   // The blood spell scene reads the same hazards as damage calculations; no floor hitbox meshes.
-  spells.update(g,dt);grandRites.update(g,dt);siphonFx.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.siphon?.active||s.pattern==='tide'&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
+  spells.update(g,dt);grandRites.update(g,dt);siphonFx.update(g,dt);particles.update(dt,visualTime,{pull:c.active||s.siphon?.active||['tide','reverseFlow','heartFeast'].includes(s.pattern)&&b.state==='pattern'?b:null,still:c.active&&c.t<2.6,retract:stage.id==='return'?{x:b.x,z:b.z}:null});
   surfaceFlow.update(dt);
   projectiles.update(g);
   shake*=Math.exp(-dt*14);
@@ -93,7 +93,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  function clear(){projectiles.clear();spells.clear();grandRites.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
  return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,siphon:siphonFx.stats()}),
   event(e,g){if(e.type==='blood-impact'){
-   shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2})[g.blood.pattern]||.025);
+   shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2,reverseFlow:.12,wingGenesis:.16,heartFeast:.22})[g.blood.pattern]||.025);
    // Heavy phase-two blood waves throw a small secondary spray out toward
    // nearby cathedral columns. Each actual droplet still has to collide with
    // the column geometry before a wall stain can appear.

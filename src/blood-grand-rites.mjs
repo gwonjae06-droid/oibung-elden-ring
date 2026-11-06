@@ -6,7 +6,8 @@ export const GRAND_BLOOD_PATTERNS=Object.freeze({
  wave:'awakening',fountain:'font',burst:'heartbeat',vortex:'whirlpool',
  lances:'martyrs',cross:'cross',pulse:'heartbeat',tide:'cataclysm',
  eclipse:'eclipse',rain:'downpour',judgement:'judgement',ritual:'mass',
- heartCage:'heartbeat',rosary:'procession',bloodScissors:'cross'
+ heartCage:'heartbeat',rosary:'procession',bloodScissors:'cross',
+ reverseFlow:'whirlpool',bloodStatues:'martyrs',wingGenesis:'cataclysm',heartFeast:'mass'
 });
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:a));
 const smooth=x=>{const v=clamp(x);return v*v*(3-2*v);};
