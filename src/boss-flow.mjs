@@ -1,4 +1,5 @@
-export const FLOW_RATE={windup:15,active:48,recovery:9,idle:10,stagger:18,transition:80,dead:80};
+// Transitional movement must not snap almost instantly to the next pose.
+export const FLOW_RATE={windup:15,active:34,recovery:9,idle:10,stagger:15,transition:14,dead:11};
 export const flowAlpha=(state,dt)=>1-Math.exp(-(FLOW_RATE[state]||12)*Math.max(0,Math.min(dt,.05)));
 export const wrapDelta=(a,b)=>Math.atan2(Math.sin(b-a),Math.cos(b-a));
 
