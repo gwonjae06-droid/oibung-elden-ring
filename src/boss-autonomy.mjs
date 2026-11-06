@@ -9,6 +9,7 @@ export function createBossAutonomy(seed=1){
  return {clock:0,vx:0,vz:0,phase:(n%4096)/4096*Math.PI*2,moving:0};
 }
 export function stepBossAutonomy(s,b,p,dt,{speed=5.5,sideSpeed=3,spacing=7,arena=23,phase=1,farDistance=BOSS_AUTONOMY.farDistance}={}){
+ if(s?.paused)return {dx:0,dz:0,moving:0};
  if(!s||!b||!p||!Number.isFinite(dt)||dt<=0||!Number.isFinite(b.x)||!Number.isFinite(b.z)||!Number.isFinite(p.x)||!Number.isFinite(p.z))return {dx:0,dz:0,moving:0};
  const h=Math.min(dt,1/30);s.clock+=h;
  const px=p.x-b.x,pz=p.z-b.z,dist=Math.hypot(px,pz),fx=dist>.001?px/dist:0,fz=dist>.001?pz/dist:1;
