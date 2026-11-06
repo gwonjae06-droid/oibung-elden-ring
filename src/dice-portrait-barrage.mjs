@@ -10,7 +10,12 @@ export function stepPortraitBarrage(g,dt,frozen=false,edge=12,limit=65,playerRad
  const d=g.dice;if(g.status!=='playing'){d.groundSpikes=null;d.spikeCooldown=0;return;}
  const contact=groundContactFace(d.pose,edge);d.bottomFace=contact;if(contact?.pips===0&&!explicit){d.groundSpikes=null;d.spikeCooldown=0;return;}if(frozen)return;
  let w=d.groundSpikes;
- if(!w){d.spikeCooldown=Math.max(0,(d.spikeCooldown||0)-dt/diceTempo(g.boss));if(d.spikeCooldown>0||!contact)return;
+ if(!w){
+  // Ordinary face-driven casting still requires a grounded, visible pip face.
+  // The giant's explicitly selected spell is different: his head is airborne
+  // and may have no contact face, but the selected warning must still fire.
+  if(!explicit)d.spikeCooldown=Math.max(0,(d.spikeCooldown||0)-dt/diceTempo(g.boss));
+  if(!explicit&&(d.spikeCooldown>0||!contact))return;
  const target={x:g.player.x,z:g.player.z},p=d.pose,n=Math.hypot(target.x-p.x,target.z-p.z),ax=n?(target.x-p.x)/n:1,az=n?(target.z-p.z)/n:0,clip=v=>Math.max(-limit,Math.min(limit,v));
  const count=explicit?Math.max(1,contact?.pips||3):contact.pips;
  const cards=Array.from({length:count},(_,i)=>{const side=(i-(count-1)/2)*1.4,reach=edge/(2*Math.max(Math.abs(ax),Math.abs(az)))+1,x=clip(p.x+ax*reach-az*side),z=clip(p.z+az*reach+ax*side),len=Math.hypot(target.x-x,target.z-z)||1;return {x,z,origin:{x,z},dx:(target.x-x)/len,dz:(target.z-z)/len,delay:i*PORTRAIT_BARRAGE.interval,launched:false,alive:true,age:0};});
