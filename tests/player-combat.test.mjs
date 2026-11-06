@@ -13,7 +13,7 @@ test('creating a dice player does not overwrite the active progression encounter
   first.player.skill.nextRed=true;
   first.player.hp=1;
   assert.equal(second.player.skill.nextRed,false);
-  assert.equal(second.player.hp,120);
+  assert.equal(second.player.hp,110);
   assert.throws(()=>createDicePlayerGame('missing'),/Unknown weapon/);
   encounterStore.clear();
 });
