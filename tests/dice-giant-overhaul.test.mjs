@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {POSSESSION,cinematicBeat,spinPose,possessionPose,possessionScale} from '../src/dice-giant-cinematic-data.mjs';
 import {createDicePlayerGame,stepDicePlayer} from '../src/dice-player.mjs';
 import {damageDice} from '../src/dice-combat.mjs';
-import {HAND_REST,GIANT,strikeGiantHand,giantHandPose,giantPattern,giantPropType,giantHeadPose,giantPosture,giantHeadExposed,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
+import {HAND_REST,GIANT,GIANT_NAMES,strikeGiantHand,giantHandPose,giantPattern,giantPropType,giantHeadPose,giantPosture,giantHeadExposed,giantHazards,hazardContains,skipGiant} from '../src/dice-giant.mjs';
 import {giantImpact} from '../src/dice-giant-hit.mjs';
 
 const from={x:20,y:6,z:20,rotation:[0,0,0,1]};
@@ -78,13 +78,13 @@ test('casino scene has fleeing guests and reactive chips, coins, dice and chess 
 });
 
 test('coin face alternates deterministically and chooses different readable attacks',()=>{
- const heads=giantPattern(3,{x:0,z:0}),tails=giantPattern(3+9,{x:0,z:0});
+ const heads=giantPattern(3,{x:0,z:0}),tails=giantPattern(3+GIANT_NAMES.length,{x:0,z:0});
  assert.equal(heads.coinFace,'heads');assert.equal(tails.coinFace,'tails');
  assert.match(heads.name,/앞면/);assert.match(tails.name,/뒷면/);
  assert.notDeepEqual(heads.hazards.map(h=>h.shape),tails.hazards.map(h=>h.shape));
 });
 test('rook, bishop and knight chess patterns use distinct travel geometries',()=>{
- const rook=giantPattern(4,{x:0,z:0}),bishop=giantPattern(4+9,{x:0,z:0}),knight=giantPattern(4+18,{x:0,z:0});
+ const rook=giantPattern(4,{x:0,z:0}),bishop=giantPattern(4+GIANT_NAMES.length,{x:0,z:0}),knight=giantPattern(4+2*GIANT_NAMES.length,{x:0,z:0});
  assert.equal(rook.chessPiece,'rook');assert.equal(bishop.chessPiece,'bishop');assert.equal(knight.chessPiece,'knight');
  assert.ok(rook.hazards.every(h=>h.shape==='rect'));
  assert.ok(bishop.hazards.every(h=>h.shape==='rotated-rect'));
