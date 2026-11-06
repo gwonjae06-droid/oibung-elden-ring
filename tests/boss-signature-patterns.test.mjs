@@ -43,7 +43,7 @@ for(const name of clownNew)test('Clown '+name+' has bodily warning, bounded dang
 });
 
 test('Park Sungwon controlled and feral stages include four distinct articulated attacks',()=>{
- assert.equal(GIANT_NAMES.length,11);assert.equal(FERAL_NAMES.length,12);
+ assert.equal(GIANT_NAMES.length,14);assert.equal(FERAL_NAMES.length,13);
  for(const [feral,indices]of [[false,[9,10]],[true,[10,11]]]){
   for(const slot of indices){
    const p=giantPattern(slot,{x:8,z:-41},feral?'feral':'controlled',.23);
@@ -96,9 +96,9 @@ for(const phase of [1,2])for(const id of bloodNew[phase])test('Baeseojun '+id+' 
  assert.equal(g.blood.hazards.length,0);
  assert.equal(g.blood.elevation,0);
 });
-test('expanded Blood pools retain both signature openers and 11 unique attacks per phase',()=>{
+test('expanded Blood pools retain both signature openers and 13 unique attacks per phase',()=>{
  for(const phase of [1,2]){
-  assert.equal(bloodPool(phase).length,11);
+  assert.equal(bloodPool(phase).length,13);
   assert.ok(bloodNew[phase].every(id=>bloodPool(phase).includes(id)));
  }
 });

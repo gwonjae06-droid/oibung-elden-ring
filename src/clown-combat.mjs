@@ -823,14 +823,14 @@ const RUN = {
       zone(g,{shape:'circle',...q,r:5.5,warn:1.15,damage:23,blast:true,sound:'laughBomb'});
       emit(g,'clown-clap');
     }
-    if(cross(a,t,3.28))zone(g,{shape:'circle',x:0,z:0,r:7,warn:1.05,damage:32,blast:true,sound:'lastClap'});
+    if(cross(a,t,2.85))zone(g,{shape:'circle',x:0,z:0,r:7,warn:1.05,damage:32,blast:true,sound:'lastClap'});
   },
   // A series of low, slanted blows sells the stage tipping rather than an unannounced global hit.
   stageCapsize(g,c,a,t){
     c.vis.crouch=t<1.5?smooth(t/1.5):.15;
     c.vis.tilt=Math.sin(Math.min(t,4)*1.3)*.55;
     c.vis.stomp=t>1.45&&t<4.1?Math.abs(Math.sin(t*4)):.0;
-    for(let i=0;i<4;i++)if(cross(a,t,.35+i*.88)){
+    for(let i=0;i<4;i++)if(cross(a,t,.35+i*.72)){
       const theta=c.yaw+(i%2?Math.PI/2:-Math.PI/2);
       zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw:theta,
         len:fitLen(g.boss,theta,22),w:5.2,warn:1.25,damage:28,
@@ -846,7 +846,7 @@ const RUN = {
     c.vis.crouch=t<1.8?.75:Math.max(0,.75*(1-smooth((t-1.8)/2)));
     c.vis.glove=t<3.6?.6+.3*Math.sin(t*3):0;
     if(cross(a,t,1.05))bombAt(g,p,4.1,31,1.2,'head',.6);
-    for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.47)){
+    for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.42)){
       const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,21);
       zone(g,{shape:'circle',...q,r:2.9,warn:1,damage:24,blast:true,sound:'curtainCall'});
     }
