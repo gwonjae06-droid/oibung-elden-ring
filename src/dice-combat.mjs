@@ -1,4 +1,5 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {stepGiant} from './dice-giant.mjs';
 import {playerIncomingDamage,weaponStats} from './weapon-stats.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
@@ -12,7 +13,7 @@ import {diceSlowFactor,stepDiceSlow,clearDiceFaceAttack} from './dice-slow.mjs';
 import {syncDiceClock,updateDicePhase} from './dice-pressure.mjs';
 import {squareContains} from './dice-square.mjs';
 import {FRENZY_WINDUP,advanceFrenzyWindup} from './dice-frenzy-windup.mjs';
-export const DICE_PATTERNS=Object.freeze({chargeWarning:1.12,chargeTime:.5,jumpWarning:1.3,jumpTime:1.6,jumpHeight:17,stompRadius:14,stompDamage:44,frenzyRolls:4,frenzyWarning:.82,frenzyRollTime:.38,chainWarning:1.3,pipWarning:1.35,pipWarningP2:1.2,pipDamage:34,pipDamageP2:38,pipFlash:.4,pipHalf:6});
+export const DICE_PATTERNS=Object.freeze({chargeWarning:1.12*BOSS_TEMPO.windup,chargeTime:.5,jumpWarning:1.3*BOSS_TEMPO.windup,jumpTime:1.6,jumpHeight:17,stompRadius:14,stompDamage:44,frenzyRolls:4,frenzyWarning:Math.max(.8,.82*BOSS_TEMPO.windup),frenzyRollTime:.38,chainWarning:1.3*BOSS_TEMPO.windup,pipWarning:1.35*BOSS_TEMPO.windup,pipWarningP2:1.2*BOSS_TEMPO.windup,pipDamage:34,pipDamageP2:38,pipFlash:.4,pipHalf:6});
 const PIP_LAYOUT=Object.freeze({1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]});
 const emit=(g,type,data={})=>{const tempo=syncDiceClock(g);g.events.push({type,...data,...(data.duration===undefined?{}:{duration:data.duration*tempo})});};
 function prepare(g,announce=true){const d=g.dice;d.from=DICE_BOARD[d.index];d.to=DICE_BOARD[nextDiceRoamTile(d,g.player)];d.base=[...d.rotation];d.warningTime=d.frenzyRemaining>0&&!d.frenzyFirst?DICE_PATTERNS.frenzyWarning:R.warning;d.rollTime=d.frenzyRemaining>0?DICE_PATTERNS.frenzyRollTime:R.rollTime;d.frenzyFirst=false;d.state='warning';d.t=0;d.longRecovery=false;d.pose=diceRollPose(d.from,d.to,0,d.base);if(announce)emit(g,'dice-warning',{from:d.from.index,to:d.to.index,duration:d.warningTime,frenzy:d.frenzyRemaining>0});}

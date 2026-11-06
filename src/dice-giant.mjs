@@ -5,8 +5,9 @@ import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-da
 import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-giant-motion.mjs';
 import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
 import {giantReadableWarning} from './attack-readability.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
-export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
+export const GIANT={transition:POSSESSION.end,recovery:2.4*BOSS_TEMPO.gap,feralRecovery:1.5*BOSS_TEMPO.gap,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','주먹으로 찢는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서','광란의 탁자 회전','도박판 분쇄','카지노 전복'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
@@ -73,7 +74,7 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
     {...circle(x,z,9,2.2,1.45,36),handIndex:0,active:.3}
   ];
   // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
- hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(h=>giantReadableWarning({...h,warn:h.warn*BOSS_TEMPO.windup}));
  return {slot,name:GIANT_NAMES[slot]+([6,12].includes(slot)?' · '+hazards.length+'발 예고':'')+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
@@ -137,7 +138,7 @@ function feralPattern(index,player,healthRatio=1){
   {...rect(28,clamp(z,-43,43),24,37,1.6,1.6),handIndex:1,damage:35,active:.32},
   tableWave(3,1.35,1.7,30,true)
  ];
- hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(giantReadableWarning);
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(h=>giantReadableWarning({...h,warn:h.warn*BOSS_TEMPO.windup}));
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.

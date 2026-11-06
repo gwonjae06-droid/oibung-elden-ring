@@ -1,6 +1,7 @@
 const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*(3-2*x);};
 const angle=a=>Math.atan2(Math.sin(a),Math.cos(a));
-export const BLOOD_COUNTER_WINDOW=1.55;
+// At least one full second remains to punish an attack after the faster cast.
+export const BLOOD_COUNTER_WINDOW=1.05;
 const STEP=.38,CLOSE=.14;
 
 // A locked destination and finite footsteps replace continuous homing during

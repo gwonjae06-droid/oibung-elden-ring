@@ -1,5 +1,6 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
@@ -32,7 +33,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
    const dealt=damageBlood(game,amount,null,{dot});
@@ -60,7 +61,7 @@ function hit(g,amount,source,projectile=false,impact=null){
  if(!damage)return 0;
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
 }
-function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn);g.blood.hazards.push(h);return h;}
+function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn*BOSS_TEMPO.windup);g.blood.hazards.push(h);return h;}
 // Attackable ritual channels cancel only their own future hazards and heal share.
 export function severHeartNode(g,amount,point){
  const s=g.blood;
@@ -173,7 +174,7 @@ function hurt(g,h){
 function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
- if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,2.8);s.t=0;emit(g,'blood-land');}return;}
+ if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,2.8*BOSS_TEMPO.recovery);s.t=0;emit(g,'blood-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
@@ -184,7 +185,7 @@ function tickBoss(g,dt){
   if(s.recover<=0){
    // Keep every frame of the existing stationary punish window first.
    // A separate non-attacking stance now makes the boss visibly reposition.
-   b.state='maneuver';s.maneuver=b.phase===2?1.14:1.24;
+   b.state='maneuver';s.maneuver=(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap;
    s.walk=createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
   }
   return;

@@ -1,6 +1,7 @@
+import {BOSS_TEMPO} from './boss-tempo.mjs';
 export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:28,hp:6400,transition:4.6});
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
-export const BLOOD_PATTERNS=Object.freeze({
+const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wave:{name:'피의 파도',phase:1,duration:3.8,recover:2.2},
  fountain:{name:'피의 분수',phase:1,duration:4,recover:2.2},
  burst:{name:'피폭발',phase:1,duration:2.6,recover:2.4},
@@ -28,6 +29,12 @@ export const BLOOD_PATTERNS=Object.freeze({
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
 });
+// Compress the recovery phase, not the authored hit/animation sequence.
+export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
+ Object.entries(ORIGINAL_BLOOD_PATTERNS).map(([id,s])=>[
+  id,Object.freeze({...s,recover:Math.round(s.recover*BOSS_TEMPO.recovery*100)/100})
+ ])
+));
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
  'burst','vortex','dive','eclipse','tide','ritual','judgement',
  'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross'

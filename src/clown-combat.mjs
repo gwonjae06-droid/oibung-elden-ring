@@ -4,6 +4,7 @@ import {playerIncomingDamage} from './weapon-stats.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {clownHurtShapes} from './boss-hit-regions.mjs';
 import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {
@@ -1085,7 +1086,7 @@ function finish(g) {
     name: null,
     f: {},
     wait: Math.max(g.boss.phase===2?.64:.76,PRESSURE.wait[g.boss.phase === 2 ? 1 : 0] *
-      (g.journeyBalance?.mode==='story'?.88:1)),
+      (g.journeyBalance?.mode==='story'?.88:1))*BOSS_TEMPO.gap,
     punish: false,
     noSeparate: false,
   });

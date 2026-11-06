@@ -4,9 +4,9 @@ const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 export const smoothAnticipation=t=>{const u=sat(t);return u*u*(3-2*u);};
 export const READABLE_ATTACK=Object.freeze({
  kwon:Object.freeze({ordinary:.43,ordinaryFirst:.48,heavy:.74}),
- clown:Object.freeze({ordinary:.62,heavy:.78,close:.52}),
+ clown:Object.freeze({ordinary:.56,heavy:.70,close:.47}),
  dice:Object.freeze({rush:.92,heavy:1.15,rapid:.79}),
- blood:Object.freeze({spell:1.28}),
+ blood:Object.freeze({spell:1.15}),
 });
 const HEAVY_KWON=new Set(['thrust','slam','leap','whirl','wave','stomp']);
 const QUICK_CLOWN=new Set(['shove','dash','clap','bounce']);
