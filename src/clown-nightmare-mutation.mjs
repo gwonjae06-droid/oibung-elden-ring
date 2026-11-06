@@ -7,7 +7,6 @@ export function clownMutationPose(g,time=0){
  const health=boss.maxHp>0?sat(boss.hp/boss.maxHp):1;
  const phaseBase=stage===3?.8:stage===2?.42:.11;
  const timeIn=ease((c.pt||0)/.85);
- const is=name=>name===name;
  const folded=name==='foldedCrawl',mask=name==='stolenFace'||name==='porcelainRain',
   mouth=name==='mouthOfTheAudience'||name==='clockOfTeeth',
   shadow=name==='livingShadow',doubles=name==='wrongTwin',rupture=name==='stageRupture'||name==='curtainNightmare';
