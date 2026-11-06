@@ -70,7 +70,7 @@ test('accepted basic dodge cancels windup immediately in every weapon and keeps 
   assert.equal(actPlayer(g,'roll'),true,weapon);
   assert.equal(g.player.action.kind,'roll',weapon);
   assert.equal(g.player.action.t,0,'roll begins in same input frame');
-  assert.equal(g.player.stamina,Math.round((stamina-cost)*10)/10,weapon);
+  assert.ok(Math.abs((stamina-g.player.stamina)-playerStaminaCost(25))<1e-8,weapon);
   tickPlayerAction(g,.02,WEAPONS[weapon]);
   assert.equal(g.events.filter(e=>e.type==='swing').length,0,'cancelled windup may not fire');
   assert.equal(g.projectiles.length,0,'cancelled windup may not spawn projectiles');
