@@ -13,7 +13,7 @@ export function createDicePlayerGame(weapon='sword',{seed}={}){
  if(!WEAPONS[weapon])throw new Error('Unknown weapon');
  const g=createDiceGame({seed}),spawn=DICE_BOARD[3];
  Object.assign(g,{weapon,projectiles:[],nextId:0,stats:{hits:0,damage:0,dodges:0}});
- g.player=createPlayerState({x:spawn.x,z:spawn.z,yaw:-Math.PI/2});
+ g.player=createPlayerState({x:spawn.x,z:spawn.z,yaw:-Math.PI/2,weapon});
  Object.assign(g.boss,{x:g.dice.pose.x,z:g.dice.pose.z,state:'dice',phase:1});
  g.dice.stun=0;g.dice.giantEnabled=true;
   // Each new attempt shuffles the full casino attack pool. Roulette is
