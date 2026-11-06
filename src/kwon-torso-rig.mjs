@@ -1,3 +1,4 @@
+import {kwonWeightAccent} from './boss-performance.mjs';
 const bound=(v,n)=>Number.isFinite(v)?Math.max(-n,Math.min(n,v)):0;
 const offsets={waist:[0,0,0],chest:[0,.6,1.2],abdomen:[0,.6,0]};
 export function torsoLocalPoint(p,region){const a=offsets[region]||offsets.waist;return [p.x-a[0],p.y-1.5-a[1],p.z+1.5-a[2]];}
@@ -16,7 +17,11 @@ export function createKwonTorsoMotion(){
   // changes facing.  The head and blade are still attached to the same rig.
   const delta=fresh||h<=0?0:Math.atan2(Math.sin(yaw-lastYaw),Math.cos(yaw-lastYaw));
   const turning=bound(-delta/Math.max(h,.012)*.005,.042),
-   goal=[lean*.35,sway*.35,lean*.2,-sway*.25,-sway*.35,turning+sway*.08];
+   accent=kwonWeightAccent(b,m),
+   // Pelvis loads before the slash, shoulders counter-rotate at impact, then settle.
+   goal=[lean*.35+accent.waistPitch,sway*.35+accent.shoulderYaw*.4,
+    lean*.2+accent.abdomenBrace,-sway*.25+accent.shoulderYaw*.5,
+    -sway*.35,turning+sway*.08+accent.chestRoll];
   if(fresh){owner=b;values=[...goal];velocity=goal.map(()=>0);lastYaw=yaw;}
   if(h>0)lastYaw=yaw;
   if(!fresh&&h>0)for(let i=0;i<values.length;i++){const w=i<2?14:8,x=values[i]-goal[i],temp=(velocity[i]+w*x)*h,ex=Math.exp(-w*h);values[i]=goal[i]+(x+temp)*ex;velocity[i]=(velocity[i]-w*temp)*ex;}
