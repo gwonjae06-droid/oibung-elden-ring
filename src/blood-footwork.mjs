@@ -19,7 +19,7 @@ export function createBloodManeuver(boss,player,duration,ordinal=0,phase=1){
  const vx=player.x-boss.x,vz=player.z-boss.z,d=Math.hypot(vx,vz);
  const forwardX=d>.001?vx/d:Math.sin(boss.yaw),forwardZ=d>.001?vz/d:Math.cos(boss.yaw);
  const side=(ordinal+phase)%4<2?1:-1;
- const desired=phase===2?7.2:6.3,radial=clamp((d-desired)*.33)*1.65-.30;
+ const desired=phase===2?7.2:6.3,radial=Math.max(-.72,Math.min(1,(d-desired)*.33))*1.65;
  const dx=forwardX*radial+forwardZ*side*1.35,dz=forwardZ*radial-forwardX*side*1.35;
  const n=Math.hypot(dx,dz)||1;
  const nx=dx/n,nz=dz/n,turn=.12+Math.abs(angle(Math.atan2(vx,vz)-boss.yaw))*.055;
