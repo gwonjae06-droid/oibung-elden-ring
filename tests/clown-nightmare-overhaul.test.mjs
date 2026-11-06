@@ -8,8 +8,8 @@ import {createClownNightmareAnatomy} from '../src/clown-nightmare-anatomy.mjs';
 import {bossFoleySpec} from '../src/boss-foley-map.mjs';
 import {clownDangerSpotlightCue} from '../src/clown-danger-spotlight.mjs';
 
-test('twelve eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
- assert.equal(HORROR_PATTERNS.length,12);
+test('seventeen eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
+ assert.equal(HORROR_PATTERNS.length,17);
  const phase1=HORROR_PATTERNS.filter(k=>PATTERNS[k].phases.includes(1));
  assert.equal(phase1.length,4);
  for(const name of HORROR_PATTERNS){
@@ -27,14 +27,14 @@ test('twelve eerie routines are registered with meaningful windup, recovery and 
  assert.equal(horrorMinStage('stageRupture'),3);
 });
 
-test('the third horror act starts at 25% HP without disrupting the physical phase-two head-mount',()=>{
+test('the third horror act starts at 25% HP without disrupting phase-two monster movement',()=>{
  const g=createClownGame('sword',{register:false,seed:91});
  g.boss.phase=2;g.clown.state='idle';g.clown.wait=900;
  g.boss.hp=g.boss.maxHp*.26;stepClown(g,1/120);
  assert.equal(g.clown.horrorStage,2);
  g.boss.hp=g.boss.maxHp*.24;stepClown(g,1/120);
  assert.equal(g.clown.horrorStage,3);
- assert.equal(g.boss.phase,2,'existing head-riding simulation must remain unchanged');
+ assert.equal(g.boss.phase,2,'monster simulation remains in its second phase');
  assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1);
  stepClown(g,1/120);
  assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1,'no repeated transformation event');
@@ -59,9 +59,12 @@ for(const name of HORROR_PATTERNS){
     assert.ok(['circle','cone','lane'].includes(z.shape));
     assert.ok(Number.isFinite(z.x)&&Number.isFinite(z.z)&&z.warn>=.55);
     assert.ok(z.damage>=0);
-    if(z.state==='warn'&&z.damage>0){
+    if(z.state==='warn'&&(z.damage>0||z.visual)){
      warnings++;
-     assert.equal(clownDangerSpotlightCue(z),true,'actual damage must be marked by a real spotlight');
+     // Swept claw/dash lanes are visually warned and resolve through actual
+     // boss motion, rather than a separate damaging floor spotlight.
+     if(z.damage>0&&!z.visual)
+      assert.equal(clownDangerSpotlightCue(z),true,'actual floor damage must be spotlighted');
     }
    }
    if(g.clown.punish)recovery=true;

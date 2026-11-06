@@ -19,11 +19,11 @@ export const HORROR_DEFINITIONS=Object.freeze([
  ['stolenFace','내 얼굴 좀 가져가세요',6.1,1.65,[2],2],
  ['mouthOfTheAudience','관객의 입이 열린다',6.3,1.7,[2],3],
  ['stageRupture','무대는 아프지 않다고 했잖아요',6.8,1.85,[2],3],
- ['feralSkitter','네발 난입 · 부러진 박자의 추격',5.7,1.1,[2],2],
+ ['feralSkitter','네발 난입 · 부러진 박자의 추격',5.7,1.2,[2],2],
  ['reverseCrawl','접힌 척추의 역주행',5.9,1.2,[2],2],
  ['facePeelHunt','가면을 벗은 사냥',6.4,1.3,[2],2],
  ['ceilingPounce','거꾸로 매달린 사냥꾼',6.6,1.45,[2],3],
- ['unhingedClap','턱이 열리는 박수',5.9,1.25,[2],3],
+ ['unhingedClap','턱이 열리는 박수',6.4,1.25,[2],3],
 ]);
 export const HORROR_PATTERNS=Object.freeze(HORROR_DEFINITIONS.map(([key])=>key));
 export const horrorMinStage=key=>HORROR_DEFINITIONS.find(a=>a[0]===key)?.[5]??1;

@@ -37,11 +37,14 @@ test('Clown riding ball is hittable in phase one with the real forward blade',()
  assert.equal(act(g,'light'),true);stepFor(g,stepClown,.5);
  assert.ok(g.boss.hp<hp,'player sword must connect with visible ball');
 });
-test('Clown enlarged phase-two head replaces (not stacks) the removed riding ball',()=>{
+test('Clown phase-two paws, hunched torso and head replace the vanished ball hitbox',()=>{
  const g=clown(2),shapes=clownHurtShapes(g);
- assert.ok(shapes.some(v=>v.id==='mount-head'&&v.ry>5));
- assert.ok(!shapes.some(v=>v.id==='ball'),'invisible old ball cannot retain a phantom collider');
- assert.ok(kwonMeleeContact(shapes,{x:0,z:0},{reach:2.85,yaw:Math.PI,height:1.85})?.part==='mount-head');
+ assert.ok(shapes.some(v=>v.id==='head'));
+ assert.ok(shapes.some(v=>v.id==='torso'));
+ assert.ok(shapes.some(v=>v.id==='left-paw'));
+ assert.ok(shapes.some(v=>v.id==='right-paw'));
+ assert.ok(!shapes.some(v=>['ball','mount-head'].includes(v.id)),'no phantom riding ball');
+ assert.ok(shapes.find(v=>v.id==='head').z>g.boss.z+3,'the crouched head leads the monster');
 });
 test('blood boss has robe, chest, arms, legs and head at true different heights',()=>{
  const g=blood(1),parts=bloodHurtShapes(g);

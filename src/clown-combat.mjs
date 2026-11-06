@@ -479,8 +479,9 @@ const RUN = {
         shape: 'circle',
         x: g.boss.x,
         z: g.boss.z,
-        // Match the ground-reaching slice of the giant mounted head in phase two.
-        r: Math.max(3.5,...clownHurtShapes(g).filter(v=>v.id==='ball'||v.id==='mount-head')
+        // The four-legged face and forward paws fill a larger ground arc
+        // than the old stage-one ball. The push is still harmless.
+        r: Math.max(g.boss.phase===2?6.3:3.5,...clownHurtShapes(g).filter(v=>v.id==='ball'||v.id==='mount-head')
           .map(v=>v.rz*Math.sqrt(Math.max(0,1-((1.15-v.y)/(v.ry+.5))**2))+.65)),
         warn: 0.6,
         kind: 'push',
