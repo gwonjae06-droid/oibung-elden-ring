@@ -33,7 +33,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
- game.applyBonusDamage=(amount,poise=0,{dot=false}={})=>damageBlood(game,amount,null,{dot});
+ Object.defineProperty(game,'applyBonusDamage',{enumerable:false,value:(amount,poise=0,{dot=false}={})=>damageBlood(game,amount,null,{dot})});
  return game;
 }
 export function actBlood(g,type,input={}){
