@@ -20,7 +20,8 @@ export function stepBossAutonomy(s,b,p,dt,{speed=5.5,sideSpeed=3,spacing=7,arena
  const lateral=dist>farDistance?side*.42:side;
  const desiredX=fx*radial*speed+fz*lateral,desiredZ=fz*radial*speed-fx*lateral;
  const smoothing=1-Math.exp(-BOSS_AUTONOMY.turnRate*h);
- s.vx+=(desiredX-s.vx)*smoothing;s.vz+=(desiredZ-s.vz)*smoothing;
+ if(s.clock<=h*1.001&&dist>farDistance){s.vx=desiredX;s.vz=desiredZ;}
+ else{s.vx+=(desiredX-s.vx)*smoothing;s.vz+=(desiredZ-s.vz)*smoothing;}
  const x=b.x+s.vx*h,z=b.z+s.vz*h;
  const length=Math.hypot(x,z),ratio=length>arena?arena/length:1;
  const nx=x*ratio,nz=z*ratio;
