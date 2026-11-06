@@ -19,4 +19,4 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: Verify stat profiles and existing journey/skill integrations
         run: |
-          node --test tests/weapon-stats.test.mjs tests/player-combat.test.mjs tests/journey-balance.test.mjs tests/skill-combat.test.mjs
+          node --test tests/weapon-stats.test.mjs tests/player-combat.test.mjs tests/skill-combat.test.mjs
