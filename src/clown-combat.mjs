@@ -1027,7 +1027,9 @@ const RUN = {
     }
   },
 };
-Object.assign(RUN,HORROR_RUN);
+const HORROR_API=Object.freeze({once,zone,bomb,emit,dashPart});
+Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
+ [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export function choosePattern(g) {
  const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
  // The close-contact shove stays a situational defensive reaction, not an
