@@ -1,4 +1,5 @@
 import {BOSS_TEMPO} from './boss-tempo.mjs';
+import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:28,hp:6400,transition:4.6});
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
 const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
@@ -33,7 +34,8 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
  Object.entries(ORIGINAL_BLOOD_PATTERNS).map(([id,s])=>[
-  id,Object.freeze({...s,recover:Math.max(2.2,Math.round(s.recover*BOSS_TEMPO.recovery*100)/100)})
+  id,Object.freeze({...s,duration:s.duration+(BLOOD_EPIC_CUTS[id]?.lead||0),
+   recover:Math.max(2.2,Math.round(s.recover*BOSS_TEMPO.recovery*100)/100)})
  ])
 ));
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
