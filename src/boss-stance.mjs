@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {bodyPose,bodyPoint,cinematicPose,handPoint,BOSS_SCALE,SWORD} from './combat.mjs';
 import {createCollapseClock} from './boss-collapse.mjs';
 import {bossMotion} from './boss-motion-data.mjs';
+import {createPoseContinuity} from './boss-animation-continuity.mjs';
 import {kwonStanceWeights,finishKwonLeg,advanceKwonGaitClock} from './kwon-leg-rig.mjs';
 import {kwonTorsoRegion,createKwonTorsoRig} from './kwon-torso-rig.mjs';
 import {collectKwonMouthParts,createKwonNeckRig} from './kwon-neck-rig.mjs';
@@ -22,16 +23,22 @@ export function createBossStance(B){
  const cinema=document.createElement('div');cinema.setAttribute('aria-live','polite');Object.assign(cinema.style,{position:'absolute',inset:'0',pointerEvents:'none',zIndex:'15',display:'none',borderTop:'7vh solid #000',borderBottom:'7vh solid #000'});
  const caption=document.createElement('p');Object.assign(caption.style,{position:'absolute',bottom:'8%',width:'100%',maxWidth:'none',textAlign:'center',fontSize:'24px',color:'#e9d3a0',textShadow:'0 2px 5px #000'});cinema.appendChild(caption);document.getElementById('arena').appendChild(cinema);
  const targetView=createKwonTargetView(THREE,B,torso,document.getElementById('arena'));
- let detached=false,lastFrame=null,lastLegClock=null;const collapse=createCollapseClock(),legClock={raw:null,phase:0},lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
+ let detached=false,lastFrame=null,lastLegClock=null;const softMotion=createPoseContinuity(),collapse=createCollapseClock(),legClock={raw:null,phase:0},lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
  return {
   projectTarget(camera,locked,canvas){return targetView.project(camera,locked,canvas);},
   cameraFocus(player){return targetView.cameraFocus(player);},
   dispose(){targetView.dispose();jawBlade.dispose();cinema.remove();},
   update(b){
   targetView.update(b);
-  const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b),weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));
+  const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;
+  const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b);
+  // Keep the blade, damage markers, foot IK and head detach on the exact
+  // authored timeline. Only the torso's secondary mass eases between phases.
+  const soft=softMotion.step({lean:m.lean,sink:m.sink,sway:m.sway},document.hidden?0:dt,
+   {owner:b,rate:m.strike>.25?28:12}),display={...m,...soft};
+  const weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));
   const stamp=[b.phase,b.state,b.pattern,b.t,b.wait,b.x,b.z,b.yaw,b.stun],frozen=Boolean(lastLegClock&&stamp.every((v,i)=>Object.is(v,lastLegClock[i])));lastLegClock=stamp;const gaitPhase=advanceKwonGaitClock(legClock,B.legs[0]?.pending?.phase,frozen);
-  pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+m.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+m.sway);torso.update(b,m,dt);neck.update(b,m,dt,frozen);jawBlade.update(b,m);
+  pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+display.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+display.sway);torso.update(b,display,dt);neck.update(b,display,dt,frozen);jawBlade.update(b,m);
   const shouldDetach=c.detach>0;if(shouldDetach&&!detached){headRig.parent?.remove(headRig);B.swordGroup.add(headRig);detached=true;}else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);neck.joint.add(headRig);detached=false;}
   if(detached){headRig.scale.setScalar(S);headRig.position.set(0,-S,-.5*S);headRig.rotation.set(-Math.PI/2,0,0);}else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(...neck.headOffset);}
   cinema.style.display=b.state==='transition'?'block':'none';if(b.state==='transition')caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?'내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';

@@ -1244,6 +1244,7 @@ export function createClownGame(weapon = 'sword', options) {
     hits: [],
     vis: newVis(),
     horrorStage:1,
+    beastSince:null,
   };
   return g;
 }
@@ -1280,6 +1281,7 @@ export function stepClown(g, dt, input = {}) {
       Object.assign(c, {
         state: 'idle',
         wait: 0.8,
+        beastSince: c.time,
         used: {},
         prevPlayer: {x: g.player.x, z: g.player.z},
       });

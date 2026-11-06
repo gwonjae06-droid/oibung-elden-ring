@@ -1,5 +1,6 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
+import {createPoseContinuity} from './boss-animation-continuity.mjs';
 import {createRecoilBank} from './animation-recoil.mjs';
 import {giantWeightAccent} from './boss-performance.mjs';
 import {createGiantElbowFollow,constrainGiantElbow} from './giant-arm-inertia.mjs';
@@ -70,6 +71,7 @@ export function buildDiceGiant(scene){
  let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0],releaseOrigins=new WeakMap();
  const wristSprings=createSpringBank(),recoil=createRecoilBank();
  const elbowFollow=[createGiantElbowFollow(),createGiantElbowFollow()];
+ const secondaryGestures=[createPoseContinuity(),createPoseContinuity()];
  let trackedPlayer=null;
  const handParts=hands.flatMap(h=>[h.group,h.upper,h.forearm,h.joint]);
  const visibility=createCameraVisibility(scene,{roots:()=>root.visible?handParts:[],targets:()=>trackedPlayer?[{x:trackedPlayer.x,y:1.4,z:trackedPlayer.z,radius:2.6}]:[]});
@@ -81,7 +83,7 @@ export function buildDiceGiant(scene){
    const depth=Math.max(1,-barView.copy(b.group.position).applyMatrix4(camera.matrixWorldInverse).z);
    b.group.scale.setScalar(Math.min(1,2*depth*Math.tan(camera.fov*Math.PI/360)*camera.aspect*.16/17.6));
   }
- },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();recoil.reset();elbowFollow.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();recoil.reset();elbowFollow.forEach(f=>f.reset());secondaryGestures.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0,weightAccent=giantWeightAccent(s);
@@ -113,7 +115,13 @@ export function buildDiceGiant(scene){
       if(q.handIndex!==i||q.cancelled||!giantPropType(s,q))return false;
       const t=giantThrowTimeline(s,q);return t&&s.t>=t.ready&&s.t<t.release+.50;
      }):null,
-     gesture=throwing?giantThrowGesture(s,throwing):giantHandGesture(s,i),destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
+     originalGesture=throwing?giantThrowGesture(s,throwing):giantHandGesture(s,i),
+     gesture={...originalGesture,...secondaryGestures[i].step({
+      wristPitch:originalGesture.wristPitch,wristYaw:originalGesture.wristYaw,
+      wristRoll:originalGesture.wristRoll,curl:originalGesture.curl,
+      elbowLift:originalGesture.elbowLift,elbowOut:originalGesture.elbowOut,
+      anticipation:originalGesture.anticipation
+     },dt,{owner:s,time:g.time,rate:originalGesture.impact>.3?30:18})},destroyed=!!s.destroyed?.[i],crumble=destroyed?(s.crumble?.[i]||0):0,revive=s.revive?.[i]||0;
    const hp=Math.max(0,Number(s.hands?.[i])||0);if(hp<handPrev[i])handPulse[i]=1;handPrev[i]=hp;handPulse[i]=Math.max(0,handPulse[i]-Math.max(0,dt)*5);
    // The arm always stays; only the hand shakes, shrinks and bursts into shards.
    upper.visible=forearm.visible=joint.visible=shoulderCap.visible=wristCap.visible=armsVisible;

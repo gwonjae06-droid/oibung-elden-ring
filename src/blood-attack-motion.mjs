@@ -1,4 +1,5 @@
 import {BLOOD_PATTERNS} from './blood-data.mjs';
+import {poseAlpha} from './boss-animation-continuity.mjs';
 import {smooth} from './blood-transformation.mjs';
 
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -186,7 +187,7 @@ export function createBloodMotionDirector(){
   // Quicker on strikes, slower in follow-through and recovery. No overshoot
   // is accumulated at pause, so frame-rate variance cannot amplify recoil.
   const rate=next.impact>.35?27:next.release>.18?19:next.anticipation>.25?11:8;
-  const alpha=1-Math.exp(-rate*validDt);
+  const alpha=poseAlpha(rate,validDt);
   const out={...next,weight:blendNumber(previous.weight,next.weight,alpha),
    body:blendObject(previous.body,next.body,alpha),
    arms:next.arms.map((a,i)=>blendObject(previous.arms?.[i],a,alpha)),

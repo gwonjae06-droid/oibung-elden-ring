@@ -13,13 +13,14 @@ import {clownWeightAccent} from './boss-performance.mjs';
 import {createClownGait} from './clown-gait.mjs';
 import {createClownNightmareAnatomy} from './clown-nightmare-anatomy.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
+import {createPoseContinuity} from './boss-animation-continuity.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor(){
  return runThreeStartup(THREE,(THREE,own)=>{
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
  const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
  const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
- const reduced=false,collapse=createClownCollapse(),gait=createClownGait(),balance=createSpringBank(),recoil=createRecoilBank();
+ const reduced=false,collapse=createClownCollapse(),gait=createClownGait(),balance=createSpringBank(),recoil=createRecoilBank(),gestureBlend=createPoseContinuity();
  let lastGame=null,lastClock=-Infinity;
  const mesh=(geo,mat,x,y,z,parent=body)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;};
  const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');for(let i=0;i<16;i++){ctx.fillStyle=i%2?'#dfcfad':'#a61c33';ctx.fillRect(i*16,0,16,128);}ctx.fillStyle='#d4a83b';ctx.fillRect(0,56,256,16);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
@@ -47,12 +48,15 @@ export function createClownActor(){
   white.color.setHex(horror===3?0xc5b5a5:horror===2?0xd8c4af:0xe8d5ad);
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
   const footMotion=gait.update(g,dt),weightAccent=clownWeightAccent(g,A);
-  if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();lastGame=g;}lastClock=time;
+  if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();gestureBlend.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
   if(g.status==='playing'){p.jaw=(p.jaw||0)+(Q.active?(horror===3?.88:.54):.03);p.wobble=(p.wobble||0)+(!reduced&&(horror>=2)? .18:0);p.stretch=(p.stretch||0)+(Q.active?.22:0);}
+  const soft=gestureBlend.step({lean:A.lean||0,twist:A.twist||0,
+   tilt:v.tilt||0,headRoll:Q.active?Math.sin(time*2.1)*.16*(Q.third?1.4:1):0},
+   dt,{owner:g,time:g.time,rate:c.state==='pattern'?25:13});
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
-  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(Q.active?Q.bodyHeight:(M?M.bodyY+M.lift:5.2)+rise+A.lift)+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=A.twist;body.rotation.z=death?death.roll:v.tilt*.13+footMotion.roll+weightAccent.roll+Q.bodyRoll;body.rotation.x=Q.active&&!death?Q.pitch+A.lean*.12+footMotion.lean*.1:(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+A.lean+footMotion.lean+weightAccent.pitch+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
+  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(Q.active?Q.bodyHeight:(M?M.bodyY+M.lift:5.2)+rise+A.lift)+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=soft.twist;body.rotation.z=death?death.roll:soft.tilt*.13+footMotion.roll+weightAccent.roll+Q.bodyRoll;body.rotation.x=Q.active&&!death?Q.pitch+soft.lean*.12+footMotion.lean*.1:(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+soft.lean+footMotion.lean+weightAccent.pitch+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
   // Compress the decorative chest during claps and heavy throws, then relax
   // behind the arm motion; palm endpoints and damage volumes never move.
   const compression=balance.step('spine:compress',Math.min(1,Math.max(0,A.clapClose??0,(v.glove||0)*.65,(A.smear||0)*.15)),dt,15);
@@ -67,7 +71,7 @@ export function createClownActor(){
   if(M?.visible){mount.group.position.set(0,M.y+rise-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6*A.headScale,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
   head.group.visible=F.bodyHead;h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
   if(F.bodyHead&&v.neckTarget&&v.neck>0){target.set(v.neckTarget.x,1.2+Math.max(0,A.headScale-1)*1.1,v.neckTarget.z);body.worldToLocal(target);h.lerp(target,v.neck);}
-  if(F.bodyHead){head.group.position.copy(h);head.group.rotation.x=Q.active?Q.headCounter:v.neck*Math.PI;head.group.rotation.z=Q.active?Math.sin(time*2.1)*.16*(Q.third?1.4:1):0;head.setMorph(p,time);}
+  if(F.bodyHead){head.group.position.copy(h);head.group.rotation.x=Q.active?Q.headCounter:v.neck*Math.PI;head.group.rotation.z=soft.headRoll;head.setMorph(p,time);}
   link(neck,[0,3.45+elongation*.15-crouch*.25,0],F.bodyHead?[h.x,h.y-Math.min(.8,size*.8)*Math.cos(v.neck*Math.PI),h.z]:[0,3.72+elongation*.15-crouch*.25,0]);neck.scale.x=neck.scale.z=A.neckWidth;
   for(const L of limbs){const s=L.s,grip=A.cameraGrip||(F.bodyHead&&['inflate','hold'].includes(F.pose)),gloveCue=A.clapClose??v.glove,pulse=Math.max(0,...c.bombs.map(q=>q.kind!=='ball'&&q.t<.3?Math.sin(q.t/.3*Math.PI):0));let hand=[s*1.9,2.1+Math.sin(time*3+s)*.08,.45];
    if(grip)hand=[s*size*.7,h.y-.25,Math.max(.4,size*.45)];if(pulse>0)hand=[s*(1.9-pulse),2.8,1+pulse*3];if(gloveCue>0)hand=[s*1.9*(1-gloveCue),2.5,1+gloveCue*1.9];if(v.juggle)hand=[s*1.8,2.7+Math.sin(time*9+s)*.8,.8];if(v.neck>0)hand=[s*.7,.2,.7];
@@ -80,7 +84,7 @@ export function createClownActor(){
     // Diagonal planted palms stay low as the boss actually travels; the
     // authored clap can lift them without making him stand upright.
     const perform=['unhingedClap','clap','invertedApplause','juggle'].includes(c.name);
-    const blend=perform?.58:1;
+    const blend=(perform?.58:1)*Q.entry;
     hand=hand.map((v,i)=>v*(1-blend)+paw[i]*blend);
    }
    const shoulder=[s*.9,3-crouch*.25,0],locked=Boolean(A.cameraGrip||A.clapClose!==null&&A.clapClose>.97||grip&&F.pose==='hold'||boss.state==='transition'),arm=L.arm.pose(shoulder,hand,dt,locked,g);hand=arm.hand;
