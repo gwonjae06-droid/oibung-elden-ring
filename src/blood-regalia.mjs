@@ -196,7 +196,8 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
    hand.rotation.z=follow('wrist:z:'+side,side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12),16);
    // Finger joints contract as energy gathers, uncurl at the impact and relax
    // after the wrist. No new geometry or IK allocation is needed per frame.
-   const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
+   // The attacking hand visibly releases its grip when the blood spell fires.
+   const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73-(pose.release||0)*.25-(pose.followThrough||0)*.52));
    fingers.forEach((finger,i)=>{const wanted=-grip*(.38+i*.055);finger.rotation.x=wanted*.86+follow('finger:curl:'+side+':'+i,wanted,22-i*2)*.14;
     finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);

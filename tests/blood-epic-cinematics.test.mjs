@@ -62,7 +62,8 @@ test('epic cutscene cannot be skipped and keeps combat unchanged',()=>{
  assert.ok(g.blood.hazards.every(h=>h.warn>3));
  g.blood.t=3.1;
  assert.equal(fx.state(g).active,false);
- assert.equal(g.blood.hazards.length,4);
+ assert.equal(g.blood.hazards.filter(h=>h.visual==='blood-tsunami-wall').length,2);
+ assert.ok(g.blood.hazards.some(h=>h.visual==='blood-undertow'));
  fx.reset();assert.ok(fx.isFraming({...g,blood:{...g.blood,t:.6}}));
  fx.dispose();
 });
