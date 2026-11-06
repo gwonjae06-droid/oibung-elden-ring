@@ -7,7 +7,7 @@ import {CAMPAIGN_ORDER,PLAYABLE_BOSSES,BOSS_REGISTRY} from '../src/boss-registry
 
 test('the campaign order is fixed and only finished bosses are playable',()=>{
  assert.deepEqual(CAMPAIGN_ORDER,['kwon','clown','dice','blood','gyuwon']);
- assert.deepEqual(PLAYABLE_BOSSES,['kwon','clown','dice','blood']);
+ assert.deepEqual(PLAYABLE_BOSSES,['kwon','clown','dice','blood','gyuwon']);
  for(const id of CAMPAIGN_ORDER)assert.equal(BOSS_REGISTRY[id].id,id);
 });
 test('boss health is similar: lowest first and slowly rising afterwards',()=>{

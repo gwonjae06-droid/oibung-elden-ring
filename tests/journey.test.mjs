@@ -17,7 +17,7 @@ test('flame shortcut targets the highest consecutively unlocked playable boss',(
   assert.equal(latestUnlockedStage(p),stage);assert.equal(r.stage,stage);assert.equal(r.startStage,stage);
   assert.equal(p.flames,5,'reserving must not spend');assert.deepEqual(r.splits,[]);
  }
- p.defeated=['clown','dice','blood'];assert.equal(newFlameRun(p),null);
+ p.defeated=['clown','dice','blood','gyuwon'];assert.equal(newFlameRun(p),null);
  p.defeated=['kwon','blood'];assert.equal(newFlameRun(p).stage,1);
  p.flames=0;assert.equal(newFlameRun(p),null);
 });
@@ -36,9 +36,9 @@ test('skipped victories record actual time and never count as a full campaign cl
  const p=freshProfile();p.flames=3;p.defeated=['kwon'];p.run=newFlameRun(p,'hammer');consumeFlameSkip(p,p.run);
  assert.equal(finishAttempt(p,{won:true,time:20}),'flame');advanceJourney(p.run);
  assert.equal(finishAttempt(p,{won:true,time:30}),'flame');advanceJourney(p.run);
- assert.equal(finishAttempt(p,{won:true,time:40}),'complete');
- assert.equal(p.clears,0);assert.equal(p.flames,5);assert.equal(p.records[0].time,90);assert.equal(p.records[0].startStage,1);
- assert.deepEqual(p.memories.map(m=>m.id),['clown','dice','blood']);
+ assert.equal(finishAttempt(p,{won:true,time:40}),'flame');advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:50}),'complete');
+ assert.equal(p.clears,0);assert.equal(p.flames,6);assert.equal(p.records[0].time,140);assert.equal(p.records[0].startStage,1);
+ assert.deepEqual(p.memories.map(m=>m.id),['clown','dice','blood','gyuwon']);
  const loaded=loadProfile({getItem:()=>JSON.stringify(p)});
  assert.equal(loaded.records[0].startStage,1);assert.equal(loaded.clears,0);
  const isolated=loadProfile({getItem:()=>JSON.stringify({...p,defeated:[],memories:[]})});
@@ -47,7 +47,7 @@ test('skipped victories record actual time and never count as a full campaign cl
  assert.equal(invalid.records.length,0);assert.equal(latestUnlockedStage(invalid),0,'invalid skip metadata cannot become a full clear');
 });
 
-test('four victories each award a flame and one run completion with persistent records',()=>{
+test('five victories each award a flame and one run completion with persistent records',()=>{
  const p=freshProfile();p.run=newRun();
  assert.equal(finishAttempt(p,{won:true,time:32}),'flame');
  assert.equal(finishAttempt(p,{won:true,time:999}),null);
@@ -57,10 +57,10 @@ test('four victories each award a flame and one run completion with persistent r
  assert.equal(finishAttempt(p,{won:true,time:60}),'flame');
  advanceJourney(p.run);
  assert.equal(p.run.stage,3);
- assert.equal(finishAttempt(p,{won:true,time:70}),'complete');
- assert.deepEqual(p.defeated,['kwon','clown','dice','blood']);
- assert.equal(p.flames,4);assert.equal(p.earnedFlames,4);
- assert.equal(p.records[0].time,207);assert.equal(p.run,null);
+ assert.equal(finishAttempt(p,{won:true,time:70}),'flame');advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:80}),'complete');
+ assert.deepEqual(p.defeated,['kwon','clown','dice','blood','gyuwon']);
+ assert.equal(p.flames,5);assert.equal(p.earnedFlames,5);
+ assert.equal(p.records[0].time,287);assert.equal(p.run,null);
  assert.equal(finishAttempt(p,{won:true,time:1}),null);
 });
 test('active runs are never written; v1 checkpoint evidence migrates into permanent lights only',()=>{

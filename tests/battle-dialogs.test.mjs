@@ -5,9 +5,9 @@ import {BATTLE_DIALOGS,BATTLE_DIALOG_IDS,battleDialogSelector,findOpenBattle,bat
 import {BOSS_REGISTRY,PLAYABLE_BOSSES} from '../src/boss-registry.mjs';
 
 test('battle dialogs come from the boss registry, newest boss first',()=>{
- assert.deepEqual(BATTLE_DIALOG_IDS,['blood-battle','dice-battle','clown-battle']);
- assert.deepEqual(BATTLE_DIALOGS.map(d=>d.boss),['blood','dice','clown']);
- assert.equal(battleDialogSelector(),'dialog#blood-battle[open], dialog#dice-battle[open], dialog#clown-battle[open]');
+ assert.deepEqual(BATTLE_DIALOG_IDS,['gyuwon-battle','blood-battle','dice-battle','clown-battle']);
+ assert.deepEqual(BATTLE_DIALOGS.map(d=>d.boss),['gyuwon','blood','dice','clown']);
+ assert.equal(battleDialogSelector(),'dialog#gyuwon-battle[open], dialog#blood-battle[open], dialog#dice-battle[open], dialog#clown-battle[open]');
 });
 test('findOpenBattle reports the open boss dialog and its shadow root',()=>{
  const root={},doc={getElementById:id=>id==='dice-battle'?{open:true,firstElementChild:{shadowRoot:root}}:null};

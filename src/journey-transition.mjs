@@ -4,9 +4,9 @@ import {playDiceCrushEntrance} from './dice-entrance-view.mjs';
 import {playBossCue,stopBossCue} from './boss-cues.mjs';
 export function playJourneyTransition(doc,win,boss,shell){
  if(boss==='dice')return playDiceCrushEntrance(doc,shell,{win});
- const d=doc.createElement('dialog');d.className='journey-transition';d.setAttribute('aria-label',boss==='kwon'?'검기로 열리는 첫 번째 시련':boss==='clown'?'광대 오슬우 전환 연출':boss==='blood'?'성혈 대성당으로':'네 시련의 종결');
- d.innerHTML=boss==='kwon'?`<div class="jt-half jt-left">${JOURNEY_ART}</div><div class="jt-half jt-right">${JOURNEY_ART}</div><div class="jt-slash"></div>`:boss==='clown'?'<canvas aria-label="공 위에서 등장해 인사하는 광대 오슬우"></canvas>':boss==='blood'?'<div class="jt-ending" style="color:#dd5478">♜　♥　♜</div>':'<div class="jt-ending">◇　◇　◇　◇</div>';
- const title=doc.createElement('div');title.className='jt-title';title.textContent=boss==='kwon'?'긴턱의 이권재':boss==='clown'?'광대 오슬우':boss==='blood'?'성혈 대성당 · 영원한 혈왕 배서준':'네 지배자가 토벌되었다';d.appendChild(title);
+ const d=doc.createElement('dialog');d.className='journey-transition';d.setAttribute('aria-label',boss==='kwon'?'검기로 열리는 첫 번째 시련':boss==='clown'?'광대 오슬우 전환 연출':boss==='blood'?'성혈 대성당으로':boss==='gyuwon'?'심야 자습실로':'다섯 시련의 종결');
+ d.innerHTML=boss==='kwon'?`<div class="jt-half jt-left">${JOURNEY_ART}</div><div class="jt-half jt-right">${JOURNEY_ART}</div><div class="jt-slash"></div>`:boss==='clown'?'<canvas aria-label="공 위에서 등장해 인사하는 광대 오슬우"></canvas>':boss==='blood'?'<div class="jt-ending" style="color:#dd5478">♜　♥　♜</div>':boss==='gyuwon'?'<div class="jt-ending">마지막 문제</div>':'<div class="jt-ending">◇　◇　◇　◇　◇</div>';
+ const title=doc.createElement('div');title.className='jt-title';title.textContent=boss==='kwon'?'긴턱의 이권재':boss==='clown'?'광대 오슬우':boss==='blood'?'성혈 대성당 · 영원한 혈왕 배서준':boss==='gyuwon'?'심야 자습실 · 최규원':'다섯 지배자가 토벌되었다';d.appendChild(title);
  doc.body.appendChild(d);let done=false,playedCue=false,raf=0,last=null,t=0,scene=null,resolve,loading=boss==='clown';const finished=new Promise(r=>resolve=r);
  function end(ok){if(done)return;done=true;win.cancelAnimationFrame(raf);stopBossCue('start');try{scene?.dispose();}finally{d.close();d.remove();resolve(ok);}}
  d.addEventListener('cancel',e=>e.preventDefault());d.addEventListener('keydown',e=>e.stopPropagation());

@@ -15,13 +15,13 @@ function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=fals
  const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener:(type,fn)=>{const a=windowListeners.get(type)||[];a.push(fn);windowListeners.set(type,a);},removeEventListener:(type,fn)=>{windowListeners.set(type,(windowListeners.get(type)||[]).filter(f=>f!==fn));}};
  const makeGame=()=>({status:'playing',time:10,weapon:'sword',player:{maxHp:120,hp:120,potions:3},boss:{hp:100,maxHp:100}});
  releases.push(bindBattleSession(doc,()=>({game:current,start(w,configure){current=makeGame();current.weapon=w;configure(current);},menu(){},pause(){}})));
- const loadBattle=async boss=>{if(failLoadOnce){failLoadOnce=false;throw Error('test load failure');}const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch};};
+ const loadBattle=async boss=>{if(failLoadOnce){failLoadOnce=false;throw Error('test load failure');}const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch,launchGyuwonBattle:launch};};
  let releaseClown;const scenes=[];const api=installJourney(doc,win,{loadBattle,playPull:()=>{scenes.push('pull');return {finished:Promise.resolve(true),dispose(){}};},playTransition:boss=>{if(failScene===boss)throw Error('cinematic exploded');scenes.push(boss);return {finished:boss==='clown'&&holdClown?new Promise(r=>releaseClown=r):Promise.resolve(true),dispose(){releaseClown?.(false);}};},makeMusic:()=>({unlock(){},update:on=>states.push(on),dispose(){}})});
  const click=(action,extra={})=>listeners.get('click')({target:{closest:()=>({dataset:{j:action,...extra}})}});
  const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},...overrides};for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
  return {api,dialog,data,states,scenes,finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
 }
-test('controller grants four repeatable flames, replaces relic choices, and records a full clear',async()=>{
+test('controller grants five repeatable flames, replaces relic choices, and records a full clear',async()=>{
  const f=rig();await f.click('new');await f.click('begin');
  assert.equal(f.dialog.open,false);
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/검사가 되지 못한 자/);
@@ -40,11 +40,13 @@ test('controller grants four repeatable flames, replaces relic choices, and reco
  await f.click('next');assert.equal(f.game().boss.maxHp,4700);
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/영원하지 못한 생명/);
  await f.click('memory-next');assert.match(f.dialog.html,/정화의 불꽃을 획득했습니다/);
- await f.click('flame-next');assert.match(f.dialog.html,/네 지배자를 넘어섰다/);
+ await f.click('flame-next');await f.click('next');
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/마지막 빈칸/);
+ await f.click('memory-next');await f.click('flame-next');assert.match(f.dialog.html,/다섯 지배자를 넘어섰다/);
  const saved=JSON.parse(f.data.get(SAVE_KEY));
- assert.equal(saved.clears,1);assert.equal(saved.flames,4);assert.equal(saved.earnedFlames,4);
- assert.deepEqual(saved.memories.map(m=>m.id),['kwon','clown','dice','blood']);
- assert.deepEqual(f.scenes,['kwon','pull','clown','pull','dice','pull','blood','complete']);
+ assert.equal(saved.clears,1);assert.equal(saved.flames,5);assert.equal(saved.earnedFlames,5);
+ assert.deepEqual(saved.memories.map(m=>m.id),['kwon','clown','dice','blood','gyuwon']);
+ assert.deepEqual(f.scenes,['kwon','pull','clown','pull','dice','pull','blood','pull','gyuwon','complete']);
  assert.doesNotMatch(f.dialog.html,/무기 진화 선택|도전 시련|연속 격파|무회복/);
  await f.click('home');await f.api.dispose();f.release();
 });
@@ -151,16 +153,16 @@ test('a failed shortcut load does not spend a flame; retry spends exactly once',
  await f.click('continue');assert.equal(saved().flames,1);await f.api.dispose();f.release();
 });
 test('last unlocked boss skip earns only its own memory and a separate completion record',async()=>{
- const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice'];
+ const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice','blood'];
  profile.records=[{weapon:'sword',time:100,deaths:0,bossCount:4,startStage:0}];profile.clears=1;
  const f=rig({savedProfile:profile});await f.click('skip-toggle');await f.click('new');await f.click('begin');
- assert.equal(f.game().boss.maxHp,4700);
+ assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.gyuwon.maxHp);
  f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
  assert.match(f.dialog.html,/마지막 시련을 넘어섰다/);assert.match(f.dialog.html,/별도로 기록/);
  const saved=JSON.parse(f.data.get(SAVE_KEY));assert.equal(saved.flames,2);assert.equal(saved.earnedFlames,3);
- assert.equal(saved.clears,1);assert.equal(saved.records.at(-1).startStage,3);assert.equal(saved.records.at(-1).time,10);
- assert.deepEqual(saved.memories.map(m=>m.id),['blood']);
- await f.click('records');assert.match(f.dialog.html,/불꽃 지름길 · 영원한 혈왕 배서준부터 · 1보스/);
+ assert.equal(saved.clears,1);assert.equal(saved.records.at(-1).startStage,4);assert.equal(saved.records.at(-1).time,10);
+ assert.deepEqual(saved.memories.map(m=>m.id),['gyuwon']);
+ await f.click('records');assert.match(f.dialog.html,/불꽃 지름길 · 무두의 사유 최규원부터 · 1보스/);
  await f.api.dispose();f.release();
 });
 
