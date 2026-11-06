@@ -6,17 +6,24 @@ export function buildGyuwonView(scene,{reduced=false}={}){
  const materials=new Map(),boxGeo=new THREE.BoxGeometry(1,1,1);
  function mat(color){if(!materials.has(color))materials.set(color,new THREE.MeshStandardMaterial({color,roughness:.8}));return materials.get(color);}
  function box(parent,x,y,z,w,h,d,color){const m=new THREE.Mesh(boxGeo,mat(color));m.position.set(x,y,z);m.scale.set(w,h,d);m.castShadow=m.receiveShadow=true;parent.add(m);return m;}
- box(stage,0,-.2,0,49,.4,49,0x354252);
- // Keep the circular combat boundary visible and furniture outside it.
- const edge=new THREE.Mesh(new THREE.RingGeometry(R.radius-.1,R.radius+.1,96),new THREE.MeshBasicMaterial({color:0x9bb6ca,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=.025;stage.add(edge);
- box(stage,0,5,-25,50,10,.5,0x263d43);box(stage,0,5,-24.65,16,5,.2,0x102b27);
- for(let i=-3;i<=3;i++){box(stage,i*6,8,-24.35,2.5,.07,.04,0xb8d5c9);box(stage,i*6,7,-24.35,.08,1.2,.04,0xb8d5c9);}
- for(let side of [-1,1])for(let i=-3;i<=3;i++){
-  const x=side*24,z=i*6;
-  box(stage,x,1.6,z,2.5,.25,2,0x9b8265);box(stage,x,.8,z,.25,1.6,.25,0x74838c);
-  box(stage,x,1.85,z,1.1,.12,.8,0xd8dddb);box(stage,x,.7,z+1.6,1.6,.2,1.4,0x586575);
- }
- const bars=[];for(let i=-2;i<=2;i++){const m=box(stage,i*9,10,-5,5,.12,.45,0xd9edfa);m.material=new THREE.MeshBasicMaterial({color:0xd9edfa});bars.push(m);}
+ // A continuous floor and fading repetitions make the arena feel unbounded.
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),mat(0x354252));floor.rotation.x=-Math.PI/2;floor.position.y=-.03;floor.receiveShadow=true;stage.add(floor);
+ const skyGeo=new THREE.SphereGeometry(700,32,20),colors=[];
+ const horizon=new THREE.Color(0x111b28),zenith=new THREE.Color(0x020711);
+ for(let i=0;i<skyGeo.attributes.position.count;i++){const y=skyGeo.attributes.position.getY(i)/700,c=horizon.clone().lerp(zenith,Math.min(1,Math.max(0,y)*2));colors.push(c.r,c.g,c.b);}
+ skyGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+ const sky=new THREE.Mesh(skyGeo,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));sky.name='gyuwon-open-sky';stage.add(sky);
+ const grid=new THREE.GridHelper(1200,120,0x71889d,0x71889d);grid.position.y=.005;grid.material.transparent=true;grid.material.opacity=.12;stage.add(grid);
+ const edge=new THREE.Mesh(new THREE.RingGeometry(R.radius-.06,R.radius+.06,96),new THREE.MeshBasicMaterial({color:0x9bb6ca,transparent:true,opacity:.45,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=.025;stage.add(edge);
+ // One instance per repeated desk part keeps distant furniture inexpensive.
+ const positions=[];for(let x=-240;x<=240;x+=12)for(let z=-240;z<=240;z+=12)if(Math.hypot(x,z)>34)positions.push([x,z]);
+ const matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();
+ function repeatedPart(dx,y,dz,w,h,d,color){const mesh=new THREE.InstancedMesh(boxGeo,mat(color),positions.length);mesh.name='gyuwon-endless-desks';positions.forEach(([x,z],i)=>{position.set(x+dx,y,z+dz);scale.set(w,h,d);matrix.compose(position,rotation,scale);mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=false;stage.add(mesh);}
+ repeatedPart(0,1.6,0,2.5,.18,2,0x8d877e);repeatedPart(0,.8,0,.2,1.6,.2,0x68798b);
+ repeatedPart(0,1.76,0,1.1,.1,.8,0xc5d0d7);repeatedPart(0,.7,1.6,1.6,.16,1.4,0x586575);
+ // Sparse stars are above the horizon, leaving the floor warnings uncluttered.
+ const stars=[];for(let i=0;i<360;i++){const yaw=i*2.3999632297,y=.08+((i*73)%353)/353*.85,r=Math.sqrt(1-y*y);stars.push(Math.sin(yaw)*r*500,y*500,Math.cos(yaw)*r*500);}
+ const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));const starfield=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9db2cb,size:.55,transparent:true,opacity:.55,fog:false,depthWrite:false}));stage.add(starfield);
  const root=new THREE.Group();root.name='gyuwon-student';stage.add(root);
  box(root,0,1.8,0,1.5,1.7,.8,0xd5d9dd);box(root,-.95,1.65,0,.35,1.6,.4,0xc8d0d6);box(root,.95,1.65,0,.35,1.6,.4,0xc8d0d6);
  box(root,-.42,.6,0,.5,1.2,.55,0x242c39);box(root,.42,.6,0,.5,1.2,.55,0x242c39);
@@ -32,7 +39,7 @@ export function buildGyuwonView(scene,{reduced=false}={}){
   const transition=b.state==='transition',erase=b.phase===1?1:transition?Math.max(.001,1-s.t/R.transition):.001;
   head.scale.setScalar(erase);head.visible=erase>.01;halo.visible=b.phase===2;halo.rotation.z=reduced?0:g.time*.3;
   root.scale.y=g.status==='won'?Math.max(.08,1-(deathElapsed+=dt)):1;
-  for(const light of bars)light.visible=b.phase===1||transition&&s.t<1;
+  starfield.material.opacity=b.phase===1?.35:.7;
   const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);
    if(!m){m=new THREE.Mesh(h.shape==='lane'?laneGeo:circleGeo,new THREE.MeshBasicMaterial({color:0xcce8f8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
    m.position.set(h.x,.06,h.z);m.rotation.z=h.shape==='lane'?-h.yaw:0;
