@@ -52,7 +52,7 @@ test('the cannon is a phase two pattern aimed at the player before it fans out',
  assert.deepEqual(CLOWN.humanCannon.phases,[2]);
  const {g,zones}=run('humanCannon',2),lanes=zones.filter(z=>z.shape==='lane');
  assert.equal(lanes.length,3);
- assert.ok(Math.abs(angleDelta(lanes[0].yaw,Math.atan2(g.player.x-g.boss.x,g.player.z-g.boss.z)))<1e-6);
+ assert.ok(Math.abs(angleDelta(lanes[0].yaw,Math.atan2(g.player.x-lanes[0].originX,g.player.z-lanes[0].originZ)))<1e-6);
  const a=angleDelta(lanes[0].yaw,lanes[1].yaw),b=angleDelta(lanes[0].yaw,lanes[2].yaw);
  assert.ok(Math.abs(Math.abs(a)-.42)<1e-6&&Math.abs(Math.abs(b)-.42)<1e-6&&a*b<0);
 });

@@ -215,6 +215,16 @@ export function giantPosture(g){
    return {lean:bend,bodyX:h.x*bend*.35,head:{...rest,x:h.x*bend*.3,y:58-8*bend,z:-106+12*bend}};
   }
  }
+ if(s.state==='recovery'){
+  // Fixed casino body, but watch the target and redistribute weight while
+  // the palms prepare their next independent action.
+  const t=Math.max(0,s.t),wake=ease(t/.35);
+  const look=Math.max(-2,Math.min(2,(g.player.x||0)*.06));
+  const side=(look+Math.sin(t*.8+(s.ordinal||0)*.37)*.8)*wake;
+  const lean=(.018+.012*Math.sin(t*1.12+(s.ordinal||0)))*wake;
+  return {lean,bodyX:side*1.5,weight:.06*wake,
+   head:{...rest,x:side,y:58-1.1*lean,z:-106+3.5*lean}};
+ }
  return {lean:0,bodyX:0,head:rest};
 }
 export function giantHeadPose(g){return giantPosture(g).head;}
@@ -265,6 +275,16 @@ function handTarget(g,index){
  if(s.state==='dead')return {...rest,y:.8,fist:0};
  const feral=s.temperament==='feral',time=g.time||0;
  let x=rest.x,z=rest.z,y=rest.y+(feral?.42*Math.sin(time*7+index*2):.16*Math.sin(time*1.8+index*2)),fist=feral?.85:0;
+ if(s.state==='recovery'){
+  // A non-damaging read-and-react pose, physically spring-smoothed and
+  // constrained to the hands' original section of the front table edge.
+  const settle=ease(Math.max(0,s.t)/.42);
+  const px=Math.max(-27,Math.min(27,g.player.x||0)),pz=Math.max(-45,Math.min(35,g.player.z||0));
+  x+=(Math.sin(s.t*.89+index*1.8)*1.45+Math.max(-1.7,Math.min(1.7,(px-rest.x)*.065)))*settle;
+  z+=(Math.sin(s.t*.57+index*1.4)*1.1+pz*.022)*settle;
+  y+=(1.1+.6*Math.sin(s.t*1.26+index*2))*settle;
+  fist=feral?.6+.16*Math.cos(s.t*2.3+index):.1+.12*Math.sin(s.t*1.3+index);
+ }
  if(s.state!=='attack')return {x,y,z,fist};
  const mine=(s.hazards||[]).filter(h=>!h.cancelled&&handKind(s,h)&&h.handIndex===index).sort((a,b)=>a.start-b.start);
  // Each hand must actually collect the next object before performing its throw.

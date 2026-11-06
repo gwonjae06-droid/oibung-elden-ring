@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
 import {clownHurtShapes} from './boss-hit-regions.mjs';
@@ -1071,8 +1072,8 @@ function finish(g) {
     state: 'idle',
     name: null,
     f: {},
-    wait: PRESSURE.wait[g.boss.phase === 2 ? 1 : 0] *
-      (g.journeyBalance?.mode==='story'?.88:1),
+    wait: Math.max(g.boss.phase===2?.64:.76,PRESSURE.wait[g.boss.phase === 2 ? 1 : 0] *
+      (g.journeyBalance?.mode==='story'?.88:1)),
     punish: false,
     noSeparate: false,
   });
@@ -1084,14 +1085,20 @@ function tickClown(g, dt) {
     p = g.player;
   if (c.state === 'idle') {
     c.yaw += clamp(angleDelta(c.yaw, toward(b, p)), -dt * 2.5, dt * 2.5);
-    const d = dist(b, p);
-    if (d > 9) {
-      const s = Math.min(PRESSURE.chase[b.phase === 2 ? 1 : 0] * dt, d - 9),
-        a = toward(b, p);
-      b.x += Math.sin(a) * s;
-      b.z += Math.cos(a) * s;
-      confine(b, BALL_LIMIT);
-      c.odo += s;
+    // Circus footwork is a real displacement, not a canned attack dash.
+    // The player can see a side-step, a close-range withdrawal, or a chase
+    // during the breathing room between performances.
+    // Do not read the player's committed attack as a signal to dodge
+    // away. Close-range swings must remain punishable during their windup.
+    const committed=Boolean(p.action&&['attack','skill'].includes(p.action.kind)&&dist(b,p)<9);
+    if(!committed){
+      const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
+        spacing:b.phase===2?6.6:7.7,
+        speed:PRESSURE.chase[b.phase===2?1:0],
+        sideSpeed:b.phase===2?4.0:3.25,
+        arena:BALL_LIMIT,phase:b.phase,farDistance:11
+      });
+      c.odo+=Math.hypot(motion.dx,motion.dz);
     }
     c.wait -= dt;
     if (c.wait <= 0)
@@ -1181,6 +1188,7 @@ export function createClownGame(weapon = 'sword', options) {
     punish: false,
     noSeparate: false,
     odo: 0,
+    autonomy:createBossAutonomy((g.patternShuffle?.seed||1)^0x7af1b9),
     yaw: 0,
     time: 0,
     hits: [],

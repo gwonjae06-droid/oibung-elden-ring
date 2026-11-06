@@ -1,5 +1,6 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
 import {kwonReadableWind} from './attack-readability.mjs';
+import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
 import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
 import {
   actPlayer,
@@ -134,7 +135,7 @@ export const ORDER = {
 export const KWON_RANGE_PRESSURE=Object.freeze({
  farDistance:12,
  chaseSpeed:Object.freeze({1:9.7,2:9.5}),
- chaseWait:.44,
+ chaseWait:.78,
  openings:Object.freeze({
   1:Object.freeze(['spiderPrison','rush','hunt','leap','siege','skyJudge','feint']),
   2:Object.freeze(['graveSword','livingSword','crescent','requiem','doubleMoon','lastStance',
@@ -350,6 +351,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
     bossShots: [],
     nextId: 0,
     patternShuffle: createPatternShuffle(seed),
+    bossAutonomy: createBossAutonomy(seed??0x72a9c1),
     player: createPlayerState(),
     boss: {
       x: 0,
@@ -787,7 +789,13 @@ export function step(g, dt, input = {}) {
     const turnRate=far?4.0:2.7;
     b.yaw += clamp(angleDelta(b.yaw, toward(b, p)), -dt * turnRate, dt * turnRate);
     b.aim = b.yaw;
-    if(gap>8)moveBoss(b,far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===1?6.8:6.5,dt);
+    // Autonomous footwork during idle: close in, orbit laterally or yield space
+    // when crowded. The same root position drives model and real hurtboxes.
+    stepBossAutonomy(g.bossAutonomy,b,p,dt,{
+      speed:far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===2?6.5:6.8,
+      sideSpeed:b.phase===2?3.5:2.9,spacing:b.phase===2?6:6.8,
+      arena:24,phase:b.phase,farDistance:KWON_RANGE_PRESSURE.farDistance
+    });
     if (b.hug > HUG_TIME) {
       b.hug = 0;
       beginSequence(g, 'shove');
@@ -909,7 +917,7 @@ export function step(g, dt, input = {}) {
       // Recovery remains a full punish window. Only the next idle step
       // gains time to run towards a distant target before attacking again.
       b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
-        ?KWON_RANGE_PRESSURE.chaseWait:b.phase===2?.07:.12;
+        ?KWON_RANGE_PRESSURE.chaseWait:b.phase===2?.58:.68;
       b.punishable = false;
       b.from = null;
     }

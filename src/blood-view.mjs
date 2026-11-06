@@ -56,7 +56,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   const energyGoal=(({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0)+(s.siphon?.active?0.7:0);energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
   // Choreography is tied to the actual spell clock, never an independent visual timer.
-  const walk=s.walk&&b.state==='recovery'?sampleBloodWalk(s.walk):null;
+  const walk=s.walk&&['recovery','maneuver'].includes(b.state)?sampleBloodWalk(s.walk):null;
   actor.position.y=(s.elevation>.45&&!reduced?Math.sin(g.time*1.8)*.035:0)+motion.body.bob+(walk?.moving?walk.bob:0);
   actor.rotation.y=motion.body.twist*.25;
   // Arms: raise while preparing, snap at the start, hold while running, lower when done, and ease back slowly while returning.

@@ -1,6 +1,6 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
-import {createBloodWalk,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
+import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
 import {BLOOD_RULES as R,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
@@ -30,7 +30,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
 }
 export function actBlood(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
@@ -170,12 +170,28 @@ function tickBoss(g,dt){
   if(s.phasePending){beginPhase(g);return;}
   if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
   s.walk.t+=dt;const step=sampleBloodWalk(s.walk);b.x=step.x;b.z=step.z;b.yaw=step.yaw;
-  s.recover-=dt;if(s.recover<=0){
-    s.index++;
-    const distance=Math.hypot(b.x-g.player.x,b.z-g.player.z);
-    startBloodPattern(g,nextBloodPattern(s.deck,b.phase,
-      g.journeyBalance?.mode==='story'?{distance}:{}));
-   }return;
+  s.recover-=dt;
+  if(s.recover<=0){
+   // Keep every frame of the existing stationary punish window first.
+   // A separate non-attacking stance now makes the boss visibly reposition.
+   b.state='maneuver';s.maneuver=b.phase===2?1.14:1.24;
+   s.walk=createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
+  }
+  return;
+ }
+ if(b.state==='maneuver'){
+  if(s.phasePending){beginPhase(g);return;}
+  s.walk.t+=dt;
+  const pose=sampleBloodWalk(s.walk);
+  b.x=pose.x;b.z=pose.z;b.yaw=pose.yaw;
+  s.maneuver-=dt;
+  if(s.maneuver<=0){
+   s.index++;
+   const distance=Math.hypot(b.x-g.player.x,b.z-g.player.z);
+   startBloodPattern(g,nextBloodPattern(s.deck,b.phase,
+     g.journeyBalance?.mode==='story'?{distance}:{}));
+  }
+  return;
  }
  s.t+=dt;const spec=BLOOD_PATTERNS[s.pattern];
  s.elevation=spec.air?bloodFlightHeight(s.pattern,s.t,spec.duration,s.strikeAt):0;
