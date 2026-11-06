@@ -28,7 +28,7 @@ import {createAudio} from './audio.mjs';
 import {createRecoverySfx} from './recovery-sfx.mjs';
 import {createPlayerHitFeedback} from './player-hit-feedback.mjs';
 import {createCombatImpact} from './combat-impact.mjs';
-import {clownEnvironmentCue} from './environmental-telegraphs.mjs';
+import {clownDangerSpotlightCue,createClownDangerSpotlight} from './clown-danger-spotlight.mjs';
 import {playBossCue} from './boss-cues.mjs';
 import {createPlayerWeaponSfx} from './player-weapon-sfx.mjs';
 import {bossFoleySpec} from './boss-foley-map.mjs';
@@ -116,25 +116,14 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   ['Clown dialog',()=>{d.close();d.remove();}],
   ['Clown close callback',()=>onClose({weapon,status:g.status,practice})]
  ]);
- function zoneMesh(z){
-  // Scattered theatre spotlights are not painted danger footprints.
-  const group=new THREE.Group(),rays=[],count=z.shape==='lane'?3:1;
-  const geo=new THREE.ConeGeometry(1.8,8,12,1,true).translate(0,4,0);
-  const mat=new THREE.MeshBasicMaterial({color:0xffca7a,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
-  for(let i=0;i<count;i++){const beam=new THREE.Mesh(geo,mat);beam.position.z=z.shape==='lane'?z.len*(i+.5)/count:0;group.add(beam);rays.push(beam);}
-  group.userData={rays,geo,mat};scene.add(group);return group;
- }
  function releaseZone(group){scene.remove(group);disposeScene(group);}
  function sync(dt){
   const b=g.boss,p=g.player,c=g.clown;actor.update(g,impact.frozen?0:dt);actor.root.scale.setScalar(CLOWN_SIZE);actor.root.position.y*=CLOWN_SIZE;actor.root.rotation.x=actor.root.rotation.z=0;impact.bossPose(actor.root);P.rig.position.set(p.x,0,p.z);P.rig.rotation.y=p.action?.yaw??p.yaw;const v=input(),walk=posePlayer(P,g.time*7,p.action?0:Math.hypot(v.x,v.z)*4.7);swayCape(P,g.time,0);P.body.position.y=1+walk.bob;P.body.rotation.x=0;P.pivot.rotation.x=0;const a=p.action;if(a&&(a.kind==='attack'||a.kind==='skill')){P.arms.R.rotation.x=0;P.pivot.rotation.x=-1.5+Math.sin(clamp(a.t/a.total,0,1)*Math.PI)*2.9;}else if(a?.kind==='charging'){P.pivot.rotation.x=-1.4;P.body.rotation.x=-.12;}else if(a?.kind==='roll')P.body.rotation.x=a.t/a.total*Math.PI*2;else if(a?.kind==='hurt')P.body.rotation.x=-.3;P.rig.rotation.x=P.rig.rotation.z=0;impact.playerPose(P.rig);mark.position.set(p.x,.06,p.z);
   const live=new Set();for(const z of c.zones){
-    const visibleBomb=c.bombs.some(b=>b.zone===z.id);
-    if(!clownEnvironmentCue(z,c.name,visibleBomb))continue;
-    live.add(z.id);let m=zones.get(z.id);if(!m){m=zoneMesh(z);zones.set(z.id,m);}
-    const charge=clamp(z.age/Math.max(.01,z.warn),0,1);
-    m.position.set(z.x,.05,z.z);m.rotation.y=z.yaw||0;
-    m.userData.mat.opacity=(reduced?.09:.1)+charge*(reduced?.08:.12);
-    for(const beam of m.userData.rays)beam.scale.setScalar(.7+charge*.3);
+    if(!clownDangerSpotlightCue(z))continue;
+    live.add(z.id);let m=zones.get(z.id);
+    if(!m){m=createClownDangerSpotlight(THREE,scene,z,{reduced});zones.set(z.id,m);}
+    m.userData.spotlightUpdate(z);
    }for(const[id,m]of zones)if(!live.has(id)){releaseZone(m);zones.delete(id);}
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:headPool.acquire();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph&&o.group.visible)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){releaseBombVisual(o);bombs.delete(id);}
   playerProjectiles.update(g);
