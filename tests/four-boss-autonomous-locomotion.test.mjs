@@ -6,6 +6,7 @@ import {createClownGame,stepClown} from '../src/clown-combat.mjs';
 import {createBloodGame,startBloodPattern,stepBlood} from '../src/blood-combat.mjs';
 import {bloodFootTargets,sampleBloodWalk,createBloodManeuver,BLOOD_COUNTER_WINDOW} from '../src/blood-footwork.mjs';
 import {createDiceGame,stepDice,damageDice} from '../src/dice-combat.mjs';
+import {createDicePlayerGame,stepDicePlayer} from '../src/dice-player.mjs';
 import {nextDiceRoamTile} from '../src/dice-autonomy.mjs';
 import {DICE_BOARD,DICE_RULES as DICE} from '../src/dice-data.mjs';
 import {giantHandPose,giantHeadPose,skipGiant} from '../src/dice-giant.mjs';
@@ -120,12 +121,12 @@ test('Casino cube independently mixes direct rolls with legal lateral tiles, nev
  assert.deepEqual({x:sim.dice.pose.x,z:sim.dice.pose.z},old,'freeze blocks autonomous dice roll');
 });
 test('Giant Sungwon naturally watches with his head and moves physical palms during non-attacking recovery',()=>{
- const g=createDiceGame({seed:74});
- damageDice(g,1500);skipGiant(g);stepDice(g,.02);
+ const g=createDicePlayerGame('sword',{seed:74});
+ damageDice(g,1500);skipGiant(g);stepDicePlayer(g,.02);
  const q=g.dice.giant;assert.equal(q.state,'recovery');
  const hp=g.player.hp;
  const first=giantHandPose(g,0),head=giantHeadPose(g);
- stepFor(stepDice,g,1.4);
+ stepFor(stepDicePlayer,g,1.4);
  assert.equal(q.state,'recovery');
  const hand=giantHandPose(g,0),neck=giantHeadPose(g);
  assert.ok(distance(first,hand)>.15||Math.abs(first.y-hand.y)>.15);
