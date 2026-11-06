@@ -10,7 +10,7 @@ const get=(scene,name)=>{const o=named(scene,name)[0];assert.ok(o,'Missing '+nam
 test('bright circus constructs ivory-crimson floor, gold motifs and physical theatre backdrop',()=>{
  const scene=new THREE.Scene(),stage=createClownCircusStage(scene);
  const s=stage.stats();
- assert.equal(s.playableRadius,23);assert.equal(s.collidableProps,0);
+ assert.equal(s.playableRadius,27);assert.equal(s.collidableProps,0);
  assert.ok(s.bulbs>=160);assert.ok(s.columns>=12);
  assert.equal(s.realSpotlights,5);assert.equal(s.wideSpotlights,3);
  assert.ok(CIRCUS_LAYOUT.columnsRadius>CIRCUS_LAYOUT.floorRadius);

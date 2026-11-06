@@ -46,7 +46,7 @@ test('endless ocean and fallen stained glass emerge from the sacred nave',()=>{
  assert.equal(chapel.stats().bloodSea.horizonRadius,700);
  assert.equal(chapel.stats().bloodSea.damageSources,0);
  assert.equal(named(scene,'cathedral-battle-floor'),floor);
- assert.equal(BLOOD_RULES.radius,28);
+ assert.equal(BLOOD_RULES.radius,32);
  chapel.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
 
@@ -73,15 +73,15 @@ test('crimson cloud dome, batched blood rain and irregular double-flash need no 
 test('the new sea requiem is a readable multi-beat attack using real floor footprints',()=>{
  const g=createBloodGame();g.boss.phase=2;
  assert.ok(startBloodPattern(g,'requiem'));
- assert.equal(g.blood.hazards.length,4);
+ assert.equal(g.blood.hazards.length,3);
  assert.equal(BLOOD_PATTERNS.requiem.phase,2);
  assert.ok(g.blood.hazards.every(h=>h.warn>=1.2&&h.warn<BLOOD_PATTERNS.requiem.duration));
  assert.ok(g.blood.hazards.every(h=>h.damage>0));
  const field=bloodFloorField(g);
  assert.ok(field?.safety,'visible safe contrast required during a huge wave');
- assert.equal(field.hazards.length,4);
+ assert.equal(field.hazards.length,3);
  const footprints=g.blood.hazards.map(bloodHazardFootprint);
- for(let i=0;i<4;i++){
+ for(let i=0;i<3;i++){
   assert.equal(field.hazards[i].kind,footprints[i].kind);
   assert.equal(field.hazards[i].halfWidth,footprints[i].halfWidth);
  }
