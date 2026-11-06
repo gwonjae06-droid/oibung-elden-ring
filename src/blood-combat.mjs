@@ -10,6 +10,7 @@ import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} fr
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {claimPlayerProjectileHit,playerProjectileHitsCircle} from './player-projectile-data.mjs';
 import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
 import {bloodHurtShapes} from './boss-hit-regions.mjs';
@@ -28,7 +29,7 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
- return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14}),
+ return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
 }
@@ -157,7 +158,8 @@ export function skipBloodTransition(g){if(g.boss.state!=='transition')return fal
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
- h.hit=true;const before=p.hp;p.hp=Math.max(0,p.hp-h.damage);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount:h.damage});
+ h.hit=true;const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage));
+ const before=p.hp;p.hp=Math.max(0,p.hp-amount);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
