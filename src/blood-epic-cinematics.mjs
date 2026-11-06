@@ -4,7 +4,7 @@ import {BLOOD_EPIC_CUTS,bloodEpicShotState} from './blood-epic-script.mjs';
 
 // Deterministic, presentation-only giant attack sequence. World geometry is
 // authored once; the attacking hitboxes remain blood-combat's real hazards.
-// Neither skipped camera framing nor reduced motion alters gameplay clocks.
+// Camera framing never changes gameplay clocks; the cutscene cannot be skipped.
 const clamp=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
 export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={}){
@@ -45,17 +45,10 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
  waveRoot.add(foam);
  waveRoot.visible=false;
  const shotCamera=new THREE.Vector3(),shotTarget=new THREE.Vector3();
- let disposed=false,skippedKey=null;
- const state=game=>bloodEpicShotState(game,{reduced,skipKey:skippedKey});
+ let disposed=false;
+ const state=game=>bloodEpicShotState(game,{reduced});
  const isFraming=game=>state(game).blocking;
- function skip(game){
-  if(!isFraming(game))return false;
-  skippedKey=state(game).key;
-  return true;
- }
- function reset(){
-  skippedKey=null;waveRoot.visible=false;
- }
+ function reset(){waveRoot.visible=false;}
  function update(game){
   if(disposed)return;
   const s=game?.blood,b=game?.boss,def=BLOOD_EPIC_CUTS[s?.pattern];
@@ -120,6 +113,6 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
   for(const geo of [crestGeo,undertowGeo,foamGeo])geo.dispose();
   for(const mat of [bloodMaterial,undertowMaterial,foamMat])mat.dispose();
  }
- return {state,isFraming,skip,reset,update,pose,dispose,waveRoot,
-  stats:()=>({meshCount:3,decorativeOnly:true,damageSources:0,skippedKey})};
+ return {state,isFraming,reset,update,pose,dispose,waveRoot,
+   stats:()=>({meshCount:3,decorativeOnly:true,damageSources:0})};
 }

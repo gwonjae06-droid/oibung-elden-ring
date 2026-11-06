@@ -1316,11 +1316,7 @@ export function stepClown(g, dt, input = {}) {
 export function clownView(g) {
   const c = g.clown,
     b = g.boss;
-  let action = '공연이 시작됩니다.';
-  if (b.state === 'transition') action = '웃음이 멈추었습니다…';
-  else if (c.stunT > 0) action = '기절! 지금이 기회입니다';
-  else if (c.punish) action = '빈틈 — 지금 반격하세요';
-  else if (c.state === 'pattern') action = PATTERNS[c.name].name;
+  let action = ''; // Only motion, sound and physical effects reveal the attack.
   return {
     name: '광대 오슬우',
     sub: c.horrorStage===3?'3막 · 무대의 악몽':b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',

@@ -104,7 +104,7 @@ const tmpV=new THREE.Vector3();
 function toScreen(x,y,z){tmpV.set(x,y,z).project(camera);if(tmpV.z>1||tmpV.z<-1)return null;return {x:(tmpV.x*.5+.5)*canvas.clientWidth,y:(-tmpV.y*.5+.5)*canvas.clientHeight};}
 function floatText(text,x,y,z,cls){const s=toScreen(x,y,z);if(!s)return;const el=document.createElement('span');el.className='damage-number '+(cls||'');el.textContent=text;el.style.left=s.x+'px';el.style.top=s.y+'px';$('damage-layer').appendChild(el);arenaRuntime.setTimeout(()=>el.remove(),850);}
 let noticeTimer=0;
-function notice(text){const el=$('notice');el.textContent=text;el.toggleAttribute('data-critical',/압사|즉사|경직|기절|약점|위험/.test(text));el.classList.add('visible');arenaRuntime.clearTimeout(noticeTimer);noticeTimer=arenaRuntime.setTimeout(()=>el.classList.remove('visible'),1700);}
+function notice(_text){/* Attack readability comes from motion and environmental effects, not HUD coaching. */}
 const audio=createAudio(()=>arenaRuntime.makeAudioContext());const playerWeaponSfx=createPlayerWeaponSfx();const recoverySfx=createRecoverySfx();const damageFeedback=createPlayerHitFeedback($('arena'));
 const impact=createCombatImpact({shell:$('arena'),root:document,boss:'kwon',reduced:reduceMotion});
 const TELEGRAPH_SOUND={sweep:'tele-slash',reverse:'tele-slash',cross:'tele-slash',thrust:'tele-thrust',slam:'tele-slam',leap:'tele-slam',whirl:'tele-whirl',rise:'tele-slash',jab:'tele-thrust',rush:'tele-thrust',retreat:'tele-whirl',wave:'tele-slam',stomp:'tele-slam',backsweep:'tele-slash',shove:'tele-thrust',spiderPrison:'tele-slam',graveSword:'tele-slam',livingSword:'tele-whirl',lastStance:'tele-whirl'};
@@ -167,7 +167,7 @@ function updateCamera(dt){const p=game.player,b=game.boss,dx=b.x-p.x,dz=b.z-p.z,
 const focus=lock&&game.status==='playing'?stance?.cameraFocus({x:p.x,y:0,z:p.z}):null;
 if(focus)camera.lookAt(focus.x,focus.y,focus.z);
 else camera.lookAt(p.x+dx*k,1.6+elevation,p.z+dz*k);}
-function updateHud(){const p=game.player,b=game.boss;renderSharedHud(document,game,skillView(game),{weaponName:WEAPONS[game.weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q',round:Math.round});setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');let line='틈을 읽고, 대검을 피해 파고드세요.';if(b.stun>0)line='기절! 지금이 기회입니다';else if(b.punishable)line='빈틈 — 지금 반격하세요';else if(b.state==='windup'||b.state==='active')line=b.pattern==='wave'&&b.state==='windup'?'월광 파 · 검을 높이 들어 올립니다':PATTERNS[b.pattern].name;else if(b.state==='stagger')line='경직! 지금이 기회입니다.';else if(b.state==='transition')line='이권재가 두 발로 일어섭니다.';else if(b.state==='dead')line='긴턱이 멈추었습니다.';setText('boss-action',line);$('boss-action').toggleAttribute('data-critical',/압사|즉사|경직|기절|약점/.test(line));if(mode!=='playing'||!lock||b.state==='dead')$('reticle').hidden=true;}
+function updateHud(){const p=game.player,b=game.boss;renderSharedHud(document,game,skillView(game),{weaponName:WEAPONS[game.weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q',round:Math.round});setText('phase-label',b.phase===2?'두 번째 단계 · 직립 검객':'첫 번째 단계 · 사냥꾼');setText('boss-action','');$('boss-action').toggleAttribute('data-critical',/압사|즉사|경직|기절|약점/.test(line));if(mode!=='playing'||!lock||b.state==='dead')$('reticle').hidden=true;}
 const quality=createEncounterQuality({coarse,onChange:scale=>resizeBattleViewport(renderer,camera,canvas,scale)});
 warmup=createBattleVisualWarmup({renderer,scene,camera});startup.own('Kwon visual warmup',()=>warmup.dispose());
 let drewArena=false;
