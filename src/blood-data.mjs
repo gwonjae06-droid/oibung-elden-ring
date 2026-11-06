@@ -41,9 +41,24 @@ export const BLOOD_CONTACT_MARGIN=.55;
 export function bloodHazardFootprint(h){
  const c=hazardPosition(h),pad=BLOOD_CONTACT_MARGIN;
  if(h.shape==='ring')return {kind:2,x:c.x,z:c.z,r:c.r,halfWidth:h.width+pad,halfLength:0,yaw:0,inner:0,arc:0};
- if(h.shape==='lane')return {kind:3,x:c.x,z:c.z,r:0,halfWidth:h.width+pad,halfLength:h.length/2+pad,yaw:h.yaw,inner:0,arc:0};
+ if(h.shape==='lane'){
+  // A moving blood wall's far leading half used to damage players long
+  // before the rendered wave crest reached them. This is the shared 3D
+  // floor-shader and actual collision footprint, so the fix stays in sync.
+  const moving=Math.hypot(h.vx||0,h.vz||0)>.01;
+  return {kind:3,x:c.x,z:c.z,r:0,halfWidth:h.width+pad,
+    halfLength:(moving?Math.min(h.length/2,3.0):h.length/2)+pad,
+    yaw:h.yaw,inner:0,arc:0};
+ }
  if(h.shape==='cone')return {kind:4,x:c.x,z:c.z,r:h.r+pad,halfWidth:0,halfLength:0,yaw:h.yaw,inner:Math.max(0,(h.innerR||0)-pad),arc:h.arc};
  return {kind:1,x:c.x,z:c.z,r:c.r+pad,halfWidth:0,halfLength:0,yaw:0,inner:0,arc:0};
+}
+export const BLOOD_BROAD_IMPACT_BUFFER=.22;
+export function bloodHazardContactReady(h){
+ // Long-range static eruptions may fill their entire footprint at once,
+ // but only become damaging after their visible release has played.
+ const broad=h.shape==='cone'||h.shape==='circle'&&h.r>=6;
+ return h.age>=h.warn+(broad?BLOOD_BROAD_IMPACT_BUFFER:0);
 }
 export function hazardContains(h,p){
  const f=bloodHazardFootprint(h),dx=p.x-f.x,dz=p.z-f.z,d=Math.hypot(dx,dz);

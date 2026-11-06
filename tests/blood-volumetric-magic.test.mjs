@@ -211,7 +211,7 @@ test('the wet safety field includes simultaneous strikes, future warnings and th
    assert.deepEqual(shade.x,p.x);
    assert.deepEqual(shade.z,p.z);
    assert.ok(shade.strength>0&&shade.strength<1);
-   h.age=h.warn+.2;
+   h.age=h.warn+.28;
    const shifted=bloodFloorField(g)?.hazards[i];
    assert.ok(shifted?.active,id+' '+i);
    const moved=hazardPosition(h);

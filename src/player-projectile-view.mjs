@@ -21,17 +21,20 @@ export function createPlayerProjectileView(sceneOrNamespace,parent=null){
   const p=[],uv=[],indices=[];
   for(let i=0;i<=28;i++){const a=-Math.PI*.70+i/28*Math.PI*1.4;for(const r of [.88,1.0]){p.push(Math.sin(a)*r,Math.cos(a)*r,0);uv.push(i/28,r);}if(i){const k=i*2;indices.push(k-2,k-1,k,k,k-1,k+1);}}
   const waveGeo=new T.BufferGeometry();waveGeo.setAttribute('position',new T.Float32BufferAttribute(p,3));waveGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));waveGeo.setIndex(indices);waveGeo.computeVertexNormals();const wave=new T.Mesh(waveGeo,waveMat);
-  const active=new Map(),pools=new Map(),resources=new Set([wood,metal,gold,ivory,ink,flightMat,glow,waveMat]);
+  const flameShape=new T.ConeGeometry(.12,.62,6),
+    flameMaterial=new T.MeshBasicMaterial({color:0xff9a25,transparent:true,opacity:.88,depthWrite:false});
+  const fireMat=new T.MeshStandardMaterial({vertexColors:true,color:0xffa553,metalness:.12,roughness:.48,emissive:0xe84b08,emissiveIntensity:.85});
+  const active=new Map(),pools=new Map(),resources=new Set([wood,metal,gold,ivory,ink,flightMat,glow,fireMat,flameShape,flameMaterial,waveMat]);
   for(const template of [arrow,card,wave])template.traverse(o=>{if(o.geometry)resources.add(o.geometry);});
   let disposed=false,time=0,allocated=0,owner=null;
   function clear(){for(const entry of active.values()){root.remove(entry.node);const pool=pools.get(entry.key)||[];pool.push(entry.node);pools.set(entry.key,pool);}active.clear();time=0;owner=null;}
   function update(input,dt=0){if(disposed)return;const game=Array.isArray(input)?null:input,list=game?.projectiles??input??[];if(game&&owner!==game){clear();owner=game;}time=game?game.time||0:time+Math.max(0,dt);const seen=new Set();
    for(const q of list){
     if(q.life!==undefined&&!(q.life>0))continue;
-    seen.add(q.id);let e=active.get(q.id);const key=q.kind==='wave'?'wave':q.kind==='cards'?'cards':q.piercing||q.skill?'piercing':'bow';
+    seen.add(q.id);let e=active.get(q.id);const key=q.kind==='wave'?'wave':q.kind==='cards'?'cards':q.fireRank>0?'fire-arrow':q.piercing||q.skill?'piercing':'bow';
     if(e&&e.key!==key){root.remove(e.node);const pool=pools.get(e.key)||[];pool.push(e.node);pools.set(e.key,pool);active.delete(q.id);e=null;}
-    if(!e){const pool=pools.get(key);let node=pool?.pop();if(!node){if(allocated>=128){let recycled=false;for(const spare of pools.values())if(spare.length){spare.pop();allocated--;recycled=true;break;}if(!recycled)continue;}node=(key==='cards'?card:key==='wave'?wave:arrow).clone(true);allocated++;if(key==='piercing')node.traverse(o=>{if(o.isMesh)o.material=glow;});}e={key,node};active.set(q.id,e);root.add(node);}
-    const node=e.node;node.position.set(q.x,Number.isFinite(q.y)?q.y:q.kind==='wave'?.25:1.2,q.z);node.rotation.set(key==='wave'&&(q.y??.25)<.4?-Math.PI/2:0,q.yaw||0,key==='cards'?time*10+(q.id||0):0);node.scale.setScalar(q.skill?1.20:q.piercing?1.10:1);
+    if(!e){const pool=pools.get(key);let node=pool?.pop();if(!node){if(allocated>=128){let recycled=false;for(const spare of pools.values())if(spare.length){spare.pop();allocated--;recycled=true;break;}if(!recycled)continue;}node=(key==='cards'?card:key==='wave'?wave:arrow).clone(true);allocated++;if(key==='piercing'||key==='fire-arrow')node.traverse(o=>{if(o.isMesh)o.material=key==='fire-arrow'?fireMat:glow;});if(key==='fire-arrow')for(const side of[-1,1]){const flame=new T.Mesh(flameShape,flameMaterial);flame.name='player-fire-arrow-flame';flame.position.set(side*.13,.16,-.28);flame.rotation.x=Math.PI/2;node.add(flame);}}e={key,node};active.set(q.id,e);root.add(node);}
+    const node=e.node;node.position.set(q.x,Number.isFinite(q.y)?q.y:q.kind==='wave'?.25:1.2,q.z);node.rotation.set(key==='wave'&&(q.y??.25)<.4?-Math.PI/2:0,q.yaw||0,key==='cards'?time*10+(q.id||0):0);node.scale.setScalar(q.skill?1.20:q.fireRank>0?1.14:q.piercing?1.10:1);
    }
    for(const[id,e]of active)if(!seen.has(id)){root.remove(e.node);const pool=pools.get(e.key)||[];pool.push(e.node);pools.set(e.key,pool);active.delete(id);}
   }

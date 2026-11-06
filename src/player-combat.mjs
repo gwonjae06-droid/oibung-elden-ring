@@ -27,10 +27,11 @@ export function spawnPlayerProjectiles(
   weapon,
   {basicLifetime = 1.7} = {},
 ) {
-  const count = game.weapon === 'cards' ? 3+2*evolutionCount(game,'wide-deck') : game.weapon==='bow'&&!action.skill?1+evolutionCount(game,'twin-arrow'):1,
+  const count = game.weapon === 'cards' ? 3 : 1,
     skill = Boolean(action.skill);
   // All projectiles remain visible and keep their normal collision behavior.
   // Only story-mode upgraded volleys soften per-projectile damage.
+  const fireRank=game.weapon==='bow'&&!skill?evolutionCount(game,'twin-arrow'):0;
   const volleyScale=game.journeyBalance?.mode==='story'&&count>1
     ?Math.max(.78,1-.055*(count-1)):1;
   for (let i = 0; i < count; i++) {
@@ -40,13 +41,14 @@ export function spawnPlayerProjectiles(
       z: game.player.z,
       y: 1.2,
       yaw: action.yaw + (i - (count - 1) / 2) * 0.075,
-      speed: skill ? 36 : game.weapon === 'bow' ? 26+10*evolutionCount(game,'piercing-arrow') : 20,
+      speed: skill ? 36 : game.weapon === 'bow' ? 26 : 20,
       life: skill ? 2 : basicLifetime,
-      damage: weapon.damage * action.mult*volleyScale*(game.weapon==='bow'&&!skill?1+.3*evolutionCount(game,'piercing-arrow'):1),
+      damage: weapon.damage * action.mult*volleyScale*(fireRank?1+.12*fireRank:1),
+      fireRank,
       poise: weapon.poise * (skill ? 2 : 1),
       kind: game.weapon,
       source: action,
-      piercing: skill||(game.weapon==='bow'&&evolutionCount(game,'piercing-arrow')>0),
+      piercing: skill,
       bossHit: false,
       hit: false,
       skill,
@@ -108,7 +110,7 @@ export function advancePlayerProjectile(projectile, dt) {
 // Called only after the encounter accepts a hit and computes the actual damage.
 export function rewardPlayerHit(game, damage, action, {canStun, stun} = {}) {
   if (damage <= 0) return;
-  const drain=action.basic?(evolutionCount(game,'blood-hammer')*.12+evolutionCount(game,'blood-deck')*.08):0;
+  const drain=action.basic?(evolutionCount(game,'blood-hammer')*.05+evolutionCount(game,'blood-deck')*.08):0;
   if(drain){const gain=Math.min(game.player.maxHp-game.player.hp,damage*drain);game.player.hp+=gain;if(gain>0)game.events.push({type:'skill-heal',flavor:game.weapon,amount:gain});}
   const skill = game.player.skill;
   if (action.basic && game.weapon === 'hammer' && !action.credited) {
@@ -119,7 +121,7 @@ export function rewardPlayerHit(game, damage, action, {canStun, stun} = {}) {
   }
   if (action.stun && !action.stunUsed && canStun) {
     action.stunUsed = true;
-    stun(SKILLS.cards.stun);
+    stun(action.autoStun||SKILLS.cards.stun);
     game.events.push({type: 'skill-stun', flavor: 'yellow'});
   }
   if (action.skill && game.weapon === 'hammer') {
@@ -174,6 +176,9 @@ export function actPlayer(game, type) {
     return true;
   }
   if (type === 'skill') {
+    // With the cyclic forge upgrade the active skill is permanently folded
+    // into light attacks. No free additional cast through the skill key.
+    if(game.weapon==='cards'&&evolutionCount(game,'wide-deck'))return false;
     const flavor = consumeSkill(skill, game.weapon);
     if (!flavor) return false;
     emit(game, 'skill-cast', {flavor});
@@ -203,6 +208,13 @@ export function actPlayer(game, type) {
   const wind = weapon.wind / rate,
     active = weapon.active / rate,
     end = weapon.end / rate;
+  // One automatic colour per accepted light attack, never one per
+  // projectile. Card hand size stays at three.
+  const cyclicRank=game.weapon==='cards'?evolutionCount(game,'wide-deck'):0;
+  const autoCard=cyclicRank?['blue','red','yellow'][(skill.autoCardCycle++||0)%3]:null;
+  if(autoCard==='blue'){skill.blue=Math.max(skill.blue,cyclicRank===2?2:1.5);skill.blueMultiplier=cyclicRank===2?1.32:1.22;emit(game,'skill-cast',{flavor:'blue',automatic:true});}
+  if(autoCard==='red')emit(game,'skill-cast',{flavor:'red',automatic:true});
+  if(autoCard==='yellow')emit(game,'skill-cast',{flavor:'yellow',automatic:true});
   player.action = {
     kind: 'attack',
     t: 0,
@@ -213,8 +225,10 @@ export function actPlayer(game, type) {
     done: false,
     hit: false,
     basic: true,
-    mult: (skill.nextRed ? SKILLS.cards.redDamage : 1)*(game.journey?.damage??1),
-    stun: skill.nextYellow,
+    mult: (skill.nextRed ? SKILLS.cards.redDamage : 1)*(autoCard==='red'?(cyclicRank===2?1.25:1.18):1)*(game.journey?.damage??1),
+    stun: skill.nextYellow||autoCard==='yellow',
+    autoCard,
+    autoStun:autoCard==='yellow'?(cyclicRank===2?.48:.32):0,
     stunUsed: false,
     credited: false,
   };

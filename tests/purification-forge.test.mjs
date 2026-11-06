@@ -18,7 +18,7 @@ test('cached pre-shortcut modules can import the retired revival name without sp
 });
 const view={button:(id,text,attrs='')=>'<button data-j="'+id+'" '+attrs+'>'+text+'</button>',back:()=>'<button data-j="home">닫기</button>',warning:()=>''};
 
-test('four weapons each expose two independent evolution paths with two tiers',()=>{
+test('four weapons expose two mutually exclusive paths with two tiers',()=>{
  const f=sanitizeForge(null);
  for(const [weapon,paths] of Object.entries(EVOLUTIONS)){
   assert.equal(paths.length,2);
@@ -54,21 +54,23 @@ test('practice/hidden bosses grant a flame every victory but never fake campaign
 test('purchase, rank cap, insufficient balance and refunded flames preserve totals',()=>{
  const p=freshProfile();p.flames=4;p.earnedFlames=4;
  const [a,b]=EVOLUTIONS.sword;
- buy(p,'sword',a.id);buy(p,'sword',a.id);buy(p,'sword',b.id);buy(p,'sword',b.id);
- assert.equal(p.flames,0);assert.equal(investedFlames(p),4);
+ buy(p,'sword',a.id);buy(p,'sword',a.id);
+ assert.equal(buyForgeTier(p,'sword',b.id),false,'opposite path is locked after a purchase');
+ assert.equal(p.flames,2);assert.equal(investedFlames(p),2);
  assert.equal(forgeTier(p,'sword',a.id),2);
  assert.equal(buyForgeTier(p,'sword',a.id),false,'cannot exceed two tiers');
- assert.equal(buyForgeTier(p,'bow',EVOLUTIONS.bow[0].id),false);
- assert.deepEqual(forgedEvolutions(p,'sword'),[a.id,a.id,b.id,b.id]);
- assert.equal(refundForgeWeapon(p,'sword'),4);
+ assert.deepEqual(forgedEvolutions(p,'sword'),[a.id,a.id]);
+ assert.equal(refundForgeWeapon(p,'sword'),2);
  assert.equal(p.flames,4);assert.equal(investedFlames(p),0);assert.equal(refundForgeWeapon(p,'sword'),0);
+ buy(p,'sword',b.id);assert.equal(forgeTier(p,'sword',b.id),1,'refunded weapon can switch paths');
+ assert.equal(refundForgeWeapon(p,'sword'),1);
  buy(p,'bow',EVOLUTIONS.bow[0].id);
  assert.equal(p.flames,3);assert.equal(forgeTier(p,'bow',EVOLUTIONS.bow[0].id),1);
  assert.equal(p.earnedFlames,4,'refund does not inflate lifetime earn count');
 });
 test('forge tiers follow the weapon into every boss without being a run-specific reward',()=>{
  const p=freshProfile();p.flames=10;
- buy(p,'sword','blade-wave');buy(p,'sword','charged-blade');
+ buy(p,'sword','blade-wave');assert.equal(buyForgeTier(p,'sword','charged-blade'),false);
  const engines=[
   ()=>createGame('sword',{register:false}),
   ()=>createClownGame('sword',{register:false}),
@@ -79,12 +81,23 @@ test('forge tiers follow the weapon into every boss without being a run-specific
   const g=make(),run=newRun('sword');run.stage=stage;
   configureJourney(g,run,p);
   assert.equal(evolutionCount(g,'blade-wave'),1);
-  assert.equal(evolutionCount(g,'charged-blade'),1);
+  assert.equal(evolutionCount(g,'charged-blade'),0);
   assert.equal(g.startGrace,0);
   assert.equal(g.introControlled,true);
  });
  const other=createGame('hammer',{register:false});configureJourney(other,newRun('hammer'),p);
  assert.equal(evolutionCount(other,'blade-wave'),0,'forged swords cannot leak into hammer');
+});
+test('legacy dual-path purchases retain the stronger rank and refund the other on load',()=>{
+ const legacy=freshProfile();legacy.flames=1;legacy.earnedFlames=5;
+ legacy.forge.sword['blade-wave']=1;legacy.forge.sword['charged-blade']=2;
+ const restored=loadProfile({getItem:()=>JSON.stringify(legacy)});
+ assert.equal(forgeTier(restored,'sword','blade-wave'),0);
+ assert.equal(forgeTier(restored,'sword','charged-blade'),2);
+ assert.equal(restored.flames,2,'one displaced tier is returned');
+ assert.equal(restored.earnedFlames,5,'migration does not invent earned flames');
+ const second=loadProfile({getItem:()=>JSON.stringify(restored)});
+ assert.equal(second.flames,2,'migration is idempotent');
 });
 test('v4 save keeps forge and earned flames per browser but not active run',()=>{
  const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
@@ -113,6 +126,10 @@ test('rendered Korean forge offers each tier, refund and the victory flame',()=>
  assert.match(html,/대장간/);assert.match(html,/정화의 불꽃/);
  assert.match(html,/data-evolution="blade-wave"/);
  assert.match(html,/data-evolution="charged-blade"/);
+ const first=freshProfile();first.flames=2;buy(first,'sword','blade-wave');
+ const locked=forgeScreen(first,'sword',view);
+ assert.match(locked,/반대 계열 각인됨/);
+ assert.match(locked,/data-evolution="charged-blade"[^>]+disabled/);
  assert.match(html,/data-j="forge-refund"/);
  assert.match(html,/data-weapon="cards"/);
  const gained=flameRewardScreen(p,'영원한 혈왕 배서준',{...view,complete:true});

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame,act,step,skillView} from '../src/combat.mjs';
 import {STANDARD_COOLDOWN} from '../src/skills.mjs';
+import {WEAPONS} from '../src/weapon-data.mjs';
 const tick=(g,t,input={})=>{for(let s=0;s<t;s+=1/120)step(g,1/120,input);};
 const arena=g=>{g.boss.wait=999;g.player.x=0;g.player.z=0;g.player.yaw=Math.PI;g.boss.x=0;g.boss.z=-4;};
 const swing=g=>{g.player.stamina=100;g.player.action=null;g.player.yaw=Math.PI;assert.ok(act(g,'light'));tick(g,1.2);};
@@ -15,14 +16,14 @@ test('hammer skill has no cooldown, needs four hitting basics, slams hard and li
   for(let i=0;i<4;i++){assert.equal(skillView(g).ready,false);swing(g);}
   assert.equal(g.player.skill.hammerHits,4);assert.equal(skillView(g).ready,true);
   g.boss.state='idle';g.boss.poise=0;const hp=g.boss.hp;g.player.maxHp=400;g.player.hp=50;assert.ok(act(g,'skill'));tick(g,1.2);
-  const dealt=hp-g.boss.hp;assert.ok(dealt>114*2.9);assert.ok(Math.abs(g.player.hp-(50+dealt*.35))<1e-6);assert.equal(g.player.skill.hammerHits,0);assert.equal(act(g,'skill'),false);
+  const dealt=hp-g.boss.hp;assert.ok(dealt>WEAPONS.hammer.damage*2.9);assert.ok(Math.abs(g.player.hp-(50+dealt*.14))<1e-6);assert.equal(g.player.skill.hammerHits,0);assert.equal(act(g,'skill'),false);
 });
 test('hammer swings that miss do not charge the skill',()=>{const g=createGame('hammer');arena(g);g.boss.z=-20;for(let i=0;i<4;i++)swing(g);assert.equal(g.player.skill.hammerHits,0);});
 test('bow stores three piercing charges, spends one each shot and refills over time',()=>{
   const g=createGame('bow');arena(g);for(let i=0;i<3;i++){g.player.action=null;assert.ok(act(g,'skill'),String(i));}assert.equal(g.player.skill.charges,0);g.player.action=null;assert.equal(act(g,'skill'),false);
   tick(g,STANDARD_COOLDOWN+.1);assert.equal(g.player.skill.charges,1);
   const n=createGame('bow'),initialHp=n.boss.hp;arena(n);act(n,'skill');tick(n,.3);assert.equal(n.projectiles.length,1);assert.equal(n.projectiles[0].piercing,true);
-  tick(n,1.5);assert.ok(initialHp-n.boss.hp>68*2.9);assert.equal(n.stats.hits,1);
+  tick(n,1.5);assert.ok(initialHp-n.boss.hp>WEAPONS.bow.damage*2.9);assert.equal(n.stats.hits,1);
 });
 test('piercing arrow removes boss waves in its path',()=>{
   const g=createGame('bow');arena(g);g.bossShots.push({id:99,x:0,z:-1,yaw:Math.PI,speed:0,life:5,damage:30});act(g,'skill');tick(g,.45);assert.equal(g.bossShots.length,0);

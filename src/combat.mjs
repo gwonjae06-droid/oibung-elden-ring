@@ -13,8 +13,9 @@ import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
 import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
+import {evolutionCount} from './weapon-evolution.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
-import {playerWalkSpeed,PLAYER_ROLL_SPEED,playerRolling} from './player-movement-rules.mjs';
+import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
@@ -706,8 +707,8 @@ export function step(g, dt, input = {}) {
   tickPlayerAction(g, dt, w, {
     roll: (a) => {
       if (a.t <= dt * 1.1 && mag) a.yaw = Math.atan2(mx, mz);
-      p.x += Math.sin(a.yaw) * PLAYER_ROLL_SPEED * dt;
-      p.z += Math.cos(a.yaw) * PLAYER_ROLL_SPEED * dt;
+      p.x += Math.sin(a.yaw) * playerRollSpeed(g) * dt;
+      p.z += Math.cos(a.yaw) * playerRollSpeed(g) * dt;
     },
     melee: (a) => {
       const shapes=encounterBossHurtShapes(g);
@@ -904,7 +905,7 @@ export function step(g, dt, input = {}) {
 export function skillView(g) {
   const s = g.player.skill,
     w = g.weapon,
-    ready = skillReady(s, w);
+    ready = w==='cards'&&evolutionCount(g,'wide-deck')?false:skillReady(s, w);
   let text = '',
     ratio = 1,
     card = '';
@@ -931,6 +932,7 @@ export function skillView(g) {
       (s.charges + (s.charges < 3 ? s.recharge / STANDARD_COOLDOWN : 0)) / 3;
     text = '충전 ' + s.charges + ' / 3';
   } else {
+    if(evolutionCount(g,'wide-deck'))return {name:'운명의 순환',text:'다음 평타 '+['파랑','빨강','노랑'][(s.autoCardCycle||0)%3]+' 카드 · 자동 발동',ratio:1,card:'',ready:false};
     ratio = ready ? 1 : 1 - s.cooldown / STANDARD_COOLDOWN;
     card = ready ? currentCard(s) : '';
     text = ready

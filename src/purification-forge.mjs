@@ -16,13 +16,32 @@ export function sanitizeForge(input){
   if(!saved||typeof saved!=='object'||Array.isArray(saved))continue;
   for(const id of Object.keys(branches)){const tier=saved[id];branches[id]=Number.isSafeInteger(tier)&&tier>=0&&tier<=FORGE_MAX_TIER?tier:0;}
  }
+ // Historical saves could buy both paths. Keep the higher-rank path
+ // (first listed wins a tie); migration returns the displaced flames.
+ for(const [weapon,branches]of Object.entries(clean)){
+  const paths=EVOLUTIONS[weapon];
+  if(branches[paths[0].id]&&branches[paths[1].id]){
+   const keep=branches[paths[1].id]>branches[paths[0].id]?paths[1].id:paths[0].id;
+   branches[paths.find(p=>p.id!==keep).id]=0;
+  }
+ }
  return clean;
 }
+const legacyInvestment=input=>{
+ if(!input||typeof input!=='object')return 0;
+ let total=0;
+ for(const [weapon,paths]of Object.entries(EVOLUTIONS))
+  for(const {id}of paths){const tier=input?.[weapon]?.[id];
+   if(Number.isSafeInteger(tier)&&tier>=0&&tier<=FORGE_MAX_TIER)total+=tier;
+  }
+ return total;
+};
 export const investedFlames=(profile,weapon=null)=>Object.entries(sanitizeForge(profile?.forge))
  .filter(([id])=>weapon===null||id===weapon)
  .reduce((sum,[,branches])=>sum+Object.values(branches).reduce((a,b)=>a+b,0),0);
 export function normalizeFlameProfile(profile){
- profile.flames=safeInt(profile.flames);
+ const returned=Math.max(0,legacyInvestment(profile.forge)-investedFlames(profile));
+ profile.flames=Math.min(MAX_FLAMES,safeInt(profile.flames)+returned);
  profile.forge=sanitizeForge(profile.forge);
  profile.earnedFlames=Math.max(safeInt(profile.earnedFlames),profile.flames+investedFlames(profile));
  return profile;
@@ -52,9 +71,11 @@ export function forgeTier(profile,weapon,id){
  return sanitizeForge(profile?.forge)[weapon][id];
 }
 export function buyForgeTier(profile,weapon,id){
- if(!EVOLUTIONS[weapon]?.some(e=>e.id===id))return false;
+ if(!EVOLUTIONS[weapon]?.some(e=>e.id===id)||!profile||typeof profile!=='object')return false;
+ normalizeFlameProfile(profile);
  if(flameBalance(profile)<1||forgeTier(profile,weapon,id)>=FORGE_MAX_TIER)return false;
- profile.forge=sanitizeForge(profile.forge);
+ // The opposite upgrade is unreachable through the UI and API.
+ if(EVOLUTIONS[weapon].some(e=>e.id!==id&&forgeTier(profile,weapon,e.id)>0))return false;
  profile.forge[weapon][id]+=1;
  profile.flames=flameBalance(profile)-1;
  return true;

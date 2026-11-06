@@ -1,8 +1,8 @@
 export const STANDARD_COOLDOWN=10;
 export const CARD_INTERVAL=.6;
 export const CARD_ORDER=['blue','red','yellow'];
-export const SKILLS={sword:{name:'질풍검',duration:5,rate:1.8},hammer:{name:'흡혈 강타',hits:4,heal:.35,multiplier:3},bow:{name:'관통 화살',max:3,multiplier:3},cards:{name:'운명의 선택',blueDuration:3,blueSpeed:1.5,redDamage:1.5,stun:1}};
-export function createSkillState(){return {cooldown:0,haste:0,blue:0,nextRed:false,nextYellow:false,hammerHits:0,charges:3,recharge:0,cycle:0};}
+export const SKILLS={sword:{name:'질풍검',duration:5,rate:1.8},hammer:{name:'흡혈 강타',hits:4,heal:.14,multiplier:3},bow:{name:'관통 화살',max:3,multiplier:3},cards:{name:'운명의 선택',blueDuration:3,blueSpeed:1.5,redDamage:1.5,stun:1}};
+export function createSkillState(){return {cooldown:0,haste:0,blue:0,nextRed:false,nextYellow:false,hammerHits:0,charges:3,recharge:0,cycle:0,autoCardCycle:0};}
 export function tickSkills(s,weapon,dt){
   const h=Math.max(0,dt);s.cooldown=Math.max(0,s.cooldown-h);s.haste=Math.max(0,s.haste-h);s.blue=Math.max(0,s.blue-h);
   if(weapon==='cards'&&s.cooldown===0)s.cycle=(s.cycle+h)%(CARD_INTERVAL*3);
