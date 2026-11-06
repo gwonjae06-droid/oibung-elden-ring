@@ -14,7 +14,7 @@ import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
-import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
+// Legacy common active skills removed; only forge paths remain.
 import {evolutionCount} from './weapon-evolution.mjs';
 import {equippedPath,playerMeleeReach} from './weapon-abilities.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
