@@ -132,7 +132,7 @@ function curtainNightmare(g,c,a,t,api){
   circle(api,g,q,4.0,1.35,32,'curtainNightmare');
   api.emit(g,'clown-horror',{cue:'curtain-hit',x:q.x,z:q.z});
  }
- if(cross(a,t,4.2))circle(api,g,anchor,3.6,1.2,30,'curtainNightmare');
+ if(cross(a,t,3.1))circle(api,g,anchor,3.6,1.2,30,'curtainNightmare');
 }
 function clockOfTeeth(g,c,a,t,api){
  tell(api,g,c,'teeth');c.vis.glove=.8;
