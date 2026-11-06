@@ -1,5 +1,5 @@
 import {bossMaxHp} from './balance.mjs';
-export const GYUWON_RULES=Object.freeze({name:'정답을 찾지 못한 자 최규원',phaseName:'무두의 사유 최규원',radius:22,hp:bossMaxHp(4),transition:3});
+export const GYUWON_RULES=Object.freeze({name:'정답을 찾지 못한 자 최규원',phaseName:'무두의 사유 최규원',radius:30,hp:bossMaxHp(4),transition:3});
 export const GYUWON_PATTERNS=Object.freeze({
  choice:{name:'객관식의 함정',duration:3.2,recover:2.4},
  timetable:{name:'시간표',duration:4,recover:2.3},

@@ -22,8 +22,8 @@ import {
   waveCrosses,
   rollPosition,
 } from './clown-pressure.mjs';
-export const ARENA = 23,
-  BALL_LIMIT = 19.5,
+export const ARENA = 27,
+  BALL_LIMIT = 23.25,
   BODY_R = 3.3,
   CLOWN_HP = PRESSURE.hp,
   FLY = 0.9,
@@ -230,7 +230,7 @@ function bomb(g, o) {
 }
 function target(g) {
   const p = {x: g.player.x, z: g.player.z};
-  confine(p, 22);
+  confine(p, ARENA-1);
   return p;
 }
 function bombAt(
@@ -608,8 +608,8 @@ const RUN = {
         for (let i = 0; i < 5; i++) {
           if (i === gap) continue;
           const q = {
-            x: clamp(p.x + (i - 2) * 4.5, -19, 19),
-            z: clamp(p.z + (row - 1) * 4, -19, 19),
+            x: clamp(p.x + (i - 2) * 4.5, -23, 23),
+            z: clamp(p.z + (row - 1) * 4, -23, 23),
           };
           if (Math.hypot(q.x, q.z) < 22)
             zone(g, {
@@ -668,7 +668,7 @@ const RUN = {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2,
           q = {x: p.x + Math.sin(a) * 4.8, z: p.z + Math.cos(a) * 4.8};
-        confine(q, 21);
+        confine(q, ARENA-2);
         bombAt(g, q, 2.1, 26, 0.9, 'ball', 0.6 + i * 0.28);
       }
       emit(g, 'clown-balloon');
@@ -855,7 +855,7 @@ const RUN = {
     c.vis.glove=t<3.6?.6+.3*Math.sin(t*3):0;
     if(cross(a,t,1.05))bombAt(g,p,4.1,31,1.2,'head',.6);
     for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.42)){
-      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,21);
+      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,ARENA-2);
       zone(g,{shape:'circle',...q,r:2.9,warn:1,damage:24,blast:true,sound:'curtainCall'});
     }
     if(cross(a,t,4.6))emit(g,'clown-inflate');
@@ -873,9 +873,9 @@ const RUN = {
     }
     if(cross(a,t,1.5)){
       const side=c.seq%2?1:-1,aim=toward(b,g.player);
-      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-18,18),
-        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-18,18)};
-      confine(q,21);c.f.echo=q;
+      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-22,22),
+        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-22,22)};
+      confine(q,ARENA-2);c.f.echo=q;
       zone(g,{shape:'circle',...q,r:5.6,warn:1.05,damage:30,blast:true,major:true,sound:'spotlightSweep'});
       emit(g,'clown-stomp');
     }
@@ -893,7 +893,7 @@ const RUN = {
         const p=target(g),yaw=toward(b,p);
         const stride=phase?4.5:3.4,side=i%2?1:-1;
         const q={x:p.x+Math.cos(yaw)*stride*side,z:p.z-Math.sin(yaw)*stride*side};
-        confine(q,21);
+        confine(q,ARENA-2);
         zone(g,{shape:'circle',...q,r:5.4,warn:1.05,damage:phase?32:28,
           blast:true,major:true,sound:'bounce'});
         emit(g,'clown-stomp');
@@ -910,7 +910,7 @@ const RUN = {
     c.vis.tilt=Math.sin(t*4)*.22;
     for(let i=0;i<3;i++)if(cross(a,t,.8+i*.9)){
       const p=target(g),ang=c.yaw+(i-1)*.65,q={x:p.x+Math.sin(ang)*3,z:p.z+Math.cos(ang)*3};
-      confine(q,21);bombAt(g,q,3.1,27,.8,'ball',.2);
+      confine(q,ARENA-2);bombAt(g,q,3.1,27,.8,'ball',.2);
     }
     if(cross(a,t,3.5)){
       const p=target(g);rosette(g,p,7.2,1.0,8,23,c.seq%8);
@@ -939,7 +939,7 @@ const RUN = {
           ang = c.seq * 1.7 + i * 2.4,
           r = i % 2 ? 5.5 : 0,
           q = {x: p.x + Math.sin(ang) * r, z: p.z + Math.cos(ang) * r};
-        confine(q, 21);
+        confine(q, ARENA-2);
         bombAt(g, q, 2.2, 24, 0.85, 'ball', 0.35);
       }
   },

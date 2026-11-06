@@ -82,7 +82,7 @@ export function startBloodPattern(g,id){
  const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
- const point=(x,z)=>{const d=Math.hypot(x,z),n=d>23?23/d:1;return {x:x*n,z:z*n};};
+ const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
  if(id==='wave')lane(aim,1.2);
  if(id==='fountain')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6,p.z-Math.sin(aim)*(i-2)*6);circle(q.x,q.z,1.2+i*.45,4);}
  if(id==='burst')circle(b.x,b.z,1.6,14,{damage:38,life:.5});

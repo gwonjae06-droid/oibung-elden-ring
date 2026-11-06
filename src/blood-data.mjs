@@ -1,6 +1,6 @@
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
-export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:28,hp:6400,transition:4.6});
+export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:32,hp:6400,transition:4.6});
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
 const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wave:{name:'피의 파도',phase:1,duration:3.8,recover:2.2},

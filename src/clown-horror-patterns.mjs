@@ -5,7 +5,7 @@ const TAU=Math.PI*2;
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const cross=(a,t,v)=>a<v&&t>=v;
 const yawTo=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
-const bound=p=>{const d=Math.hypot(p.x,p.z),m=d>20?20/d:1;return {x:p.x*m,z:p.z*m};};
+const bound=p=>{const d=Math.hypot(p.x,p.z),m=d>24?24/d:1;return {x:p.x*m,z:p.z*m};};
 export const HORROR_DEFINITIONS=Object.freeze([
  ['echoApplause','반 박자 늦은 박수',5.7,1.3,[1],1],
  ['wrongTwin','누가 진짜 광대일까요',5.5,1.5,[1],1],
