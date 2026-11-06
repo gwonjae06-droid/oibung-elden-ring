@@ -309,12 +309,12 @@ export function attackZone(b) {
       yaw: b.yaw + Math.PI,
       half: Math.PI - 1.2,
     };
-  if (['slam', 'leap','graveSword'].includes(b.pattern) && b.zone)
+  if (['slam', 'leap'].includes(b.pattern) && b.zone)
     return {
       ...base,
       x: b.zone.x,
       z: b.zone.z,
-      r: b.pattern === 'leap' ? 5.2 : b.pattern==='graveSword'?4.4:3.2,
+      r: b.pattern === 'leap' ? 5.2 : 3.2,
     };
   return null;
 }
@@ -479,7 +479,7 @@ export function startPattern(g, name) {
   b.punishable = false;
   b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
   b.aim = b.yaw;
-  b.zone = ['slam', 'leap','graveSword'].includes(name)
+  b.zone = ['slam', 'leap'].includes(name)
     ? {x: g.player.x, z: g.player.z}
     : null;
   emit(g, 'telegraph', {name: PATTERNS[name].name});
@@ -874,7 +874,10 @@ export function step(g, dt, input = {}) {
     } else if (
       !b.hit &&
       !zone &&
-      !['wave', 'retreat'].includes(b.pattern) &&
+      // Grave Sword is a projectile-only signature. Its former targeted
+      // 4.4-unit ground zone and this sword sweep could deal invisible
+      // instant damage before any traveling grave projectiles arrived.
+      !['wave', 'retreat', 'graveSword'].includes(b.pattern) &&
       bladeHits(p, swordSegment(b))
     ) {
       b.hit = true;
