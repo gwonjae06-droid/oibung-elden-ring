@@ -252,6 +252,7 @@ function makeLights(root,coarse){
 }
 const WARM=[0xffe4a9,0xffcf7f,0xffd49a];
 const FRENZY=[0xf5cb80,0xf389b8,0x8bd8d3,0xb08ff2,0xffe4a9];
+const NIGHTMARE=[0xb98691,0x70405a,0xc7a79c,0x8c334a,0x8a788e];
 export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='clown-radiant-nightmare-circus';scene.add(root);
  const scenery=makeScenery(root,coarse),lights=makeLights(root,coarse),tent=createClownEncoreTent(root,{coarse,reduced}),machinery=createClownStageMachinery(root,{coarse,reduced});
@@ -259,10 +260,10 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  const box=new THREE.Vector3(),aim=new THREE.Vector3(),tmp=new THREE.Vector3();
  function recolor(next){
   if(phase===next)return;phase=next;
-  const colors=next===2?FRENZY:WARM;
+  const colors=next===3?NIGHTMARE:next===2?FRENZY:WARM;
   for(let i=0;i<scenery.bulbCount;i++)scenery.marquee.setColorAt(i,new THREE.Color(colors[(i+(next===2?Math.floor(i/12):0))%colors.length]));
   scenery.marquee.instanceColor.needsUpdate=true;
-  scenery.haloMat.color.setHex(next===2?0xffb8cc:0xffdb9c);
+  scenery.haloMat.color.setHex(next===3?0x9b637a:next===2?0xffb8cc:0xffdb9c);
  }
  function reset(){
   tent.reset();machinery.reset();clock=0;pulse=0;beat=0;cueLeft=0;focus=null;spotMode='gold';
@@ -272,7 +273,9 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  function event(e,g){
   if(disposed||!e)return;
   const type=e.type;machinery.event(e);
-  if(type==='phase'||type==='clown-phase2'){recolor(2);pulse=.45;spotMode='frenzy';cueLeft=1.8;}
+  if(type==='clown-phase3'){recolor(3);pulse=.7;spotMode='crimson';cueLeft=2.2;}
+  else if(type==='clown-horror'){pulse=Math.max(pulse,.28);spotMode='crimson';cueLeft=Math.max(cueLeft,.55);focus=Number.isFinite(e.x)&&Number.isFinite(e.z)?{x:e.x,z:e.z}:null;}
+  else if(type==='phase'||type==='clown-phase2'){recolor(2);pulse=.45;spotMode='frenzy';cueLeft=1.8;}
   else if(type==='clown-clap'||type==='clown-bounce'){pulse=Math.max(pulse,.5);spotMode='gold';cueLeft=.8;}
   else if(type==='clown-blast'||type==='clown-throw'||type==='clown-roll'){
    pulse=Math.max(pulse,.65);spotMode='crimson';cueLeft=.85;
@@ -287,8 +290,9 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
   const h=clamp(Number.isFinite(dt)?dt:0,0,.05),live=g.status==='playing';
   tent.update(g,h);machinery.update(g,h);
   clock+=h;pulse=Math.max(0,pulse-h*1.6);cueLeft=Math.max(0,cueLeft-h);
-  if(g?.boss?.phase===2)recolor(2);else if(g?.boss?.phase===1&&g.boss.state!=='transition')recolor(1);
-  const p=g.boss||{x:0,z:0},mode=cueLeft>0?spotMode:(phase===2?'frenzy':'gold');
+  if(g?.clown?.horrorStage===3)recolor(3);
+  else if(g?.boss?.phase===2)recolor(2);else if(g?.boss?.phase===1&&g.boss.state!=='transition')recolor(1);
+  const p=g.boss||{x:0,z:0},mode=cueLeft>0?spotMode:(phase===3?'crimson':phase===2?'frenzy':'gold');
   const colorA=mode==='crimson'?0xffb09d:mode==='frenzy'?0xff9fcb:0xffe5b6;
   const colorB=mode==='frenzy'?0x8de5dc:mode==='crimson'?0xffd2a0:0xffcf8a;
   lights.left.color.setHex(colorA);lights.right.color.setHex(colorB);
@@ -299,8 +303,8 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
   if(focus&&cueLeft>0)tmp.set(focus.x,.8,focus.z);
   else tmp.set(-movement,1.2,-2+Math.cos(clock*.7)*3);
   lights.right.target.position.lerp(tmp,clamp(h*3,0,1));
-  lights.left.intensity=(coarse?72:100)*(live?1:.78)*(1+pulse*.32);
-  lights.right.intensity=coarse?0:(phase===2?98:75)*(live?1:.7)*(1+pulse*.2);
+  lights.left.intensity=(coarse?72:100)*(live?1:.78)*(phase===3?.8:1)*(1+pulse*.32);
+  lights.right.intensity=coarse?0:(phase>=2?98:75)*(live?1:.7)*(phase===3?.78:1)*(1+pulse*.2);
   for(const {light,fixture,lens,beam,color,base}of lights.fill){
    light.color.setHex(phase===2?0xffd1ce:color);
    light.intensity=base*(live?1:.78)*(1+Math.min(.22,pulse*.10));
