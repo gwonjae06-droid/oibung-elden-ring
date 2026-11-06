@@ -3,7 +3,7 @@ import {BLOOD_FOLEY,bloodFoleySpec} from './blood-foley.mjs';
 const dir='assets/sfx/';
 export const BOSS_FOLEY_FILES=Object.freeze({
  sword:Object.freeze({draw:dir+'u_dtbxmnju4i-taking-out-knife-217793.mp3',sharpen:dir+'dragon-studio-sharpening-blade-393850.mp3',swing:dir+'freesound_community-sword-sound-2-36274.mp3',flesh:dir+'universfield-sword-blade-slicing-flesh-352708.mp3'}),
- clown:Object.freeze({drum:dir+'dragon-studio-hammer-smash-effect-382731.mp3',glass:dir+'freesound_community-glass-smash-6266.mp3',shatter:dir+'dragon-studio-window-smash-sfx-382708.mp3',ball:dir+'freesound_community-tennis-smash-100733.mp3'}),
+ clown:Object.freeze({drum:dir+'dragon-studio-hammer-smash-effect-382731.mp3',glass:dir+'freesound_community-glass-smash-6266.mp3',shatter:dir+'dragon-studio-window-smash-sfx-382708.mp3',shutter:dir+'oxidvideos-taking-playing-card-522520.mp3',ball:dir+'freesound_community-tennis-smash-100733.mp3'}),
  dice:Object.freeze({roll:dir+'freesound_community-rolling-dice-2-102706.mp3',longRoll:dir+'freesound_community-076456_2d6-rolling-dice-35980.mp3',jump:dir+'u_qpfzpydtro-dice-142528.mp3',coin:dir+'dragon-studio-dropping-a-coin-478359.mp3',coinSecond:dir+'freesound_gamestudio-drop-coin-384921.mp3',coinThird:dir+'universfield-coin-drop-229314.mp3',impact:dir+'dragon-studio-hard-heavy-impact-515256.mp3',giant:dir+'dragon-studio-heavy-impact-loud-515259.mp3',fracture:dir+'freesound_community-rock-smash-6304.mp3'})
 });
 export const BOSS_FOLEY_PRELOAD=Object.freeze({blood:Object.freeze(Object.values(BLOOD_FOLEY)),kwon:Object.freeze(Object.values(BOSS_FOLEY_FILES.sword)),clown:Object.freeze(Object.values(BOSS_FOLEY_FILES.clown)),dice:Object.freeze(Object.values(BOSS_FOLEY_FILES.dice))});
@@ -16,6 +16,9 @@ export function bossFoleySpec(ev,g){
   case 'dice-roll':return cue(f.roll,.17,.94,.14,.22);
   case 'dice-charge':return cue(f.longRoll,.28,1.6,.2,.25);
   case 'dice-jump':return cue(f.jump,.2,1,.16,.25);
+  case 'dice-roulette-spin':return cue(f.longRoll,.23,1.4,.2,.5,.92);
+  case 'dice-roulette-result':return cue(f.coinThird,.24,.8,.12,.2);
+  case 'dice-roulette-release':return cue(f.coinSecond,.2,.65,.1,.2,1.06);
   case 'dice-pip-warning':return cue(f.coinSecond,.16,.72,.1,.28);
   case 'dice-pip-burst':return cue(f.coinThird,.17,.85,.15,.2);
   case 'dice-impact':return cue(f.impact,.22,1.25,.22,.17);
@@ -30,7 +33,7 @@ export function bossFoleySpec(ev,g){
   default:return null;
  }}
  if(g.clown){const f=BOSS_FOLEY_FILES.clown;switch(type){
-  case 'clown-shutter':return cue(f.ball,.22,.18,.03,.14,1.7);
+  case 'clown-shutter':return cue(f.shutter,.32,.32,.035,.13,1.15);
   case 'clown-telegraph':return cue(f.drum,.12,.4,.1,.35,.72);
   case 'clown-zone':return ev.warn>=.5?cue(f.ball,.12,.3,.08,.28,ev.shape==='cone'?1.1:.8):null;
   case 'clown-roll':return cue(f.ball,.2,.32,.08,.18,.85);

@@ -20,7 +20,7 @@ export function createClownImpactFx(scene,{mobile=false,reduced=false}={}){
  function clear(){stageProps.clear();game=null;particles.length=fragments.length=0;geo.setDrawRange(0,0);paper.count=rubber.count=0;light.intensity=lightLife=trailTime=0;for(const w of[...decor,...live]){w.life=0;w.m.visible=false;}serial=0;}
  function event(e,g){
   if(!g.clown)return;game=g;stageProps.event(e,g);if(['phase','victory','death'].includes(e.type)){clear();return;}
-  if(e.type==='clown-shutter'){wave(e.x,e.z,1.4,0xffffff);light.position.set(e.x,2,e.z);light.color.setHex(0xffffff);lightLife=.08;light.intensity=45;}
+  // Shutter is deliberately a cheap 2D white flash, not a transient point light.
   if(e.type==='clown-blast'){
    const index=serial++,theme=blastTheme(index),r=e.r||3.2;burst(e.x,e.z,index);debris(e.x,e.z,index);wave(e.x,e.z,r,theme.colors[0],theme.jagged);if(!reduced){wave(e.x,e.z,r*.7,theme.colors[1],theme.jagged);wave(e.x,e.z,r*1.15,theme.colors[0],0);}
    light.position.set(e.x,2,e.z);light.color.setHex(theme.colors[0]);lightLife=.16;light.intensity=180;

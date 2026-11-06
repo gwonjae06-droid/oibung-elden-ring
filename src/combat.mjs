@@ -750,7 +750,7 @@ export function step(g, dt, input = {}) {
     q.age = (q.age||0) + dt;
     q.life -= dt;
     if (Math.hypot(q.x, q.z) > 27) q.life = 0;
-    if (q.life > 0 && segmentDistance(p, old, q) < (q.radius ?? 0.9)) {
+    if (q.life > 0 && q.age >= (q.minArmTime||0) && segmentDistance(p, old, q) < (q.radius ?? 0.9)) {
       q.life = 0;
       hurtPlayer(g, q.damage);
     }
@@ -819,11 +819,13 @@ export function step(g, dt, input = {}) {
         const yaw=kind==='spiderPrison'?baseYaw+(i-3)*gap:
           kind==='graveSword'?baseYaw+(i-1)*.31:
           kind==='lastStance'?baseYaw+(i?-.37:.37):baseYaw;
-        const origin=kind==='graveSword'&&b.zone?b.zone:b;
-        const x=origin.x+Math.sin(yaw)*1.7,z=origin.z+Math.cos(yaw)*1.7;
+        // Emit sword waves from the visible boss blade, never from the player-locked impact marker.
+        const origin=b;
+        const x=origin.x+Math.sin(yaw)*4.5,z=origin.z+Math.cos(yaw)*4.5;
         const shot={id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw,
           variant:b.waveVariant,radius:kind==='livingSword'?1.1:1.05,
           speed:kind==='spiderPrison'?9:kind==='graveSword'?8:kind==='livingSword'?11:17,
+          minArmTime:.3,
           life:kind==='spiderPrison'?1.65:2.0,age:0,damage:kind==='spiderPrison'?16:kind==='graveSword'?22:26};
         if(kind==='livingSword')shot.turnRate=.65;
         g.bossShots.push(shot);
@@ -835,7 +837,7 @@ export function step(g, dt, input = {}) {
       const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
       g.bossShots.push({id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw:b.yaw,
         variant:b.waveVariant,radius:KWON_WAVE.radius,
-        speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,
+        speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,minArmTime:.2,
         life:KWON_WAVE.lifetime,age:0,damage:cfg.damage});
       emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
     }
