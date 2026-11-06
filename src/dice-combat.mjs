@@ -69,7 +69,16 @@ function finishPattern(g){const d=g.dice;d.index=d.to.index;d.state='recovery';d
 function completeRoll(g){const d=g.dice;if(d.frenzyRemaining>0){d.frenzyRemaining--;if(d.frenzyRemaining>0){prepare(g);return;}d.longRecovery=true;d.pendingPattern=false;d.state='recovery';d.t=0;emit(g,'dice-frenzy-end');return;}d.moves++;d.pendingPattern=d.moves%2===0;d.state='recovery';d.t=0;syncDiceClock(g);}
 function finishRoll(g){const d=g.dice;d.roamPrevious=d.index;d.index=d.to.index;d.rotation=[...d.pose.rotation];emit(g,'dice-impact',{x:d.pose.x,z:d.pose.z});if(g.boss.phase===1){beginPips(g,true);return;}completeRoll(g);}
 function tick(g,dt,input){tickBossHitTraits(g,dt);g.dice.crushCooldown=Math.max(0,(g.dice.crushCooldown||0)-dt);const p=g.player,d=g.dice,locked=playerIncapacitated(p),x=!locked&&Number.isFinite(input.x)?input.x:0,z=!locked&&Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=input.roll?(Number.isFinite(input.rollSpeed)?input.rollSpeed:10):R.playerSpeed*weaponStats(g.weapon).walkSpeed*(Number.isFinite(input.blueSpeed)?input.blueSpeed:input.blue?1.5:1)*diceSlowFactor(p),nx=p.x+(d.giant?.state==='transition'?0:x/n*speed*dt),nz=p.z+(d.giant?.state==='transition'?0:z/n*speed*dt);if(onDiceBoard({x:nx,z:p.z}))p.x=nx;if(onDiceBoard({x:p.x,z:nz}))p.z=nz;g.time+=dt;stepDiceSlow(p,dt);updateDicePhase(g);
- if(d.giant){d.pips=null;clearDiceRoulette(g);stepGiant(g,dt,Boolean(input.freezeBoss));return;}
+ if(d.giant){
+  d.pips=null;clearDiceRoulette(g);stepGiant(g,dt,Boolean(input.freezeBoss));
+  // These restored special attacks are now EXCLUSIVE giant slots. No
+  // background portrait/chain attack can overlap a different giant move.
+  if(d.groundSpikes&&g.status==='playing'){
+   stepDiceFaceAttacks(g,dt,Boolean(input.freezeBoss),R.edge,65,R.playerRadius);
+   if(!d.groundSpikes)d.facePattern=null;
+  }
+  return;
+ }
  stepDiceRoulette(g,dt,Boolean(input.freezeBoss));if(g.status!=='playing')return;
  if(d.state==='face-pattern'){
   // One boss pattern runs at a time. Keep its telegraph and projectile/sweep

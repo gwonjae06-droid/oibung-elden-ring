@@ -17,8 +17,9 @@ test('all thirty of Sungwons giant signatures can actually cast with visible str
    const g={player:{x:0,z:-42},dice:{patternShuffle:createPatternShuffle(seed),
     giant:{temperament:phase,phaseCastCount:0}}};
    const selected=Array.from({length:pool.length},()=>nextGiantPressureSlot(g));
-   const essential=phase==='feral'?[7,13,14,15]:[6,12,13];
+   const essential=phase==='feral'?[7,13,14,15]:[14,15,6,12,13];
    assert.deepEqual(sort(selected.slice(0,essential.length)),sort(essential));
+   if(phase==='controlled')assert.deepEqual(sort(selected.slice(0,2)),sort([14,15]));
    assert.deepEqual(sort(selected),sort(Array.from({length:pool.length},(_,i)=>i)));
   }
  }
