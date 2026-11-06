@@ -63,10 +63,12 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
   const feral=giant?.temperament==='feral',rage=giant?.rageBeat||0;
   const impact=giant?.state==='attack'&&giant.hazards?.some(h=>giant.t>=h.start+h.warn&&giant.t<h.start+h.warn+.18)?1:0;
   const flicker=giant&&!reduced?(Math.sin(t*17.7)*.10+Math.sin(t*29.3)*.08):0;
-  neon.color.copy(warm).lerp(alarm,alarmMix).multiplyScalar((1-mood.silence*.85)*(1-.35*alarmMix)*(1+flicker+impact*.17));
+  // Phase two remains an elegant golden casino. Only the feral third phase
+  // drives the whole environment to violent red strobing and distortion.
+  neon.color.copy(warm).lerp(alarm,feral?.96:alarmMix*.22).multiplyScalar((1-mood.silence*.85)*(1-.2*alarmMix)*(1+flicker*(feral?1:.15)+impact*.17));
   gold.color.copy(darkGold).lerp(warm,1-alarmMix*.5);
   // Emergency strobes on every wall flash red once the body is stolen and keep pulsing in the dark second phase.
-  const alarmLevel=giant?(giant.state==='transition'?alarmMix:.45+(feral?.35:0)):0;
+  const alarmLevel=giant?(giant.state==='transition'?alarmMix:feral?.82:.12):0;
   strobe.color.setRGB(alarmLevel*(Math.sin(t*(feral?18:12))>0?1:.18),0,0);
   chandeliers.forEach((ring,i)=>{ring.rotation.z=(act.phase===3?(i?-.24:.19):0)+(reduced?0:Math.sin(t*(feral?2.6:1.25)+i)*(.02+.05*alarmMix+act.p3*.13)+impact*.035);});
   for(const [index,p] of patrons.entries()){
