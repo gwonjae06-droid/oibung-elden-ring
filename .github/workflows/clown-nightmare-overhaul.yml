@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - feat/clown-nightmare-horror-overhaul-20261106
+      - feat/clown-living-nightmare-world-20261106
     paths:
       - 'src/clown-*'
       - 'src/circus-*'
@@ -51,3 +51,4 @@ jobs:
           tests/clown-engine.test.mjs
           tests/clown-stage-isolation.test.mjs
           tests/boss-sfx.test.mjs
+          tests/boss-foley-map.test.mjs
