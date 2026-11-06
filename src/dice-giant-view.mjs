@@ -1,5 +1,6 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
+import {createRecoilBank} from './animation-recoil.mjs';
 import {createGiantElbowFollow,constrainGiantElbow} from './giant-arm-inertia.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
@@ -66,7 +67,7 @@ export function buildDiceGiant(scene){
  const handImpactRings=[0,1].map(i=>{const m=mesh(ringGeo,ringMat.clone(),root,[1,1,1]);m.castShadow=m.receiveShadow=false;m.name='sungwon-palm-impact-'+i;m.visible=false;m.renderOrder=8;return m;});
  const spray=Array.from({length:64},(_,i)=>{const m=new T.Mesh(sprayGeo,sprayMat);m.visible=false;root.add(m);const a=i*2.399963229728653,rad=Math.sqrt((i+.5)/64);return {mesh:m,vx:Math.cos(a)*(6+32*rad),vy:Math.sin(a)*(12+22*rad),vz:-(16+28*rad),size:.22+.7*((i*37)%29)/29};});
  let last=null,death=0,disposed=false,handPrev=[GIANT.handHp,GIANT.handHp],handPulse=[0,0],releaseOrigins=new WeakMap();
- const wristSprings=createSpringBank();
+ const wristSprings=createSpringBank(),recoil=createRecoilBank();
  const elbowFollow=[createGiantElbowFollow(),createGiantElbowFollow()];
  let trackedPlayer=null;
  const handParts=hands.flatMap(h=>[h.group,h.upper,h.forearm,h.joint]);
@@ -79,7 +80,7 @@ export function buildDiceGiant(scene){
    const depth=Math.max(1,-barView.copy(b.group.position).applyMatrix4(camera.matrixWorldInverse).z);
    b.group.scale.setScalar(Math.min(1,2*depth*Math.tan(camera.fov*Math.PI/360)*camera.aspect*.16/17.6));
   }
- },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();elbowFollow.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
+ },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();recoil.reset();elbowFollow.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
   const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
@@ -88,7 +89,8 @@ export function buildDiceGiant(scene){
   body.position.set(posture.bodyX*rise,23-11*lean-weight*7-23*(1-rise)-34*fall,-133+61*lean+weight*7);
   body.scale.set(1+weight*.025,1-weight*.055,1+weight*.07);
   const breath=feral?Math.sin(time*9)*.035:Math.sin(time*1.4)*.012;
-  body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14;
+  body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14+
+   recoil.step('shoulder:weight',weight+(posture.throwTwist||0)*.6+(handPulse[0]+handPulse[1])*.4,dt,{strength:1.8,frequency:13,limit:.078});
   body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
   body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0);
   // Gentle delayed counterweight augments existing elbows and wrists.
