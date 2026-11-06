@@ -66,13 +66,12 @@ test('journey attack and roll modifiers are both scaled after the final cost is 
  assert.ok(actPlayer(roll,'roll'));
  near(roll.player.stamina,73.6);
 });
-test('charged sword stamina includes the surcharge and gets the same relief',()=>{
+test('long sword specialization no longer charges an attack or adds stamina surcharge',()=>{
  const g=fresh('sword');g.evolutions=['charged-blade'];
- assert.ok(actPlayer(g,'charge-start'));
- assert.equal(g.player.stamina,100);
- g.player.action.t=.9;
- assert.ok(actPlayer(g,'charge-release'));
- near(g.player.stamina,76.2);
+ assert.equal(actPlayer(g,'charge-start'),false);
+ assert.equal(actPlayer(g,'charge-release'),false);
+ assert.ok(actPlayer(g,'light'));
+ near(g.player.stamina,100-playerStaminaCost(WEAPONS.sword.cost));
  assert.equal(g.player.action.kind,'attack');
 });
 test('maximum stamina, recharge speed, and regeneration delay are unchanged',()=>{

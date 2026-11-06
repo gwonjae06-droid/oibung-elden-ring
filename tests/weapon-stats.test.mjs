@@ -55,13 +55,13 @@ test('all four story boss entry points initialize equipped HP, not a shared 120'
  }
 });
 
-test('move, dodge and stamina regeneration scale without altering existing skill bonuses',()=>{
+test('move, dodge and stamina regeneration scale while retired active buffs stay disabled',()=>{
  for(const [weapon,stats]of Object.entries(CASES)){
   const game=createGame(weapon,{register:false}),p=game.player;
   near(playerWalkSpeed(p),PLAYER_WALK_SPEED*stats.walkSpeed);
   near(playerRollSpeed(game),PLAYER_ROLL_SPEED*stats.rollDistance);
   p.skill.blue=2;p.skill.blueMultiplier=1.4;
-  near(playerWalkSpeed(p,.65),PLAYER_WALK_SPEED*stats.walkSpeed*1.4*.65);
+  near(playerWalkSpeed(p,.65),PLAYER_WALK_SPEED*stats.walkSpeed*.65);
   p.skill.blue=0;
   p.stamina=20;p.regen=0;p.action=null;
   tickPlayerResources(game,.5);
@@ -72,7 +72,7 @@ test('move, dodge and stamina regeneration scale without altering existing skill
  }
  const bow=createGame('bow',{register:false});
  bow.evolutions=['piercing-arrow','piercing-arrow'];
- near(playerRollSpeed(bow),PLAYER_ROLL_SPEED*1.05*1.35);
+ near(playerRollSpeed(bow),PLAYER_ROLL_SPEED*1.05);
 });
 
 test('clown damage applies phase pressure first and then weapon defense, with accurate events',()=>{
@@ -98,16 +98,16 @@ test('casino roulette projectiles deal scaled damage while conserving their dodg
  }
 });
 
-test('remaining combat damage handlers share the same incoming scaling and existing skills are untouched',()=>{
+test('remaining combat damage handlers share the same incoming scaling and skills are forge-only',()=>{
  for(const path of ['combat','clown-combat','blood-combat','dice-combat','dice-giant','dice-roulette-attack','boss-hit-traits']){
   const s=readFileSync(new URL('../src/'+path+'.mjs',import.meta.url),'utf8');
   assert.match(s,/playerIncomingDamage\(/,path);
  }
  const dice=readFileSync(new URL('../src/dice-combat.mjs',import.meta.url),'utf8');
  assert.match(dice,/R\.playerSpeed\*weaponStats\(g\.weapon\)\.walkSpeed/);
- assert.equal(SKILLS.sword.duration,5);
- assert.equal(SKILLS.hammer.hits,4);
- assert.equal(SKILLS.bow.max,3);
+ assert.equal(SKILLS.sword.name,'검술');
+ assert.equal(SKILLS.hammer.name,'철추');
+ assert.equal(SKILLS.bow.name,'궁술');
  assert.deepEqual(Object.keys(SKILLS),['sword','hammer','bow','cards']);
  const journey=readFileSync(new URL('../src/journey.mjs',import.meta.url),'utf8');
  assert.match(journey,/j-weapon-statline/);
