@@ -40,7 +40,7 @@ test('the third horror act starts at 25% HP without disrupting the physical phas
 for(const name of HORROR_PATTERNS){
  test(name+' never causes unexplained immediate damage, has visible warnings, then a punish window',()=>{
   const g=createClownGame('sword',{register:false,seed:90});
-  g.boss.phase=PATTERNS[name].phases.includes(1)?1:2;
+  g.boss.phase=2; // keep the authored phase-two physical rig stable while exercising all attack timelines
   g.boss.hp=g.boss.maxHp*.2;
   g.clown.horrorStage=3;
   const hp=g.player.hp;g.player.invuln=999;
