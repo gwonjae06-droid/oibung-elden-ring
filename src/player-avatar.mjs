@@ -3,6 +3,7 @@ import {runThreeStartup} from './runtime/three-startup.mjs';
 import {loft,plate,beam,addMesh,mergeRigid} from './player-geometry.mjs';
 import {buildPlayerWeapons} from './player-weapons.mjs';
 import {finishPlayerSurfaces} from './player-surfaces.mjs';
+import {createWeightedJoint} from './joint-skinning.mjs';
 
 export function buildPlayerAvatar(weaponKeys,namespace=BASE_THREE){
  return runThreeStartup(namespace,T=>{
@@ -105,7 +106,19 @@ export function buildPlayerAvatar(weaponKeys,namespace=BASE_THREE){
   shell(flask,'player-flask-glass',m.gem,[[-.12,.04,.04],[-.08,.075,.065],[.07,.07,.06],[.13,.035,.03],[.17,.035,.03]],12,0,-.07,.08);
   shell(flask,'player-flask-stopper',m.gold,[[.15,.04,.035],[.20,.04,.035]],10,0,-.07,.08);
   mergeRigid(T,body);mergeRigid(T,flask);
-  const presentationParts=Object.freeze({quality:'oathwarden-v1',rig,body,pivot,head,shadow,arms:Object.freeze([arms.L,arms.R]),elbows:Object.freeze([elbows.L,elbows.R]),hands:Object.freeze([hands.L,hands.R]),wrists:Object.freeze([wrists.L,wrists.R]),legs:Object.freeze([legs.L,legs.R]),knees:Object.freeze([knees.L,knees.R]),ankles:Object.freeze([ankles.L,ankles.R]),weapons:Object.freeze({...weaponRigs}),weaponDetails,cape,capeMesh,capeRest,flask,materials:m});
+  // Flexible material now closes the gaps between rigid armor plates.
+  // Add AFTER rigid mesh batching so skin weights and Skeleton cannot be
+  // flattened into a static merged mesh.
+  const jointSkins=[];
+  for(const key of ['L','R']){
+   jointSkins.push(
+    createWeightedJoint(T,arms[key],elbows[key],m.leather,{name:'player-skinned-elbow-'+key,radius:.085,length:.22,sides:9}),
+    createWeightedJoint(T,elbows[key],wrists[key],m.leather,{name:'player-skinned-wrist-'+key,radius:.068,length:.17,sides:8}),
+    createWeightedJoint(T,legs[key],knees[key],m.leather,{name:'player-skinned-knee-'+key,radius:.100,length:.22,sides:9}),
+    createWeightedJoint(T,knees[key],ankles[key],m.darkSteel,{name:'player-skinned-ankle-'+key,radius:.085,length:.17,sides:8})
+   );
+  }
+  const presentationParts=Object.freeze({quality:'oathwarden-v1',rig,body,pivot,head,shadow,arms:Object.freeze([arms.L,arms.R]),elbows:Object.freeze([elbows.L,elbows.R]),hands:Object.freeze([hands.L,hands.R]),wrists:Object.freeze([wrists.L,wrists.R]),legs:Object.freeze([legs.L,legs.R]),knees:Object.freeze([knees.L,knees.R]),ankles:Object.freeze([ankles.L,ankles.R]),weapons:Object.freeze({...weaponRigs}),weaponDetails,cape,capeMesh,capeRest,flask,jointSkins:Object.freeze(jointSkins),materials:m});
   Object.defineProperty(rig,'presentationParts',{value:presentationParts});
   return {rig,body,pivot,mats:Object.values(m).filter(v=>v.isMeshStandardMaterial),weaponRigs,legs,knees,ankles,arms,elbows,hands,cape,capeParts,cloth:m.cloth,presentationParts};
  });

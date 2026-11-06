@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import {createBloodLegRig} from './blood-leg-rig.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
+import {createRecoilBank} from './animation-recoil.mjs';
+import {bloodWeightAccent} from './boss-performance.mjs';
+import {createWeightedJoint} from './joint-skinning.mjs';
 
 // Sculpted, articulated costume geometry. Every detail is actual depth geometry;
 // the spell system and all damage volumes remain independent of this visual rig.
@@ -33,7 +37,7 @@ function taperedCuff(parent,side,mat){
  cuff.rotation.z=-side*.12;
  return cuff;
 }
-function armature(actor,side,{dark,red,metal,edge,skin,vein}){
+function armature(actor,side,{dark,red,metal,edge,skin,vein,coarse=false}){
  const arm=new THREE.Group();arm.position.set(side*1.06,3.26,-.02);actor.add(arm);
  const shoulder=attach(arm,new THREE.SphereGeometry(.56,20,12),metal,side*.08,-.08,-.03);
  shoulder.scale.set(1.17,.66,1);
@@ -67,7 +71,11 @@ function armature(actor,side,{dark,red,metal,edge,skin,vein}){
  }
  const thorn=attach(arm,new THREE.ConeGeometry(.15,.78,8),vein,side*.47,.11,-.12);
  thorn.rotation.z=-side*.45;thorn.visible=false;
- return {arm,forearm,hand,fingers,thorn,side};
+ const skins=[
+  createWeightedJoint(THREE,arm,forearm,dark,{name:'blood-skinned-elbow-'+side,radius:.26,length:.34,sides:coarse?8:10}),
+  createWeightedJoint(THREE,forearm,hand,skin,{name:'blood-skinned-wrist-'+side,radius:.16,length:.22,sides:coarse?8:10})
+ ];
+ return {arm,forearm,hand,fingers,thorn,side,skins};
 }
 export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const dark=material(0x1a1118,0,.92),wine=material(0x35111e,0,.84,{side:THREE.DoubleSide});
@@ -75,7 +83,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const edge=material(0xd5ba88,.7,.28),skin=material(0xb38b80,0,.85);
  const vein=material(0x790a2c,.16,.29,{emissive:0x310612,emissiveIntensity:.5});
  const bone=material(0xb8a8a0,.16,.44),ashes=material(0x26131f,.2,.6);
- const legRig=createBloodLegRig(actor,{dark,metal,edge});
+ const legRig=createBloodLegRig(actor,{dark,metal,edge,coarse});
  const torso=new THREE.Group();actor.add(torso);
  // The inner robe is one continuous lathed volume, rather than a flat cone.
  const outline=[new THREE.Vector2(1.28,.55),new THREE.Vector2(1.43,.65),new THREE.Vector2(1.25,1.02),new THREE.Vector2(.98,1.65),new THREE.Vector2(.73,2.48),new THREE.Vector2(.89,3.15),new THREE.Vector2(.68,3.48)];
@@ -118,7 +126,7 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   seam.scale.set(1,1,1);
  }
  // Heavy curtain cape with a separate over-shoulder mantle.
- const cape=new THREE.Group();actor.add(cape);cape.position.set(0,3.66,-.32);
+ const cape=new THREE.Group();torso.add(cape);cape.position.set(0,3.66,-.32);
  for(const side of [-1,1]){
   const sh=attach(cape,new THREE.SphereGeometry(.8,20,12),wine,side*.7,-.05,-.45);
   sh.scale.set(.95,.37,.7);
@@ -126,9 +134,11 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   fall.rotation.z=side*.07;
   tube(cape,[[side*.36,0,-.74],[side*.67,-1.0,-1],[side*1.12,-3.38,-.85]],.034,edge,22);
  }
- const arms=[armature(actor,-1,{dark,red,metal,edge,skin,vein}),armature(actor,1,{dark,red,metal,edge,skin,vein})];
+ // Shoulder sockets stay mounted on the turning chest: hand and elbow joints
+ // follow the same torso during every casting pose instead of floating.
+ const arms=[armature(torso,-1,{dark,red,metal,edge,skin,vein,coarse}),armature(torso,1,{dark,red,metal,edge,skin,vein,coarse})];
  // Phase two: exposed ribs and needlelike bone growth originate from beneath the armor.
- const growth=new THREE.Group();actor.add(growth);growth.visible=false;
+ const growth=new THREE.Group();torso.add(growth);growth.visible=false;
  for(const side of [-1,1]){
   for(let i=0;i<4;i++){
    const y=2.3+i*.32,spread=.45+i*.12;
@@ -143,33 +153,52 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
  const heart=attach(growth,new THREE.IcosahedronGeometry(.3,1),vein,0,3.12,.76);
  const ring=attach(growth,new THREE.TorusGeometry(.52,.04,6,32),edge,0,3.12,.73);
  // A restrained moving silhouette in phase one; violent structural bloom in phase two.
- let bloom=0;
+ let bloom=0,lastOwner=null,lastClock=-Infinity;
+ const joints=createSpringBank(),recoil=createRecoilBank();
  function update(g,c,dt,cast=0,pose={}){
-  const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,dt):0;
+  const time=g.time||0,t=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;
+  if(lastOwner!==g||time<lastClock){joints.reset();recoil.reset();lastOwner=g;}lastClock=time;
+  const follow=(key,goal,frequency=15)=>joints.step(key,goal,t,frequency);
   const target=c.veins||0;bloom+=(target-bloom)*(1-Math.exp(-t*5));
   const sway=reduced?0:Math.sin(time*1.5)*.023;
+  const weightAccent=bloodWeightAccent(pose);
+  // When the boots trade support, the hips lead and the armored chest
+  // counter-rotates. The face and all damage volumes remain authoritative.
+  const feet=pose.walk?.feet||[],walkWeight=pose.walk?.moving?1:0;
+  const balance=Math.max(-.055,Math.min(.055,((feet[0]||0)-(feet[1]||0))*.022*walkWeight));
+  const pelvisRoll=follow('pelvis:roll',balance+(pose.body?.roll||0)*.035,11);
+  torso.position.x=follow('torso:step-lateral',weightAccent.lateral,12);
+  torso.position.y=follow('torso:cast-brace',-weightAccent.kneeBrace,14);
   torso.rotation.y=sway*.5+(pose.body?.twist||0)*.24;
-  torso.rotation.x=(pose.body?.lean||0)*.16;
-  torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023;
-  cape.rotation.x=(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06;
-  cape.rotation.z=(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55;
-  drapes.forEach((p,i)=>{p.rotation.y=(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07;p.rotation.x=(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7);});
-  cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12;waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
+  torso.rotation.x=(pose.body?.lean||0)*.16+weightAccent.pitch;
+  torso.rotation.z=(pose.body?.roll||0)*.15-(pose.anticipation||0)*.023+pelvisRoll+weightAccent.roll;
+  cape.rotation.x=follow('cape:x',(reduced?0:Math.sin(time*1.4)*.035)+cast*.06+(pose.cape||0)*.17+(pose.followThrough||0)*.06+weightAccent.capeKick,8);
+  cape.rotation.z=follow('cape:z',(reduced?0:Math.sin(time*.9)*.025)+(pose.body?.roll||0)*.55,9);
+  drapes.forEach((p,i)=>{p.rotation.y=follow('drape:y:'+i,(reduced?0:Math.sin(time*1.35+i*.65)*.018)+(pose.body?.twist||0)*.07,10);p.rotation.x=follow('drape:x:'+i,(reduced?0:Math.sin(time*1.7+i*.85)*.014)+(pose.cape||0)*.026*Math.sin(i*1.7),8);});
+  // The sternum compresses at the windup and releases behind the striking
+  // shoulders. This affects armor only, not flying blood or hitboxes.
+  const armorCompression=follow('armor:compress',(pose.anticipation||0)*.035-(pose.release||0)*.05+(pose.impact||0)*.03,14);
+  cuirass.position.y=2.96+armorCompression;
+  cuirass.rotation.y=follow('armor:twist',-(pose.body?.twist||0)*.075+(pose.impact||0)*.014,12);
+  cuirass.rotation.x=-cast*.025-(pose.body?.chest||0)*.12+
+   recoil.step('cuirass:spell',(pose.impact||0)*1.15-(pose.anticipation||0)*.3+(pose.release||0)*.16,t,{strength:1.45,frequency:17,limit:.063});
+  cuirass.rotation.z=follow('chest:counter',-pelvisRoll*.68+(pose.body?.twist||0)*.025,13);waist.scale.setScalar(1+Math.sin(time*1.4)*(reduced?0:.012));
   for(const {arm,forearm,hand,fingers,thorn,side}of arms){
    const gesture=pose.arms?.[side<0?0:1];
    const raise=gesture?.raise??cast,open=gesture?.open??cast;
    const stride=pose.walk?.moving?((pose.walk.feet[0]||0)-(pose.walk.feet[1]||0))*.14:0;
-   arm.rotation.x=-raise*.88+side*stride+(reduced?0:Math.sin(time*1.2+side)*.018);
-   arm.rotation.z=side*(.17+open*.32);
-   arm.rotation.y=(pose.body?.twist||0)*.14;
-   forearm.rotation.x=-(gesture?.elbow||0)*.62-cast*.05;
-   forearm.rotation.z=side*(gesture?.open||0)*.08;
-   hand.rotation.x=-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12;
-   hand.rotation.z=side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12);
+   arm.rotation.x=follow('arm:x:'+side,-raise*.88+side*stride+(reduced?0:Math.sin(time*1.2+side)*.018),21);
+   arm.rotation.z=follow('arm:z:'+side,side*(.17+open*.32),18);
+   arm.rotation.y=follow('arm:y:'+side,(pose.body?.twist||0)*.14-side*pelvisRoll*.10,17);
+   forearm.rotation.x=follow('elbow:x:'+side,-(gesture?.elbow||0)*.62-cast*.05,23);
+   forearm.rotation.z=follow('elbow:z:'+side,side*(gesture?.open||0)*.08,20);
+   hand.rotation.x=follow('wrist:x:'+side,-(gesture?.hand||0)*.34-(gesture?.elbow||0)*.12,18);
+   hand.rotation.z=follow('wrist:z:'+side,side*((reduced?0:Math.sin(time*1.6+side)*.03)+(gesture?.hand||0)*.12),16);
    // Finger joints contract as energy gathers, uncurl at the impact and relax
    // after the wrist. No new geometry or IK allocation is needed per frame.
    const grip=Math.max(0,Math.min(1,(pose.anticipation||0)*.73+(pose.release||0)*.14-(pose.followThrough||0)*.24));
-   fingers.forEach((finger,i)=>{finger.rotation.x=-grip*(.38+i*.055);finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
+   fingers.forEach((finger,i)=>{const wanted=-grip*(.38+i*.055);finger.rotation.x=wanted*.86+follow('finger:curl:'+side+':'+i,wanted,22-i*2)*.14;
+    finger.rotation.z=side*(pose.release||0)*.07*(i-1.5);});
    thorn.visible=bloom>.01;thorn.scale.y=Math.max(.001,bloom);
   }
   growth.visible=bloom>.004;growth.scale.set(1,Math.max(.001,bloom),1);
@@ -177,5 +206,5 @@ export function createBloodRegalia(actor,{coarse=false,reduced=false}={}){
   ring.rotation.z=reduced?0:time*.28;
   vein.emissiveIntensity=.3+bloom*.9;
  }
- return {update,arms,drapes,growth,legs:legRig.legs,plantFeet:legRig.update,dispose(){}};
+ return {update,arms,drapes,torso,cape,growth,legs:legRig.legs,jointSkins:[...arms.flatMap(a=>a.skins),...legRig.legs.flatMap(l=>l.skins)],plantFeet:legRig.update,resetPose(){joints.reset();recoil.reset();lastOwner=null;lastClock=-Infinity;},dispose(){joints.reset();recoil.reset();}};
 }

@@ -5,13 +5,16 @@ export function battleViewportSize(width,height){
  return {width:1600*scale,height:900*scale,left:(width-1600*scale)/2,top:(height-900*scale)/2};
 }
 const state=new WeakMap();
-export function resizeBattleViewport(renderer,camera,canvas){
+export function resizeBattleViewport(renderer,camera,canvas,renderScale=1){
  const win=canvas.ownerDocument.defaultView,shell=canvas.closest('#arena'),w=win.innerWidth,h=win.innerHeight;
+ const scale=Number.isFinite(renderScale)?Math.max(.6,Math.min(1,renderScale)):1;
  const previous=state.get(canvas);
- if(previous?.w===w&&previous?.h===h&&previous.camera===camera)return previous.size;
+ if(previous?.w===w&&previous?.h===h&&previous.camera===camera&&previous.scale===scale)return previous.size;
  const size=battleViewportSize(w,h);
  if(shell)Object.assign(shell.style,{width:size.width+'px',height:size.height+'px',minHeight:'0',left:size.left+'px',top:size.top+'px',position:'relative',margin:'0'});
- renderer.setPixelRatio(1);renderer.setSize(1600,900,false);
+ renderer.setPixelRatio(1);
+ // Reduce fill rate without moving the CSS viewport, HUD or mouse coordinates.
+ renderer.setSize(Math.round(1600*scale),Math.round(900*scale),false);
  camera.aspect=16/9;camera.updateProjectionMatrix();
- state.set(canvas,{w,h,camera,size});return size;
+ state.set(canvas,{w,h,camera,scale,size});return size;
 }

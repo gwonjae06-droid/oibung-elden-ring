@@ -7,7 +7,7 @@ const neutral=m=>m.sy===1&&m.sxz===1&&m.glow===0&&m.shake===0;
 test('no motion without a state or while rolling, idle or defeated',()=>{
  assert.ok(neutral(diceMotion(null)));
  assert.ok(neutral(diceMotion({pose:{}})));
- for(const state of ['idle','warning','rolling','frenzy-windup','dead'])assert.ok(neutral(diceMotion({state,t:.3},1)),state);
+ for(const state of ['idle','rolling','dead'])assert.ok(neutral(diceMotion({state,t:.3},1)),state);
  assert.ok(neutral(diceMotion({state:'charge-warning',t:NaN},NaN))||diceMotion({state:'charge-warning',t:NaN},NaN).glow===0);
 });
 
@@ -43,4 +43,13 @@ test('the body remains rigid during every landing recovery',()=>{
  const settled=diceMotion({state:'recovery',t:.45},0);
  assert.ok(Math.abs(settled.sy-1)<1e-9&&Math.abs(settled.sxz-1)<1e-9);
  assert.ok(neutral({...diceMotion({state:'recovery',t:5},0),sy:1,sxz:1})||true);
+});
+
+test('ordinary rolls, face pips and frenzy all signal before collision without deforming the die',()=>{
+ for(const state of ['warning','pip-warning','frenzy-windup']){
+  const early=diceMotion({state,t:.1,warningTime:1.08,pips:{warn:1.35}},1);
+  const late=diceMotion({state,t:.8,warningTime:1.08,pips:{warn:1.35}},1);
+  assert.ok(late.glow>early.glow&&late.shake>early.shake,state);
+  assert.equal(late.sy,1);assert.equal(late.sxz,1);
+ }
 });

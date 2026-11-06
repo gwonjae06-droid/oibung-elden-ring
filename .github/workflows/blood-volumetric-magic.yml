@@ -1,0 +1,22 @@
+name: Blood volumetric waves and cathedral-scale spells
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  volumetric-blood:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install existing rendering test dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Validate thick waves, grand rites, readable windups and performance budgets
+        run: |
+          node --test tests/blood-volumetric-magic.test.mjs tests/blood-spectacle.test.mjs tests/blood-render.test.mjs tests/blood-stage.test.mjs tests/blood-hydrodynamics.test.mjs tests/blood-wall-surface-merging.test.mjs tests/blood-airborne-projectiles.test.mjs tests/blood-motion-followthrough.test.mjs tests/attack-readability.test.mjs

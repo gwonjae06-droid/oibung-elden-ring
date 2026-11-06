@@ -66,13 +66,12 @@ test('journey attack and roll modifiers are both scaled after the final cost is 
  assert.ok(actPlayer(roll,'roll'));
  near(roll.player.stamina,73.6);
 });
-test('charged sword stamina includes the surcharge and gets the same relief',()=>{
+test('expanded sword reach remains passive with ordinary stamina cost',()=>{
  const g=fresh('sword');g.evolutions=['charged-blade'];
- assert.ok(actPlayer(g,'charge-start'));
- assert.equal(g.player.stamina,100);
- g.player.action.t=.9;
- assert.ok(actPlayer(g,'charge-release'));
- near(g.player.stamina,76.2);
+ assert.equal(actPlayer(g,'charge-start'),false);
+ near(g.player.stamina,100);
+ assert.ok(actPlayer(g,'light'));
+ near(g.player.stamina,84.7);
  assert.equal(g.player.action.kind,'attack');
 });
 test('maximum stamina, recharge speed, and regeneration delay are unchanged',()=>{

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
+import {cinematicLightCue} from './cinematic-light-cues.mjs';
 
 // Reusable realism direction for every current boss AND all future bosses.
 // 100% browser-native: no Blender, external GPU libraries or asset pipeline.
 export const CINEMATIC_PROFILES=Object.freeze({
- kwon:Object.freeze({exposure:1.14,reflection:.54,rim:0x8da9d7,fill:.56,defaultSurface:'stone'}),
- clown:Object.freeze({exposure:1.18,reflection:.64,rim:0xffc58e,fill:.46,defaultSurface:'velvet'}),
- dice:Object.freeze({exposure:1.12,reflection:.7,rim:0xffe0a1,fill:.44,defaultSurface:'wood'}),
- blood:Object.freeze({exposure:1.1,reflection:.73,rim:0xe3d8e6,fill:.56,defaultSurface:'marble'}),
+ kwon:Object.freeze({exposure:1.1,reflection:.6,rim:0xa5b9ca,fill:.62,defaultSurface:'stone'}),
+ clown:Object.freeze({exposure:1.08,reflection:.57,rim:0xf2c89f,fill:.58,defaultSurface:'velvet'}),
+ dice:Object.freeze({exposure:1.09,reflection:.64,rim:0xe6c8a1,fill:.58,defaultSurface:'wood'}),
+ blood:Object.freeze({exposure:1.07,reflection:.68,rim:0xdcd4d4,fill:.62,defaultSurface:'marble'}),
  gyuwon:Object.freeze({exposure:1.05,reflection:.58,rim:0xaab8d4,fill:.5,defaultSurface:'stone'}),
 });
 export const CINEMATIC_SURFACES=Object.freeze({
@@ -16,8 +17,8 @@ export const CINEMATIC_SURFACES=Object.freeze({
  wood:Object.freeze({roughness:.66,metalness:0,bump:.41}),
  metal:Object.freeze({roughness:.38,metalness:.78,bump:.19}),
  leather:Object.freeze({roughness:.75,metalness:0,bump:.35}),
- skin:Object.freeze({roughness:.61,metalness:0,bump:.13}),
- blood:Object.freeze({roughness:.18,metalness:.08,bump:.16}),
+ skin:Object.freeze({roughness:.58,metalness:0,bump:.14}),
+ blood:Object.freeze({roughness:.22,metalness:0,bump:.19}),
 });
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const frac=v=>v-Math.floor(v);
@@ -44,6 +45,12 @@ function heightAt(type,x,y,seed){
  }
 }
 function bytes(size){return new Uint8Array(size*size*4);}
+const cachedSurfaceData=new Map();
+function cachedTextureData(type,size,seed){
+ const key=type+':'+size+':'+seed;
+ if(!cachedSurfaceData.has(key))cachedSurfaceData.set(key,textureData(type,size,seed));
+ return cachedSurfaceData.get(key);
+}
 function textureData(type,size,seed){
  const color=bytes(size),normal=bytes(size),roughness=bytes(size),profile=CINEMATIC_SURFACES[type];
  const shade={marble:[240,236,229],stone:[221,219,213],velvet:[235,229,232],wood:[228,218,209],
@@ -123,11 +130,16 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
  const rim=new THREE.DirectionalLight(settings.rim,coarse?0:settings.fill);
  rim.name='cinematic-boss-silhouette-fill';rim.position.set(-15,17,-19);rim.castShadow=false;
  scene.add(rim);
+ // One existing non-shadow rim changes subtly with attack pose and phase.
+ // Mobile keeps its zero-intensity light, even if an encounter enters phase 2.
+ const rimBase=new THREE.Color(settings.rim);
+ const rimSecond=new THREE.Color(({blood:0xe8a6b3,clown:0xe7b99f,dice:0xefb585,kwon:0xb3c7e6})[profile]||settings.rim);
+ let rimWarmth=0;
  const surfaces=new Map(),applied=new Set(),saved=new Map(),owned=new Set([env]);
  let closed=false;
  function texturePack(kind){
   if(surfaces.has(kind))return surfaces.get(kind);
-  const n=coarse?64:256,d=buildCinematicTextureData(kind,n,47);
+  const n=coarse?64:256,d=cachedTextureData(kind,n,47);
   const pack={map:mapFromData(d.color,n,true),normalMap:mapFromData(d.normal,n),roughnessMap:mapFromData(d.roughness,n)};
   for(const t of Object.values(pack))owned.add(t);
   surfaces.set(kind,pack);return pack;
@@ -164,9 +176,16 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
  function update(game,dt=0){
   if(closed||!game)return;
   const phase=game?.boss?.phase||1,second=phase>1;
-  const target=settings.reflection*(second?.88:1);
   const h=clamp(Number.isFinite(dt)?dt:0,0,.05);
+  const cue=cinematicLightCue(game,profile);
+  const target=settings.reflection*(second?.88:1)*(1+cue.environment);
   scene.environmentIntensity+=(target-scene.environmentIntensity)*(1-Math.exp(-1.5*h));
+  if(!coarse){
+   const lightGoal=settings.fill*(1+cue.rim);
+   rim.intensity+=(lightGoal-rim.intensity)*(1-Math.exp(-8*h));
+   rimWarmth+=(cue.warmth-rimWarmth)*(1-Math.exp(-3*h));
+   rim.color.copy(rimBase).lerp(rimSecond,rimWarmth);
+  }
  }
  function dispose(){
   if(closed)return;closed=true;rim.parent?.remove(rim);

@@ -1,0 +1,22 @@
+name: Per-weapon stats and four boss compatibility
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three.js runtime
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify stat profiles and existing journey/skill integrations
+        run: |
+          node --test tests/weapon-stats.test.mjs tests/player-combat.test.mjs tests/skill-combat.test.mjs

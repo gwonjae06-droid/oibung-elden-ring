@@ -6,7 +6,7 @@ export function createBloodPatternDeck(seed=Math.floor(Math.random()*0x100000000
 }
 function random(deck){let x=deck.seed;x^=x<<13;x^=x>>>17;x^=x<<5;deck.seed=x>>>0;return deck.seed/0x100000000;}
 function shuffle(deck,list){const a=[...list];for(let i=a.length-1;i>0;i--){const j=Math.floor(random(deck)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-export function nextBloodPattern(state,phase){
+export function nextBloodPattern(state,phase,{distance=null}={}){
  if(state.phase!==phase){state.phase=phase;state.queue=[];state.last=null;state.cycles=0;}
  if(!state.queue.length){
   if(phase===1){
@@ -21,5 +21,20 @@ export function nextBloodPattern(state,phase){
   if(state.queue[0]===state.last)[state.queue[0],state.queue[2]]=[state.queue[2],state.queue[0]];
   state.cycles++;
  }
- const id=state.queue.shift();state.last=id;return id;
+ if(Number.isFinite(distance)&&distance!==null&&state.queue.length>1){
+   // Preserve the signature opening and airborne/ground sequencing, but
+   // choose among nearby cards to react to range. No attacks are removed.
+   const size=bloodPool(phase).length;
+   const opening=state.queue.length===size||(phase===2&&state.queue.length===size-1);
+   if(!opening){
+     const pair={chain:'burst',wave:'fountain',bloodScissors:'heartCage',heartCage:'bloodScissors',wingShear:'rosary',rosary:'wingShear',dive:'wing',
+       eclipse:'rain',pursuit:'pulse',wing:'pursuit'}[state.last];
+     const close=new Set(['burst','chain','vortex','wave','wing','pulse','dive','bloodScissors','heartCage','wingShear','rosary']);
+     const candidates=state.queue.slice(0,Math.min(3,state.queue.length));
+     const ix=pair&&candidates.includes(pair)?candidates.indexOf(pair):
+       candidates.findIndex(id=>distance<10?close.has(id):distance>17?!close.has(id):false);
+     if(ix>0)[state.queue[0],state.queue[ix]]=[state.queue[ix],state.queue[0]];
+   }
+  }
+  const id=state.queue.shift();state.last=id;return id;
 }

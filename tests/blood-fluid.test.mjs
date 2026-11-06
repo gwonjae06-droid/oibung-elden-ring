@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {playerIncomingDamage} from '../src/weapon-stats.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {bloodQuality,createBloodFluid} from '../src/blood-fluid.mjs';
@@ -11,9 +12,11 @@ import {collectSceneResources,disposeScene} from '../src/runtime/scene-resources
 test('each real pattern causes its defined damage when the player enters the actual hazard',()=>{
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.hp=g.player.maxHp=1e6;startBloodPattern(g,id);
-  const hazard=g.blood.hazards[0],expected=hazard.damage,hp=g.player.hp;
-  for(let t=0;t<hazard.warn+.025;t+=.005){const c=hazardPosition(hazard);const d=hazard.shape==='ring'?c.r:hazard.shape==='cone'?c.r*.65:0;g.player.x=c.x+(hazard.shape==='cone'?Math.sin(hazard.yaw)*d:d);g.player.z=c.z+(hazard.shape==='cone'?Math.cos(hazard.yaw)*d:0);stepBlood(g,.005);}
-  assert.equal(hp-g.player.hp,expected,id);
+  const hazard=g.blood.hazards[0],expected=playerIncomingDamage(g,hazard.damage),hp=g.player.hp;
+  // Broad eruptions visibly charge for 0.22s after their telegraph;
+  // verify the real damage at contact, not on their first glow frame.
+  for(let t=0;t<hazard.warn+.27;t+=.005){const c=hazardPosition(hazard);const d=hazard.shape==='ring'?c.r:hazard.shape==='cone'?c.r*.65:0;g.player.x=c.x+(hazard.shape==='cone'?Math.sin(hazard.yaw)*d:d);g.player.z=c.z+(hazard.shape==='cone'?Math.cos(hazard.yaw)*d:0);stepBlood(g,.005);}
+  assert.ok(Math.abs(hp-g.player.hp-expected)<1e-5,id);
  }
 });
 test('particle and puddle caps hold after thousands of impacts, merge and drain on the visual clock',()=>{
@@ -27,7 +30,13 @@ test('all 14 spell pools settle to a fixed resource count across repeated fights
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true}),g=createBloodGame();g.player.hp=1e6;const sizes=[];
  for(let round=0;round<3;round++){
   for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){g.boss.phase=spec.phase;g.boss.state='recovery';g.blood.phasePending=false;startBloodPattern(g,id);for(let t=0;t<spec.duration+.1;t+=.05){stepBlood(g,.05);view.update(g,.05);}}
-  view.clear();sizes.push(collectSceneResources(scene).size);assert.deepEqual(view.stats(),{drops:0,puddles:0,hazards:0});
+  view.clear();sizes.push(collectSceneResources(scene).size);
+  // The view also reports decorative sea/siphon metadata on current builds.
+  // Verify the actual runtime resource counters instead of an old exact shape.
+  const state=view.stats();
+  assert.deepEqual([state.drops,state.puddles,state.hazards],[0,0,0]);
+  assert.equal(state.bloodSea.damageSources,0);
+  assert.equal(state.siphon.collidable,false);
  }
  assert.equal(sizes[1],sizes[0]);assert.equal(sizes[2],sizes[1]);view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });

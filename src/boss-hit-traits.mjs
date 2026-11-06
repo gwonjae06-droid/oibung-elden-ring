@@ -1,3 +1,5 @@
+import {playerIncomingDamage} from './weapon-stats.mjs';
+
 // Encounter-owned simulation state; presentation consumes this without adding text.
 export const BOSS_HIT_TRAITS=Object.freeze({bleedDuration:2,bleedDps:2,bleedRegen:1.2,stunDuration:.7,crushDuration:1,drainRatio:.25,drainDuration:.75});
 const fresh=()=>({bleed:0,stun:0,crush:0,drain:0});
@@ -23,7 +25,7 @@ export function tickBossHitTraits(g,dt){
  if(!Number.isFinite(dt)||dt<=0)return;
  if(g.status!=='playing'){clearBossHitTraits(g);return;}
  const p=g.player,t=p.traits;if(!t)return;
- if(t.bleed>0){const amount=Math.min(p.hp,Math.min(dt,t.bleed)*BOSS_HIT_TRAITS.bleedDps);p.hp=Math.max(0,p.hp-amount);
+ if(t.bleed>0){const amount=Math.min(p.hp,playerIncomingDamage(g,Math.min(dt,t.bleed)*BOSS_HIT_TRAITS.bleedDps,{dot:true}));p.hp=Math.max(0,p.hp-amount);
   if(p.hp<=0){g.status='lost';clearBossHitTraits(g);if(g.bossShots)g.bossShots.length=0;if(g.projectiles)g.projectiles.length=0;g.events.push({type:'death'});return;}
  }
  for(const name of ['bleed','stun','crush','drain']){const left=t[name]-dt;t[name]=left>1e-9?left:0;}

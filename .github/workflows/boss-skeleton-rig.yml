@@ -1,0 +1,22 @@
+name: Boss skeleton sockets and joint reach regression
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  skeleton:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install physical rig testing dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Test fixed bone lengths, torso sockets, giant elbow limits and hitboxes
+        run: |
+          node --test tests/next-boss-rigging.test.mjs tests/boss-animation-polish.test.mjs tests/blood-motion-followthrough.test.mjs tests/blood-attack-animation.test.mjs tests/kwon-leg-rig.test.mjs tests/kwon-torso-rig.test.mjs tests/dice-giant-motion.test.mjs tests/attack-readability.test.mjs

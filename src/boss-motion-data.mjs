@@ -1,8 +1,12 @@
 import {PATTERNS,patternConfig} from './combat.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(Number.isFinite(t)?t:0,0,1);return t*t*(3-2*t);};
-const ZERO={lean:0,sink:0,sway:0};
+const ZERO={lean:0,sink:0,sway:0,brace:0,strike:0,follow:0};
 export const MOTION_STYLE={
+ spiderPrison:[{lean:-.18,sink:-.43,sway:-.06},{lean:.17,sink:-.12,sway:.10}],
+ graveSword:[{lean:-.27,sink:.22,sway:-.03},{lean:.22,sink:-.49,sway:.06}],
+ livingSword:[{lean:-.19,sink:-.16,sway:.16},{lean:.21,sink:-.06,sway:-.12}],
+ lastStance:[{lean:-.18,sink:-.3,sway:-.16},{lean:.24,sink:-.1,sway:.18}],
  sweep:[{lean:-.06,sink:-.1,sway:-.08},{lean:.08,sink:0,sway:.1}],
  reverse:[{lean:-.05,sink:-.1,sway:.08},{lean:.08,sink:0,sway:-.1}],
  thrust:[{lean:-.18,sink:-.3,sway:0},{lean:.2,sink:-.1,sway:0}],
@@ -14,7 +18,7 @@ export const MOTION_STYLE={
  jab:[{lean:-.06,sink:-.1,sway:0},{lean:.12,sink:-.05,sway:0}],
  rush:[{lean:.05,sink:-.55,sway:0},{lean:.25,sink:-.35,sway:0}],
  retreat:[{lean:-.1,sink:-.2,sway:.04},{lean:-.18,sink:-.1,sway:-.04}],
- wave:[{lean:-.12,sink:.1,sway:0},{lean:.12,sink:-.05,sway:0}],
+ wave:[{lean:-.27,sink:.15,sway:-.03},{lean:.25,sink:-.25,sway:.04}],
  stomp:[{lean:-.12,sink:.25,sway:0},{lean:.1,sink:-.4,sway:0}],
  backsweep:[{lean:-.05,sink:-.1,sway:.1},{lean:.05,sink:0,sway:-.14}],
  shove:[{lean:-.1,sink:-.15,sway:0},{lean:.15,sink:-.05,sway:0}]
@@ -29,9 +33,14 @@ export function bossMotion(b){
  if(!s||!PATTERNS[b.pattern]||!['windup','active','recovery'].includes(b.state))return {...ZERO};
  const cfg=patternConfig(b),power=b.phase===2?1.2:1;
  let m;
- if(b.state==='windup')m=mix(ZERO,s[0],ease(t/cfg.wind));
+ if(b.state==='windup')m=mix(MOTION_STYLE[b.motionFrom]?.[1]||ZERO,s[0],ease(t/cfg.wind));
  else if(b.state==='active')m=mix(s[0],s[1],ease(t/cfg.active));
  else if(b.queue&&b.queue.length)m=s[1];
  else m=mix(s[1],ZERO,ease(t/Math.max(.01,b.recovery||cfg.recover)));
- return {lean:clamp(m.lean*power,-.35,.35),sink:clamp(m.sink*power,-.8,.5),sway:clamp(m.sway*power,-.2,.2)};
+ // The additional cues are visual-only and use the authoritative phase clocks.
+ const brace=b.state==='windup'?ease(t/Math.max(.01,cfg.wind)):0;
+ const strike=b.state==='active'?Math.sin(Math.PI*ease(t/Math.max(.01,cfg.active))):0;
+ const follow=b.state==='recovery'?1-ease(t/Math.max(.01,b.recovery||cfg.recover)):0;
+ return {lean:clamp(m.lean*power,-.35,.35),sink:clamp(m.sink*power,-.8,.5),
+  sway:clamp(m.sway*power,-.2,.2),brace,strike,follow};
 }

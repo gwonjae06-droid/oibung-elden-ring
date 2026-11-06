@@ -1,4 +1,12 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
+import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
+import {drawPatternShuffle} from './pattern-shuffle.mjs';
+import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
+import {clownHurtShapes} from './boss-hit-regions.mjs';
+import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {
   createGame,
   step as baseStep,
@@ -86,7 +94,7 @@ export function hurt(g, damage, src) {
     emit(g, 'dodge');
     return false;
   }
-  damage = Math.round(damage * PRESSURE.damage[g.boss.phase === 2 ? 1 : 0]);
+  damage = Math.min(p.hp,playerIncomingDamage(g,Math.round(damage * PRESSURE.damage[g.boss.phase === 2 ? 1 : 0])));
   p.hp = Math.max(0, p.hp - damage);
   p.invuln = 0.32;
   applyBossHitTrait(g,damage,{boss:'clown'});
@@ -320,11 +328,22 @@ const definitions = [
   ['bounceChain', '연쇄 공 튀기기', 5.6, 1.3, [2]],
   ['ballSpin', '회전 공 휩쓸기', 4.9, 1.3, [2]],
   ['ballCannon', '공 대포', 5.4, 1.5, [2]],
+  // Each new routine is a staged performance: pose -> environmental warning
+  // -> delayed impact -> clean recovery. No extra high-poly stage props.
+  ['mirrorStage', '거울 무대 · 뒤집힌 조명', 4.7, 1.25, [1, 2]],
+  ['trapdoorWaltz', '함정 무도회', 5.2, 1.5, [1, 2]],
+  ['grandEncore', '세 번의 앙코르', 6.1, 1.6, [2]],
+  ['invertedApplause', '거꾸로 박수', 6, 1.45, [2]],
+  ['puppetFuneral', '꼭두각시의 장례식', 5.8, 1.65, [1,2]],
+  ['laughContagion', '웃음의 전염', 5.4, 1.4, [1,2]],
+  ['stageCapsize', '무대 전복', 5.6, 1.7, [2]],
+  ['lastMagic', '마지막 마술', 6.4, 1.9, [2]],
+  ...HORROR_DEFINITIONS.map(([key,name,dur,recover,phases])=>[key,name,dur,recover,phases]),
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
     key,
-    {name, dur, recover, phases},
+    {name, dur:dur+clownPrecastTime(key), precast:clownPrecastTime(key), recover, phases},
   ]),
 );
 function dashPart(g, c, a, t, start, key) {
@@ -459,7 +478,9 @@ const RUN = {
         shape: 'circle',
         x: g.boss.x,
         z: g.boss.z,
-        r: 3.5,
+        // Match the ground-reaching slice of the giant mounted head in phase two.
+        r: Math.max(3.5,...clownHurtShapes(g).filter(v=>v.id==='ball'||v.id==='mount-head')
+          .map(v=>v.rz*Math.sqrt(Math.max(0,1-((1.15-v.y)/(v.ry+.5))**2))+.65)),
         warn: 0.6,
         kind: 'push',
       });
@@ -784,6 +805,128 @@ const RUN = {
       emit(g, 'clown-stomp');
     }
   },
+  // Three hanging puppets swing along alternating lanes. Glove pulls precede every swing.
+  puppetFuneral(g,c,a,t){
+    const aim=once(c,'puppet-aim',()=>({yaw:toward(g.boss,g.player)})).yaw;
+    c.vis.glove=.25+.7*Math.abs(Math.sin(t*2.2));
+    c.vis.tilt=Math.sin(t*2.2)*.34;
+    c.vis.juggle=t<3.7?1:0;
+    for(let i=0;i<3;i++)if(cross(a,t,.25+i*1.12)){
+      const yaw=aim+(i-1)*.64;c.yaw=yaw;
+      zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw,
+        len:fitLen(g.boss,yaw,20),w:3.8,warn:1.05,
+        damage:25,blast:true,sound:'carousel'});
+      emit(g,'clown-juggle');
+    }
+  },
+  // The audience laughs from the perimeter in sequence; the last beat is a central clap.
+  laughContagion(g,c,a,t){
+    c.vis.glove=t<3.4?.5+.35*Math.sin(t*3):0;
+    c.vis.shake=t<3.4?.3*Math.abs(Math.sin(t*9)):0;
+    for(let i=0;i<6;i++)if(cross(a,t,.25+i*.5)){
+      const theta=i*Math.PI/3+c.seq*.37;
+      const q={x:Math.sin(theta)*17,z:Math.cos(theta)*17};
+      zone(g,{shape:'circle',...q,r:5.5,warn:1.15,damage:23,blast:true,sound:'laughBomb'});
+      emit(g,'clown-clap');
+    }
+    if(cross(a,t,2.85))zone(g,{shape:'circle',x:0,z:0,r:7,warn:1.05,damage:32,blast:true,sound:'lastClap'});
+  },
+  // A series of low, slanted blows sells the stage tipping rather than an unannounced global hit.
+  stageCapsize(g,c,a,t){
+    c.vis.crouch=t<1.5?smooth(t/1.5):.15;
+    c.vis.tilt=Math.sin(Math.min(t,4)*1.3)*.55;
+    c.vis.stomp=t>1.45&&t<4.1?Math.abs(Math.sin(t*4)):.0;
+    for(let i=0;i<4;i++)if(cross(a,t,.35+i*.72)){
+      const theta=c.yaw+(i%2?Math.PI/2:-Math.PI/2);
+      zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw:theta,
+        len:fitLen(g.boss,theta,22),w:5.2,warn:1.25,damage:28,
+        blast:true,sound:'trapdoorWaltz'});
+      emit(g,'clown-stomp');
+    }
+  },
+  // A head in a magic box: the swelling, fall and delayed side bursts are separate readable beats.
+  lastMagic(g,c,a,t){
+    const p=once(c,'magic-target',()=>target(g));
+    head(c,t<1.3?'inflate':t<3.2?'shrink':'regrow',
+      t<1.3?smooth(t/1.3):t<3.2?1:smooth((t-3.2)/2),'small');
+    c.vis.crouch=t<1.8?.75:Math.max(0,.75*(1-smooth((t-1.8)/2)));
+    c.vis.glove=t<3.6?.6+.3*Math.sin(t*3):0;
+    if(cross(a,t,1.05))bombAt(g,p,4.1,31,1.2,'head',.6);
+    for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.42)){
+      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,21);
+      zone(g,{shape:'circle',...q,r:2.9,warn:1,damage:24,blast:true,sound:'curtainCall'});
+    }
+    if(cross(a,t,4.6))emit(g,'clown-inflate');
+  },
+  // An old-fashioned follow spotlight marks the player's last position,
+  // then the clown turns his shoulders and relights the stage behind them.
+  mirrorStage(g, c, a, t) {
+    once(c, 'intro', () => emit(g, 'clown-stomp'));
+    const b=g.boss,lead=once(c, 'lead',()=>target(g));
+    c.yaw+=clamp(angleDelta(c.yaw,toward(b,lead)),-.05,.05);
+    c.vis.glove=t<1.35?smooth(t/1.35):Math.max(0,1-smooth((t-1.35)/1.1));
+    c.vis.tilt=Math.sin(t*2.7)*.32;
+    if(cross(a,t,.16)){
+      zone(g,{shape:'circle',...lead,r:6,warn:1.25,damage:27,blast:true,major:true,sound:'spotlightSweep'});
+    }
+    if(cross(a,t,1.5)){
+      const side=c.seq%2?1:-1,aim=toward(b,g.player);
+      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-18,18),
+        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-18,18)};
+      confine(q,21);c.f.echo=q;
+      zone(g,{shape:'circle',...q,r:5.6,warn:1.05,damage:30,blast:true,major:true,sound:'spotlightSweep'});
+      emit(g,'clown-stomp');
+    }
+  },
+  // Three visually readable footfalls advance across the felt. Each warning
+  // lands only after the body sinks, springs up, and drops again.
+  trapdoorWaltz(g, c, a, t) {
+    const b=g.boss,T=[.35,1.45,2.55],phase=g.boss.phase===2;
+    c.vis.crouch=.35+.4*Math.max(0,Math.sin(t*Math.PI*2));
+    c.vis.jump=0;
+    for(let i=0;i<T.length;i++){
+      const u=t-T[i];
+      if(u>=.38&&u<1.05)c.vis.jump=Math.max(c.vis.jump,Math.sin(Math.PI*(u-.38)/.67)*.7);
+      if(cross(a,t,T[i])){
+        const p=target(g),yaw=toward(b,p);
+        const stride=phase?4.5:3.4,side=i%2?1:-1;
+        const q={x:p.x+Math.cos(yaw)*stride*side,z:p.z-Math.sin(yaw)*stride*side};
+        confine(q,21);
+        zone(g,{shape:'circle',...q,r:5.4,warn:1.05,damage:phase?32:28,
+          blast:true,major:true,sound:'bounce'});
+        emit(g,'clown-stomp');
+      }
+      if(cross(a,t,T[i]+1.05))emit(g,'clown-bounce');
+    }
+  },
+  // Balls are physically thrown in sequence; the final bouquet leaves an
+  // intentionally open wedge rather than covering the whole arena.
+  grandEncore(g, c, a, t) {
+    once(c,'overture',()=>emit(g,'clown-juggle'));
+    c.vis.juggle=t<3.5?1:0;
+    c.vis.throwK=t<3.4?Math.abs(Math.sin(t*Math.PI*1.2)):.0;
+    c.vis.tilt=Math.sin(t*4)*.22;
+    for(let i=0;i<3;i++)if(cross(a,t,.8+i*.9)){
+      const p=target(g),ang=c.yaw+(i-1)*.65,q={x:p.x+Math.sin(ang)*3,z:p.z+Math.cos(ang)*3};
+      confine(q,21);bombAt(g,q,3.1,27,.8,'ball',.2);
+    }
+    if(cross(a,t,3.5)){
+      const p=target(g);rosette(g,p,7.2,1.0,8,23,c.seq%8);
+      emit(g,'clown-juggle');
+    }
+  },
+  // Gloves visibly close before each existing wave. Delayed alternating
+  // fans, not instant damage, force a positional read.
+  invertedApplause(g, c, a, t) {
+    const aim=once(c,'aim',()=>({yaw:toward(g.boss,g.player)})).yaw;
+    c.vis.glove=t<3.7?.25+.7*Math.abs(Math.sin(t*2.8)):.1;
+    c.vis.tilt=Math.sin(t*3)*.28;
+    for(let i=0;i<3;i++)if(cross(a,t,.15+i*1.25)){
+      const yaw=aim+[0,.76,-.76][i];c.yaw=yaw;
+      cone(g,yaw,.9,16,i===0?.48:.42,27+(i===2?5:0),'clap');
+      emit(g,'clown-clap');
+    }
+  },
   // A volley of balls rains down around the player, alternating direct hits and a ring around them.
   ballRain(g, c, a, t) {
     once(c, 's', () => emit(g, 'clown-juggle'));
@@ -885,33 +1028,39 @@ const RUN = {
     }
   },
 };
+const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart});
+Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
+ [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export function choosePattern(g) {
-  const c = g.clown,
-    phase = g.boss.phase === 2 ? 2 : 1,
-    d = dist(g.boss, g.player);
-  c.used ||= {};
-  let list = Object.keys(PATTERNS).filter(
-    (k) => PATTERNS[k].phases.includes(phase) && k !== c.last && k !== 'shove',
-  );
-  if (d < 4 && c.shoveCd <= 0 && c.seq % 4 === 0) {
-    c.seq++;
-    return 'shove';
+ const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
+ // The close-contact shove stays a situational defensive reaction, not an
+ // unfairly common attack occupying half the regular performance cycle.
+ if(d<4&&c.shoveCd<=0&&c.seq>0&&c.seq%7===0&&c.last!=='shove'){
+  c.seq++;return 'shove';
+ }
+ const stage=g.clown.horrorStage||1;
+ const pool=Object.keys(PATTERNS).filter(k=>k!=='shove'&&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
+ const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',
+  'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
+ let preferred=d<5.5?pool.filter(k=>close.has(k))
+  :d>12?pool.filter(k=>!close.has(k)):[];
+ // Horror acts are real combat variety, not a rare one-off cutscene: prefer
+ // an unread nightmare cue while respecting the shuffled full-pattern deck.
+ const horror=pool.filter(k=>HORROR_PATTERNS.includes(k));
+ if(horror.length&&stage>=2&&c.seq%3===0)
+  preferred=[...horror.filter(k=>c.last!==k),...preferred];
+ if(g.journeyBalance?.mode==='story'){
+  const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
+   spotlightSweep:'hornFan',ballCannon:'bounceChain',
+   ballRain:'ballSpin',bounceChain:'ballCannon'}[c.last];
+  if(follow&&pool.includes(follow)&&
+      (d>=5.5||close.has(follow))&&(d<=12||!close.has(follow))){
+   preferred=[follow,...preferred];
   }
-  const min = Math.min(...list.map((k) => c.used[k] || 0));
-  list = list.filter((k) => (c.used[k] || 0) === min);
-  const close = new Set([
-      'clap',
-      'bounce',
-      'inverseBow',
-      'lastClap',
-      'carousel',
-      'ballSpin',
-    ]),
-    prefer = list.filter((k) =>
-      d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,
-    );
-  if (prefer.length) list = prefer;
-  return list[c.seq++ % list.length];
+ }
+ c.seq++;
+ // Every ordinary performance appears once before that phase's bag refills.
+ return drawPatternShuffle(g.patternShuffle,'clown-'+phase,pool,{preferred,avoid:c.last});
 }
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');
@@ -936,7 +1085,8 @@ function finish(g) {
     state: 'idle',
     name: null,
     f: {},
-    wait: PRESSURE.wait[g.boss.phase === 2 ? 1 : 0],
+    wait: Math.max(g.boss.phase===2?.64:.76,PRESSURE.wait[g.boss.phase === 2 ? 1 : 0] *
+      (g.journeyBalance?.mode==='story'?.88:1))*BOSS_TEMPO.gap,
     punish: false,
     noSeparate: false,
   });
@@ -948,14 +1098,20 @@ function tickClown(g, dt) {
     p = g.player;
   if (c.state === 'idle') {
     c.yaw += clamp(angleDelta(c.yaw, toward(b, p)), -dt * 2.5, dt * 2.5);
-    const d = dist(b, p);
-    if (d > 9) {
-      const s = Math.min(PRESSURE.chase[b.phase === 2 ? 1 : 0] * dt, d - 9),
-        a = toward(b, p);
-      b.x += Math.sin(a) * s;
-      b.z += Math.cos(a) * s;
-      confine(b, BALL_LIMIT);
-      c.odo += s;
+    // Circus footwork is a real displacement, not a canned attack dash.
+    // The player can see a side-step, a close-range withdrawal, or a chase
+    // during the breathing room between performances.
+    // Do not read the player's committed attack as a signal to dodge
+    // away. Close-range swings must remain punishable during their windup.
+    const committed=Boolean(p.action&&['attack','skill'].includes(p.action.kind)&&dist(b,p)<9);
+    if(!committed){
+      const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
+        spacing:b.phase===2?6.6:7.7,
+        speed:PRESSURE.chase[b.phase===2?1:0],
+        sideSpeed:b.phase===2?4.0:3.25,
+        arena:BALL_LIMIT,phase:b.phase,farDistance:11
+      });
+      c.odo+=Math.hypot(motion.dx,motion.dz);
     }
     c.wait -= dt;
     if (c.wait <= 0)
@@ -967,7 +1123,25 @@ function tickClown(g, dt) {
     const d = PATTERNS[c.name],
       a = c.pt;
     c.pt += dt;
-    RUN[c.name](g, c, a, c.pt);
+    // No danger object or projectile can be spawned during this authored
+    // body-language introduction. The old stage timeline begins only after
+    // a visible bow, glove draw-back or compressing step.
+    const lead=d.precast,previous=Math.max(0,a-lead),elapsed=Math.max(0,c.pt-lead);
+    if(c.pt<=lead){
+      Object.assign(c.vis,clownPrecastPose(c.name,c.pt,lead));
+    }else{
+      // Blend the windup into each show's own rig animation. Without this
+      // bridge, the drawn-back glove or crouching body would snap to idle on
+      // the exact first attack frame, even though collision timing was safe.
+      const channels=['crouch','glove','tilt','shake','juggle','stomp'];
+      for(const key of channels)c.vis[key]=0;
+      RUN[c.name](g,c,previous,elapsed);
+      if(elapsed<.24){
+        const anticipation=clownPrecastPose(c.name,lead,lead);
+        const blend=smooth(elapsed/.24);
+        for(const key of channels)c.vis[key]=anticipation[key]*(1-blend)+c.vis[key]*blend;
+      }
+    }
     c.punish =
       c.pt >= d.dur - d.recover &&
       !c.waves.length &&
@@ -982,6 +1156,10 @@ function updateClown(g, dt) {
   c.time += dt;
   c.hug = dist(p, b) < HUG_DIST ? c.hug + dt : 0;
   c.shoveCd = Math.max(0, c.shoveCd - dt);
+  const nextStage=b.phase===2?(b.hp<=b.maxHp*.25?3:2):1;
+  if(nextStage!==c.horrorStage){c.horrorStage=nextStage;
+   if(nextStage===3)emit(g,'clown-phase3',{name:'막이 내린 뒤의 진짜 얼굴'});
+  }
   updateBombs(g, dt);
   updateZones(g, dt);
   updateWaves(g, dt);
@@ -989,11 +1167,9 @@ function updateClown(g, dt) {
   if (c.stunT > 0) c.stunT = Math.max(0, c.stunT - dt);
   else tickClown(g, dt);
   b.yaw = c.yaw;
-  if (!c.noSeparate && dist(p, b) < BODY_R) {
-    const a = dist(p, b) < 0.001 ? p.yaw : toward(b, p);
-    p.x = b.x + Math.sin(a) * BODY_R;
-    p.z = b.z + Math.cos(a) * BODY_R;
-    confine(p);
+  if(!c.noSeparate){
+    const contact=kwonPlayerSeparation(clownHurtShapes(g),p,{radius:.42,height:1.15});
+    if(contact){p.x=contact.x;p.z=contact.z;confine(p);}
   }
   c.prevPlayer = {x: p.x, z: p.z};
 }
@@ -1029,10 +1205,12 @@ export function createClownGame(weapon = 'sword', options) {
     punish: false,
     noSeparate: false,
     odo: 0,
+    autonomy:createBossAutonomy((g.patternShuffle?.seed||1)^0x7af1b9),
     yaw: 0,
     time: 0,
     hits: [],
     vis: newVis(),
+    horrorStage:1,
   };
   return g;
 }
@@ -1100,8 +1278,8 @@ export function clownView(g) {
   else if (c.state === 'pattern') action = PATTERNS[c.name].name;
   return {
     name: '광대 오슬우',
-    sub: b.phase === 2 ? '끝나지 않는 앙코르' : '즐거운 공연',
-    phase: b.phase,
+    sub: c.horrorStage===3?'3막 · 무대의 악몽':b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',
+    phase: c.horrorStage||b.phase,
     hp: b.hp,
     maxHp: b.maxHp,
     action,

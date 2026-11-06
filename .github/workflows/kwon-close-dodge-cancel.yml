@@ -1,0 +1,61 @@
+name: Kwon adaptive close defense and basic dodge cancel
+
+on:
+  push:
+    branches:
+      - main
+      - feat/kwon-adaptive-close-defense-and-attack-dodge-cancel-20261106
+    paths:
+      - 'src/combat.mjs'
+      - 'src/kwon-close-defense.mjs'
+      - 'src/player-combat.mjs'
+      - 'src/arena.mjs'
+      - 'src/clown-battle.mjs'
+      - 'src/blood-battle.mjs'
+      - 'src/dice-battle.mjs'
+      - 'tests/kwon-close-defense-dodge-cancel.test.mjs'
+      - 'tests/kwon-melee-contact-readability.test.mjs'
+      - 'tests/combat.test.mjs'
+      - '.github/workflows/kwon-close-dodge-cancel.yml'
+  pull_request:
+    paths:
+      - 'src/combat.mjs'
+      - 'src/kwon-close-defense.mjs'
+      - 'src/player-combat.mjs'
+      - 'src/arena.mjs'
+      - 'src/clown-battle.mjs'
+      - 'src/blood-battle.mjs'
+      - 'src/dice-battle.mjs'
+      - 'tests/kwon-close-defense-dodge-cancel.test.mjs'
+      - 'tests/kwon-melee-contact-readability.test.mjs'
+      - 'tests/combat.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install 3D simulation dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Syntax checks
+        run: |
+          for f in src/combat.mjs src/kwon-close-defense.mjs src/player-combat.mjs src/arena.mjs src/clown-battle.mjs src/blood-battle.mjs src/dice-battle.mjs; do node --check "$f"; done
+      - name: Verify all four bosses, attack cancels, physical hits and recovery
+        run: >
+          node --test
+          tests/kwon-close-defense-dodge-cancel.test.mjs
+          tests/kwon-melee-contact-readability.test.mjs
+          tests/combat.test.mjs
+          tests/close.test.mjs
+          tests/player-combat.test.mjs
+          tests/stamina-cost-relief.test.mjs
+          tests/attack-readability.test.mjs
+          tests/kwon-ranged-pressure.test.mjs
+          tests/boss-danger-presentation.test.mjs
+          tests/four-boss-autonomous-locomotion.test.mjs

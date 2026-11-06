@@ -12,6 +12,8 @@ const browser=await chromium.launch({executablePath,headless:true,
 const errors=[];
 try{
  const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+ // External web fonts can stall headless screenshot capture on isolated CI hosts.
+ await page.route('https://fonts.**/**',request=>request.abort());
  page.on('pageerror',e=>errors.push(String(e.stack||e)));
  page.on('console',m=>{if(m.type()==='error'&&/Battle frame failed|WebGL.*(error|failed)/i.test(m.text()))errors.push(m.text());});
  await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});

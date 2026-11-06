@@ -105,7 +105,8 @@ export function buildCasinoPhaseTheatre(T,parent,{coarse=false,reduced=false}={}
   const p3=phase===3?smooth(age/3.2):0;
   roulette.rotation.z=(phase===3?.24:phase===2?.045:0)+(reduced?0:Math.sin(safeTime*(phase===3?1.8:.35))*.017);
   roulette.rotation.y=(phase===3?.34:0);
-  wheel.rotation.z=reduced?0:safeTime*(phase===3?.95:phase===2?.45:.12);
+  const rouletteShow=next===2&&g?.dice?.giant?.state==='attack'&&[6,12].includes(g.dice.giant.slot);
+  wheel.rotation.z+=reduced?0:Math.max(0,dt)*(rouletteShow?3.2:phase===3?.9:phase===2?.19:.12);
   scoreboard.rotation.z=(phase===3?-.13:0)+(reduced?0:Math.sin(safeTime*.75)*p3*.026);
   cabinetScreens.forEach((m,i)=>{m.visible=phase===1||reduced||Math.sin(safeTime*(phase===3?19:9)+i*1.4)>.1;});
   const number=phase===1?777:phase===2?Math.floor(safeTime*4)%2?666:777:Math.floor(safeTime*7)%3?666:999;

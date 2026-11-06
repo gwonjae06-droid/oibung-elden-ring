@@ -8,7 +8,7 @@ const s=Math.SQRT1_2,FACES=[[0,0,0,1],[0,0,s,s],[0,0,-s,s],[1,0,0,0],[-s,0,0,s],
 function advance(g,seconds,input={}){for(let left=seconds;left>1e-9;){const dt=Math.min(.05,left);stepDice(g,dt,input);left-=dt;}}
 function ready(count,phase,rotation=[0,0,0,1],player={x:0,z:0}){
  const g=createDiceGame();g.boss.phase=phase;
- Object.assign(g.dice,{index:0,pose:diceRollPose(B[0],B[1],0),rotation,state:'recovery',t:R.recovery,pendingPattern:true,patternCount:count});
+ Object.assign(g.dice,{index:0,pose:diceRollPose(B[0],B[1],0),rotation,state:'recovery',t:R.recovery,pendingPattern:true,forcedPatternSlot:count});
  g.player.x=player.x;g.player.z=player.z;stepDice(g,.05);return g;
 }
 const withPips=n=>FACES.find(q=>diceTopFace(q).pips===n);
@@ -86,7 +86,7 @@ test('winning during the warning clears the cells and stops further attacks',()=
 });
 
 test('the old chain and portrait attacks are off in a normal fight',()=>{
- assert.equal(createDiceGame().dice.faceAttacks,false);
+ assert.equal('faceAttacks' in createDiceGame().dice,false);
  const g=ready(0,1,[0,0,0,1],{x:-60,z:60});
  for(let i=0;i<1200&&g.status==='playing';i++){stepDice(g,.05);assert.equal(g.dice.groundSpikes,null);}
  assert.ok(!g.events.some(e=>/portrait|sweep/.test(e.type)));

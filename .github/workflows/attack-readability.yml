@@ -1,0 +1,22 @@
+name: Four boss motion readability and PBR regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js for realistic material tests
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify every tell, physical animation, collision and PBR style
+        run: |
+          node --test tests/attack-readability.test.mjs tests/boss-signature-patterns.test.mjs tests/boss-motion.test.mjs tests/patterns.test.mjs tests/clown-patterns.test.mjs tests/dice-giant-motion.test.mjs tests/dice-motion.test.mjs tests/blood-attack-animation.test.mjs tests/cinematic-graphics.test.mjs

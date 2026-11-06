@@ -37,7 +37,7 @@ test('controller grants five repeatable flames, replaces relic choices, and reco
  await f.click('memory-next');await f.click('flame-next');
  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);
  assert.match(f.dialog.html,/성혈 대성당/);
- await f.click('next');assert.equal(f.game().boss.maxHp,4700);
+ await f.click('next');assert.equal(f.game().boss.maxHp,6345);
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/영원하지 못한 생명/);
  await f.click('memory-next');assert.match(f.dialog.html,/정화의 불꽃을 획득했습니다/);
  await f.click('flame-next');await f.click('next');
@@ -49,6 +49,20 @@ test('controller grants five repeatable flames, replaces relic choices, and reco
  assert.deepEqual(f.scenes,['kwon','pull','clown','pull','dice','pull','blood','pull','gyuwon','complete']);
  assert.doesNotMatch(f.dialog.html,/무기 진화 선택|도전 시련|연속 격파|무회복/);
  await f.click('home');await f.api.dispose();f.release();
+});
+test('after a boss clear, home is in the top-left header rather than next to the next-boss button',async()=>{
+ const f=rig();await f.click('new');await f.click('begin');
+ f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
+ const html=f.dialog.html;
+ const header=html.match(/<header class="j-top">([\s\S]*?)<\/header>/)?.[1];
+ const main=html.match(/<main class="j-main">([\s\S]*?)<\/main>/)?.[1];
+ assert.ok(header&&main);
+ assert.match(header,/data-j="home"/);
+ assert.doesNotMatch(main,/data-j="home"/);
+ assert.match(main,/data-j="next"/);
+ assert.equal((html.match(/data-j="home"/g)||[]).length,1);
+ await f.click('next');assert.equal(f.game().status,'playing');
+ await f.api.dispose();f.release();
 });
 test('loss and home discard the run while permanent kill records remain',async()=>{
  const f=rig();await f.click('new');await f.click('begin');f.game().status='lost';f.poll();assert.match(f.dialog.html,/처음부터 다시 도전/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run,null);
@@ -84,16 +98,34 @@ test('a failing boss cinematic is disabled and next boss still launches after fl
 });
 test('closing during the victory animation still preserves the defeated boss but never the active run',async()=>{const f=rig();await f.click('new');await f.click('begin');f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,['kwon']);assert.equal(saved.flames,1);assert.equal(saved.run,null);f.release();});
 
-test('hidden title route launches selected boss and retries without journey rewards or records',async()=>{
- const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/봉인 밖의 문/);
- await f.click('secret-weapon',{weapon:'bow'});await f.click('secret-enter',{boss:'dice'});assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);assert.deepEqual(f.game().evolutions,[]);
- f.game().status='won';await f.poll();assert.match(f.dialog.html,/같은 보스 재도전/);assert.doesNotMatch(f.dialog.html,/무기 진화 선택/);
- await f.click('secret-retry');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.dice.maxHp);f.game().status='lost';await f.poll();assert.match(f.dialog.html,/다른 보스로 이동/);
- await f.click('secret-menu');assert.match(f.dialog.html,/봉인 밖의 문/);await f.click('secret-enter',{boss:'clown'});assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.clown.maxHp);
- f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,[]);assert.deepEqual(saved.memories,[]);assert.equal(saved.clears,0);assert.equal(saved.flames,2);assert.equal(saved.run,null);f.release();
+test('five title taps award exactly two persistent flames instead of opening boss travel',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(let i=0;i<4;i++){await f.click('secret-tap');assert.equal(saved().flames,0,'partial taps do not pay');}
+ await f.click('secret-tap');
+ assert.equal(saved().flames,2);assert.equal(saved().earnedFlames,2);
+ assert.match(f.dialog.html,/정화의 불꽃 \+2개 · 보유 2개/);
+ assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|바로 이동|육체 강탈부터/);
+ assert.deepEqual(saved().defeated,[]);assert.deepEqual(saved().memories,[]);assert.equal(saved().clears,0);
+ for(let i=0;i<5;i++)await f.click('secret-tap');
+ assert.equal(saved().flames,4,'each complete set of five taps grants two more');
+ assert.equal(saved().earnedFlames,4);
+ await f.click('secret-enter',{boss:'blood'});
+ await f.click('secret-phase',{boss:'dice',phase:'2'});
+ assert.equal(saved().run,null,'retired secret navigation actions cannot launch combat');
+ await f.api.dispose();f.release();
+ const reload=rig({savedProfile:saved()});
+ assert.match(reload.dialog.html,/정화의 불꽃 4개/);
+ assert.doesNotMatch(reload.dialog.html,/봉인 밖의 문/);
+ await reload.api.dispose();reload.release();
 });
-
-test('hidden shortcut starts a boss in a later phase, keeps it on retry and does not affect journey records',async()=>{const f=rig();for(let i=0;i<5;i++)await f.click('secret-tap');assert.match(f.dialog.html,/육체 강탈부터/);await f.click('secret-phase',{boss:'dice',phase:'2'});assert.equal(f.lastLaunch().startPhase,2);f.game().status='lost';await f.poll();await f.click('secret-retry');assert.equal(f.lastLaunch().startPhase,2);await f.api.dispose();assert.equal(JSON.parse(f.data.get(SAVE_KEY)).clears,0);f.release();});
+test('old hidden ODEN key path no longer opens a boss selector or mints flames',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(const code of ['KeyO','KeyD','KeyE','KeyN'])f.key(code,{key:code.at(-1).toLowerCase()});
+ assert.equal(saved().flames,0);
+ assert.equal(saved().run,null);
+ assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|보스에게 이동하세요/);
+ await f.api.dispose();f.release();
+});
 
 test('main-menu forge invests permanent points and can refund across weapons',async()=>{
  const profile=freshProfile();profile.flames=4;profile.earnedFlames=4;
@@ -123,12 +155,12 @@ test('flame selection can be cancelled and only a successful trial start spends 
  await f.click('new');assert.doesNotMatch(f.dialog.html,/선택됨/);await f.click('home');
  await f.click('skip-toggle');await f.click('new');await f.click('weapon',{weapon:'bow'});
  assert.match(f.dialog.html,/불꽃 1개로 선택한 무기 출정/);
- await f.click('begin');assert.equal(f.game().boss.maxHp,4230);
+ await f.click('begin');assert.equal(f.game().boss.maxHp,5711);
  assert.deepEqual(f.game().evolutions,['twin-arrow']);assert.equal(saved().flames,2);
  const first=f.game();await f.click('begin');assert.equal(f.game(),first);assert.equal(saved().flames,2);
  first.status='lost';await f.poll();assert.doesNotMatch(f.dialog.html,/data-j="revive"/);
  await f.click('revive');assert.equal(f.game(),first);assert.equal(saved().flames,2);
- await f.click('restart');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);assert.equal(saved().flames,2);
+ await f.click('restart');assert.equal(f.game().boss.maxHp,4822);assert.equal(saved().flames,2);
  await f.api.dispose();f.release();
 });
 test('flame shortcut cannot bypass the first locked gate or spend an empty balance',async()=>{
@@ -136,20 +168,54 @@ test('flame shortcut cannot bypass the first locked gate or spend an empty balan
   const profile=freshProfile();profile.flames=5;profile.defeated=defeated;
   const f=rig({savedProfile:profile});assert.match(f.dialog.html,/data-j="skip-toggle"[^>]*disabled/);
   await f.click('skip-toggle');await f.click('new');await f.click('begin',{boss:'blood'});
-  assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);
+  assert.equal(f.game().boss.maxHp,4822);
   assert.equal(JSON.parse(f.data.get(SAVE_KEY)).flames,5);await f.api.dispose();f.release();
  }
  const profile=freshProfile();profile.defeated=['kwon'];
  const f=rig({savedProfile:profile});assert.match(f.dialog.html,/정화의 불꽃이 부족합니다/);
  await f.click('skip-toggle');await f.click('new');await f.click('begin');
- assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.kwon.maxHp);await f.api.dispose();f.release();
+ assert.equal(f.game().boss.maxHp,4822);await f.api.dispose();f.release();
 });
+test('flame chooser can select an earlier unlocked boss across home and weapon menu',async()=>{
+ const profile=freshProfile();profile.flames=3;profile.defeated=['kwon','clown','dice'];
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('skip-toggle');
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="1"/);
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="2"/);
+ assert.match(f.dialog.html,/data-j="skip-target"[^>]+data-stage="3"/);
+ await f.click('skip-target',{stage:'1'});
+ assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ await f.click('new');assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ await f.click('weapon',{weapon:'bow'});assert.match(f.dialog.html,/광대 오슬우부터 시작/);
+ assert.equal(saved().flames,3,'changing destination and weapon is free');
+ await f.click('begin');assert.equal(f.game().boss.maxHp,5076,'chosen clown loads instead of blood');
+ assert.equal(f.lastLaunch().weapon,'bow','launch options must use the chosen bow');assert.equal(saved().flames,2);
+ f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
+ assert.match(f.dialog.html,/다음 도전/,'journey continues normally after chosen boss');
+ await f.api.dispose();f.release();
+});
+
+test('locked bosses stay disabled, and choosing the first boss cancels flame spending',async()=>{
+ const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('skip-toggle');
+ assert.match(f.dialog.html,/data-stage="3"[^>]*disabled/,'unearned boss remains locked');
+ await f.click('skip-target',{stage:'3'});
+ assert.match(f.dialog.html,/광대 오슬우부터 시작/,'synthetic locked click is rejected');
+ await f.click('skip-target',{stage:'0'});
+ assert.doesNotMatch(f.dialog.html,/선택됨/);
+ await f.click('new');await f.click('begin');
+ assert.equal(f.game().boss.maxHp,4822);
+ assert.equal(saved().flames,2,'the first boss costs no flame');
+ await f.api.dispose();f.release();
+});
+
 test('a failed shortcut load does not spend a flame; retry spends exactly once',async()=>{
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon'];
  const f=rig({savedProfile:profile,failLoadOnce:true}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
  await f.click('skip-toggle');await f.click('new');await f.click('begin');
  assert.match(f.dialog.html,/전장을 열지 못했습니다/);assert.equal(saved().flames,2);
- await f.click('continue');assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.clown.maxHp);assert.equal(saved().flames,1);
+ await f.click('continue');assert.equal(f.game().boss.maxHp,5076);assert.equal(saved().flames,1);
  await f.click('continue');assert.equal(saved().flames,1);await f.api.dispose();f.release();
 });
 test('last unlocked boss skip earns only its own memory and a separate completion record',async()=>{

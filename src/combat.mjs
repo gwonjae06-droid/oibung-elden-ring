@@ -1,4 +1,8 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
+import {kwonReadableWind} from './attack-readability.mjs';
+import {BOSS_TEMPO} from './boss-tempo.mjs';
+import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
+import {chooseKwonCloseDefense,KWON_CLOSE_DEFENSE} from './kwon-close-defense.mjs';
 import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
 import {
   actPlayer,
@@ -8,10 +12,17 @@ import {
 } from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
-import {KWON_WAVE} from './kwon-wave-data.mjs';
-import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
+import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
+import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
+import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
+// Legacy common active skills removed; only forge paths remain.
+import {evolutionCount} from './weapon-evolution.mjs';
+import {equippedPath,playerMeleeReach} from './weapon-abilities.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
+import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -20,9 +31,14 @@ export const angleDelta = (a, b) =>
 export const BOSS_SCALE = 1.4;
 export const CINEMATIC = 5.2;
 export const HUG_RANGE = 3.3;
-export const HUG_TIME = 2.2;
+export const HUG_TIME = 1.5;
 export const WEAPONS = PLAYER_WEAPONS;
 export const PATTERNS = {
+  // Signature skills retain the same readable windup/active/recovery contract.
+  spiderPrison: {name:'거미의 봉쇄',wind:1.25,active:.52,recover:1.7,damage:26},
+  graveSword: {name:'검의 묘비',wind:1.42,active:.42,recover:1.65,damage:38},
+  livingSword: {name:'살아 있는 턱검',wind:1.12,active:.46,recover:1.48,damage:28},
+  lastStance: {name:'왕의 최후 자세',wind:1.12,active:.66,recover:2.1,damage:34},
   sweep: {
     name: '왕검 횡단',
     wind: 0.48,
@@ -92,6 +108,9 @@ export const ORDER = {
     'siege',
     'feint',
     'skewer',
+    'counterDancer',
+    'skyJudge',
+    'spiderPrison',
   ],
   2: [
     'draw',
@@ -105,10 +124,30 @@ export const ORDER = {
     'requiem',
     'afterimage',
     'widow',
+    'falseExecution',
+    'jawSnare',
+    'doubleMoon',
+    'windParry',
+    'graveSword',
+    'livingSword',
+    'lastStance',
   ],
 };
+// Above this distance Kwon's response should be a visible travelling sword
+// projectile or an actual gap-closing combo, not a stationary melee swing.
+// The adaptive shuffle bag still deals every legal opening once per cycle.
+export const KWON_RANGE_PRESSURE=Object.freeze({
+ farDistance:12,
+ chaseSpeed:Object.freeze({1:9.7,2:9.5}),
+ chaseWait:.78,
+ openings:Object.freeze({
+  1:Object.freeze(['spiderPrison','rush','hunt','leap','siege','skyJudge','feint']),
+  2:Object.freeze(['graveSword','livingSword','crescent','requiem','doubleMoon','lastStance',
+    'jawSnare','afterimage','widow','royalHunt','draw'])
+ })
+});
 export const CLOSE = {
-  1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer'],
+  1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer', 'counterDancer', 'skyJudge'],
   2: [
     'breaker',
     'counter',
@@ -117,6 +156,8 @@ export const CLOSE = {
     'tempest',
     'maelstrom',
     'royalHunt',
+    'jawSnare',
+    'windParry',
   ],
 };
 export const SEQUENCES = {
@@ -134,8 +175,18 @@ export const SEQUENCES = {
   requiem: ['wave', 'rush', 'slam'],
   afterimage: ['rush', 'retreat', 'rise'],
   widow: ['leap', 'jab', 'slam'],
+  // Every new combination uses the original sword/torso motion channels.
+  // Each constituent cut telegraphs, then resolves before the next begins.
+  falseExecution: ['retreat', 'thrust', 'reverse', 'slam'],
+  jawSnare: ['rush', 'backsweep', 'rise'],
+  doubleMoon: ['wave', 'retreat', 'rush', 'slam'],
+  windParry: ['jab', 'reverse', 'whirl'],
+  graveSword: ['graveSword','slam'],
+  livingSword: ['livingSword','rush'],
+  lastStance: ['lastStance','reverse','cross','slam'],
 };
 export const PHASE_ONE = {
+  spiderPrison: ['spiderPrison','backsweep'],
   rush: ['rush'],
   sweep: ['sweep', 'reverse'],
   thrust: ['thrust'],
@@ -147,6 +198,8 @@ export const PHASE_ONE = {
   siege: ['leap', 'stomp'],
   feint: ['retreat', 'rush'],
   skewer: ['jab', 'sweep'],
+  counterDancer: ['retreat', 'jab', 'backsweep'],
+  skyJudge: ['leap', 'stomp', 'reverse'],
 };
 export const SWORD = {x: 0, y: 2.3, z: 2.8, length: 8.55, width: 0.78};
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z),
@@ -194,6 +247,21 @@ export function bodyPose(b) {
         : 0;
   return {standing: s, angle: -0.9 * s, pivotY: 1.5, pivotZ: -1.5, lift: air};
 }
+export function kwonVisibleHurtShapes(b){
+ const pose=bodyPose(b),cinema=cinematicPose(b);
+ return kwonHurtShapes(b,{point:p=>bodyPoint(b,p),angle:pose.angle,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
+}
+export function kwonBossAimPoint(b){
+ // The same centre of the visible chest drives player targeting and hurt tests.
+ const chest=kwonVisibleHurtShapes(b).find(s=>s.id==='chest');
+ return chest||b;
+}
+export function encounterBossHurtShapes(g){
+ return g.clown?clownHurtShapes(g):kwonVisibleHurtShapes(g.boss);
+}
+export function encounterBossAimPoint(g){
+ return g.clown?clownAimPart(g):kwonBossAimPoint(g.boss);
+}
 export function bodyPoint(b, p) {
   const q = bodyPose(b),
     c = Math.cos(q.angle),
@@ -208,7 +276,7 @@ export function bodyPoint(b, p) {
 }
 export function patternConfig(b) {
   const c = PATTERNS[b.pattern];
-  if (b.phase !== 2) return {...c, damage: c.damage > 0 ? c.damage + 3 : 0};
+  if (b.phase !== 2) return {...c,wind:kwonReadableWind(b.pattern,['slam','wave'].includes(b.pattern)?c.wind:c.wind*BOSS_TEMPO.windup,b.phase),recover:Math.max(b.pattern==='shove'?1.2:.8,c.recover*BOSS_TEMPO.recovery),damage: c.damage > 0 ? c.damage + 3 : 0};
   const wind = {
     rush: 0.38,
     jab: 0.19,
@@ -228,10 +296,9 @@ export function patternConfig(b) {
   }[b.pattern];
   return {
     ...c,
-    wind,
+    wind:kwonReadableWind(b.pattern,(wind??c.wind)*(['slam','wave'].includes(b.pattern)?1:BOSS_TEMPO.windup),b.phase),
     damage: c.damage > 0 ? c.damage + (b.pattern === 'jab' ? 6 : 10) : 0,
-    recover:
-      {
+    recover:Math.max(b.pattern==='shove'?1.2:.8,({
         slam: 1.05,
         thrust: 0.85,
         whirl: 0.9,
@@ -239,7 +306,7 @@ export function patternConfig(b) {
         reverse: 0.8,
         rush: 0.8,
         shove: 1.2,
-      }[b.pattern] || 0.8,
+      }[b.pattern] || .8)*BOSS_TEMPO.recovery),
   };
 }
 export function attackZone(b) {
@@ -249,15 +316,13 @@ export function attackZone(b) {
     active = b.state === 'active',
     base = {kind: 'danger', shape: 'circle', x: b.x, z: b.z, progress, active};
   if (b.pattern === 'stomp') return {...base, r: 6.5};
-  if (b.pattern === 'shove') return {...base, kind: 'push', r: 4.8};
-  if (b.pattern === 'backsweep')
-    return {
-      ...base,
-      shape: 'cone',
-      r: 8,
-      yaw: b.yaw + Math.PI,
-      half: Math.PI - 1.2,
-    };
+  // The prison fan and royal last stance have visible sword/projectile contact,
+  // not an invisible radial hit around the boss. Same for a rear sword sweep.
+  if (['spiderPrison', 'lastStance', 'backsweep'].includes(b.pattern)) return null;
+  // Hugging the boss triggers a telegraphed, forward-facing body shove,
+  // rather than a 360-degree invisible displacement.
+  if (b.pattern === 'shove')
+    return {...base, kind:'push', shape:'cone', yaw:b.yaw, r:4.8, half:1.0};
   if (['slam', 'leap'].includes(b.pattern) && b.zone)
     return {
       ...base,
@@ -273,7 +338,7 @@ export function inZone(z, p) {
     (z.shape === 'circle' || Math.abs(angleDelta(z.yaw, toward(z, p))) < z.half)
   );
 }
-export function createGame(weapon = 'sword', {register = true} = {}) {
+export function createGame(weapon = 'sword', {register = true,seed} = {}) {
   if (!WEAPONS[weapon]) throw new Error('Unknown weapon');
   const game = {
     status: 'playing',
@@ -284,7 +349,9 @@ export function createGame(weapon = 'sword', {register = true} = {}) {
     projectiles: [],
     bossShots: [],
     nextId: 0,
-    player: createPlayerState(),
+    patternShuffle: createPatternShuffle(seed),
+    bossAutonomy: createBossAutonomy(seed??0x72a9c1),
+    player: createPlayerState({weapon}),
     boss: {
       x: 0,
       z: -4,
@@ -312,19 +379,21 @@ export function createGame(weapon = 'sword', {register = true} = {}) {
       pressure: 0,
       stun: 0,
       hug: 0,
+      closeCooldown: 0,
       from: null,
       zone: null,
       turnTarget: 0,
     },
     stats: {hits: 0, dodges: 0, damage: 0},
   };
+  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,value:(amount,poise=0,opts={})=>bossDamage(game,amount,poise,opts)});
   return register ? registerEncounter(game) : game;
 }
 export function act(g, type) {
   return actPlayer(g, type);
 }
 export function rolling(p) {
-  return p.action?.kind === 'roll' && p.action.t >= 0.075 && p.action.t <= 0.35;
+  return playerRolling(p);
 }
 function poseParams(pattern, stand, carry, cut) {
   let ly = 0,
@@ -411,18 +480,22 @@ function endPose(b) {
     );
   return {yaw: P.ey, pitch: P.ep, offset: P.back * 0.7};
 }
-export function startPattern(g, name) {
+export function startPattern(g, name, {closeDefense=false} = {}) {
   if (!PATTERNS[name]) throw new Error('Unknown pattern');
   const b = g.boss;
   b.from = b.state === 'recovery' ? endPose(b) : null;
+  // Keep the torso at the previous strike's follow-through during quick
+  // combos. It now returns through the next windup instead of snapping.
+  b.motionFrom = b.state === 'recovery' && b.recovery <= .2 ? b.pattern : null;
   b.state = 'windup';
   b.pattern = name;
   b.t = 0;
   b.hit = false;
   b.waveFired = false;
+  if(name==='wave')b.waveVariant=nextKwonWaveVariant(b.waveVariant);
   b.attackId++;
   b.punishable = false;
-  b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
+  b.turnTarget = toward(b, g.player) + (name === 'backsweep' && !closeDefense ? Math.PI : 0);
   b.aim = b.yaw;
   b.zone = ['slam', 'leap'].includes(name)
     ? {x: g.player.x, z: g.player.z}
@@ -438,31 +511,32 @@ export function beginSequence(g, opening) {
   startPattern(g, map[opening][0]);
 }
 export function chooseOpening(g) {
-  const b = g.boss,
-    d = dist(b, g.player);
-  let list;
-  if (b.phase === 1)
-    list =
-      g.player.action?.kind === 'heal'
-        ? ['thrust', 'hunt']
-        : d > 13
-          ? ['thrust', 'leap', 'siege']
-          : d < 5
-            ? CLOSE[1]
-            : ORDER[1];
-  else if (g.player.action?.kind === 'heal') list = ['royalHunt', 'execution'];
-  else
-    list =
-      d > 13
-        ? ['crescent', 'draw', 'execution', 'requiem']
-        : d < 5
-          ? CLOSE[2]
-          : ORDER[2];
-  const i = b.sequence++;
-  let pick = list[i % list.length];
-  if (pick === b.lastOpening && list.length > 1)
-    pick = list[(i + 1) % list.length];
-  return pick;
+ const b=g.boss,d=dist(b,g.player),phase=b.phase===2?2:1;
+ const pool=Object.keys(phase===1?PHASE_ONE:SEQUENCES);
+ // Healing is an explicit punish reaction: shuffle its two legal counters
+ // separately. It cannot poison the ordinary attack deck.
+ if(g.player.action?.kind==='heal'){
+  b.sequence++;
+  return drawPatternShuffle(g.patternShuffle,'kwon-healing-'+phase,
+   phase===1?['thrust','hunt']:['royalHunt','execution'],{avoid:b.lastOpening});
+ }
+ const distant=d>KWON_RANGE_PRESSURE.farDistance;
+ let preferred=distant?KWON_RANGE_PRESSURE.openings[phase]
+  :d<5?CLOSE[phase]:ORDER[phase];
+ if(g.journeyBalance?.mode==='story'&&!distant){
+  if(d<6)preferred=phase===1
+   ?['hunt','skewer','counterDancer','skyJudge','backsweep']
+   :['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
+  else if(d>11)preferred=phase===1
+   ?['siege','spiderPrison','skyJudge','feint','hunt','thrust']
+   :['requiem','livingSword','graveSword','doubleMoon','falseExecution','crescent','execution','draw'];
+  else if(phase===2&&b.lastOpening==='crescent')
+   preferred=['royalHunt','counter','windParry','trample'];
+ }
+ b.sequence++;
+ // First prefer moves suitable for current distance, but never exclude the
+ // remaining signatures: one full cycle visits EVERY phase-legal opening.
+ return drawPatternShuffle(g.patternShuffle,'kwon-'+phase,pool,{preferred,avoid:b.lastOpening});
 }
 export function swordPose(b) {
   const cfg = patternConfig(b),
@@ -470,7 +544,7 @@ export function swordPose(b) {
     stand = q.standing,
     carry = mix(0.25, -0.6, stand),
     cut = mix(0.25, 0.72, stand),
-    {ly, ey, lp, ep, back} = poseParams(b.pattern, stand, carry, cut),
+    {ly, ey, lp, ep, back} = poseParams(({spiderPrison:'stomp',graveSword:'slam',livingSword:'wave',lastStance:'whirl'})[b.pattern]||b.pattern, stand, carry, cut),
     from = b.from || {yaw: 0, pitch: carry, offset: 0};
   let yaw = 0,
     pitch = carry,
@@ -558,8 +632,26 @@ export function bladeHits(p, {a, b}, width = SWORD.width) {
   const at = (t) => ({x: mix(a.x, b.x, t), z: mix(a.z, b.z, t)});
   return segmentDistance(p, at(lo), at(hi)) < width;
 }
-function landHit(g, amount, poise, a) {
-  const actual = bossDamage(g, amount, poise),
+// Sweep only the actual 3D blade over the elapsed animation frame.
+// A fast rear slash or full turn can no longer become an invisible 360-degree
+// hitbox, while a player who really crosses the moving sword still gets hit.
+export function sweptBladeHits(player,previous,current,width=SWORD.width){
+ if(!previous||!current)return false;
+ const point=(a,b,t)=>({
+  x:a.x+(b.x-a.x)*t,
+  y:a.y+(b.y-a.y)*t,
+  z:a.z+(b.z-a.z)*t,
+ });
+ for(let i=0;i<=4;i++){
+  const t=i/4;
+  if(bladeHits(player,{a:point(previous.a,current.a,t),b:point(previous.b,current.b,t)},width))
+   return true;
+ }
+ return false;
+}
+
+function landHit(g, amount, poise, a,point=null) {
+  const actual = bossDamage(g, amount, poise,{point}),
     b = g.boss;
   // bossDamage already counted the hit (with poise and hit-stop), so only the rewards are settled here.
   settlePlayerHit(g, actual, a, {
@@ -579,10 +671,11 @@ function hurtPlayer(g, damage,cut=true) {
     emit(g, 'dodge');
     return;
   }
-  const before=p.hp;p.hp = Math.max(0, p.hp - damage);
+  const amount=Math.min(p.hp,playerIncomingDamage(g,damage));
+  const before=p.hp;p.hp = Math.max(0, p.hp - amount);
   p.invuln = 0.32;
   p.action = {kind: 'hurt', t: 0, total: 0.22};
-  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount: damage});
+  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount});
   freeze(g, 0.07);
   if (!p.hp) {
     g.status = 'lost';
@@ -621,56 +714,71 @@ export function step(g, dt, input = {}) {
   const mx = input.x || 0,
     mz = input.z || 0,
     mag = Math.hypot(mx, mz),
-    speed = p.skill.blue > 0 ? 4.7 * SKILLS.cards.blueSpeed : 4.7;
+    speed = playerWalkSpeed(p);
   if (!p.action && mag&&!playerIncapacitated(p)) {
     p.x += (mx / Math.max(1, mag)) * speed * dt;
     p.z += (mz / Math.max(1, mag)) * speed * dt;
   }
   if (!p.action) {
-    if (input.lock) p.yaw = toward(p, b);
+    if (input.lock) p.yaw = toward(p, encounterBossAimPoint(g));
     else if (mag) p.yaw = Math.atan2(mx, mz);
+  }
+  // Lock-on follows the boss during the attack's preparatory frames. The
+  // previously frozen initial yaw let fast bosses escape an apparently aimed hit.
+  const action=p.action;
+  if(input.lock&&action&&['attack','skill'].includes(action.kind)&&!action.done&&action.t<action.wind){
+    const desired=toward(p,encounterBossAimPoint(g)),delta=angleDelta(action.yaw,desired);
+    action.yaw+=clamp(delta,-dt*11,dt*11);
+    p.yaw=action.yaw;
   }
   tickPlayerAction(g, dt, w, {
     roll: (a) => {
       if (a.t <= dt * 1.1 && mag) a.yaw = Math.atan2(mx, mz);
-      p.x += Math.sin(a.yaw) * 10 * dt;
-      p.z += Math.cos(a.yaw) * 10 * dt;
+      p.x += Math.sin(a.yaw) * playerRollSpeed(g) * dt;
+      p.z += Math.cos(a.yaw) * playerRollSpeed(g) * dt;
     },
+    backstep: (a,seconds) => {p.x-=Math.sin(a.yaw)*9*seconds;p.z-=Math.cos(a.yaw)*9*seconds;},
     melee: (a) => {
-      const range = a.skill ? 6.8 : w.range + 2.5;
-      if (
-        dist(p, b) <= range &&
-        Math.abs(angleDelta(a.yaw, toward(p, b))) < 1.25
-      ) {
-        a.hit = true;
-        landHit(g, w.damage * a.mult, w.poise * (a.skill ? 2.5 : 1), a);
+      const shapes=encounterBossHurtShapes(g);
+      // The sword is ~2m long beyond the character grip, NOT a radius
+      // around the player's feet. Direction and blade height must both line up.
+      const reach=playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85);
+      const hit=kwonMeleeContact(shapes,p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
+      if(hit){
+        a.hit=true;
+        landHit(g,w.damage*a.mult+(a.bankedBonus||0),w.poise*(g.weapon==='sword'&&evolutionCount(g,'charged-blade')>=2?1.15:1),a,hit);
       }
     },
   });
   confine(p);
   for (const q of g.projectiles) {
-    const old = advancePlayerProjectile(q, dt);
+    const old = advancePlayerProjectile(q, dt,p);
     if (q.piercing && g.bossShots.length) {
       const n = g.bossShots.length;
       g.bossShots = g.bossShots.filter((s) => segmentDistance(s, old, q) > 1.8);
       if (g.bossShots.length < n) emit(g, 'skill-pierce', {flavor: 'bow'});
     }
-    if (q.life > 0 && !q.bossHit && segmentDistance(b, old, q) < 2.8) {
-      q.bossHit = true;
-      if (!q.piercing) q.life = 0;
-      landHit(g, q.damage, q.poise, q.source);
+    const flightY=Number.isFinite(q.y)?q.y:1.2;
+    const from={...old,y:Number.isFinite(old.y)?old.y:flightY};
+    const to={x:q.x,y:flightY,z:q.z};
+    const hit=q.life>0&&!q.bossHit?kwonProjectileContact(encounterBossHurtShapes(g),from,to):null;
+    if(hit){
+      q.bossHit=true;
+      if(!q.piercing&&!q.returningHammer)q.life=0;
+      landHit(g,q.damage,q.poise,q.source,hit);
     }
   }
   g.projectiles = g.projectiles.filter((q) => q.life > 0);
   if (g.status !== 'playing' || b.state === 'transition') return;
   for (const q of g.bossShots) {
     const old = {x: q.x, z: q.z};
+    if(q.turnRate){const delta=angleDelta(q.yaw,toward(q,p));q.yaw+=clamp(delta,-q.turnRate*dt,q.turnRate*dt);}
     q.x += Math.sin(q.yaw) * q.speed * dt;
     q.z += Math.cos(q.yaw) * q.speed * dt;
     q.age = (q.age||0) + dt;
     q.life -= dt;
     if (Math.hypot(q.x, q.z) > 27) q.life = 0;
-    if (q.life > 0 && segmentDistance(p, old, q) < (q.radius ?? 0.9)) {
+    if (q.life > 0 && q.age >= (q.minArmTime||0) && segmentDistance(p, old, q) < (q.radius ?? 0.9)) {
       q.life = 0;
       hurtPlayer(g, q.damage);
     }
@@ -682,6 +790,7 @@ export function step(g, dt, input = {}) {
     return;
   }
   b.poise = Math.max(0, b.poise - dt * 5);
+  b.closeCooldown = Math.max(0, (b.closeCooldown||0)-dt);
   b.t += dt;
   const cfg = patternConfig(b);
   if (b.state === 'stagger') {
@@ -695,15 +804,28 @@ export function step(g, dt, input = {}) {
   b.hug = dist(p, b) < HUG_RANGE ? (b.hug || 0) + dt : 0;
   if (b.state === 'idle') {
     b.punishable = false;
-    b.yaw += clamp(angleDelta(b.yaw, toward(b, p)), -dt * 2.7, dt * 2.7);
-    b.aim = b.yaw;
-    if (dist(p, b) > 8) moveBoss(b, b.phase === 1 ? 6.8 : 6.5, dt);
-    if (b.hug > HUG_TIME) {
-      b.hug = 0;
-      beginSequence(g, 'shove');
-    } else {
-      b.wait -= dt;
-      if (b.wait <= 0) beginSequence(g, chooseOpening(g));
+    // Never interrupt an authored strike, recovery, knockdown or stagger:
+    // all counterattacks start only from genuine idle time.
+    const counter=chooseKwonCloseDefense(b,p);
+    if(counter){
+      b.hug=0;
+      b.closeCooldown=KWON_CLOSE_DEFENSE.cooldown;
+      b.queue=[];
+      b.lastOpening='close-'+counter;
+      startPattern(g,counter,{closeDefense:true});
+    }else{
+      const gap=dist(p,b),far=gap>KWON_RANGE_PRESSURE.farDistance;
+      // Turn and pursue between attacks, instead of dealing proximity damage.
+      const turnRate=far?4.0:2.7;
+      b.yaw += clamp(angleDelta(b.yaw, toward(b,p)), -dt*turnRate, dt*turnRate);
+      b.aim=b.yaw;
+      stepBossAutonomy(g.bossAutonomy,b,p,dt,{
+        speed:far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===2?6.5:6.8,
+        sideSpeed:b.phase===2?3.5:2.9,spacing:b.phase===2?6:6.8,
+        arena:24,phase:b.phase,farDistance:KWON_RANGE_PRESSURE.farDistance
+      });
+      b.wait-=dt;
+      if(b.wait<=0)beginSequence(g,chooseOpening(g));
     }
   } else if (b.state === 'windup') {
     if (b.pattern === 'rush' && b.t < 0.18)
@@ -730,14 +852,40 @@ export function step(g, dt, input = {}) {
       }
     }
   } else if (b.state === 'active') {
+    // Sample the actual blade before moving/turning this frame.
+    const previousSword=swordSegment({...b,t:Math.max(0,b.t-dt)});
     // One broad vertical slash leaves the sword at the midpoint of its fall.
+    if(['spiderPrison','graveSword','livingSword','lastStance'].includes(b.pattern)&&!b.waveFired&&b.t>=cfg.active*.38){
+      b.waveFired=true;
+      const kind=b.pattern, count=kind==='spiderPrison'?7:kind==='graveSword'?3:kind==='lastStance'?2:1;
+      const baseYaw=b.yaw, gap=kind==='spiderPrison'?Math.PI/5:0;
+      for(let i=0;i<count;i++){
+        const yaw=kind==='spiderPrison'?baseYaw+(i-3)*gap:
+          kind==='graveSword'?baseYaw+(i-1)*.31:
+          kind==='lastStance'?baseYaw+(i?-.37:.37):baseYaw;
+        // Emit sword waves from the visible boss blade, never from the player-locked impact marker.
+        const origin=b;
+        const x=origin.x+Math.sin(yaw)*4.5,z=origin.z+Math.cos(yaw)*4.5;
+        const shot={id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw,
+          variant:b.waveVariant,radius:kind==='livingSword'?1.1:1.05,
+          speed:kind==='spiderPrison'?9:kind==='graveSword'?8:kind==='livingSword'?11:17,
+          minArmTime:.3,
+          // The slow, visible ranged signature must have enough lifetime to
+           // reach a target near the arena rim without speeding up its projectile.
+           life:kind==='spiderPrison'?2.45:kind==='graveSword'?2.7:2.0,age:0,damage:kind==='spiderPrison'?16:kind==='graveSword'?22:26};
+        if(kind==='livingSword')shot.turnRate=.65;
+        g.bossShots.push(shot);
+        emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
+      }
+    }
     if (b.pattern === 'wave' && !b.waveFired && b.t >= cfg.active*KWON_WAVE.releaseRatio) {
       b.waveFired = true;
       const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
       g.bossShots.push({id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw:b.yaw,
-        radius:KWON_WAVE.radius,speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,
+        variant:b.waveVariant,radius:KWON_WAVE.radius,
+        speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,minArmTime:.2,
         life:KWON_WAVE.lifetime,age:0,damage:cfg.damage});
-      emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind});
+      emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
     }
     if (b.pattern === 'rush') moveBoss(b, b.phase === 2 ? 31 : 23, dt);
     else if (b.pattern === 'thrust') moveBoss(b, 19, dt);
@@ -745,7 +893,7 @@ export function step(g, dt, input = {}) {
     else if (b.pattern === 'retreat') moveBoss(b, -9, dt);
     else if (b.pattern === 'leap' && b.t < cfg.active * 0.7)
       moveBoss(b, b.leapSpeed, dt);
-    else if (b.pattern === 'whirl') b.yaw += (TAU / cfg.active) * dt;
+    else if (b.pattern === 'whirl'||b.pattern==='lastStance') b.yaw += (TAU / cfg.active) * dt;
     const zone = attackZone(b);
     if (!b.hit && zone) {
       const ready =
@@ -771,8 +919,11 @@ export function step(g, dt, input = {}) {
     } else if (
       !b.hit &&
       !zone &&
-      !['wave', 'retreat'].includes(b.pattern) &&
-      bladeHits(p, swordSegment(b))
+      // Grave Sword is a projectile-only signature. Its former targeted
+      // 4.4-unit ground zone and this sword sweep could deal invisible
+      // instant damage before any traveling grave projectiles arrived.
+      !['wave', 'retreat', 'graveSword'].includes(b.pattern) &&
+      sweptBladeHits(p, previousSword, swordSegment(b))
     ) {
       b.hit = true;
       hurtPlayer(g, cfg.damage);
@@ -789,57 +940,31 @@ export function step(g, dt, input = {}) {
     else {
       b.state = 'idle';
       b.t = 0;
-      b.wait = b.phase === 2 ? 0.07 : 0.12;
+      // Recovery remains a full punish window. Only the next idle step
+      // gains time to run towards a distant target before attacking again.
+      b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
+        ?KWON_RANGE_PRESSURE.chaseWait:(b.phase===2?.58:.68)*BOSS_TEMPO.gap;
       b.punishable = false;
       b.from = null;
     }
   }
-  const d = dist(p, b);
-  if (d < 3) {
-    const a = d < 0.001 ? p.yaw : toward(b, p);
-    p.x = b.x + Math.sin(a) * 3;
-    p.z = b.z + Math.cos(a) * 3;
-    confine(p);
-  }
+  // Prevent clipping against the boss's ACTUAL abdomen at player height.
+  // Never snap the player to a circle about the invisible locomotion pivot.
+  const separation=g.clown?null:kwonPlayerSeparation(kwonVisibleHurtShapes(b),p);
+  if(separation){p.x=separation.x;p.z=separation.z;confine(p);}
 }
-export function skillView(g) {
-  const s = g.player.skill,
-    w = g.weapon,
-    ready = skillReady(s, w);
-  let text = '',
-    ratio = 1,
-    card = '';
-  if (w === 'sword') {
-    ratio =
-      s.haste > 0
-        ? s.haste / SKILLS.sword.duration
-        : ready
-          ? 1
-          : 1 - s.cooldown / STANDARD_COOLDOWN;
-    text =
-      s.haste > 0
-        ? '공속 증가 ' + s.haste.toFixed(1) + '초'
-        : ready
-          ? '준비 완료'
-          : '재사용 ' + s.cooldown.toFixed(1) + '초';
-  } else if (w === 'hammer') {
-    ratio = s.hammerHits / SKILLS.hammer.hits;
-    text = ready
-      ? '준비 완료'
-      : s.hammerHits + ' / ' + SKILLS.hammer.hits + ' 적중';
-  } else if (w === 'bow') {
-    ratio =
-      (s.charges + (s.charges < 3 ? s.recharge / STANDARD_COOLDOWN : 0)) / 3;
-    text = '충전 ' + s.charges + ' / 3';
-  } else {
-    ratio = ready ? 1 : 1 - s.cooldown / STANDARD_COOLDOWN;
-    card = ready ? currentCard(s) : '';
-    text = ready
-      ? '우클릭으로 카드 확정'
-      : '재사용 ' + s.cooldown.toFixed(1) + '초';
-    if (s.blue > 0) text = '이동 가속 ' + s.blue.toFixed(1) + '초';
-    else if (s.nextRed) text = '다음 공격 피해 +50%';
-    else if (s.nextYellow) text = '다음 적중 시 기절';
-  }
-  return {name: SKILLS[w].name, text, ratio: clamp(ratio, 0, 1), card, ready};
+export function skillView(g){
+ const id=equippedPath(g),s=g.player.skill,cooldown=Math.max(0,s.cooldown||0);
+ const names={'blade-wave':'검기','charged-blade':'2배 사거리','earth-wave':'피해 저장',
+ 'blood-hammer':'귀환 철추','twin-arrow':'후퇴 사격','piercing-arrow':'화염 화살',
+ 'wide-deck':'삼중 낙인','blood-deck':'흡혈 카드'};
+ if(!id)return {name:'기본 공격',text:'대장간에서 스킬을 각인하세요',ratio:0,card:'',ready:false};
+ const active=['earth-wave','blood-hammer','twin-arrow'].includes(id);
+ const progress=id==='wide-deck'?(s.sigilMarks||0)/3:active?cooldown>0?
+  1-cooldown/({ 'earth-wave':12,'blood-hammer':13,'twin-arrow':10}[id]):1:1;
+ const text=id==='wide-deck'?('문양 '+(s.sigilMarks||0)+' / 3'):
+  id==='earth-wave'&&s.storedDamage>0?'저장된 피해 '+Math.round(s.storedDamage):
+  active?(cooldown>0?'재사용 '+cooldown.toFixed(1)+'초':'스킬 사용 가능'):
+  '일반 공격에 자동 적용';
+ return {name:names[id],text,ratio:clamp(progress,0,1),card:'',ready:active&&cooldown<=0};
 }

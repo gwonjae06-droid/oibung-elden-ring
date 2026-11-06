@@ -6,8 +6,8 @@ import {freshProfile,loadProfile,newRun,finishAttempt,advanceJourney} from '../s
 import {createEncounterStore} from '../src/encounter-state.mjs';
 import {score} from '../src/boss-score.mjs';
 const advance=(g,seconds,input={})=>{for(let t=0;t<seconds-1e-8;t+=.01)stepBlood(g,.01,input);};
-test('all eighteen patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
- assert.equal(bloodPool(1).length,9);assert.equal(bloodPool(2).length,9);
+test('all twenty-six patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
+ assert.equal(bloodPool(1).length,13);assert.equal(bloodPool(2).length,13);
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.x=8;g.player.z=8;g.player.hp=g.player.maxHp=1e6;
   assert.ok(startBloodPattern(g,id));assert.ok(g.blood.hazards.length);assert.ok(g.blood.hazards.every(h=>h.warn>=.6));
@@ -29,7 +29,7 @@ test('airborne core resists melee then lands close enough for a counterattack',(
  const g=createBloodGame();g.boss.phase=2;g.player.z=-2;startBloodPattern(g,'eclipse');advance(g,.5);assert.ok(g.blood.elevation>2);const hp=g.boss.hp;assert.ok(actBlood(g,'light'));advance(g,.6);assert.equal(g.boss.hp,hp);advance(g,BLOOD_PATTERNS.eclipse.duration-1.1+.2);assert.equal(g.boss.state,'recovery');assert.equal(g.blood.elevation,0);assert.ok(actBlood(g,'light'));advance(g,.4);assert.ok(g.boss.hp<hp);
 });
 test('chain slow leaves a full-speed roll and enough warning to escape the fountain',()=>{
- const g=createBloodGame();g.player.x=5;g.player.z=5;startBloodPattern(g,'chain');advance(g,1.15);assert.ok(g.blood.slow>0);assert.ok(actBlood(g,'roll',{x:1}));advance(g,.55);assert.ok(g.player.x>12);const hp=g.player.hp;advance(g,1.1);assert.equal(g.player.hp,hp);
+ const g=createBloodGame();g.player.x=5;g.player.z=5;startBloodPattern(g,'chain');const chainOnset=g.blood.hazards[0].warn;advance(g,chainOnset+.03);assert.ok(g.blood.slow>0);assert.ok(actBlood(g,'roll',{x:1}));advance(g,.55);assert.ok(g.player.x>9.8&&g.player.x<11,'roll matches shared 10-unit dodge, not the former 18-unit dash');const hp=g.player.hp;advance(g,1.1);assert.equal(g.player.hp,hp);
 });
 test('zero time freezes hazards, invalid input is ignored and victory clears all attacks',()=>{
  const g=createBloodGame();startBloodPattern(g,'fountain');const snapshot=JSON.stringify(g);for(const dt of[0,NaN,-1,Infinity])stepBlood(g,dt);assert.equal(JSON.stringify(g),snapshot);g.boss.phase=2;damageBlood(g,99999);assert.equal(g.status,'won');assert.equal(g.blood.hazards.length,0);const won=JSON.stringify(g);stepBlood(g,1);assert.equal(JSON.stringify(g),won);assert.equal(createBloodGame().boss.phase,1);

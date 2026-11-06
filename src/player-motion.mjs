@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import {springStep} from './secondary-physics.mjs';
+import {createRecoilBank} from './animation-recoil.mjs';
+import {solvePlayerFoot,playerFootTarget} from './player-foot-ik.mjs';
 const down=new THREE.Vector3(0,-1,0),axis=new THREE.Vector3(),bend=new THREE.Vector3(),elbow=new THREE.Vector3(),upper=new THREE.Vector3(),lower=new THREE.Vector3(),target=new THREE.Vector3();
 const armQ=new THREE.Quaternion(),lowerQ=new THREE.Quaternion(),bodyQ=new THREE.Quaternion(),parentQ=new THREE.Quaternion(),desired=new THREE.Quaternion(),angles=new THREE.Euler();
 const gripQ=new THREE.Quaternion(),handOffset=new THREE.Vector3();
@@ -27,14 +30,36 @@ function alignGrip(parts,pose,weapon){
  parts.pivot.quaternion.copy(parentQ).invert().multiply(bodyQ).multiply(desired);
 }
 const leftHint=new THREE.Vector3(-1,-.15,-.45),rightHint=new THREE.Vector3(1,-.05,-.65);
-const clothTimes=new WeakMap();
+const clothTimes=new WeakMap(),clothStates=new WeakMap(),headStates=new WeakMap(),helmetRecoil=new WeakMap();
 export function applyPlayerMotion(parts,p,weapon,time=0,speed=0){
  const body=parts.body;body.position.set(p.strideX,1+p.bob+p.lift,p.strideZ);body.rotation.set(p.spin||p.lean,p.twist,p.sway);
  for(let i=0;i<2;i++){
   const key=i?'R':'L';parts.legs[i].rotation.set(p['leg'+key],0,p['legZ'+key]||0);parts.knees[i].rotation.set(p['knee'+key],0,0);parts.ankles[i].rotation.set(p['ankle'+key]||0,0,0);
   parts.arms[i].rotation.set(p['arm'+key],0,p['armZ'+key]);parts.elbows[i].rotation.set(p['elbow'+key],0,0);parts.hands[i].rotation.set(0,0,0);
  }
- parts.head.rotation.set(p.headX,p.headY,0);
+ // Only ordinary locomotion uses foot IK. Attacks, evasions and knockbacks
+ // retain their authored timing and visual choreography.
+ if(p.locomotion&&p.grounded&&speed>.02){
+  for(let i=0;i<2;i++){
+   const key=i?'R':'L',foot=playerFootTarget(p,key,speed);
+   const solved=solvePlayerFoot(foot.y,foot.z),weight=foot.weight;
+   parts.legs[i].rotation.x+=(solved.hip-parts.legs[i].rotation.x)*weight;
+   parts.knees[i].rotation.x+=(solved.knee-parts.knees[i].rotation.x)*weight;
+   parts.ankles[i].rotation.x+=(solved.ankle-parts.ankles[i].rotation.x)*weight;
+  }
+ }
+ // Helmet inertia is local to the neck. Neither the gameplay root nor a
+ // weapon mount is moved by this visual follow-through.
+ const neckGoalX=p.headX-Math.max(-.1,Math.min(.1,(p.lean||0)*.25));
+ const neckGoalY=p.headY-Math.max(-.09,Math.min(.09,(p.twist||0)*.18));
+ let neck=headStates.get(parts),inertia=helmetRecoil.get(parts);
+ if(!inertia){inertia=createRecoilBank();helmetRecoil.set(parts,inertia);}
+ if(!neck||time<neck.time||time-neck.time>.4){neck={time,x:neckGoalX,y:neckGoalY,vx:0,vy:0};inertia.reset();}
+ const hNeck=Math.max(0,Math.min(.05,time-neck.time));
+ const sx=springStep(neck.x,neck.vx,neckGoalX,hNeck,20),sy=springStep(neck.y,neck.vy,neckGoalY,hNeck,18);
+ neck.x=sx.position;neck.vx=sx.velocity;neck.y=sy.position;neck.vy=sy.velocity;neck.time=time;
+ headStates.set(parts,neck);parts.head.rotation.set(neck.x,neck.y,-(p.sway||0)*.06+
+  inertia.step('helmet:balance',(p.lean||0)*1.1+(p.charge||0)*.25,hNeck,{strength:.78,frequency:19,limit:.032}));
  if(p.grounded){
   let lowest=Infinity;
   for(const ankle of parts.ankles)for(const z of [-.10,.26]){sole.set(0,-.10,z);ankle.localToWorld(sole);lowest=Math.min(lowest,sole.y);}
@@ -63,12 +88,28 @@ export function applyPlayerMotion(parts,p,weapon,time=0,speed=0){
  parts.weaponDetails.cards.fan.forEach((card,i)=>{card.rotation.y=(i-2)*(.23+p.grip*.055);});
  parts.flask.visible=p.heal>.06;parts.flask.rotation.x=-p.heal*.35;
  parts.cape.rotation.set(.03+Math.min(speed,8)*.012,-p.twist*.12,p.sway*.6);
- if(clothTimes.get(parts)===time)return;clothTimes.set(parts,time);
+ const lastCloth=clothTimes.get(parts);
+ if(lastCloth===time)return;
  const attr=parts.capeMesh.geometry.attributes.position,rest=parts.capeRest;
+ let state=clothStates.get(parts);
+ if(!state||attr.count!==state.count||time<lastCloth||time-lastCloth>.4){
+  state={count:attr.count,x:new Float32Array(attr.count),z:new Float32Array(attr.count),
+   vx:new Float32Array(attr.count),vz:new Float32Array(attr.count)};
+  clothStates.set(parts,state);
+ }
+ const h=Number.isFinite(lastCloth)?Math.max(0,Math.min(.05,time-lastCloth)):0;
+ clothTimes.set(parts,time);
  for(let i=0;i<attr.count;i++){
-  const x=rest[i*3],y=rest[i*3+1],z=rest[i*3+2],v=-y/1.4;
-  const swing=Math.sin(time*4.2+v*3+x*3)*(.012+Math.min(speed,8)*.006)*v;
-  attr.setXYZ(i,x+swing*.4,y+Math.sin(time*3+v*5)*.012*v,z-v*v*(Math.min(speed,8)*.035+p.grip*.045)+swing);
+  const x=rest[i*3],y=rest[i*3+1],z=rest[i*3+2],v=Math.max(0,-y/1.4);
+  // The hem lags behind acceleration and turning; shoulder vertices stay anchored.
+  const breeze=Math.sin(time*2.8+v*2.4+x*2.2)*(.008+Math.min(speed,8)*.004)*v;
+  const goalX=(breeze*.55+(p.sway||0)*.21+(p.twist||0)*.09)*v;
+  const goalZ=-v*v*(Math.min(speed,8)*.035+p.grip*.045)+breeze;
+  const sx=springStep(state.x[i],state.vx[i],goalX,h,12);
+  const sz=springStep(state.z[i],state.vz[i],goalZ,h,9);
+  state.x[i]=sx.position;state.vx[i]=sx.velocity;
+  state.z[i]=sz.position;state.vz[i]=sz.velocity;
+  attr.setXYZ(i,x+sx.position,y+Math.sin(time*2.6+v*3.1)*.006*v,z+sz.position);
  }
  attr.needsUpdate=true;parts.capeMesh.geometry.computeVertexNormals();
 }

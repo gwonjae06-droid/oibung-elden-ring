@@ -21,6 +21,29 @@ test('flame shortcut targets the highest consecutively unlocked playable boss',(
  p.defeated=['kwon','blood'];assert.equal(newFlameRun(p).stage,1);
  p.flames=0;assert.equal(newFlameRun(p),null);
 });
+test('flame selection can target any unlocked boss but cannot skip a locked gate',()=>{
+ const p=freshProfile();p.flames=4;p.defeated=['kwon','clown','dice'];
+ for(const stage of [1,2,3]){
+  const run=newFlameRun(p,'bow',stage);
+  assert.equal(run.stage,stage);assert.equal(run.startStage,stage);
+  assert.equal(run.skipFlamePending,true);
+  assert.equal(p.flames,4);
+ }
+ for(const stage of [-1,0,4,1.2,'2',null,NaN]){
+  assert.equal(newFlameRun(p,'bow',stage),null,'invalid destination '+stage);
+ }
+ const chosen=newFlameRun(p,'cards',1);
+ assert.equal(consumeFlameSkip(p,chosen),true);
+ assert.equal(p.flames,3,'a chosen earlier boss costs exactly one flame');
+ assert.equal(consumeFlameSkip(p,chosen),false);
+ const stale=newFlameRun(p,'sword',3);
+ p.defeated=['kwon'];
+ assert.equal(consumeFlameSkip(p,stale),false,'recheck unlocks before charging');
+ assert.equal(p.flames,3);
+ assert.equal(newFlameRun(p,'sword',2),null);
+ assert.equal(newFlameRun(p,'sword',1)?.stage,1);
+});
+
 test('a shortcut pays once, validates the gate again, and remains session-only',()=>{
  const p=freshProfile();p.flames=2;p.defeated=['kwon','clown'];const r=newFlameRun(p);
  assert.equal(consumeFlameSkip(p,{...r,stage:3,startStage:3}),false);
@@ -85,10 +108,9 @@ test('evolution choices are permanent forge purchases, not post-boss relic selec
  const p=freshProfile();p.flames=4;
  assert.ok(buyForgeTier(p,'sword','blade-wave'));
  assert.ok(buyForgeTier(p,'sword','blade-wave'));
- assert.ok(buyForgeTier(p,'sword','charged-blade'));
- assert.ok(buyForgeTier(p,'sword','charged-blade'));
- assert.equal(p.flames,0);
- assert.deepEqual(forgedEvolutions(p,'sword'),['blade-wave','blade-wave','charged-blade','charged-blade']);
+ assert.equal(buyForgeTier(p,'sword','charged-blade'),false);
+ assert.equal(p.flames,2);
+ assert.deepEqual(forgedEvolutions(p,'sword'),['blade-wave','blade-wave']);
  const r=newRun();r.pending=true;
  assert.equal(advanceJourney(r),undefined);
  assert.equal(r.stage,1);
@@ -108,9 +130,24 @@ test('real boss engines receive the registry health curve, grace and forged upgr
   configureJourney(g,r,p);
   assert.equal(g.player.potions,3);
   const id=BOSSES[stage],baseHp=BOSS_REGISTRY[id].maxHp;
-  assert.equal(g.boss.maxHp,({kwon:3572,clown:3760,dice:4230,blood:4700})[id]);
+  assert.equal(g.boss.maxHp,({kwon:4822,clown:5076,dice:5711,blood:6345})[id]);
   assert.deepEqual(g.journeyBalance,{mode:'story',boss:id});
   assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.startGrace,0);assert.equal(g.introControlled,true);
   assert.deepEqual(g.evolutions,['blade-wave']);
  });
+});
+
+test('recorded cumulative damage sums each boss once and old records stay unknown',()=>{
+ const p=freshProfile();p.run=newRun('sword');
+ assert.equal(finishAttempt(p,{won:true,time:12,damage:121.5}),'flame');
+ assert.equal(finishAttempt(p,{won:true,time:12,damage:5000}),null);
+ advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:13,damage:12.25}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:14,damage:-3}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:15,damage:5}),'flame');advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:16,damage:0}),'complete');
+ assert.equal(p.records[0].damage,139);
+ const data=new Map(),store={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ assert.equal(saveProfile(store,p),true);assert.equal(loadProfile(store).records[0].damage,139);
+ const old={...p,records:[{weapon:'sword',time:54,deaths:0,bossCount:4,startStage:0}]};
+ assert.equal(loadProfile({getItem:()=>JSON.stringify(old)}).records[0].damage,null);
 });

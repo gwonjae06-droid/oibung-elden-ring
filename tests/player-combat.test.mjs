@@ -10,10 +10,10 @@ test('creating a dice player does not overwrite the active progression encounter
   const before=encounterStore.read();
   const first=createDicePlayerGame('cards'),second=createDicePlayerGame('cards');
   assert.deepEqual(encounterStore.read(),before);
-  first.player.skill.nextRed=true;
+  first.player.skill.sigilMarks=2;
   first.player.hp=1;
-  assert.equal(second.player.skill.nextRed,false);
-  assert.equal(second.player.hp,120);
+  assert.equal(second.player.skill.sigilMarks,0);
+  assert.equal(second.player.hp,110);
   assert.throws(()=>createDicePlayerGame('missing'),/Unknown weapon/);
   encounterStore.clear();
 });

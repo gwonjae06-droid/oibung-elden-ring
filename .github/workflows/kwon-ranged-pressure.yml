@@ -1,0 +1,42 @@
+name: Kwon range pressure and fair sword patterns
+
+on:
+  pull_request:
+    paths:
+      - 'src/combat.mjs'
+      - 'src/pattern-shuffle.mjs'
+      - 'tests/kwon-ranged-pressure.test.mjs'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kwon-range:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install test dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check combat modules
+        run: |
+          node --check src/combat.mjs
+          node --check src/pattern-shuffle.mjs
+      - name: Distant pressure, combo and hitbox regression tests
+        run: >
+          node --test
+          tests/kwon-ranged-pressure.test.mjs
+          tests/boss-pattern-shuffle.test.mjs
+          tests/royal-pressure.test.mjs
+          tests/patterns.test.mjs
+          tests/new-boss-patterns.test.mjs
+          tests/combat.test.mjs
+          tests/kwon-overhead-wave.test.mjs
+          tests/kwon-wave-shapes-and-sky-slam.test.mjs
+          tests/hard-story-balance.test.mjs

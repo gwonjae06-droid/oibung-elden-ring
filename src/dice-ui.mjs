@@ -12,10 +12,10 @@ export function createDiceUi({coarse=false,doc=globalThis.document}={}){
  function bar(id,value,max){renderBattleMeter($(id),value,max);}
  function render(g,sv,weaponName,lock){
   const giant=g.dice.giant;panel.hidden=true;cue.textContent='';
-  $('boss-hud').querySelector('h2').textContent=!giant||giant.state==='transition'&&giant.t<4.5?R.name:giant.temperament==='feral'?'이성을 잃은 박성원':'운명의 찬탈자 박성원';
-  $('phase-label').textContent=g.boss.phase===3?'세 번째 단계 · 광기 붕괴':g.boss.phase===2?'두 번째 단계 · 육체 강탈':'첫 번째 단계 · 거대 주사위';
+  $('boss-hud').querySelector('h2').textContent=!giant||giant.state==='transition'&&giant.t<4.5?R.name:giant.temperament==='feral'?'이성을 잃은 박성원':'카지노의 신사 박성원';
+  $('phase-label').textContent=g.boss.phase===3?'세 번째 단계 · 카지노 붕괴':g.boss.phase===2?'두 번째 단계 · 점잖은 신사의 도박':'첫 번째 단계 · 거대 주사위';
   renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});
-  $('boss-action').textContent=giant?'':g.status==='won'?'박성원이 토벌되었다':g.status==='lost'?'주사위에 깔렸습니다':g.dice.stun>0?'기절':g.dice.state==='warning'?'다음 칸으로 굴러옵니다':g.dice.state==='rolling'?'압사 주의':'빈틈 — 지금 반격하세요';
+  $('boss-action').textContent=giant?(giant.state==='attack'?giant.name:giant.state==='transition'?'육체를 강탈하고 있습니다':giant.temperament==='feral'?'탁자가 무너집니다 · 몸짓을 보고 회피':'신사의 다음 수를 기다리는 중'):g.status==='won'?'박성원이 토벌되었다':g.status==='lost'?'주사위에 깔렸습니다':g.dice.stun>0?'기절':g.dice.state==='warning'?'다음 칸으로 굴러옵니다':g.dice.state==='rolling'?'압사 주의':g.dice.roulette?'룰렛 '+(g.dice.roulette.kind==='jackpot'?'잭팟 · ':'선언 · ')+'투사체 '+g.dice.roulette.count+'개':'빈틈 — 지금 반격하세요';
   $('boss-action').toggleAttribute('data-critical',!giant&&/압사|즉사|약점|경직/.test($('boss-action').textContent));
   if(giant)$('result-text').textContent='';
  }

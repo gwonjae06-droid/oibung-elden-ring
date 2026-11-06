@@ -14,6 +14,8 @@ try{
  for(const boss of bosses){
   const page=await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
   const errors=[];
+  // Test 3D scene geometry without waiting indefinitely on remote web fonts.
+  await page.route('https://fonts.**/**',request=>request.abort());
   page.on('pageerror',e=>errors.push(String(e.stack||e)));
   page.on('console',m=>{
    if(m.type()==='error'&&/Battle frame failed|Blood frame failed|Clown frame failed|WebGL.*(error|failed)|Shader Error/i.test(m.text()))

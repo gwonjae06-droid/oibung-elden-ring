@@ -9,7 +9,7 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createGyuwonGame(weapon='sword'){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
- return {bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14}),
+ return {bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   gyuwon:{pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:'sword'}};
 }

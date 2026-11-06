@@ -42,11 +42,18 @@ const finite=v=>Number.isFinite(v)?v:0;
 export function giantThrowTimeline(state,h){
  if(!state||!h||!(h.warn>0))return null;
  const index=h.handIndex,impact=h.start+h.warn;
- // A single palm has to finish releasing its previous object before collecting the next.
+ // Real multi-second ballistic flight, not the former 0.11-second blur.
+ // Schedule pickup after the previous release, not after its projectile lands:
+ // several objects may be in flight while only one is held by each hand.
+ const flight=Math.min(h.flightSeconds??.11,Math.max(.11,h.warn-.25));
  const preceding=(state.hazards||[]).filter(q=>q!==h&&q.handIndex===index&&!q.cancelled&&q.start<h.start)
-  .reduce((latest,q)=>Math.max(latest,q.start+q.warn*.64+.045),0);
- const ready=Math.min(impact-.23,Math.max(h.start,preceding));
- const release=Math.min(impact-.11,Math.max(ready+.14,h.start+h.warn*.64));
+  .reduce((latest,q)=>{
+   const duration=Math.min(q.flightSeconds??.11,Math.max(.11,q.warn-.25));
+   return Math.max(latest,q.start+q.warn-duration+.025);
+  },0);
+ const plannedRelease=impact-flight;
+ const ready=Math.min(plannedRelease-.13,Math.max(h.start,preceding));
+ const release=Math.max(ready+.13,plannedRelease);
  const pickupEnd=ready+Math.min(.19,(release-ready)*.31);
  return {ready,pickupEnd,release,impact,age:state.t-h.start,phase:state.t<ready?'rest':state.t<pickupEnd?'pickup':state.t<release?'grip':state.t<impact?'flight':'impact'};
 }
@@ -71,9 +78,12 @@ export function giantThrownPropPose(state,h,type,grip,launch){
  }
  if(state.t<timing.release)return {visible:true,phase:'grip',x:current.x,y:current.y,z:current.z,spin:0,flight:0};
  const start=launch||current,u=clamp01((state.t-timing.release)/(timing.impact-timing.release));
- const travel=Math.hypot(h.x-start.x,h.z-start.z),height=Math.min(19,Math.max(type==='chess'?7:5,travel*.23));
- const spin=(type==='coin'?Math.PI*6:type==='dice'?Math.PI*3.2:type==='chip'?Math.PI*2.3:Math.PI*1.2)*u;
- return {visible:true,phase:'flight',x:lerp(start.x,h.x,u),y:lerp(start.y,Math.max(1.4,type==='chess'?4:2),u)+Math.sin(u*Math.PI)*height,z:lerp(start.z,h.z,u),spin,flight:u};
+ const travel=Math.hypot(h.x-start.x,h.z-start.z),height=Math.min(19,Math.max(type==='chess'?7:5,travel*.19));
+ const spin=(type==='coin'?Math.PI*4:type==='dice'?Math.PI*2.5:type==='chip'?Math.PI*1.8:Math.PI)*u;
+ // Smooth horizontal acceleration/deceleration and a visibly arcing descent.
+ // Both endpoints are identical to the gameplay's actual launch/impact.
+ const flight=ease(u);
+ return {visible:true,phase:'flight',x:lerp(start.x,h.x,flight),y:lerp(start.y,Math.max(1.4,type==='chess'?4:2),u)+Math.sin(u*Math.PI)*height,z:lerp(start.z,h.z,flight),spin,flight:u};
 }
 // Grip -> shoulder wind-up -> release -> recoil. Pure curves; the hand collider uses
 // giantHandPose (same positional trajectory), while wrist and fingers follow this gesture.
@@ -114,9 +124,20 @@ export function giantFeralHeadMotion(state){
  const tremor=state.slot===7?ease(state.t/.65)*(1-ease((state.t-.72)/.55)):0;
  if(lean<.00001&&tremor<.00001)return null;
  const shake=Math.sin(state.t*76)*.85*tremor,poseLean=clamp01(lean);
- return {lean:poseLean+.13*tremor*(1-poseLean),weight:clamp01(weight),
-  bodyX:Math.max(-27,Math.min(27,bodyX+shake*.6)),
-  x:Math.max(-28,Math.min(28,x+shake*2)),
-  y:58-51*poseLean+Math.sin(state.t*98)*1.25*tremor,
-  z:Math.max(-106,Math.min(-30,z+Math.cos(state.t*70)*1.2*tremor))};
+ let poseX=Math.max(-28,Math.min(28,x+shake*2)),poseY=58-51*poseLean+Math.sin(state.t*98)*1.25*tremor,
+  poseZ=Math.max(-106,Math.min(-30,z+Math.cos(state.t*70)*1.2*tremor));
+ let poseBodyX=Math.max(-27,Math.min(27,bodyX+shake*.6)),poseWeight=clamp01(weight),poseMass=poseLean+.13*tremor*(1-poseLean);
+ // An outgoing slam may overlap the next anticipation. Aim the shared head
+ // precisely at its actual contact point instead of summing both target X/Z
+ // values and producing a visually displaced, invisible impact.
+ for(const h of state.hazards||[]){
+  if(!h.headSlam||h.cancelled)continue;
+  const impact=h.start+h.warn,age=state.t-impact;
+  if(age<-.14||age>.32)continue;
+  const align=ease((age+.14)/.14)*(1-ease((age-.10)/.22));
+  poseX=lerp(poseX,h.x,align);poseZ=lerp(poseZ,h.z,align);
+  poseY=lerp(poseY,7,align);poseBodyX=lerp(poseBodyX,h.x*.65,align);
+  poseMass=lerp(poseMass,1,align);poseWeight=lerp(poseWeight,.86,align);
+ }
+ return {lean:poseMass,weight:poseWeight,bodyX:poseBodyX,x:poseX,y:poseY,z:poseZ};
 }

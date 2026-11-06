@@ -26,6 +26,15 @@ export const BLOOD_ATTACK_GESTURES=Object.freeze({
  cross:   {style:'part-the-nave',lean:.2,twist:.5,arms:[1.6,1.6],open:[1.3,1.3],elbow:[.1,.1],head:-.15,wing:0,fold:0,sweep:0,cape:1},
  judgement:{style:'heavenly-execution',lean:.5,twist:-.6,arms:[1.9,.8],open:[.2,.8],elbow:[-.8,.5],head:-.3,wing:.9,fold:.2,sweep:.75,cape:1.3},
  ritual:  {style:'cathedral-consecration',lean:-.4,twist:.25,arms:[1.85,1.85],open:[1.25,1.25],elbow:[-.45,-.45],head:-.45,wing:1.3,fold:-.3,sweep:.2,cape:1.3},
+ // Each profile interpolates through the original damage-marker envelopes.
+ bloodScissors:{style:'sweeping-scissors',lean:.27,twist:.73,arms:[1.1,1.65],open:[.7,.9],elbow:[-.35,.45],head:-.18,wing:0,fold:0,sweep:0,cape:.95},
+ heartCage:{style:'heart-cage',lean:-.22,twist:.24,arms:[1.65,1.65],open:[1.2,1.2],elbow:[-.4,-.4],head:-.3,wing:0,fold:0,sweep:0,cape:.8},
+ wingShear:{style:'crossed-wings',lean:.43,twist:.83,arms:[.65,1.3],open:[.8,.8],elbow:[.16,-.3],head:-.2,wing:1,fold:.1,sweep:1.25,cape:1.15},
+ rosary:{style:'rosary-procession',lean:-.25,twist:.35,arms:[1.4,1.7],open:[1.1,.85],elbow:[-.45,-.2],head:-.35,wing:.5,fold:0,sweep:.3,cape:1.0},
+ reverseFlow:{style:'undertow',lean:-.3,twist:.4,arms:[.35,.35],open:[-.8,-.8],elbow:[.8,.8],head:.2,wing:0,fold:0,sweep:.4,cape:1.1},
+ bloodStatues:{style:'sculptor',lean:-.23,twist:.5,arms:[1.7,1.35],open:[1.1,1.1],elbow:[-.6,.3],head:-.33,wing:0,fold:0,sweep:.6,cape:.8},
+ wingGenesis:{style:'scarlet-unfurl',lean:-.42,twist:.16,arms:[1.6,1.6],open:[1,1],elbow:[-.55,-.55],head:-.4,wing:1.5,fold:-.5,sweep:1.15,cape:1.3},
+ heartFeast:{style:'heart-sacrament',lean:-.35,twist:.15,arms:[1.8,1.8],open:[1.15,1.15],elbow:[-.45,-.45],head:-.45,wing:.9,fold:-.15,sweep:.4,cape:1.1},
 });
 // All keyframe envelopes share actual hazard warning times from combat state.
 // Persistent marker snapshots are owned by the presentation controller because
