@@ -8,7 +8,7 @@ import {createDicePlayerGame} from '../src/dice-player.mjs';
 import {createBloodGame,damageBlood} from '../src/blood-combat.mjs';
 import {createBloodPatternDeck,nextBloodPattern} from '../src/blood-pattern-director.mjs';
 import {bloodPool} from '../src/blood-data.mjs';
-import {nextGiantPressureSlot} from '../src/dice-giant.mjs';
+import {nextGiantPressureSlot,GIANT_NAMES,FERAL_NAMES} from '../src/dice-giant.mjs';
 import {createPatternShuffle} from '../src/pattern-shuffle.mjs';
 import {actPlayer,tickPlayerAction} from '../src/player-combat.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
