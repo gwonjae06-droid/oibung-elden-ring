@@ -8,6 +8,7 @@ import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
+import {registerSpecialHit,tickWeaponBurn,abilityRank} from './weapon-specialization.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -46,11 +47,13 @@ export function damageBlood(g,amount,impact=null){
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
 }
-function hit(g,amount,source,projectile=false,impact=null){
+function hit(g,amount,source,projectile=false,impact=null,fireRank=0){
  const s=g.blood;if(bloodBossAirborne(g))return 0;
  const damage=damageBlood(g,amount*(g.boss.phase===2&&g.boss.state==='recovery'?journeyWeaknessMultiplier(g,'blood',1.6):1),impact);
  if(!damage)return 0;
- settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});return damage;
+ settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
+ registerSpecialHit(g,damage,source,{fireRank,bonus:extra=>{const got=damageBlood(g,extra,impact);if(got>0)s.stun=Math.max(s.stun||0,.35);return got;}});
+ return damage;
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.45,age:0,damage:24,hit:false,...opts};h.warn=bloodReadableWarning(h.warn);g.blood.hazards.push(h);return h;}
 // Attackable ritual channels cancel only their own future hazards and heal share.
@@ -211,21 +214,21 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
- tickPlayerAction(g,dt,w,{melee:a=>{
+ tickPlayerAction(g,dt,w,{leap:a=>{p.x-=Math.sin(a.yaw)*8*dt;p.z-=Math.cos(a.yaw)*8*dt;},melee:a=>{
    if(bloodBossAirborne(g))return;
-   const reach=g.weapon==='hammer'?3.05:2.85;
+   const reach=g.weapon==='sword'&&abilityRank(g,'charged-blade')?5.7:g.weapon==='hammer'?3.05:2.85;
    const n=g.blood.heartNodes?.find(q=>q.hp>0&&Math.hypot(q.x-p.x,q.z-p.z)<reach+q.r&&
      Math.abs(Math.atan2(Math.sin(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw),Math.cos(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw)))<.6);
    if(n&&severHeartNode(g,w.damage*a.mult,{x:n.x,z:n.z})){a.hit=true;return;}
    const impact=kwonMeleeContact(bloodHurtShapes(g),p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
-   if(impact){a.hit=true;hit(g,w.damage*a.mult,a,false,impact);}
+   if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bonusDamage||0),a,false,impact);}
   }});
  if(g.status!=='playing')return;
  for(const q of g.projectiles){
   // Blood shots skim the cathedral floor rather than pitching up to a flying
   // target. Keep simulation height identical to the actual rendered mesh.
   q.y=bloodProjectileGroundHeight(q);
-  const prev=advancePlayerProjectile(q,dt);
+  const prev=advancePlayerProjectile(q,dt,p);
   if(q.hit||q.bossHit||q.life<=0)continue;
   // An airborne boss does not intercept, consume, reward or take damage from
   // a floor-level shot. It simply passes underneath until he lands.
@@ -234,7 +237,7 @@ function tickPlayer(g,dt,input){
   const prevY=Number.isFinite(prev.y)?prev.y:q.y;
   const impact=!bloodBossAirborne(g)?kwonProjectileContact(bloodHurtShapes(g),
    {x:prev.x,y:prevY,z:prev.z},{x:q.x,y:q.y,z:q.z}):null;
-  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true,impact);
+  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,true,impact,q.fireRank||0);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
  const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*playerRollSpeed(g)*dt;p.z+=Math.cos(a.yaw)*playerRollSpeed(g)*dt;}
@@ -246,7 +249,9 @@ export function stepBlood(g,dt,input={}){
  let left=Math.min(.05,dt);while(left>1e-9&&g.status==='playing'){
   const h=Math.min(1/120,left);g.time+=h;
   if(g.boss.state==='transition'){g.player.action=null;g.projectiles.length=0;tickBoss(g,h);}
-  else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
+  else{tickBossHitTraits(g,h);if(g.status!=='playing')return;
+   if(!bloodBossAirborne(g))tickWeaponBurn(g,h,d=>damageBlood(g,d));
+   if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
   if(g.status==='playing')tickBloodSiphon(g,h);
   left-=h;
  }
