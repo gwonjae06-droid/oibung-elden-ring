@@ -21,10 +21,12 @@ for(const [slot,kind,warning,release]of [
   assert.ok(g.events.some(e=>e.type===warning));
   const hp=g.player.hp;
   step(g,.35);assert.equal(g.player.hp,hp,'no contact before warning');
-  step(g,15);
+  // Stop at the first actual cast completion. A fixed 15-second wait could
+  // begin another unrelated random move and produce a false failure.
+  for(let i=0;i<16*120&&g.dice.state==='face-pattern';i++)stepDice(g,1/120);
   assert.ok(g.events.some(e=>e.type===release),kind+' attack never fired');
   assert.equal(g.dice.facePattern,null);
-  assert.notEqual(g.dice.state,'face-pattern');
+  assert.equal(g.dice.state,'recovery');
   assert.ok(g.dice.patternCount>=1);
  });
 }
