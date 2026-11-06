@@ -15,23 +15,36 @@ import {createClownNightmareAnatomy} from './clown-nightmare-anatomy.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {createPoseContinuity} from './boss-animation-continuity.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
-export function createClownActor(){
+export function createClownActor({coarse=false}={}){
  return runThreeStartup(THREE,(THREE,own)=>{
  const root=new THREE.Group(),body=new THREE.Group();body.position.y=5.2;root.add(body);
- const red=new THREE.MeshStandardMaterial({color:0x981d38,roughness:.7}),white=new THREE.MeshStandardMaterial({color:0xe8d5ad,roughness:.8}),black=new THREE.MeshStandardMaterial({color:0x16101a});
- const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.5,roughness:.4}),purple=new THREE.MeshStandardMaterial({color:0x54256c,roughness:.65});
+ const red=new THREE.MeshPhysicalMaterial({color:0x981d38,roughness:.85,sheen:.42,sheenRoughness:.9}),white=new THREE.MeshPhysicalMaterial({color:0xe8d5ad,roughness:.88,sheen:.34}),black=new THREE.MeshStandardMaterial({color:0x16101a,roughness:.7});
+ const gold=new THREE.MeshStandardMaterial({color:0xe5b64d,metalness:.75,roughness:.32}),purple=new THREE.MeshPhysicalMaterial({color:0x54256c,roughness:.86,sheen:.38});
  const reduced=false,collapse=createClownCollapse(),gait=createClownGait(),balance=createSpringBank(),recoil=createRecoilBank(),gestureBlend=createPoseContinuity();
  let lastGame=null,lastClock=-Infinity;
  const mesh=(geo,mat,x,y,z,parent=body)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m;};
- const c=document.createElement('canvas');c.width=256;c.height=128;const ctx=c.getContext('2d');for(let i=0;i<16;i++){ctx.fillStyle=i%2?'#dfcfad':'#a61c33';ctx.fillRect(i*16,0,16,128);}ctx.fillStyle='#d4a83b';ctx.fillRect(0,56,256,16);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
- const ball=mesh(new THREE.SphereGeometry(2.6,40,28),new THREE.MeshStandardMaterial({map:tex,roughness:.6,transparent:true}),0,2.6,0,root);
- const torso=mesh(new THREE.SphereGeometry(1,20,16),red,0,2.25,0);torso.scale.set(1,1.2,.72);mesh(new THREE.SphereGeometry(.65,16,12),red,0,1.1,0).scale.y=.7;
- const tube=mat=>mesh(new THREE.CylinderGeometry(.18,.22,1,10),mat,0,0,0),joint=(r,mat)=>mesh(new THREE.SphereGeometry(r,12,10),mat,0,0,0);
+ // Worn woven velvet with stitched panels, patina and muted satin trim.
+ const c=document.createElement('canvas');c.width=512;c.height=256;const ctx=c.getContext('2d');
+ for(let i=0;i<16;i++){
+  const x=i*32;ctx.fillStyle=i%2?'#c3ab83':'#842b35';ctx.fillRect(x,0,32,256);
+  ctx.fillStyle='rgba(20,10,15,.23)';ctx.fillRect(x+30,0,2,256);
+  for(let y=4;y<255;y+=13){ctx.fillStyle='rgba(240,210,171,.39)';ctx.fillRect(x+29,y,2,5);}
+ }
+ for(let y=0;y<256;y+=4){ctx.fillStyle=y%3?'rgba(36,19,22,.045)':'rgba(245,228,202,.04)';ctx.fillRect(0,y,512,1);}
+ ctx.fillStyle='#987746';ctx.fillRect(0,119,512,19);
+ ctx.fillStyle='rgba(33,20,13,.32)';ctx.fillRect(0,136,512,2);
+ const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+ tex.anisotropy=coarse?2:8;
+ const ball=mesh(new THREE.SphereGeometry(2.6,coarse?32:72,coarse?24:48),new THREE.MeshPhysicalMaterial({map:tex,roughness:.87,sheen:.38,transparent:true}),0,2.6,0,root);
+ const sculpt=points=>new THREE.LatheGeometry(points.map(([r,y])=>new THREE.Vector2(r,y)),coarse?28:64);
+ const torso=mesh(sculpt([[0,-1],[.56,-.98],[.78,-.78],[.81,-.45],[.67,-.18],[.79,.22],[.94,.57],[.73,.83],[.3,1],[0,1.03]]),red,0,2.25,0);torso.scale.set(1,1.2,.72);
+ const lowerCoat=mesh(sculpt([[0,-.5],[.48,-.48],[.67,-.38],[.73,-.12],[.60,.28],[.3,.39],[0,.4]]),red,0,1.1,0);lowerCoat.scale.y=.7;
+ const tube=mat=>mesh(sculpt([[.12,-.5],[.18,-.45],[.22,-.17],[.20,.1],[.24,.37],[.16,.5]]),mat,0,0,0),joint=(r,mat)=>mesh(new THREE.SphereGeometry(r,coarse?16:32,coarse?12:20),mat,0,0,0);
  const limbs=[-1,1].map(s=>({s,upper:tube(s<0?red:white),lower:tube(s<0?white:red),elbow:joint(.25,white),glove:joint(.4,white),thigh:tube(s<0?white:red),shin:tube(s<0?white:red),knee:joint(.25,red),shoe:joint(.4,black)}));
  const neck=tube(white),head=createClownHead(),mount=createClownHead();body.add(head.group);root.add(mount.group);mount.group.visible=false;
  const nightmare=createClownNightmareAnatomy(THREE,{body,head,mount});
- const collar=mesh(new THREE.TorusGeometry(.67,.16,8,24),white,0,3.4,0);collar.rotation.x=Math.PI/2;
- const beadGeo=new THREE.SphereGeometry(.14,10,8),ruffGeo=new THREE.ConeGeometry(.32,.65,4),patchGeo=new THREE.BoxGeometry(.26,.36,.04),cuffGeo=new THREE.TorusGeometry(.28,.08,6,16),puffGeo=new THREE.SphereGeometry(.38,12,10);
+ const collar=mesh(new THREE.TorusGeometry(.67,.16,coarse?8:14,coarse?24:56),white,0,3.4,0);collar.rotation.x=Math.PI/2;
+ const beadGeo=new THREE.SphereGeometry(.14,coarse?12:24,coarse?8:16),ruffGeo=new THREE.ConeGeometry(.32,.65,coarse?8:18),patchGeo=new THREE.BoxGeometry(.26,.36,.04),cuffGeo=new THREE.TorusGeometry(.28,.08,coarse?8:12,coarse?16:32),puffGeo=new THREE.SphereGeometry(.38,coarse?16:32,coarse?12:20);
  for(let i=0;i<3;i++)mesh(beadGeo,gold,0,1.7+i*.55,.72);
  for(let i=0;i<12;i++){const a=i*Math.PI/6,r=mesh(ruffGeo,i%2?purple:white,Math.cos(a)*.68,3.45,Math.sin(a)*.68);r.rotation.z=Math.PI;r.rotation.x=Math.sin(a)*.4;r.rotation.z+=Math.cos(a)*.4;}
  for(const s of[-1,1])for(let i=0;i<2;i++){const p=mesh(patchGeo,s<0?white:purple,s*.48,2+i*.6,.68);p.rotation.z=Math.PI/4;}

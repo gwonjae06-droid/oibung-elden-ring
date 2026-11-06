@@ -67,7 +67,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const nightmare=createClownNightmareTheatre(scene,{coarse,reduced});startup.own('Clown impossible theatre',()=>nightmare.dispose());
  const livingWorld=createClownLivingWorld(scene,{coarse,reduced,keyLight:sun,ambientLight:hemisphere});startup.own('Clown living world',()=>livingWorld.dispose());
   const atmosphere=createBossAtmosphere(scene,{profile:'clown',coarse,reduced});startup.own('Clown silent atmosphere',()=>atmosphere.dispose());
- const actor=createClownActor();scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);const P=buildPlayer(Object.keys(WEAPONS));scene.add(P.rig);
+ const actor=createClownActor({coarse});scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);const P=buildPlayer(Object.keys(WEAPONS));scene.add(P.rig);
   const cinematic=createCinematicWorld(scene,renderer,{profile:'clown',coarse,reduced});startup.own('Clown cinematic PBR',()=>cinematic.dispose());
   cinematic.apply(circus.root);cinematic.apply(actor.root,{actor:true});cinematic.apply(P.rig,{actor:true});
   const contactFx=createCinematicImpactFx(scene,{profile:'clown',coarse,reduced});startup.own('Clown physical hit fragments',()=>contactFx.dispose());const traitView=createBossHitTraitView(scene,P.body,shell,{reduced});startup.own('Clown trait view',()=>traitView.dispose());for(const k of Object.keys(P.weaponRigs))P.weaponRigs[k].visible=k===weapon;
