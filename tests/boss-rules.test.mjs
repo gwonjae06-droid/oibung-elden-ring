@@ -27,3 +27,8 @@ test('five bosses record performance evidence without inventing a confirmed bott
   assert.match(read('src/'+id+'.mjs'),/createFramePerformanceAudit/);
  assert.match(read('src/runtime/performance-audit.mjs'),/confirmedCause:null/);
 });
+
+test('dice defeat results never reveal boss attack solutions or dodge instructions',()=>{
+ const dice=read('src/dice-battle.mjs');
+ assert.doesNotMatch(dice,/손을 부수거나 머리 박기 후|다음 칸을 보고 옆으로 피한 뒤/);
+});
