@@ -23,8 +23,9 @@ test('phase two adds a chained charge and a pip burst to the pattern cycle',()=>
  assert.equal(g.dice.state,'charge-warning');
  assert.equal(g.dice.chainCharges,1);
  assert.equal(ready(4,2).dice.state,'pip-warning');
- assert.equal(ready(5,2).dice.state,'charge-warning');
+ assert.equal(ready(5,2).dice.state,'roulette-spin');
  assert.ok(!ready(5,2).dice.chainCharges);
+ assert.equal(ready(6,2).dice.state,'roulette-spin');
 });
 
 test('the second charge starts where the first ended, with no recovery in between',()=>{
