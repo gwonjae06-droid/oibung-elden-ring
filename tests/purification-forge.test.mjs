@@ -34,10 +34,10 @@ test('one flame per defeat, once per boss-result, and another flame on every rep
  advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:8}),'flame');
  assert.equal(p.flames,2);
  advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:7}),'flame');
- advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:4}),'complete');
- assert.equal(p.flames,4);assert.equal(p.earnedFlames,4);assert.equal(p.run,null);
+ advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:4}),'flame');advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:3}),'complete');
+ assert.equal(p.flames,5);assert.equal(p.earnedFlames,5);assert.equal(p.run,null);
  p.run=newRun();assert.equal(finishAttempt(p,{won:true,time:1}),'flame');
- assert.equal(p.flames,5);assert.equal(p.earnedFlames,5);
+ assert.equal(p.flames,6);assert.equal(p.earnedFlames,6);
 });
 test('practice/hidden bosses grant a flame every victory but never fake campaign clears',()=>{
  const p=freshProfile();

@@ -34,8 +34,8 @@ test('chain slow leaves a full-speed roll and enough warning to escape the fount
 test('zero time freezes hazards, invalid input is ignored and victory clears all attacks',()=>{
  const g=createBloodGame();startBloodPattern(g,'fountain');const snapshot=JSON.stringify(g);for(const dt of[0,NaN,-1,Infinity])stepBlood(g,dt);assert.equal(JSON.stringify(g),snapshot);g.boss.phase=2;damageBlood(g,99999);assert.equal(g.status,'won');assert.equal(g.blood.hazards.length,0);const won=JSON.stringify(g);stepBlood(g,1);assert.equal(JSON.stringify(g),won);assert.equal(createBloodGame().boss.phase,1);
 });
-test('legacy clears never unlock the fourth seal, and 3/4 boss records stay distinct',()=>{
+test('legacy clears never unlock the fourth seal, and old records remain incomplete until the fifth boss',()=>{
  const old={version:2,clears:1,records:[{time:10,weapon:'sword',mode:'story',deaths:0}],memories:[],defeated:[]};const p=loadProfile({getItem:()=>JSON.stringify(old)});assert.deepEqual(p.defeated,['kwon','clown','dice']);assert.equal(p.records[0].bossCount,3);assert.equal(p.version,4);
- p.run=newRun();p.run.stage=2;assert.equal(finishAttempt(p,{won:true,time:2}),'flame');advanceJourney(p.run);assert.equal(p.run.stage,3);assert.equal(finishAttempt(p,{won:true,time:3}),'complete');assert.equal(p.records[1].bossCount,4);assert.equal(p.memories.at(-1).id,'blood');
+ p.run=newRun();p.run.stage=2;assert.equal(finishAttempt(p,{won:true,time:2}),'flame');advanceJourney(p.run);assert.equal(p.run.stage,3);assert.equal(finishAttempt(p,{won:true,time:3}),'flame');assert.equal(p.records.length,1);assert.equal(p.memories.at(-1).id,'blood');
  const store=createEncounterStore();store.register(createBloodGame());assert.equal(store.read().bossId,'blood');assert.ok(score('blood',1,0).length);assert.notDeepEqual(score('blood',1,0),score('blood',2,0));
 });

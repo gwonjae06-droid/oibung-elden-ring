@@ -25,7 +25,10 @@ const DEFINITIONS={
   damage:()=>import('./blood-combat.mjs').then(m=>m.damageBlood),
   load:()=>import('./blood-battle.mjs'),
   launch:(m,o)=>m.launchBloodBattle({weapon:o.weapon,configure:o.configure,onClose:o.onClose})},
- gyuwon:{name:'무두의 사유 최규원',implemented:false,kind:'module',dialogId:'gyuwon-battle',gameKey:'gyuwon',reward:'flame',hint:()=>''}
+ gyuwon:{name:'무두의 사유 최규원',implemented:true,kind:'module',dialogId:'gyuwon-battle',gameKey:'gyuwon',reward:'flame',
+  place:'심야 자습실에',hint:()=>'밝은 선과 붉은 표식을 피하세요. 금빛 흔적은 같은 자리에서 두 번 발동합니다.',
+  damage:()=>import('./gyuwon-combat.mjs').then(m=>m.damageGyuwon),
+  load:()=>import('./gyuwon-battle.mjs'),launch:(m,o)=>m.launchGyuwonBattle({weapon:o.weapon,configure:o.configure,onClose:o.onClose})}
 };
 export const BOSS_REGISTRY=Object.freeze(Object.fromEntries(CAMPAIGN_ORDER.map((id,order)=>[id,Object.freeze({id,order,maxHp:bossMaxHp(order),...DEFINITIONS[id]})])));
 // Only finished bosses can be reached from the journey; flip `implemented` when a new boss is ready.
