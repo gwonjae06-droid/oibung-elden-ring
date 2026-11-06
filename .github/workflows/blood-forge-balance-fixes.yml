@@ -1,0 +1,20 @@
+name: Forge, weapon evolution and Blood telegraph regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Three.js
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify exclusive forge, weapon effects and Blood projectile timing
+        run: node --test tests/blood-forge-balance-fixes.test.mjs tests/purification-forge.test.mjs tests/weapon-evolution.test.mjs tests/journey.test.mjs tests/hard-story-balance.test.mjs tests/skill-combat.test.mjs
