@@ -1,6 +1,7 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
+import {addBloodRiteAccent} from './blood-rite-escalation.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
@@ -121,14 +122,19 @@ export function startBloodPattern(g,id){
  // crests followed by an expanding undertow. Each visible blood wall shares
  // the exact authoritative hazard dimensions, warning and contact time.
  if(id==='requiem'){
-  for(let i=0;i<3;i++){
-   const yaw=aim+(i-1)*.62,forwardX=Math.sin(yaw),forwardZ=Math.cos(yaw);
-   const q=point(b.x-forwardX*13,b.z-forwardZ*13);
-   lane(yaw,1.8+i*1.08,{x:q.x,z:q.z,length:13.5,width:5.2,
-    vx:forwardX*16,vz:forwardZ*16,life:1.25,damage:35});
-  }
-  hazard(g,'ring',{x:b.x,z:b.z,r:5,width:1.5,grow:14,
-   warn:5.52,life:1.2,damage:31});
+  // The twin walls rise from the actual horizon and advance across the
+  // full blood sea. Their 9-unit central opening follows the boss's
+  // location and remains physically clear throughout the tsunami.
+  // The player can survive the wall by reaching this marked corridor.
+  for(const side of [-1,1])hazard(g,'lane',{
+   x:b.x+side*18,z:-R.radius-24,
+   yaw:0,width:13.5,length:14,
+   vx:0,vz:28,life:3.4,warn:1.95,
+   damage:34,visual:'blood-tsunami-wall'
+  });
+  // A separate late undertow encourages moving back out of the corridor.
+  hazard(g,'ring',{x:b.x,z:b.z,r:5,width:1.25,grow:12,
+   warn:5.45,life:.9,damage:30,visual:'blood-undertow'});
  }
  if(id==='judgement')for(let i=0;i<3;i++)hazard(g,'cone',{yaw:aim+[-.8,.8,0][i],arc:.5,r:23,warn:1.5+i*1.2,life:.55,damage:32});
  if(id==='ritual'){for(let beat=0;beat<2;beat++)for(let i=0;i<4;i++)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/2+beat*Math.PI/4,arc:.45,innerR:5.5,r:26,warn:2+beat*1.65,life:.65,damage:30});hazard(g,'ring',{x:0,z:0,r:2,width:1.1,grow:18,warn:4.9,life:1.4,damage:26});}
@@ -173,6 +179,7 @@ export function startBloodPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
  }
+ addBloodRiteAccent(g,id,hazard);
  // The camera completes its reveal and returns well before the first actual
  // collision. This adjusts the authoritative attack clock, not just visuals.
  const lead=BLOOD_EPIC_CUTS[id]?.lead||0;
