@@ -12,8 +12,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
   await page.route('https://fonts.**',r=>r.abort());
   const url='http://127.0.0.1:'+server.address().port;await page.goto(url+'/spider-combat.html',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.querySelector('[data-j="new"]'));
   // Use the real hidden route; the same journey launcher is used after the casino.
-  await page.evaluate(()=>{for(let i=0;i<5;i++)document.querySelector('[data-j="secret-tap"]').click();});
-  await page.locator('button[data-boss="gyuwon"]').click();await page.waitForSelector('#gyuwon-battle');
+  await page.locator('[data-j="practice-gyuwon"]').click();
+  await page.waitForSelector('#gyuwon-battle');
   await page.waitForFunction(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const r=document.querySelector('#gyuwon-battle')?.firstElementChild.shadowRoot;return r&&readBattleSession(r)?.active;});
   await page.waitForFunction(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const r=document.querySelector('#gyuwon-battle')?.firstElementChild.shadowRoot;return r&&readBattleSession(r)?.active;});
   const result=await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const {damageGyuwon,stepGyuwon}=await import('/src/gyuwon-combat.mjs');const root=document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot,s=readBattleSession(root),g=s.game;g.startGrace=0;s.pause();const t=g.time;await new Promise(r=>setTimeout(r,100));if(g.time!==t)throw Error('pause advanced time');s.resume();damageGyuwon(g,3500);return {hp:g.boss.hp,phase:g.boss.phase,weapon:g.weapon};});
