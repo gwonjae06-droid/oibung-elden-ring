@@ -12,6 +12,24 @@ export function createBloodWalk(boss,player,recovery){
  return {x:boss.x,z:boss.z,yawFrom:boss.yaw,yaw,dx:d?dx/d:0,dz:d?dz/d:1,
   steps,stride:steps?Math.min(.85,(d-4)/steps):0,turn:steps?turn:0,stepTime:STEP,close:CLOSE,t:0};
 }
+// After the protected counter window, Seojun deliberately repositions
+// instead of instantly chaining another static spell. The existing IK uses
+// the same finite-step plan as the world-position collider.
+export function createBloodManeuver(boss,player,duration,ordinal=0,phase=1){
+ const vx=player.x-boss.x,vz=player.z-boss.z,d=Math.hypot(vx,vz);
+ const forwardX=d>.001?vx/d:Math.sin(boss.yaw),forwardZ=d>.001?vz/d:Math.cos(boss.yaw);
+ const side=(ordinal+phase)%4<2?1:-1;
+ const desired=phase===2?7.2:6.3,radial=clamp((d-desired)*.33)*1.65-.30;
+ const dx=forwardX*radial+forwardZ*side*1.35,dz=forwardZ*radial-forwardX*side*1.35;
+ const n=Math.hypot(dx,dz)||1;
+ const nx=dx/n,nz=dz/n,turn=.12+Math.abs(angle(Math.atan2(vx,vz)-boss.yaw))*.055;
+ const steps=Math.max(1,Math.min(3,Math.floor((duration-turn-CLOSE+.00001)/STEP)));
+ const bound=25.5,forwardGap=bound-Math.hypot(boss.x,boss.z);
+ const stride=Math.max(0,Math.min(.87,Math.max(0,forwardGap+.3)/steps));
+ return {x:boss.x,z:boss.z,yawFrom:boss.yaw,
+   yaw:d>.001?Math.atan2(vx,vz):boss.yaw,dx:nx,dz:nz,
+   steps,stride,turn,stepTime:STEP,close:CLOSE,t:0};
+}
 export function sampleBloodWalk(w){
  if(!w||!w.steps)return {x:w?.x??0,z:w?.z??0,yaw:w?.yawFrom??0,feet:[0,0],lift:[0,0],moving:false,bob:0};
  const t=Math.max(0,w.t-w.turn),i=Math.min(w.steps-1,Math.floor(t/w.stepTime)),u=clamp((t-i*w.stepTime)/w.stepTime),k=ease(u);
@@ -29,7 +47,7 @@ export function sampleBloodWalk(w){
   feet:feet.map(f=>f-distance),lift,moving:w.t>0&&w.t<w.turn+w.steps*w.stepTime+w.close,bob:-(Math.sin(Math.PI*u)**2)*.025};
 }
 export function bloodFootTargets(g,scale=1.25){
- const b=g.boss,s=g.blood,w=b.state==='recovery'?s.walk:null,walk=w?sampleBloodWalk(w):null;
+ const b=g.boss,s=g.blood,w=['recovery','maneuver'].includes(b.state)?s.walk:null,walk=w?sampleBloodWalk(w):null;
  const yaw=w?.steps?w.yaw:b.yaw,dx=Math.sin(yaw),dz=Math.cos(yaw),sideX=Math.cos(b.yaw),sideZ=-Math.sin(b.yaw);
  return [-1,1].map((side,i)=>({x:b.x+sideX*side*.46*scale+dx*(walk?.feet[i]||0)+Math.sin(b.yaw)*.10*scale,
   y:s.elevation+(.22+(walk?.lift[i]||0))*scale,z:b.z+sideZ*side*.46*scale+dz*(walk?.feet[i]||0)+Math.cos(b.yaw)*.10*scale,
