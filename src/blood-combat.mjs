@@ -179,7 +179,8 @@ export function startBloodPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
  }
- addBloodRiteAccent(g,id,hazard);
+ // Bind the encounter state before passing the two-argument hazard spawner.
+ addBloodRiteAccent(g,id,(shape,opts)=>hazard(g,shape,opts));
  // The camera completes its reveal and returns well before the first actual
  // collision. This adjusts the authoritative attack clock, not just visuals.
  const lead=BLOOD_EPIC_CUTS[id]?.lead||0;
