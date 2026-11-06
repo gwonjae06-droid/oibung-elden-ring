@@ -111,7 +111,7 @@ export function actPlayer(game,type){
  const cost=playerStaminaCost(weapon.cost+(game.journey?.cost??0));
  if(type!=='light'||player.stamina<cost)return false;
  player.stamina-=cost;player.regen=.85;
- const speed=game.journey?.speed??1,wind=weapon.wind*speed,active=weapon.active*speed,end=weapon.end*speed;
+ const speed=Math.max(.1,game.journey?.speed??1),wind=weapon.wind/speed,active=weapon.active/speed,end=weapon.end/speed;
  const bonus=game.weapon==='hammer'?attackStoredDamage(game,{basic:true}):0;
  player.action={kind:'attack',t:0,total:wind+active+end,wind,active,yaw:player.yaw,
   done:false,hit:false,basic:true,mult:game.journey?.damage??1,bankedBonus:bonus,
