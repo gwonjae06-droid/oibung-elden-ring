@@ -67,7 +67,7 @@ test('clown cycles every regular circus show once, independently of phase and di
 });
 test('Sungwon casino cycles every roulette/physical attack once, then reshuffles',()=>{
  for(const phase of [1,2]){
-  const slots=Array.from({length:phase===1?3:7},(_,i)=>i);
+  const slots=Array.from({length:phase===1?3:9},(_,i)=>i);
   const run=seed=>{
    const g=createDiceGame({seed}),seen=[];g.boss.phase=phase;
    for(let i=0;i<slots.length*4;i++){
