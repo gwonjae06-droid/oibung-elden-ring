@@ -15,17 +15,24 @@ export function interpretFrameStats({boss,phase,pattern,frameMs,renderCalls,tria
  return {boss,phase,pattern,medianFrameMs:+median.toFixed(1),p95FrameMs:+p95.toFixed(1),
   avgFps:avg>0?+(1000/avg).toFixed(1):0,renderCalls,triangles,geometries,textures,
   heapGrowthMB:+heapGrowthMB.toFixed(1),renderScale:scale,
-  evidence:'Frame durations and Three.js render counters (not separate CPU/GPU timing).',
+  evidence:'Real animation-frame gaps (up to 2 s) and Three.js render counters; CPU/GPU not separated.',
   status:p95>30||median>25?'slow':'normal',confirmedCause:null,suspectedCauses:suspects};
 }
 export function createFramePerformanceAudit({renderer,boss,onReport=report=>console.warn('[오든링 렉 원인 조사 · 실측/추정 구분]',report),windowSize=120,reportEvery=10}={}){
- const samples=[];let elapsed=0,lastReport=-Infinity,last=null,initialHeap=null;
+ const samples=[];let elapsed=0,lastReport=-Infinity,last=null,initialHeap=null,lastFrameAt=null;
  const heap=()=>finite(globalThis.performance?.memory?.usedJSHeapSize,0)/1048576;
- function reset(){samples.length=0;elapsed=0;lastReport=-Infinity;last=null;initialHeap=null;}
- function sample(dt,{active=true,phase=1,pattern='',scale=1}={}){
-  if(!active||!Number.isFinite(dt)||dt<=0){samples.length=0;return null;}
+ function reset(){samples.length=0;elapsed=0;lastReport=-Infinity;last=null;initialHeap=null;lastFrameAt=null;}
+ function sample(dt,{active=true,phase=1,pattern='',scale=1,timestamp}={}){
+  if(!active||!Number.isFinite(dt)||dt<=0){samples.length=0;lastFrameAt=null;return null;}
   if(initialHeap===null)initialHeap=heap();
-  elapsed+=dt;samples.push(Math.min(100,dt*1000));if(samples.length>windowSize)samples.shift();
+  // Battle physics intentionally clamps dt to 50ms. The diagnostic must
+  // measure real rAF wall-clock gaps or a 300ms hitch would report only 50ms.
+  const hasClock=Number.isFinite(timestamp),frameMs=hasClock&&lastFrameAt!==null
+   ?Math.max(.001,Math.min(2000,timestamp-lastFrameAt))
+   :Math.max(.001,Math.min(2000,dt*1000));
+  lastFrameAt=hasClock?timestamp:null;
+  elapsed+=frameMs/1000;samples.push(frameMs);
+  if(samples.length>windowSize)samples.shift();
   if(samples.length<windowSize||elapsed-lastReport<reportEvery)return null;
   const r=renderer?.info?.render??{},m=renderer?.info?.memory??{};
   last=interpretFrameStats({boss,phase,pattern,frameMs:samples,renderCalls:finite(r.calls),triangles:finite(r.triangles),

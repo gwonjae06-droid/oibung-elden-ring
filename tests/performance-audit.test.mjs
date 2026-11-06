@@ -19,3 +19,13 @@ test('60fps battle does not issue lag warning; paused frames are excluded',()=>{
  const r=interpretFrameStats({boss:'kwon',phase:1,pattern:'',frameMs:[16,16,17],renderCalls:50,triangles:30000,geometries:12,textures:8,heapGrowthMB:0,scale:1});
  assert.equal(r.status,'normal');assert.equal(r.confirmedCause,null);
 });
+
+test('diagnosis measures real elapsed frames instead of capped gameplay dt',()=>{
+ const out=[],audit=createFramePerformanceAudit({renderer:fake(90,100000),boss:'blood',onReport:r=>out.push(r)});
+ let timestamp=1000;
+ for(let i=0;i<120;i++){timestamp+=i%4===0?145:16;audit.sample(.05,{timestamp,active:true,phase:2,pattern:'tide'});}
+ assert.equal(out.length,1);
+ assert.ok(out[0].p95FrameMs>=140,'145ms hitch must not be misreported as 50ms');
+ assert.ok(out[0].avgFps<40);
+ assert.equal(out[0].confirmedCause,null);
+});

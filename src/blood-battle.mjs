@@ -1,4 +1,4 @@
-import {resizeBattleViewport} from './battle-viewport.mjs';
+import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
 import {createFramePerformanceAudit} from './runtime/performance-audit.mjs';
 import {createEncounterQuality} from './battle-quality-governor.mjs';
 import {createFreeLookCamera} from './free-look-camera.mjs';
@@ -122,7 +122,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
  });
  desired.set(frame.position.x,frame.position.y,frame.position.z);
  camera.position.lerp(desired,1-Math.exp(-6*dt));
- target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseBloodCamera(camera,target,g,{reduced});epic.pose(camera,target,g);chapel.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);chapel.occlude(camera,g);atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.blood.pattern,scale:quality.scale});
+ target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseBloodCamera(camera,target,g,{reduced});epic.pose(camera,target,g);chapel.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);chapel.occlude(camera,g);atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.blood.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   warmup=createBattleVisualWarmup({renderer,scene,camera,container:d});startup.own('Blood visual warmup',()=>warmup.dispose());const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Blood frame failed',error);close();}});startup.own('Blood loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,view:chapel.stats(),epic:epic.stats(),quality:chapel.quality,audio:transformationAudio.fired,audioState:transformationAudio.state,frameMs:[...samples]})}:{})}));startup.own('Blood session',unbind);hud.mode(mode);loop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);warmup.start().then(()=>{if(!closed)introGate.whenReady(!g.introControlled);});return {close,dispose:close,get closed(){return closed;}};
  });

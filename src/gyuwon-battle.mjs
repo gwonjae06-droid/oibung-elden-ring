@@ -1,4 +1,4 @@
-import {resizeBattleViewport} from './battle-viewport.mjs';
+import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
 import {createFramePerformanceAudit} from './runtime/performance-audit.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import * as THREE from 'three';
@@ -88,7 +88,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
  });
  desired.set(frame.position.x,frame.position.y,frame.position.z);
  camera.position.lerp(desired,1-Math.exp(-6*dt));
- target.set(frame.focus.x,frame.focus.y,frame.focus.z);study.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:quality.scale});
+ target.set(frame.focus.x,frame.focus.y,frame.focus.z);study.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,view:study.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
  });
