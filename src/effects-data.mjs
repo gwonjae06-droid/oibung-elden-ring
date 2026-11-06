@@ -21,6 +21,6 @@ export function createParticlePool(limit=FX_LIMIT,random=Math.random){
   };
 }
 export function impactDue(b,activeDuration){
-  return b.state==='active'&&((b.pattern==='slam'&&b.t>=activeDuration*.84)||(b.pattern==='leap'&&b.t>=activeDuration*.7));
+  return b.state==='active'&&((b.pattern==='slam'&&b.t>=activeDuration*.84)||(b.pattern==='leap'&&b.t>=activeDuration*.7)||(b.pattern==='stomp'&&b.t>=activeDuration*.4));
 }
 export function trailAllowed(b){return b.state==='active'&&b.pattern!=='retreat';}
