@@ -11,9 +11,9 @@ const clamp01=v=>Math.max(0,Math.min(1,v));
 const easeOut=u=>1-Math.pow(1-clamp01(u),3);
 const smooth=u=>{u=clamp01(u);return u*u*(3-2*u);};
 const reach=(h,c)=>h.shape==='lane'?Math.max(1.8,h.width*1.2):h.shape==='cone'?Math.max(2.5,h.r*.4):h.shape==='ring'?Math.max(1.5,h.width*1.5):Math.max(1.2,c.r);
-export function createBloodSpellFx(parent,fluid,particles,{reduced=false}={}){
+export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=false}={}){
  const live=new Map(),ghosts=new Set(),pool=new Map();let stamp=0,clock=0;
- const sprayDummy=new THREE.Object3D(),sprayCount=reduced?8:20;
+ const sprayDummy=new THREE.Object3D(),sprayCount=(reduced||coarse)?8:20;
  const mesh=(geo,group)=>{const m=new THREE.Mesh(geo,fluid.material);group.add(m);return m;};
  function acquire(pattern){
   const free=pool.get(pattern)||[];pool.set(pattern,free);let item=free.pop();
