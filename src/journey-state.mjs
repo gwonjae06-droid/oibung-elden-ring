@@ -15,7 +15,7 @@ export function freshProfile(){return {
 export const rewardKind=run=>BOSSES[run?.stage]?'flame':null;
 export function newRun(weapon='sword'){
  if(!Object.hasOwn(EVOLUTIONS,weapon))throw Error('Invalid journey');
- return {weapon,stage:0,startStage:0,elapsed:0,deaths:0,pending:false,splits:[]};
+ return {weapon,stage:0,startStage:0,elapsed:0,deaths:0,damage:0,pending:false,splits:[]};
 }
 // Only normal, consecutive campaign victories unlock the next playable boss.
 // Secret-route rewards and out-of-order kill evidence cannot jump a locked gate.
@@ -50,7 +50,7 @@ export function loadProfile(storage){try{
  const records=Array.isArray(p.records)?p.records.filter(r=>validTime(r.time)&&(r.mode===undefined||r.mode==='story')&&Object.hasOwn(EVOLUTIONS,r.weapon)&&Number.isInteger(r.deaths)&&r.deaths>=0).slice(-40).map(r=>{
   const bossCount=p.version<3?3:Number.isInteger(r.bossCount)&&r.bossCount>=3&&r.bossCount<=BOSSES.length?r.bossCount:3;
   const startStage=r.startStage??0;
-  return Number.isInteger(startStage)&&startStage>=0&&startStage<bossCount?{...r,bossCount,startStage}:null;
+  return Number.isInteger(startStage)&&startStage>=0&&startStage<bossCount?{...r,bossCount,startStage,damage:Number.isFinite(r.damage)&&r.damage>=0&&r.damage<1e10?Math.round(r.damage):null}:null;
  }).filter(Boolean):[];
  const available=p.version<3?BOSSES.slice(0,3):BOSSES;
  const memories=Array.isArray(p.memories)?p.memories.filter(m=>available.includes(m?.id)&&(m.firstClear===null||typeof m.firstClear==='string'&&Number.isFinite(Date.parse(m.firstClear)))).filter((m,i,a)=>a.findIndex(n=>n.id===m.id)===i).slice(0,BOSSES.length):[];
@@ -70,7 +70,7 @@ export function loadProfile(storage){try{
 export function saveProfile(storage,profile){try{
  storage.setItem(SAVE_KEY,JSON.stringify({...profile,version:4,run:null}));return true;
  }catch{return false;}}
-export function finishAttempt(profile,{won,time=0}){
+export function finishAttempt(profile,{won,time=0,damage=0}){
  const r=profile.run;
  if(!r||r.pending||r.secretSettled)return null;
  if(r.secret){
@@ -81,6 +81,8 @@ export function finishAttempt(profile,{won,time=0}){
  if(!BOSSES[r.stage])return null;
  r.elapsed+=Number.isFinite(time)?Math.max(0,time):0;
  if(!won){r.deaths++;return 'lost';}
+ // Count actual player damage once per boss; do not double-count an already pending victory.
+ r.damage=(Number.isFinite(r.damage)&&r.damage>=0?r.damage:0)+(Number.isFinite(damage)&&damage>0?damage:0);
  // Exactly one award per settled boss encounter; pending is the idempotency
  // latch until the player explicitly advances to the next boss.
  awardPurificationFlame(profile);
@@ -89,7 +91,7 @@ export function finishAttempt(profile,{won,time=0}){
  r.splits.push(Math.max(0,time));rememberBoss(profile,BOSSES[r.stage]);r.memoryRead=false;
  if(r.stage<BOSSES.length-1){r.pending=true;return 'flame';}
  if(!r.startStage)profile.clears++;
- profile.records.push({weapon:r.weapon,time:r.elapsed,deaths:r.deaths,bossCount:BOSSES.length,startStage:r.startStage||0,date:new Date().toISOString()});
+ profile.records.push({weapon:r.weapon,time:r.elapsed,deaths:r.deaths,damage:Math.round(r.damage),bossCount:BOSSES.length,startStage:r.startStage||0,date:new Date().toISOString()});
  profile.records=profile.records.slice(-40);profile.run=null;
  return 'complete';
 }

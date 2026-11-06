@@ -136,3 +136,18 @@ test('real boss engines receive the registry health curve, grace and forged upgr
   assert.deepEqual(g.evolutions,['blade-wave']);
  });
 });
+
+test('recorded cumulative damage sums each boss once and old records stay unknown',()=>{
+ const p=freshProfile();p.run=newRun('sword');
+ assert.equal(finishAttempt(p,{won:true,time:12,damage:121.5}),'flame');
+ assert.equal(finishAttempt(p,{won:true,time:12,damage:5000}),null);
+ advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:13,damage:12.25}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:14,damage:-3}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:15,damage:5}),'complete');
+ assert.equal(p.records[0].damage,139);
+ const data=new Map(),store={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ assert.equal(saveProfile(store,p),true);assert.equal(loadProfile(store).records[0].damage,139);
+ const old={...p,records:[{weapon:'sword',time:54,deaths:0,bossCount:4,startStage:0}]};
+ assert.equal(loadProfile({getItem:()=>JSON.stringify(old)}).records[0].damage,null);
+});

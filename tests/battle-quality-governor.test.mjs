@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createBattleQualityGovernor} from '../src/battle-quality-governor.mjs';
+import {createBattleQualityGovernor,createEncounterQuality} from '../src/battle-quality-governor.mjs';
 import {resizeBattleViewport} from '../src/battle-viewport.mjs';
 
 test('sustained GPU lag steps render resolution down without skipping simulation time',()=>{
@@ -33,4 +33,15 @@ test('render scale changes internal pixel budget only, not locked HUD geometry',
  assert.equal(camera.aspect,16/9);
  assert.equal(shell.style.width,'1600px');
  assert.equal(shell.style.height,'900px');
+});
+
+test('per-boss resolution policy favors full quality and lowers GPU pixels only under sustained load',()=>{
+ const mobile=createEncounterQuality({coarse:true}),desktop=createEncounterQuality();
+ assert.equal(mobile.scale,.95);assert.equal(desktop.scale,1);
+ for(let i=0;i<240;i++){mobile.sample(1/25);desktop.sample(1/25);}
+ assert.ok(mobile.scale>=.65&&mobile.scale<.95);
+ assert.ok(desktop.scale>=.7&&desktop.scale<1);
+ const reduced=mobile.scale;
+ for(let i=0;i<300;i++)mobile.sample(1/60);
+ assert.ok(mobile.scale>=reduced);
 });

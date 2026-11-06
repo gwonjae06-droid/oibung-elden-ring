@@ -18,3 +18,8 @@ export function createBattleQualityGovernor({initial=1,min=.65,max=1,interval=2.
  }
  return {sample,setScale,get scale(){return scale;}};
 }
+
+// Shared GPU-only render scaling. Retain full-resolution models, effects, HUD and simulation.
+export function createEncounterQuality({coarse=false,onChange=()=>{}}={}){
+ return createBattleQualityGovernor({initial:coarse?.95:1,min:coarse?.65:.7,max:1,interval:2,onChange});
+}
