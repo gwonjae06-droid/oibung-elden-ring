@@ -7,6 +7,7 @@ import {BLOOD_RULES as R} from './blood-data.mjs';
 import {bloodQuality,createBloodFluid} from './blood-fluid.mjs';
 import {createBloodParticles} from './blood-particles.mjs';
 import {createBloodSurfaceFlow} from './blood-surface-flow.mjs';
+import {createBloodArterialVortex} from './blood-arterial-vortex.mjs';
 import {createBloodSpellFx} from './blood-spell-fx.mjs';
 import {createGrandBloodRites} from './blood-grand-rites.mjs';
 import {createBloodSiphonFx} from './blood-siphon-fx.mjs';
@@ -36,6 +37,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const actor=new THREE.Group();root.add(actor);
  const regalia=createBloodRegalia(actor,{coarse,reduced});
  const surfaceFlow=createBloodSurfaceFlow(regalia.torso,fxRoot,fluid,{coarse,reduced});
+ const arterialVortex=createBloodArterialVortex(regalia.torso,{coarse,reduced});
  particles.setWallSplashListener(surfaceFlow.splashWall);
  // Keep the sculpted head at its original local rest coordinate but parent it
  // beneath the real chest/neck pivot, so bowing cannot detach the throat.
@@ -61,7 +63,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   const castGoal=({ready:.25+.5*stage.progress,start:1.05,run:.9,done:.5,return:.5*(1-stage.progress)})[stage.id]??0;
   cast+=(castGoal-cast)*(1-Math.exp(-dt*(({ready:5,start:18,run:6,done:4,return:2.2})[stage.id]||4)));
   actor.rotation.x=motion.body.lean-cast*.025+(walk?.moving ? .035 : 0);
-  regalia.update(g,c,dt,cast,{...motion,walk});portrait.update(g,c,dt,{cast,pose:motion});
+  regalia.update(g,c,dt,cast,{...motion,walk});arterialVortex.update(g,dt,motion,c);portrait.update(g,c,dt,{cast,pose:motion});
   // Thin streaks remain attached to the actual animated torso and shoulders.
   // The normal blood spell and hurtbox positions remain in world space.
   rivuletTime+=Math.max(0,dt);
@@ -90,8 +92,8 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   shake*=Math.exp(-dt*14);
  }
  function occlude(camera,g){focusGame=g;}
- function clear(){projectiles.clear();spells.clear();grandRites.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,siphon:siphonFx.stats()}),
+ function clear(){projectiles.clear();spells.clear();grandRites.clear();siphonFx.clear();surfaceFlow.clear();arterialVortex.reset();wings.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,siphon:siphonFx.stats(),arterialVortex:arterialVortex.stats()}),
   event(e,g){if(e.type==='blood-impact'){
    shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2,reverseFlow:.12,wingGenesis:.16,heartFeast:.22})[g.blood.pattern]||.025);
    // Heavy phase-two blood waves throw a small secondary spray out toward
@@ -107,5 +109,5 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
    }
   }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
   shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
-  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();arterialVortex.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }
