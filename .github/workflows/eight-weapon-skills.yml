@@ -1,0 +1,21 @@
+name: Eight weapon skills rework tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  weapon-skills:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install 3D test runtime
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify eight weapon skills and live encounter integration
+        run: node --test tests/weapon-skill-overhaul.test.mjs
