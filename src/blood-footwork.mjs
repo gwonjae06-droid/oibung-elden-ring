@@ -24,12 +24,17 @@ export function createBloodManeuver(boss,player,duration,ordinal=0,phase=1){
  const dx=forwardX*radial+forwardZ*side*1.35,dz=forwardZ*radial-forwardX*side*1.35;
  const n=Math.hypot(dx,dz)||1;
  const nx=dx/n,nz=dz/n,turn=.12+Math.abs(angle(Math.atan2(vx,vz)-boss.yaw))*.055;
- const steps=Math.max(1,Math.min(3,Math.floor((duration-turn-CLOSE+.00001)/STEP)));
+ // For shorter intervals use two quicker but continuous strides, so the
+ // final planted foot lands just before the next spell rather than halfway
+ // through the maneuver clock. The sampled IK and boss collider share it.
+ const quick=duration<1.1,close=quick?.08:CLOSE;
+ const steps=quick?2:Math.max(1,Math.min(3,Math.floor((duration-turn-close+.00001)/STEP)));
+ const stepTime=quick?Math.max(.22,(duration-turn-close)/steps):STEP;
  const bound=25.5,forwardGap=bound-Math.hypot(boss.x,boss.z);
  const stride=Math.max(0,Math.min(.87,Math.max(0,forwardGap+.3)/steps));
  return {x:boss.x,z:boss.z,yawFrom:boss.yaw,
    yaw:d>.001?Math.atan2(vx,vz):boss.yaw,dx:nx,dz:nz,
-   steps,stride,turn,stepTime:STEP,close:CLOSE,t:0};
+   steps,stride,turn,stepTime,close,t:0};
 }
 export function sampleBloodWalk(w){
  if(!w||!w.steps)return {x:w?.x??0,z:w?.z??0,yaw:w?.yawFrom??0,feet:[0,0],lift:[0,0],moving:false,bob:0};
