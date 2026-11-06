@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {bloodTsunamiApproach} from './blood-tsunami.mjs';
 import {bloodOceanGeometry,BLOOD_OCEAN_VERTEX_FUNCTIONS,BLOOD_OCEAN_FRAGMENT_FUNCTIONS} from './blood-ocean-waves.mjs';
 
 // The sea occupies only the sanctuary OUTSIDE the circular combat floor.
@@ -143,7 +144,7 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
   const eased=v*v*(3-2*v),floodLevel=phase?(transition?eased:1):0;
   const tempest=game?.boss?.state==='pattern'&&
     ['tide','requiem','eclipse'].includes(game?.blood?.pattern)?1:0;
-  uniforms.time.value=t;uniforms.frenzy.value=phase+tempest*.92;
+  uniforms.time.value=t;uniforms.frenzy.value=phase+tempest*.92+bloodTsunamiApproach(game).intensity*1.25;
   const endless=floodLevel>.94;
   horizon.visible=endless;surface.visible=!endless;
   flood.visible=floodLevel>.01&&!endless;

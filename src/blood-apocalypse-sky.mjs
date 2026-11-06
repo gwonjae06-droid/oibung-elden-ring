@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {bloodTransformation} from './blood-transformation.mjs';
+import {bloodTsunamiApproach} from './blood-tsunami.mjs';
 import {createBloodInstancedRain} from './blood-storm-rain.mjs';
 
 // The storm is decorative: it has no colliders, damage, RNG consumption or
@@ -86,7 +87,7 @@ export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
   uniforms.uReveal.value=e.reveal;uniforms.uFlash.value=e.flash;
   lightning.visible=e.flash>.06;
   boltMaterial.opacity=Math.min(.95,e.flash*.9);
-  rainFx.update(t,(coarse?.38:.54)*e.rain*(1+e.flash*.28));
+  rainFx.update(t,(coarse?.38:.54)*e.rain*(1+e.flash*.28+bloodTsunamiApproach(game).intensity*.24));
   return e;;
  }
  function dispose(){

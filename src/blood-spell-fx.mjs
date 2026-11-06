@@ -114,9 +114,9 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     const main=parts[0],under=parts[1];
     main.position.set(0,.08,v.crestForward*.24);
     main.rotation.set(0,0,v.wobble);
-    main.scale.set(v.width*.54,v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
+    main.scale.set((pattern==='requiem'?h.width+.55:v.width*.54),v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
     under.position.set(0,.08,-1.3-v.phase*.65);
-    under.scale.set(v.width*.58,Math.max(1.3,v.height*.53),5.3);
+    under.scale.set((pattern==='requiem'?h.width+.55:v.width*.58),Math.max(1.3,v.height*.53),5.3);
     if(pattern==='wave'){
      parts[2].position.set(0,.12,-1.7);
      parts[2].scale.set(v.width*.48,.38,Math.max(2.4,h.length*.58));

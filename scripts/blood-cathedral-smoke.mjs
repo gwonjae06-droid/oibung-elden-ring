@@ -57,6 +57,32 @@ try{
  assert.equal(errors.length,0,'phase-two WebGL error: '+errors.join(' / '));
  await page.screenshot({path:'artifacts/blood-cathedral/phase-two-red-contrast.png'});
  await page.screenshot({path:'artifacts/blood-cathedral/phase-two-crimson-sea.png'});
+
+
+ // Exercise the actual horizon-wide requiem while WebGL is running, not
+ // merely the static phase-two ocean. A frame that fails to compile the 3D
+ // split tsunami shader is captured as a page or console error.
+ const tsunami=await page.evaluate(async()=>{
+  const {readBattleSession}=await import('./src/battle-session.mjs');
+  const {startBloodPattern}=await import('./src/blood-combat.mjs');
+  const session=readBattleSession(document.querySelector('#blood-battle').firstElementChild.shadowRoot);
+  const g=session.game;
+  g.boss.state='recovery';
+  const started=startBloodPattern(g,'requiem');
+  if(!started)return {started:false};
+  // Pose on the real horizon-to-arena transition without skipping the real
+  // collision or mutating the authoritative strike timestamps.
+  g.blood.t=g.blood.hazards[0].warn+.45;
+  for(const h of g.blood.hazards)h.age=g.blood.t;
+  return {started,flanks:g.blood.hazards.filter(h=>h.tsunami).length,phase:g.boss.phase};
+ });
+ assert.equal(tsunami.started,true,'horizon tsunami failed to begin');
+ assert.equal(tsunami.flanks,4,'the actual wave must have two safe split crests');
+ await page.waitForTimeout(400);
+ assert.equal(errors.length,0,'blood tsunami WebGL shader failure: '+errors.join(' / '));
+ await page.screenshot({path:'artifacts/blood-cathedral/phase-two-horizon-tsunami.png'});
+
+
  await page.setViewportSize({width:844,height:390});
  await page.waitForTimeout(450);
  const mobile=await page.evaluate(()=>{

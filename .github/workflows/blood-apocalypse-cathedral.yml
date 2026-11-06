@@ -34,6 +34,7 @@ jobs:
           tests/blood-render.test.mjs
           tests/blood-fluid.test.mjs
           tests/blood-epic-cinematics.test.mjs
+          tests/blood-tsunami-disaster.test.mjs
           tests/blood-white-cathedral.test.mjs
           tests/blood-cathedral-sea.test.mjs
           tests/blood-attack-animation.test.mjs

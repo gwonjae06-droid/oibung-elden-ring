@@ -45,7 +45,7 @@ test('first see a small distant tsunami, return to the arena before the actual w
  assert.equal(bloodEpicKey(g),initialKey);
  assert.ok(g.blood.hazards.every(h=>h.age===0),'presentation must not advance actual attacks');
  g.blood.t=Math.min(...g.blood.hazards.map(h=>h.warn));
- fx.update(g);assert.equal(fx.waveRoot.visible,false,'the true hitbox waves take over at impact');
+ fx.update(g);assert.equal(fx.waveRoot.visible,true,'the real tsunami must remain visible throughout the actual moving hitbox');
  assert.equal(fx.stats().damageSources,0);
  fx.dispose();fx.dispose();
  assert.deepEqual(disposeScene(scene).errors,[]);
@@ -62,8 +62,8 @@ test('epic cutscene cannot be skipped and keeps combat unchanged',()=>{
  assert.ok(g.blood.hazards.every(h=>h.warn>3));
  g.blood.t=3.1;
  assert.equal(fx.state(g).active,false);
- assert.equal(g.blood.hazards.filter(h=>h.visual==='blood-tsunami-wall').length,2);
- assert.ok(g.blood.hazards.some(h=>h.visual==='blood-undertow'));
+ assert.equal(g.blood.hazards.filter(h=>h.tsunami&&h.shape==='lane').length,4);
+ assert.ok(g.blood.hazards.every(h=>h.tsunami),'both overtopping crests use the same safe corridor');
  fx.reset();assert.ok(fx.isFraming({...g,blood:{...g.blood,t:.6}}));
  fx.dispose();
 });

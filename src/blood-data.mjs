@@ -29,7 +29,7 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  rosary:{name:'붉은 묵주의 행렬',phase:2,duration:5.7,recover:2.75},
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
- requiem:{name:'해일의 장송',phase:2,duration:7.4,recover:3.8},
+ requiem:{name:'해일의 장송',phase:2,duration:10.65,recover:3.8},
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
