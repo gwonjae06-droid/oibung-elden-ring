@@ -1027,7 +1027,7 @@ const RUN = {
     }
   },
 };
-const HORROR_API=Object.freeze({once,zone,bomb,emit,dashPart});
+const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart});
 Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export function choosePattern(g) {
