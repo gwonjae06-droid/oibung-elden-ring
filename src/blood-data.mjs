@@ -32,7 +32,7 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
  Object.entries(ORIGINAL_BLOOD_PATTERNS).map(([id,s])=>[
-  id,Object.freeze({...s,recover:Math.round(s.recover*BOSS_TEMPO.recovery*100)/100})
+  id,Object.freeze({...s,recover:Math.max(2.2,Math.round(s.recover*BOSS_TEMPO.recovery*100)/100)})
  ])
 ));
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([

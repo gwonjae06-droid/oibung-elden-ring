@@ -74,7 +74,7 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
     {...circle(x,z,9,2.2,1.45,36),handIndex:0,active:.3}
   ];
   // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
- hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(h=>giantReadableWarning({...h,warn:h.warn*BOSS_TEMPO.windup}));
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+([6,12].includes(slot)?' · '+hazards.length+'발 예고':'')+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 function feralPattern(index,player,healthRatio=1){
@@ -138,7 +138,7 @@ function feralPattern(index,player,healthRatio=1){
   {...rect(28,clamp(z,-43,43),24,37,1.6,1.6),handIndex:1,damage:35,active:.32},
   tableWave(3,1.35,1.7,30,true)
  ];
- hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(h=>giantReadableWarning({...h,warn:h.warn*BOSS_TEMPO.windup}));
+ hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(giantReadableWarning);
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.

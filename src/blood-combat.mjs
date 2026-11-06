@@ -174,7 +174,7 @@ function hurt(g,h){
 function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
- if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,2.8*BOSS_TEMPO.recovery);s.t=0;emit(g,'blood-land');}return;}
+ if(b.state==='transition'){s.t+=dt;s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
@@ -185,7 +185,7 @@ function tickBoss(g,dt){
   if(s.recover<=0){
    // Keep every frame of the existing stationary punish window first.
    // A separate non-attacking stance now makes the boss visibly reposition.
-   b.state='maneuver';s.maneuver=(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap;
+   b.state='maneuver';s.maneuver=Math.max(.98,(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap);
    s.walk=createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
   }
   return;

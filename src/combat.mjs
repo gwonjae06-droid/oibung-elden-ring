@@ -276,7 +276,7 @@ export function bodyPoint(b, p) {
 }
 export function patternConfig(b) {
   const c = PATTERNS[b.pattern];
-  if (b.phase !== 2) return {...c,wind:kwonReadableWind(b.pattern,c.wind*BOSS_TEMPO.windup,b.phase),recover:Math.max(.8,c.recover*BOSS_TEMPO.recovery),damage: c.damage > 0 ? c.damage + 3 : 0};
+  if (b.phase !== 2) return {...c,wind:kwonReadableWind(b.pattern,['slam','wave'].includes(b.pattern)?c.wind:c.wind*BOSS_TEMPO.windup,b.phase),recover:Math.max(b.pattern==='shove'?1.2:.8,c.recover*BOSS_TEMPO.recovery),damage: c.damage > 0 ? c.damage + 3 : 0};
   const wind = {
     rush: 0.38,
     jab: 0.19,
@@ -296,9 +296,9 @@ export function patternConfig(b) {
   }[b.pattern];
   return {
     ...c,
-    wind:kwonReadableWind(b.pattern,(wind??c.wind)*BOSS_TEMPO.windup,b.phase),
+    wind:kwonReadableWind(b.pattern,(wind??c.wind)*(['slam','wave'].includes(b.pattern)?1:BOSS_TEMPO.windup),b.phase),
     damage: c.damage > 0 ? c.damage + (b.pattern === 'jab' ? 6 : 10) : 0,
-    recover:Math.max(.8,({
+    recover:Math.max(b.pattern==='shove'?1.2:.8,({
         slam: 1.05,
         thrust: 0.85,
         whirl: 0.9,
@@ -942,8 +942,8 @@ export function step(g, dt, input = {}) {
       b.t = 0;
       // Recovery remains a full punish window. Only the next idle step
       // gains time to run towards a distant target before attacking again.
-      b.wait = (dist(p,b)>KWON_RANGE_PRESSURE.farDistance
-        ?KWON_RANGE_PRESSURE.chaseWait:b.phase===2?.58:.68)*BOSS_TEMPO.gap;
+      b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
+        ?KWON_RANGE_PRESSURE.chaseWait:(b.phase===2?.58:.68)*BOSS_TEMPO.gap;
       b.punishable = false;
       b.from = null;
     }

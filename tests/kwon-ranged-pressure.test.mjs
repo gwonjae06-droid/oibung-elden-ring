@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {BOSS_TEMPO} from '../src/boss-tempo.mjs';
 import assert from 'node:assert/strict';
 import {
  createGame,chooseOpening,beginSequence,step,startPattern,
@@ -83,6 +84,6 @@ test('finishing a distant sword combo gives Kwon a short visible pursuit interva
   assert.equal(b.state,'idle');
   if(range>KWON_RANGE_PRESSURE.farDistance)
    assert.equal(b.wait,KWON_RANGE_PRESSURE.chaseWait);
-  else assert.equal(b.wait,.68);
+  else assert.equal(b.wait,.68*BOSS_TEMPO.gap);
  }
 });
