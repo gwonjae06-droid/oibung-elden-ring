@@ -100,7 +100,7 @@ test('real casino and circus scenes mount distinct signature visuals without tou
 
 test('the four new presentation components are wired only into view modules',()=>{
  const paths=['casino-room','blood-view','boss-stance','clown-radiant-circus'];
- const marker=['createCasinoBreakawayTables','createBloodArterialVortex',
+ const marker=['createCasinoBreakawayTables','createBloodSurfaceFlow',
   'createKwonLivingBlade','createClownStageMachinery'];
  for(let i=0;i<paths.length;i++){
   const src=readFileSync(new URL('../src/'+paths[i]+'.mjs',import.meta.url),'utf8');
