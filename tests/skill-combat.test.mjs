@@ -4,7 +4,7 @@ import {createGame,act,step,skillView,startPattern} from '../src/combat.mjs';
 import {STANDARD_COOLDOWN} from '../src/skills.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 const tick=(g,t,input={})=>{for(let s=0;s<t;s+=1/120)step(g,1/120,input);};
-const arena=g=>{g.boss.wait=999;g.player.x=0;g.player.z=0;g.player.yaw=Math.PI;g.boss.x=0;g.boss.z=-4;};
+const arena=g=>{g.boss.wait=999;g.bossAutonomy.paused=true;g.player.x=0;g.player.z=0;g.player.yaw=Math.PI;g.boss.x=0;g.boss.z=-4;};
 const swing=g=>{g.player.stamina=100;g.player.action=null;g.player.yaw=Math.PI;assert.ok(act(g,'light'));tick(g,1.2);};
 test('sword skill speeds attacks up and expires after five seconds, then waits for the standard cooldown',()=>{
   const slow=createGame();arena(slow);act(slow,'light');const base=slow.player.action.total;
