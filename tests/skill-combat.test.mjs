@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame,act,step,skillView} from '../src/combat.mjs';
+import {createGame,act,step,skillView,startPattern} from '../src/combat.mjs';
 import {STANDARD_COOLDOWN} from '../src/skills.mjs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 const tick=(g,t,input={})=>{for(let s=0;s<t;s+=1/120)step(g,1/120,input);};
@@ -41,7 +41,7 @@ test('red card boosts only the next attack by 50 percent',()=>{
   assert.ok(Math.abs(first/second-1.5)<1e-9);assert.equal(g.player.skill.nextRed,false);
 });
 test('yellow card stuns for one second once, even with a three card volley',()=>{
-  const g=createGame('cards');arena(g);g.boss.wait=0;g.player.skill.cycle=1.3;act(g,'skill');g.player.yaw=Math.PI;act(g,'light');tick(g,.45);
+  const g=createGame('cards');arena(g);startPattern(g,'sweep');g.player.skill.cycle=1.3;act(g,'skill');g.player.yaw=Math.PI;act(g,'light');tick(g,.45);
   assert.ok(g.boss.stun>.4&&g.boss.stun<=1);assert.equal(g.events.filter(e=>e.type==='skill-stun').length,1);
   const st=g.boss.state;tick(g,.3);assert.equal(g.boss.state,st);tick(g,1);assert.equal(g.boss.stun,0);
 });
