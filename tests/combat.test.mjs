@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {createGame,act,step,rolling,startPattern,swordSegment,segmentDistance,WEAPONS,patternConfig,kwonVisibleHurtShapes} from '../src/combat.mjs';
 const tick=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/120)step(g,1/120,input);};
 test('four weapons and invalid weapon guard',()=>{assert.equal(Object.keys(WEAPONS).length,4);assert.throws(()=>createGame('bad'));});
-test('attack consumes stamina once and cannot cancel itself',()=>{const g=createGame();assert.ok(act(g,'light'));assert.equal(g.player.stamina,84.7);assert.equal(act(g,'roll'),false);assert.equal(g.player.stamina,84.7);});
+test('attack consumes stamina once, cannot be spammed, and can cancel into a paid dodge',()=>{const g=createGame();assert.ok(act(g,'light'));assert.equal(g.player.stamina,84.7);assert.equal(act(g,'light'),false);assert.equal(g.player.stamina,84.7);assert.equal(act(g,'roll'),true);assert.equal(g.player.action.kind,'roll');assert.ok(Math.abs(g.player.stamina-63.4)<1e-8);});
 test('the heavy attack mechanic is gone',()=>{const g=createGame('hammer');assert.equal(act(g,'heavy'),false);assert.equal(g.player.stamina,100);for(const w of Object.values(WEAPONS)){assert.equal('heavy' in w,false);assert.equal('heavyCost' in w,false);}});
 test('stamina cannot be overspent',()=>{const g=createGame('hammer');g.player.stamina=20;assert.equal(act(g,'light'),false);assert.equal(g.player.stamina,20);});
 test('roll has delayed and finite invulnerability',()=>{const g=createGame();act(g,'roll');assert.equal(rolling(g.player),false);tick(g,.12);assert.ok(rolling(g.player));tick(g,.26);assert.equal(rolling(g.player),false);});

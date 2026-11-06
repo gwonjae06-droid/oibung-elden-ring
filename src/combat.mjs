@@ -1,6 +1,7 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
 import {kwonReadableWind} from './attack-readability.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
+import {chooseKwonCloseDefense,KWON_CLOSE_DEFENSE} from './kwon-close-defense.mjs';
 import {WEAPONS as PLAYER_WEAPONS} from './weapon-data.mjs';
 import {
   actPlayer,
@@ -377,6 +378,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       pressure: 0,
       stun: 0,
       hug: 0,
+      closeCooldown: 0,
       from: null,
       zone: null,
       turnTarget: 0,
@@ -476,7 +478,7 @@ function endPose(b) {
     );
   return {yaw: P.ey, pitch: P.ep, offset: P.back * 0.7};
 }
-export function startPattern(g, name) {
+export function startPattern(g, name, {closeDefense=false} = {}) {
   if (!PATTERNS[name]) throw new Error('Unknown pattern');
   const b = g.boss;
   b.from = b.state === 'recovery' ? endPose(b) : null;
@@ -491,7 +493,7 @@ export function startPattern(g, name) {
   if(name==='wave')b.waveVariant=nextKwonWaveVariant(b.waveVariant);
   b.attackId++;
   b.punishable = false;
-  b.turnTarget = toward(b, g.player) + (name === 'backsweep' ? Math.PI : 0);
+  b.turnTarget = toward(b, g.player) + (name === 'backsweep' && !closeDefense ? Math.PI : 0);
   b.aim = b.yaw;
   b.zone = ['slam', 'leap'].includes(name)
     ? {x: g.player.x, z: g.player.z}
@@ -786,6 +788,7 @@ export function step(g, dt, input = {}) {
     return;
   }
   b.poise = Math.max(0, b.poise - dt * 5);
+  b.closeCooldown = Math.max(0, (b.closeCooldown||0)-dt);
   b.t += dt;
   const cfg = patternConfig(b);
   if (b.state === 'stagger') {
@@ -799,25 +802,28 @@ export function step(g, dt, input = {}) {
   b.hug = dist(p, b) < HUG_RANGE ? (b.hug || 0) + dt : 0;
   if (b.state === 'idle') {
     b.punishable = false;
-    const gap=dist(p,b),far=gap>KWON_RANGE_PRESSURE.farDistance;
-    // While idle, visibly turn and pursue a fleeing player rather than
-    // opening a close-range stationary sword combo from across the arena.
-    const turnRate=far?4.0:2.7;
-    b.yaw += clamp(angleDelta(b.yaw, toward(b, p)), -dt * turnRate, dt * turnRate);
-    b.aim = b.yaw;
-    // Autonomous footwork during idle: close in, orbit laterally or yield space
-    // when crowded. The same root position drives model and real hurtboxes.
-    stepBossAutonomy(g.bossAutonomy,b,p,dt,{
-      speed:far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===2?6.5:6.8,
-      sideSpeed:b.phase===2?3.5:2.9,spacing:b.phase===2?6:6.8,
-      arena:24,phase:b.phase,farDistance:KWON_RANGE_PRESSURE.farDistance
-    });
-    if (b.hug > HUG_TIME) {
-      b.hug = 0;
-      beginSequence(g, 'shove');
-    } else {
-      b.wait -= dt;
-      if (b.wait <= 0) beginSequence(g, chooseOpening(g));
+    // Never interrupt an authored strike, recovery, knockdown or stagger:
+    // all counterattacks start only from genuine idle time.
+    const counter=chooseKwonCloseDefense(b,p);
+    if(counter){
+      b.hug=0;
+      b.closeCooldown=KWON_CLOSE_DEFENSE.cooldown;
+      b.queue=[];
+      b.lastOpening='close-'+counter;
+      startPattern(g,counter,{closeDefense:true});
+    }else{
+      const gap=dist(p,b),far=gap>KWON_RANGE_PRESSURE.farDistance;
+      // Turn and pursue between attacks, instead of dealing proximity damage.
+      const turnRate=far?4.0:2.7;
+      b.yaw += clamp(angleDelta(b.yaw, toward(b,p)), -dt*turnRate, dt*turnRate);
+      b.aim=b.yaw;
+      stepBossAutonomy(g.bossAutonomy,b,p,dt,{
+        speed:far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===2?6.5:6.8,
+        sideSpeed:b.phase===2?3.5:2.9,spacing:b.phase===2?6:6.8,
+        arena:24,phase:b.phase,farDistance:KWON_RANGE_PRESSURE.farDistance
+      });
+      b.wait-=dt;
+      if(b.wait<=0)beginSequence(g,chooseOpening(g));
     }
   } else if (b.state === 'windup') {
     if (b.pattern === 'rush' && b.t < 0.18)

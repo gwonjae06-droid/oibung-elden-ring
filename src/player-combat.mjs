@@ -154,10 +154,14 @@ export function actPlayer(game, type) {
       done:false,hit:false,basic:true,mult:1+bonus*u,charged:u>0};
     emit(game,'attack-start');return true;
   }
+  // Basic attacks alone can be cancelled into a roll, including their
+  // recovery. Specials, healing, stagger and hurt retain their commitments.
+  // Never discard the attack unless the dodge stamina cost can be paid.
+  const cancelBasic=type==='roll'&&player.action?.kind==='attack'&&player.action.basic===true;
   if(type==='roll'&&player.action?.kind==='charging')player.action=null;
   if (
     game.status !== 'playing' ||
-    player.action ||
+    (player.action&&!cancelBasic) ||
     game.boss.state === 'transition'
   )
     return false;
@@ -172,6 +176,9 @@ export function actPlayer(game, type) {
   if (type === 'roll') {
     const cost=playerStaminaCost(game.journey?.rollCost??25);
     if (player.stamina < cost) return false;
+    // Atomic replace prevents the cancelled swing from spawning a late hit,
+    // projectile or repeated skill proc on the next simulation frame.
+    if(cancelBasic)player.action=null;
     player.stamina -= cost;
     player.regen = 0.85;
     player.action = {kind: 'roll', t: 0, total: 0.52, yaw: player.yaw};

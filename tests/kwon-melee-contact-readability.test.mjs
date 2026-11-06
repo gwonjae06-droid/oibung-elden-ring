@@ -78,14 +78,14 @@ test('close-range response is readable and pushes only in the boss facing direct
  }
 });
 
-test('a prolonged hug selects a telegraphed shove rather than awarding automatic damage',()=>{
+test('a prolonged hug selects a telegraphed stomp rather than awarding automatic damage',()=>{
  const g=createGame('sword',{register:false,seed:20});
  g.boss.x=g.boss.z=0;g.boss.yaw=0;g.boss.state='idle';g.boss.wait=100;
  g.boss.hug=HUG_TIME+.1;g.player.x=0;g.player.z=2.5;
  const hp=g.player.hp;
  step(g,1/120);
  assert.equal(g.boss.state,'windup');
- assert.equal(g.boss.pattern,'shove');
+ assert.equal(g.boss.pattern,'stomp');
  assert.equal(g.player.hp,hp);
  assert.equal(g.boss.hit,false);
 });
