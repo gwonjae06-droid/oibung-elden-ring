@@ -19,7 +19,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const grid=new THREE.GridHelper(1200,120,0x71889d,0x71889d);grid.position.y=.005;grid.material.transparent=true;grid.material.opacity=.12;stage.add(grid);
  const edge=new THREE.Mesh(new THREE.RingGeometry(R.radius-.06,R.radius+.06,96),new THREE.MeshBasicMaterial({color:0x9bb6ca,transparent:true,opacity:.45,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=.025;stage.add(edge);
  // One instance per repeated desk part keeps distant furniture inexpensive.
- const positions=[],span=coarse?180:240,pitch=coarse?18:12;for(let x=-span;x<=span;x+=pitch)for(let z=-span;z<=span;z+=pitch)if(Math.hypot(x,z)>34)positions.push([x,z]);
+ const positions=[],span=coarse?180:240,pitch=coarse?18:12;for(let x=-span;x<=span;x+=pitch)for(let z=-span;z<=span;z+=pitch)if(Math.hypot(x,z)>R.radius+12)positions.push([x,z]);
  const matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();
  function repeatedPart(dx,y,dz,w,h,d,color){const mesh=new THREE.InstancedMesh(boxGeo,mat(color),positions.length);mesh.name='gyuwon-endless-desks';positions.forEach(([x,z],i)=>{position.set(x+dx,y,z+dz);scale.set(w,h,d);matrix.compose(position,rotation,scale);mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=false;stage.add(mesh);}
  repeatedPart(0,1.6,0,2.5,.18,2,0x8d877e);repeatedPart(0,.8,0,.2,1.6,.2,0x68798b);
@@ -37,10 +37,15 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
   const voidSpace=b.phase>=2||won;
-  sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!voidSpace;
+  sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!won;
+  edge.material.color.setHex(b.phase===3?0x92734d:b.phase===2?(white?0x7a697a:0x8c839a):0x9bb6ca);
+  edge.material.opacity=b.phase===3?.25:b.phase===2?.20:.45;
   for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
   scene.background.setHex(white?0xffffff:voidSpace?0x010105:0x111b28);
-  scene.fog.color.copy(scene.background);floor.visible=!voidSpace;warnings.visible=!won;
+  scene.fog.color.copy(scene.background);
+  // A continuous, non-colliding floor makes metaphysical spaces legible.
+  floor.visible=!won;floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
+  warnings.visible=!won;
   spectacle.update(g,dt,deathElapsed);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);

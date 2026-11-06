@@ -88,7 +88,7 @@ export function createClownLivingWorld(scene,{coarse=false,reduced=false,keyLigh
  const floor=group('unchanging-collision-floor-illusion');
  const lines=[];
  for(let i=0;i<(coarse?3:5);i++){
-  const m=add(floor,new THREE.RingGeometry(24.2+i*1.05,24.25+i*1.05,64).rotateX(-Math.PI/2),rim,'outer-theatre-seam');
+  const m=add(floor,new THREE.RingGeometry(28.2+i*1.05,28.25+i*1.05,64).rotateX(-Math.PI/2),rim,'outer-theatre-seam');
   m.position.y=.028+i*.002;lines.push(m);
  }
  let clock=0,pulse=0,disposed=false,mode='carnival',weight=0,stage=1;

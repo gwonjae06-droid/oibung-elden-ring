@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import {createClownEncoreTent} from './clown-tent-transformation.mjs';
 import {createClownStageMachinery} from './clown-stage-machinery.mjs';
 
+export const CIRCUS_SCENERY_SPREAD=27/23;
 // All scenic construction is non-collidable and beyond the playable radius.
 // Only the decorated floor enters the arena. No damage/hitbox code lives here.
 export const CIRCUS_LAYOUT=Object.freeze({
- playableRadius:23, floorRadius:25, columnsRadius:31.2,
- curtainsRadius:35, audienceRadius:39, stageHeight:21,
+ playableRadius:27, floorRadius:25*CIRCUS_SCENERY_SPREAD, columnsRadius:31.2*CIRCUS_SCENERY_SPREAD,
+ curtainsRadius:35*CIRCUS_SCENERY_SPREAD, audienceRadius:39*CIRCUS_SCENERY_SPREAD, stageHeight:21,
 });
 export const CIRCUS_PALETTE=Object.freeze({
  ivory:0xf0dbb8,cream:0xf3e3c3,crimson:0x8c253b,
@@ -86,7 +87,7 @@ function curtainPanel(root,a,b,mat,idx){
  for(let y=0;y<=vertical;y++)for(let x=0;x<=horizontal;x++){
   const u=x/horizontal,v=y/vertical,theta=a+(b-a)*u;
   const wave=Math.sin(u*Math.PI*9+idx*.7)*(.34+.17*v);
-  const r=CIRCUS_LAYOUT.curtainsRadius+wave;
+  const r=CIRCUS_LAYOUT.curtainsRadius/CIRCUS_SCENERY_SPREAD+wave;
   const h=2.2+v*16.2- (1-v)*.36*Math.cos(u*Math.PI*4);
   pts.push(...polar(r,theta,h));uv.push(u,v);
  }
@@ -155,7 +156,7 @@ function makeScenery(root,coarse){
        wood=material(0x57343b,.82),shadow=material(0x342831,.92);
  makeFloor(root,coarse,ivory,gold);
  makeCanopy(root,coarse,gold);
- const n=coarse?12:16,r=CIRCUS_LAYOUT.columnsRadius;
+ const n=coarse?12:16,r=CIRCUS_LAYOUT.columnsRadius/CIRCUS_SCENERY_SPREAD;
  const columns=[],bases=[],caps=[],finials=[];
  for(let i=0;i<n;i++){
   const a=i*TAU/n,at=polar(r,a);
@@ -255,7 +256,12 @@ const FRENZY=[0xf5cb80,0xf389b8,0x8bd8d3,0xb08ff2,0xffe4a9];
 const NIGHTMARE=[0xb98691,0x70405a,0xc7a79c,0x8c334a,0x8a788e];
 export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='clown-radiant-nightmare-circus';scene.add(root);
- const scenery=makeScenery(root,coarse),lights=makeLights(root,coarse),tent=createClownEncoreTent(root,{coarse,reduced}),machinery=createClownStageMachinery(root,{coarse,reduced});
+ const stageScenery=new THREE.Group();stageScenery.name='clown-expanded-theatre';root.add(stageScenery);
+ stageScenery.scale.set(CIRCUS_SCENERY_SPREAD,1,CIRCUS_SCENERY_SPREAD);
+ // Lighting is intentionally kept unscaled so its aim tracks real boss positions.
+ const scenery=makeScenery(stageScenery,coarse),lights=makeLights(root,coarse),
+  tent=createClownEncoreTent(stageScenery,{coarse,reduced}),
+  machinery=createClownStageMachinery(stageScenery,{coarse,reduced});
  let phase=0,clock=0,pulse=0,beat=0,spotMode='gold',cueLeft=0,focus=null,disposed=false;
  const box=new THREE.Vector3(),aim=new THREE.Vector3(),tmp=new THREE.Vector3();
  function recolor(next){

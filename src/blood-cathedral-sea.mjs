@@ -38,7 +38,7 @@ function droplets(radius,count){
  }
  return positions;
 }
-export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radius=28}={}){
+export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radius=32}={}){
  if(!Number.isFinite(radius)||radius<=0||radius>=CATHEDRAL_BLOOD_SEA.halfWidth)throw new Error('Invalid cathedral combat radius');
  const root=new THREE.Group();root.name='cathedral-crimson-blood-sea';parent.add(root);
  const uniforms={time:{value:0},frenzy:{value:0},detail:{value:coarse||reduced?0:1}};
@@ -63,7 +63,7 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
    objectNormal=normalize(vec3(-dx,1.0,-dz));`);
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
    float radius=length(position.xz);
-   float shoreDamping=smoothstep(28.550,30.050,radius);
+   float shoreDamping=smoothstep(${(radius+CATHEDRAL_BLOOD_SEA.innerMargin).toFixed(3)},${(radius+CATHEDRAL_BLOOD_SEA.innerMargin+1.5).toFixed(3)},radius);
    float seaH=bloodSeaHeight(position.xz)*shoreDamping;
    transformed.y+=seaH;
    vSeaCrest=seaH;

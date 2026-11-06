@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import {createCathedralBloodSea} from './blood-cathedral-sea.mjs';
 
 // Gothic nave surrounding the existing circular combat volume. Architectural
-// decoration is visual only: all solid furniture/columns are outside radius 28.
+// decoration is visual only: all solid furniture/columns are outside radius 32.
 export const WHITE_CATHEDRAL_LAYOUT=Object.freeze({
- combatRadius:28, wallX:42, columnX:35.4, ceilingApex:43,
+ combatRadius:32, wallX:46, columnX:39.4, ceilingApex:43,
  bayZ:Object.freeze([-35,-21,-7,7,21,35]),
- altarZ:-43.5, minSolidRadius:30,
+ altarZ:-43.5, minSolidRadius:34.5,
 });
 const {bayZ,wallX,columnX}=WHITE_CATHEDRAL_LAYOUT;
 const TAU=Math.PI*2;
@@ -139,7 +139,7 @@ function sunbeam(parent,side,z,material){
  const o=mesh(parent,geo,material,[0,0,0],'cathedral-sunlight-shaft');
  o.renderOrder=1;return o;
 }
-export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28}={}){
+export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=32}={}){
  const parent=new THREE.Group();parent.name='blood-white-cathedral';scene.add(parent);
  const ivory=mat(0xf2efe7,.76),limestone=mat(0xe7e3da,.91),moulding=mat(0xdcd5c9,.66),
        gold=mat(0xbba67b,.4,.46),pewWood=mat(0xc2a78c,.69),floorMat=mat(0xf2efe9,.38),
@@ -181,7 +181,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   }
   // Every bench is safely OUTSIDE the playable circular arena. No collisions.
   for(const z of [-29,-18,-7,4,15,26]){
-   const x=side*34.35;
+   const x=side*39.05;
    pewSeat.push({p:[x,.87,z]});
    pewBack.push({p:[x,1.48,z-1.12]});
    for(const dx of [-2.8,2.8])pewLegs.push({p:[x+dx,.44,z]});
@@ -200,8 +200,8 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
   vaultedCeilingSection(parent,stations[i],stations[i+1],side,roofMat,coarse);
  for(const z of stations){
   for(const side of [-1,1]){
-   rib(parent,[[side*35.5,25.2,z],[side*26,31.9,z],[side*14,38.8,z],[0,42.55,z]],coarse?.24:.3,ivory,coarse?14:28);
-   rib(parent,[[side*35.5,25.2,z],[side*35.5,30,z-1.4],[side*35.5,33,z]],.13,gold,12,'cathedral-arch-capital-filigree');
+   rib(parent,[[side*39.5,25.2,z],[side*26,31.9,z],[side*14,38.8,z],[0,42.55,z]],coarse?.24:.3,ivory,coarse?14:28);
+   rib(parent,[[side*39.5,25.2,z],[side*39.5,30,z-1.4],[side*39.5,33,z]],.13,gold,12,'cathedral-arch-capital-filigree');
   }
  }
  rib(parent,[[0,42.55,-45],[0,43,0],[0,42.55,45]],.22,gold,coarse?22:50,'cathedral-vault-keystone-ridge');
@@ -282,7 +282,7 @@ export function createWhiteCathedral(scene,{coarse=false,reduced=false,radius=28
  }
  bleed.instanceMatrix.needsUpdate=true;parent.add(bleed);bleed.visible=false;
  // Sunken cathedral islands and broken stained-glass plates float OUTSIDE
- // radius 28. No physics surfaces, pickups, hitboxes, or extra arena obstacles.
+ // radius 32. No physics surfaces, pickups, hitboxes, or extra arena obstacles.
  const wreck=new THREE.Group();wreck.name='cathedral-sinking-ruins-on-blood-sea';parent.add(wreck);
  wreck.userData.decorativeOnly=true;
  const ruinStone=mat(0x76636a,.9),ruinGold=mat(0x94705a,.62,.22);
