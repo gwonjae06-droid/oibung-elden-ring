@@ -1,5 +1,6 @@
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated} from './boss-hit-traits.mjs';
 import {stepGiant} from './dice-giant.mjs';
+import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 import {DICE_RULES as R,DICE_BOARD,onDiceBoard,nearestDiceTile,diceDirection,diceRollPose} from './dice-data.mjs';
 import {resolveDiceContact} from './dice-contact.mjs';
@@ -13,7 +14,7 @@ export const DICE_PATTERNS=Object.freeze({chargeWarning:1.12,chargeTime:.5,jumpW
 const PIP_LAYOUT=Object.freeze({1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],6:[[-1,-1],[-1,0],[-1,1],[1,-1],[1,0],[1,1]]});
 const emit=(g,type,data={})=>{const tempo=syncDiceClock(g);g.events.push({type,...data,...(data.duration===undefined?{}:{duration:data.duration*tempo})});};
 function prepare(g,announce=true){const d=g.dice;d.from=DICE_BOARD[d.index];d.to=DICE_BOARD[d.index+diceDirection(d.index,nearestDiceTile(g.player))];d.base=[...d.rotation];d.warningTime=d.frenzyRemaining>0&&!d.frenzyFirst?DICE_PATTERNS.frenzyWarning:R.warning;d.rollTime=d.frenzyRemaining>0?DICE_PATTERNS.frenzyRollTime:R.rollTime;d.frenzyFirst=false;d.state='warning';d.t=0;d.longRecovery=false;d.pose=diceRollPose(d.from,d.to,0,d.base);if(announce)emit(g,'dice-warning',{from:d.from.index,to:d.to.index,duration:d.warningTime,frenzy:d.frenzyRemaining>0});}
-export function createDiceGame(){const p=DICE_BOARD[DICE_BOARD.length-1],g={status:'playing',time:0,events:[],player:{x:p.x,z:p.z,hp:120,maxHp:120},boss:{name:R.name,hp:R.hp,maxHp:R.hp,phase:1},dice:{index:0,state:'idle',t:0,rotation:[0,0,0,1],base:[0,0,0,1],pose:null,from:null,to:null,moves:0,patternCount:0,pendingPattern:false,telegraph:null,groundSpikes:null,spikeCooldown:0,frenzyRemaining:0,longRecovery:false,chainCharges:0,pips:null,roulette:null,rouletteShots:[],rouletteTurn:0}};prepare(g);return g;}
+export function createDiceGame({seed}={}){const p=DICE_BOARD[DICE_BOARD.length-1],g={status:'playing',time:0,events:[],player:{x:p.x,z:p.z,hp:120,maxHp:120},boss:{name:R.name,hp:R.hp,maxHp:R.hp,phase:1},dice:{index:0,state:'idle',t:0,rotation:[0,0,0,1],base:[0,0,0,1],pose:null,from:null,to:null,moves:0,patternCount:0,patternShuffle:createPatternShuffle(seed),lastAttackSlot:null,pendingPattern:false,telegraph:null,groundSpikes:null,spikeCooldown:0,frenzyRemaining:0,longRecovery:false,chainCharges:0,pips:null,roulette:null,rouletteShots:[],rouletteTurn:0}};prepare(g);return g;}
 function clearHazards(g){clearDiceRoulette(g);clearDiceFaceAttack(g);Object.assign(g.dice,{telegraph:null,groundSpikes:null,frenzyRemaining:0,chainCharges:0,pips:null});}
 export function damageDice(g,amount,point=null){if(g.status!=='playing'||g.dice.giant?.state==='transition'||!Number.isFinite(amount)||amount<=0)return 0;const n=Math.min(g.boss.hp,amount);g.boss.hp-=n;emit(g,'boss-hit',{amount:n,...(point?{x:point.x,y:point.y,z:point.z}:{})});if(g.boss.hp===0){g.status='won';if(g.dice.giant){g.dice.giant.deathFrom={...g.dice.pose,rotation:[...g.dice.pose.rotation]};g.dice.giant.state='dead';g.dice.giant.hazards=[];}clearHazards(g);g.dice.state='dead';emit(g,'victory',{boss:'dice'});}else updateDicePhase(g);return n;}
 function ordinaryHit(g,damage,source){const p=g.player;if(diceInvulnerable(p))return false;const amount=Math.min(p.hp,damage);p.hp-=amount;p.invuln=Math.max(p.invuln||0,.32);applyBossHitTrait(g,amount,{boss:'dice'});emit(g,'player-hit',{amount,source});if(p.hp>0)return false;g.status='lost';g.deathCause=source;clearHazards(g);emit(g,'death');return true;}
@@ -31,12 +32,15 @@ function beginPips(g,afterRoll=false){
  d.state='pip-warning';d.t=0;d.chargeWarnTime=undefined;d.chainCharges=0;d.telegraph=null;d.pips={tiles,pips,face:face?.face,afterRoll,warn:phase2?DICE_PATTERNS.pipWarningP2:DICE_PATTERNS.pipWarning,damage:phase2?DICE_PATTERNS.pipDamageP2:DICE_PATTERNS.pipDamage,flash:0,burst:false};emit(g,'dice-pip-warning',{tiles,pips,face:face?.face,bottom:afterRoll,duration:d.pips.warn});
 }
 function burstPips(g){const d=g.dice,p=g.player,pp=d.pips,tiles=pp.tiles.map(i=>DICE_BOARD[i]),reach=DICE_PATTERNS.pipHalf+R.playerRadius,hit=tiles.some(t=>Math.abs(p.x-t.x)<=reach&&Math.abs(p.z-t.z)<=reach);pp.flash=DICE_PATTERNS.pipFlash;pp.burst=true;d.state='recovery';d.t=0;for(const t of tiles)emit(g,'dice-impact',{x:t.x,z:t.z,source:'dice-pip'});emit(g,'dice-pip-burst',{tiles:pp.tiles,pips:pp.pips});if(hit&&ordinaryHit(g,pp.damage,'dice-pip'))return;if(pp.afterRoll&&g.status==='playing')completeRoll(g);}
-function beginPattern(g){const d=g.dice;d.pendingPattern=false;d.from=DICE_BOARD[d.index];d.t=0;d.topFace=diceTopFace(d.rotation);const phase2=g.boss.phase===2,baseSlot=d.patternCount++%(phase2?7:5);
+function beginPattern(g){const d=g.dice;d.pendingPattern=false;d.from=DICE_BOARD[d.index];d.t=0;d.topFace=diceTopFace(d.rotation);const phase2=g.boss.phase===2,slots=phase2?[0,1,2,3,4,5,6]:[0,1,2,3,4];
  const distance=Math.hypot(g.player.x-d.pose.x,g.player.z-d.pose.z);
- const priority=baseSlot===0&&distance<14?1:baseSlot===1&&distance>22?0:baseSlot;
- // Change order only, never target geometry or warning duration.
- const slot=g.journeyBalance?.mode==='story'&&priority!==d.lastPressureSlot?priority:baseSlot;
- if(g.journeyBalance?.mode==='story')d.lastPressureSlot=slot;
+ const preferred=distance<14?[1,0,2]:distance>22?[0,3,4,2]:[];
+ // Forced slots are an explicit diagnostics/test seam; ordinary gameplay
+ // always consumes the phase-specific randomized, fully balanced shuffle bag.
+ const slot=Number.isInteger(d.forcedPatternSlot)
+  ?slots.includes(d.forcedPatternSlot)?d.forcedPatternSlot:slots[0]
+  :drawPatternShuffle(d.patternShuffle,'dice-'+(phase2?2:1),slots,{preferred,avoid:d.lastAttackSlot});
+ delete d.forcedPatternSlot;d.patternCount++;d.lastAttackSlot=slot;
  // The roulette visibly announces its count before any physical chip is fired.
  if((!phase2&&slot>=3)||(phase2&&slot>=5)){beginDiceRoulette(g,slot===(phase2?6:4)?'jackpot':'count');return;}
  if(slot===2){d.frenzyRemaining=DICE_PATTERNS.frenzyRolls;d.frenzyFirst=true;prepare(g,false);d.state='frenzy-windup';d.t=0;g.events.push({type:'dice-frenzy-windup',duration:FRENZY_WINDUP,rolls:d.frenzyRemaining});return;}if(phase2&&slot===4){beginPips(g);return;}const jump=slot===1;d.chargeWarnTime=undefined;d.chainCharges=phase2&&slot===3?1:0;d.state=jump?'jump-warning':'charge-warning';if(jump)d.to=DICE_BOARD[nearestDiceTile(g.player)];else{const dir=diceDirection(d.index,nearestDiceTile(g.player));let i=d.index;for(let k=0;k<3;k++){const a=DICE_BOARD[i],b=DICE_BOARD[i+dir];if(!b||Math.abs(b.x-a.x)+Math.abs(b.z-a.z)>R.edge+.001)break;i+=dir;}d.to=DICE_BOARD[i];}d.telegraph={kind:jump?'circle':'line',shape:jump?'square':'rectangle',from:{x:d.from.x,z:d.from.z},to:{x:d.to.x,z:d.to.z},radius:DICE_PATTERNS.stompRadius,width:R.edge+R.playerRadius*2};emit(g,jump?'dice-jump-warning':'dice-charge-warning',{...d.telegraph,topFace:d.topFace,duration:jump?DICE_PATTERNS.jumpWarning:DICE_PATTERNS.chargeWarning});}
