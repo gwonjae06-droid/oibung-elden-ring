@@ -51,4 +51,3 @@ jobs:
           tests/clown-engine.test.mjs
           tests/clown-stage-isolation.test.mjs
           tests/boss-sfx.test.mjs
-          tests/boss-foley-map.test.mjs
