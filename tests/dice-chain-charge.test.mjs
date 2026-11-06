@@ -6,7 +6,7 @@ import {createDiceGame,stepDice,damageDice,DICE_PATTERNS as P} from '../src/dice
 function advance(g,seconds,input={}){for(let left=seconds;left>1e-9;){const dt=Math.min(.05,left);stepDice(g,dt,input);left-=dt;}}
 function ready(count,phase){
  const g=createDiceGame();g.boss.phase=phase;
- Object.assign(g.dice,{index:60,pose:diceRollPose(B[60],B[61],0),rotation:[0,0,0,1],state:'recovery',t:R.recovery,pendingPattern:true,patternCount:count});
+ Object.assign(g.dice,{index:60,pose:diceRollPose(B[60],B[61],0),rotation:[0,0,0,1],state:'recovery',t:R.recovery,pendingPattern:true,forcedPatternSlot:count});
  g.player.x=-60;g.player.z=-60;stepDice(g,.05);return g;
 }
 const warnings=g=>g.events.filter(e=>e.type==='dice-charge-warning');
@@ -23,8 +23,9 @@ test('phase two adds a chained charge and a pip burst to the pattern cycle',()=>
  assert.equal(g.dice.state,'charge-warning');
  assert.equal(g.dice.chainCharges,1);
  assert.equal(ready(4,2).dice.state,'pip-warning');
- assert.equal(ready(5,2).dice.state,'charge-warning');
+ assert.equal(ready(5,2).dice.state,'roulette-spin');
  assert.ok(!ready(5,2).dice.chainCharges);
+ assert.equal(ready(6,2).dice.state,'roulette-spin');
 });
 
 test('the second charge starts where the first ended, with no recovery in between',()=>{

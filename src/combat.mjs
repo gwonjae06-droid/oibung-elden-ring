@@ -17,6 +17,7 @@ import {evolutionCount} from './weapon-evolution.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {registerEncounter} from './encounter-state.mjs';
+import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -324,7 +325,7 @@ export function inZone(z, p) {
     (z.shape === 'circle' || Math.abs(angleDelta(z.yaw, toward(z, p))) < z.half)
   );
 }
-export function createGame(weapon = 'sword', {register = true} = {}) {
+export function createGame(weapon = 'sword', {register = true,seed} = {}) {
   if (!WEAPONS[weapon]) throw new Error('Unknown weapon');
   const game = {
     status: 'playing',
@@ -335,6 +336,7 @@ export function createGame(weapon = 'sword', {register = true} = {}) {
     projectiles: [],
     bossShots: [],
     nextId: 0,
+    patternShuffle: createPatternShuffle(seed),
     player: createPlayerState(),
     boss: {
       x: 0,
@@ -493,42 +495,32 @@ export function beginSequence(g, opening) {
   startPattern(g, map[opening][0]);
 }
 export function chooseOpening(g) {
-  const b = g.boss,
-    d = dist(b, g.player);
-  let list;
-  if (b.phase === 1)
-    list =
-      g.player.action?.kind === 'heal'
-        ? ['thrust', 'hunt']
-        : d > 13
-          ? ['thrust', 'leap', 'siege']
-          : d < 5
-            ? CLOSE[1]
-            : ORDER[1];
-  else if (g.player.action?.kind === 'heal') list = ['royalHunt', 'execution'];
-  else
-    list =
-      d > 13
-        ? ['crescent', 'draw', 'execution', 'requiem']
-        : d < 5
-          ? CLOSE[2]
-          : ORDER[2];
-  if(b.phase===2&&b.hp/b.maxHp<.3&&g.player.action?.kind!=='heal'&&b.sequence%5===0)
-    return b.lastOpening==='lastStance'?'graveSword':'lastStance';
-  if(g.journeyBalance?.mode==='story'&&g.player.action?.kind!=='heal'){
-    // Prioritize existing combos for close pursuit or distance denial.
-    if(d<6)list=b.phase===1?['hunt','skewer','counterDancer','skyJudge','backsweep']:
-      ['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
-    else if(d>11)list=b.phase===1?['siege','spiderPrison','skyJudge','feint','hunt','thrust']:
-      ['requiem','livingSword','graveSword','doubleMoon','falseExecution','crescent','execution','draw'];
-    else if(b.phase===2&&b.lastOpening==='crescent')
-      list=['royalHunt','counter','windParry','trample'];
-  }
-  const i = b.sequence++;
-  let pick = list[i % list.length];
-  if (pick === b.lastOpening && list.length > 1)
-    pick = list[(i + 1) % list.length];
-  return pick;
+ const b=g.boss,d=dist(b,g.player),phase=b.phase===2?2:1;
+ const pool=Object.keys(phase===1?PHASE_ONE:SEQUENCES);
+ // Healing is an explicit punish reaction: shuffle its two legal counters
+ // separately. It cannot poison the ordinary attack deck.
+ if(g.player.action?.kind==='heal'){
+  b.sequence++;
+  return drawPatternShuffle(g.patternShuffle,'kwon-healing-'+phase,
+   phase===1?['thrust','hunt']:['royalHunt','execution'],{avoid:b.lastOpening});
+ }
+ let preferred=d>13
+  ?phase===1?['thrust','leap','siege']:['crescent','draw','execution','requiem']
+  :d<5?CLOSE[phase]:ORDER[phase];
+ if(g.journeyBalance?.mode==='story'){
+  if(d<6)preferred=phase===1
+   ?['hunt','skewer','counterDancer','skyJudge','backsweep']
+   :['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
+  else if(d>11)preferred=phase===1
+   ?['siege','spiderPrison','skyJudge','feint','hunt','thrust']
+   :['requiem','livingSword','graveSword','doubleMoon','falseExecution','crescent','execution','draw'];
+  else if(phase===2&&b.lastOpening==='crescent')
+   preferred=['royalHunt','counter','windParry','trample'];
+ }
+ b.sequence++;
+ // First prefer moves suitable for current distance, but never exclude the
+ // remaining signatures: one full cycle visits EVERY phase-legal opening.
+ return drawPatternShuffle(g.patternShuffle,'kwon-'+phase,pool,{preferred,avoid:b.lastOpening});
 }
 export function swordPose(b) {
   const cfg = patternConfig(b),

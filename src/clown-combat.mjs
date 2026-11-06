@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {clownPrecastTime,clownPrecastPose} from './attack-readability.mjs';
 import {clownHurtShapes} from './boss-hit-regions.mjs';
 import {kwonPlayerSeparation} from './kwon-hurtbox.mjs';
@@ -1023,47 +1024,29 @@ const RUN = {
   },
 };
 export function choosePattern(g) {
-  const c = g.clown,
-    phase = g.boss.phase === 2 ? 2 : 1,
-    d = dist(g.boss, g.player);
-  c.used ||= {};
-  let list = Object.keys(PATTERNS).filter(
-    (k) => PATTERNS[k].phases.includes(phase) && k !== c.last && k !== 'shove',
-  );
-  if (d < 4 && c.shoveCd <= 0 && c.seq % 4 === 0) {
-    c.seq++;
-    return 'shove';
-  }
-  const min = Math.min(...list.map((k) => c.used[k] || 0));
-  list = list.filter((k) => (c.used[k] || 0) === min);
-  const close = new Set([
-      'clap',
-      'bounce',
-      'inverseBow',
-      'lastClap',
-      'carousel',
-      'ballSpin',
-      'trapdoorWaltz',
-      'invertedApplause',
-      'puppetFuneral',
-      'lastMagic',
-    ]),
-    prefer = list.filter((k) =>
-      d < 5.5 ? close.has(k) : d > 12 ? !close.has(k) : true,
-    );
-  if(g.journeyBalance?.mode==='story'){
-    // Follow-ups are already-telegraphed performances with normal punish windows.
-    const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
-      spotlightSweep:'hornFan',ballCannon:'bounceChain',
-      ballRain:'ballSpin',bounceChain:'ballCannon'}[c.last];
-    if(follow&&follow!==c.last&&PATTERNS[follow]?.phases.includes(phase)&&
-      (c.used[follow]||0)<=min+1&&
+ const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
+ // The close-contact shove stays a situational defensive reaction, not an
+ // unfairly common attack occupying half the regular performance cycle.
+ if(d<4&&c.shoveCd<=0&&c.seq>0&&c.seq%7===0&&c.last!=='shove'){
+  c.seq++;return 'shove';
+ }
+ const pool=Object.keys(PATTERNS).filter(k=>k!=='shove'&&PATTERNS[k].phases.includes(phase));
+ const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',
+  'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
+ let preferred=d<5.5?pool.filter(k=>close.has(k))
+  :d>12?pool.filter(k=>!close.has(k)):[];
+ if(g.journeyBalance?.mode==='story'){
+  const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
+   spotlightSweep:'hornFan',ballCannon:'bounceChain',
+   ballRain:'ballSpin',bounceChain:'ballCannon'}[c.last];
+  if(follow&&pool.includes(follow)&&
       (d>=5.5||close.has(follow))&&(d<=12||!close.has(follow))){
-      c.seq++;return follow;
-    }
+   preferred=[follow,...preferred];
   }
-  if (prefer.length) list = prefer;
-  return list[c.seq++ % list.length];
+ }
+ c.seq++;
+ // Every ordinary performance appears once before that phase's bag refills.
+ return drawPatternShuffle(g.patternShuffle,'clown-'+phase,pool,{preferred,avoid:c.last});
 }
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');

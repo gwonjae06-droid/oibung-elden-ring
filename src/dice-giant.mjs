@@ -4,6 +4,7 @@ import {POSSESSION,cinematicBeat,possessionPose} from './dice-giant-cinematic-da
 import {giantThrowTimeline,giantSpringStep,giantFeralHeadMotion} from './dice-giant-motion.mjs';
 import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
 import {giantReadableWarning} from './attack-readability.mjs';
+import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4,feralRecovery:1.5,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
 export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','폭주하는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서'];
@@ -281,13 +282,14 @@ export function giantAim(g){const s=g.dice.giant;if(!s)return g.dice.pose;if(gia
 // Choose all existing attacks once per cycle with proximity-aware priority.
 export function nextGiantPressureSlot(g){
  const s=g.dice.giant,feral=s.temperament==='feral',total=feral?FERAL_NAMES.length:GIANT_NAMES.length;
- if(!s.pressureSlots?.length)s.pressureSlots=Array.from({length:total},(_,i)=>i);
  const near=Math.hypot(g.player.x,g.player.z+45)<30;
- const favored=feral?(near?[12,11,7,2,9,0,5,10]:[12,10,8,6,1,4,3]):(near?[13,10,0,5,7,8]:[11,12,9,3,4,6,1,2]);
- let index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot&&favored.includes(slot));
- if(index<0)index=s.pressureSlots.findIndex(slot=>slot!==s.lastPressureSlot);
- if(index<0)index=0;
- const [slot]=s.pressureSlots.splice(index,1);
+ const favored=feral
+  ?near?[12,11,7,2,9,0,5,10]:[12,10,8,6,1,4,3]
+  :near?[13,10,0,5,7,8]:[11,12,9,3,4,6,1,2];
+ g.dice.patternShuffle ||=createPatternShuffle();
+ const slots=Array.from({length:total},(_,i)=>i);
+ const slot=drawPatternShuffle(g.dice.patternShuffle,'giant-'+(feral?'feral':'controlled'),slots,
+  {preferred:favored,avoid:s.lastPressureSlot});
  s.lastPressureSlot=slot;
  return slot;
 }
@@ -314,8 +316,11 @@ export function stepGiant(g,dt,frozen=false){
   }else q.revive[i]=Math.max(0,q.revive[i]-dt);
  }
  if(q.state==='recovery'&&q.t>=(q.temperament==='feral'?GIANT.feralRecovery:GIANT.recovery)){
-  const ordinal=q.ordinal++,slot=g.journeyBalance?.mode==='story'?nextGiantPressureSlot(g):ordinal,
-    pattern=giantPattern(slot,g.player,q.temperament,g.boss.hp/g.boss.maxHp);
+  const ordinal=q.ordinal++,slot=nextGiantPressureSlot(g),
+    total=q.temperament==='feral'?FERAL_NAMES.length:GIANT_NAMES.length,
+    // Coin heads/tails and chess piece variants still change over cycles.
+    authoredIndex=slot+total*Math.floor(ordinal/total),
+    pattern=giantPattern(authoredIndex,g.player,q.temperament,g.boss.hp/g.boss.maxHp);
   Object.assign(q,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:q.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});
   g.events.push({type:'dice-giant-warning',name:q.name});
  }
