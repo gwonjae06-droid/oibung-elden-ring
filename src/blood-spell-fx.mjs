@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {hazardPosition,bloodHazardFootprint,BLOOD_RULES} from './blood-data.mjs';
+import {hazardPosition,bloodHazardFootprint,BLOOD_RULES,BLOOD_SAFE_GROUND_PATTERNS} from './blood-data.mjs';
+export {BLOOD_SAFE_GROUND_PATTERNS} from './blood-data.mjs';
 import {onsetTime} from './blood-stage.mjs';
 import {bloodEnvironmentCue} from './environmental-telegraphs.mjs';
 import {bloodWaveVisualPose} from './blood-volumetric-wave.mjs';
@@ -11,10 +12,7 @@ const clamp01=v=>Math.max(0,Math.min(1,v));
 const easeOut=u=>1-Math.pow(1-clamp01(u),3);
 const smooth=u=>{u=clamp01(u);return u*u*(3-2*u);};
 const reach=(h,c)=>h.shape==='lane'?Math.max(1.8,h.width*1.2):h.shape==='cone'?Math.max(2.5,h.r*.4):h.shape==='ring'?Math.max(1.5,h.width*1.5):Math.max(1.2,c.r);
-export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
- 'burst','vortex','dive','eclipse','tide','ritual','judgement',
- 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross'
-]);
+
 export const BLOOD_FLOOR_MAX_HAZARDS=12;
 // Render the precise padded collision footprint, including moving blood walls.
 // Safe red is shown for broad attacks; future warnings already mark their
