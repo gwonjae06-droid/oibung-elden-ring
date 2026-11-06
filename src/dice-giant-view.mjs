@@ -1,6 +1,7 @@
 import {createCameraVisibility} from './camera-visibility.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 import {createRecoilBank} from './animation-recoil.mjs';
+import {giantWeightAccent} from './boss-performance.mjs';
 import {createGiantElbowFollow,constrainGiantElbow} from './giant-arm-inertia.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import * as T from 'three';
@@ -83,16 +84,16 @@ export function buildDiceGiant(scene){
  },dispose(){if(disposed)return;disposed=true;visibility.dispose();root.parent?.remove(root);return disposeScene(root,{extras:[circle,auraGeo,warnMat,fillWarnMat,sprayGeo,sprayMat,barGeo,fillGeo,sphere,cylinder,armGeo,neckGeo,box,shirt,satin,tie,rageGeo,rageMat,ringGeo,ringMat,impactDustGeo,impactDustMat,...barMats,...Object.values(propGeo),...Object.values(propMats)]});},update(g,dt){if(disposed)return;if(last!==g){last=g;death=0;handPrev=[GIANT.handHp,GIANT.handHp];handPulse=[0,0];releaseOrigins=new WeakMap();wristSprings.reset();recoil.reset();elbowFollow.forEach(f=>f.reset());for(const b of bars){b.prev=GIANT.handHp;b.flash=0;}}const s=g.dice.giant;root.visible=!!s;if(!s)return;
   if(s.state==='dead')death+=Math.max(0,dt);s.deathVisual=death;
   const time=g.time||0,rise=s.state==='transition'?sat((s.t-4.35)/(POSSESSION.riseEnd-4.35)):1,fall=s.state==='dead'?sat(death/2):0;
-  const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0;
+  const posture=giantPosture(g),lean=posture.lean,feral=s.temperament==='feral',rage=s.rageBeat||0,weightAccent=giantWeightAccent(s);
   body.visible=s.state!=='transition'||s.t>=4.35;
   const weight=posture.weight||0;
   body.position.set(posture.bodyX*rise,23-11*lean-weight*7-23*(1-rise)-34*fall,-133+61*lean+weight*7);
-  body.scale.set(1+weight*.025,1-weight*.055,1+weight*.07);
+  body.scale.set(1+weight*.025,1-weight*.055-weightAccent.compression,1+weight*.07);
   const breath=feral?Math.sin(time*9)*.035:Math.sin(time*1.4)*.012;
-  body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14+
+  body.rotation.x=1.05*lean+weight*.13+fall*.35+(feral?.1:0)+breath+rage*.14+weightAccent.pitch+
    recoil.step('shoulder:weight',weight+(posture.throwTwist||0)*.6+(handPulse[0]+handPulse[1])*.4,dt,{strength:1.8,frequency:13,limit:.078});
-  body.rotation.z=feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0;
-  body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0);
+  body.rotation.z=(feral?Math.sin(time*5)*.027+Math.sin(time*39)*rage*.015:0)+weightAccent.roll;
+  body.rotation.y=(feral?Math.sin(time*17)*rage*.045:0)+(posture.throwTwist||0)+weightAccent.yaw;
   // Gentle delayed counterweight augments existing elbows and wrists.
   // All attackable hands still use their original authoritative positions.
   body.rotation.z+=wristSprings.step('torso:counterweight',Math.max(-.012,Math.min(.012,(posture.bodyX||0)*-.0003+weight*.006)),dt,11);
