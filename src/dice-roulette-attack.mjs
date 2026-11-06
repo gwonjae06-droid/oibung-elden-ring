@@ -1,4 +1,5 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
 import {diceInvulnerable} from './dice-defense.mjs';
 
 // Unlike the retired portrait cards, these coins start on the physical dice,
@@ -70,7 +71,7 @@ export function stepDiceRoulette(g,dt,frozen=false){
   shot.age+=dt;shot.life-=dt;shot.x+=shot.vx*dt;shot.z+=shot.vz*dt;
   if(shot.age>=DICE_ROULETTE.armTime&&hitSegment(g.player,from,shot,shot.radius)){
    if(!diceInvulnerable(g.player)&&!(g.player.invuln>0)){
-    const amount=Math.min(g.player.hp,shot.damage);g.player.hp-=amount;
+    const amount=Math.min(g.player.hp,playerIncomingDamage(g,shot.damage));g.player.hp-=amount;
     g.player.invuln=.55;applyBossHitTrait(g,amount,{boss:'dice'});
     g.events.push({type:'player-hit',source:'dice-roulette',amount});
     if(g.player.hp<=0){g.status='lost';g.deathCause='dice-roulette';clearDiceRoulette(g);g.events.push({type:'death'});return;}
