@@ -14,7 +14,7 @@ import {damageArenaBoss as bossDamage} from './arena-damage.mjs';
 import {KWON_WAVE,nextKwonWaveVariant} from './kwon-wave-data.mjs';
 import {kwonHurtShapes,kwonMeleeContact,kwonProjectileContact,kwonPlayerSeparation} from './kwon-hurtbox.mjs';
 import {clownHurtShapes,clownAimPart} from './boss-hit-regions.mjs';
-import {currentCard, skillReady, SKILLS, STANDARD_COOLDOWN} from './skills.mjs';
+import {registerSpecialHit,tickWeaponBurn,abilityDisplay,abilityRank} from './weapon-specialization.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
@@ -648,7 +648,7 @@ export function sweptBladeHits(player,previous,current,width=SWORD.width){
  return false;
 }
 
-function landHit(g, amount, poise, a,point=null) {
+function landHit(g, amount, poise, a,point=null,fireRank=0) {
   const actual = bossDamage(g, amount, poise,{point}),
     b = g.boss;
   // bossDamage already counted the hit (with poise and hit-stop), so only the rewards are settled here.
@@ -659,6 +659,7 @@ function landHit(g, amount, poise, a,point=null) {
     },
     countStats: false,
   });
+  registerSpecialHit(g,actual,a,{fireRank,bonus:(d,stagger)=>bossDamage(g,d,stagger,{point})});
 }
 function hurtPlayer(g, damage,cut=true) {
   const p = g.player;
@@ -709,6 +710,7 @@ export function step(g, dt, input = {}) {
     return;
   }
   tickBossHitTraits(g,dt);if(g.status!=='playing')return;tickPlayerResources(g, dt);
+  tickWeaponBurn(g,dt,amount=>bossDamage(g,amount,0));if(g.status!=='playing')return;
   const mx = input.x || 0,
     mz = input.z || 0,
     mag = Math.hypot(mx, mz),
@@ -735,23 +737,23 @@ export function step(g, dt, input = {}) {
       p.x += Math.sin(a.yaw) * playerRollSpeed(g) * dt;
       p.z += Math.cos(a.yaw) * playerRollSpeed(g) * dt;
     },
+    leap: (a) => {p.x-=Math.sin(a.yaw)*8*dt;p.z-=Math.cos(a.yaw)*8*dt;},
     melee: (a) => {
       const shapes=encounterBossHurtShapes(g);
       // The sword is ~2m long beyond the character grip, NOT a radius
       // around the player's feet. Direction and blade height must both line up.
-      const reach=a.skill?Math.max(3.55,Math.min(4.2,w.range+0.6)):
-        g.weapon==='hammer'?3.05:2.85;
+      const reach=g.weapon==='sword'&&abilityRank(g,'charged-blade')?5.7:g.weapon==='hammer'?3.05:2.85;
       const hit=kwonMeleeContact(shapes,p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
       if(hit){
         a.hit=true;
-        landHit(g,w.damage*a.mult,w.poise*(a.skill?2.5:1),a,hit);
+        landHit(g,w.damage*a.mult+(a.bonusDamage||0),w.poise,a,hit);
       }
     },
   });
   confine(p);
   for (const q of g.projectiles) {
-    const old = advancePlayerProjectile(q, dt);
-    if (q.piercing && g.bossShots.length) {
+    const old = advancePlayerProjectile(q, dt, p);
+    if (q.kind==='bow'&&q.piercing && g.bossShots.length) {
       const n = g.bossShots.length;
       g.bossShots = g.bossShots.filter((s) => segmentDistance(s, old, q) > 1.8);
       if (g.bossShots.length < n) emit(g, 'skill-pierce', {flavor: 'bow'});
@@ -763,7 +765,7 @@ export function step(g, dt, input = {}) {
     if(hit){
       q.bossHit=true;
       if(!q.piercing)q.life=0;
-      landHit(g,q.damage,q.poise,q.source,hit);
+      landHit(g,q.damage,q.poise,q.source,hit,q.fireRank||0);
     }
   }
   g.projectiles = g.projectiles.filter((q) => q.life > 0);
@@ -951,45 +953,4 @@ export function step(g, dt, input = {}) {
   const separation=g.clown?null:kwonPlayerSeparation(kwonVisibleHurtShapes(b),p);
   if(separation){p.x=separation.x;p.z=separation.z;confine(p);}
 }
-export function skillView(g) {
-  const s = g.player.skill,
-    w = g.weapon,
-    ready = w==='cards'&&evolutionCount(g,'wide-deck')?false:skillReady(s, w);
-  let text = '',
-    ratio = 1,
-    card = '';
-  if (w === 'sword') {
-    ratio =
-      s.haste > 0
-        ? s.haste / SKILLS.sword.duration
-        : ready
-          ? 1
-          : 1 - s.cooldown / STANDARD_COOLDOWN;
-    text =
-      s.haste > 0
-        ? '공속 증가 ' + s.haste.toFixed(1) + '초'
-        : ready
-          ? '준비 완료'
-          : '재사용 ' + s.cooldown.toFixed(1) + '초';
-  } else if (w === 'hammer') {
-    ratio = s.hammerHits / SKILLS.hammer.hits;
-    text = ready
-      ? '준비 완료'
-      : s.hammerHits + ' / ' + SKILLS.hammer.hits + ' 적중';
-  } else if (w === 'bow') {
-    ratio =
-      (s.charges + (s.charges < 3 ? s.recharge / STANDARD_COOLDOWN : 0)) / 3;
-    text = '충전 ' + s.charges + ' / 3';
-  } else {
-    if(evolutionCount(g,'wide-deck'))return {name:'운명의 순환',text:'다음 평타 '+['파랑','빨강','노랑'][(s.autoCardCycle||0)%3]+' 카드 · 자동 발동',ratio:1,card:'',ready:false};
-    ratio = ready ? 1 : 1 - s.cooldown / STANDARD_COOLDOWN;
-    card = ready ? currentCard(s) : '';
-    text = ready
-      ? '우클릭으로 카드 확정'
-      : '재사용 ' + s.cooldown.toFixed(1) + '초';
-    if (s.blue > 0) text = '이동 가속 ' + s.blue.toFixed(1) + '초';
-    else if (s.nextRed) text = '다음 공격 피해 +50%';
-    else if (s.nextYellow) text = '다음 적중 시 기절';
-  }
-  return {name: SKILLS[w].name, text, ratio: clamp(ratio, 0, 1), card, ready};
-}
+export function skillView(g){return abilityDisplay(g);}
