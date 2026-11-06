@@ -10,7 +10,7 @@ export function buildChainSweepVisuals(THREE,root){
    const link=new THREE.Mesh(geometry,gold);link.name='dice-chain-link';link.rotation.x=i%2?Math.PI/2:0;
    chain.add(link);links.push({link,i,side});
  }
- return {update(g){
+ return {clear(){group.visible=false;},update(g){
    const w=g.dice.groundSpikes;
    group.visible=g.status==='playing'&&w?.kind==='chain-sweep';if(!group.visible)return;
    const area=chainLane(w.plan),band=chainBand(w.plan,w.stage==='warning'?0:Math.min(1,w.t/CHAIN_SWEEP.sweepTime));
