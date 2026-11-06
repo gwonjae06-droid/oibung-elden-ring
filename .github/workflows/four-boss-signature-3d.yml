@@ -1,0 +1,22 @@
+name: Four boss signature 3D visuals regression
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signature-3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three.js and browser test dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify 3D setpieces and legacy animation and clearance
+        run: |
+          node --test tests/four-boss-signature-3d.test.mjs tests/casino-clearance.test.mjs tests/dice-giant-render-lifecycle.test.mjs tests/blood-cinematic.test.mjs tests/kwon-neck-rig.test.mjs tests/clown-radiant-circus.test.mjs
