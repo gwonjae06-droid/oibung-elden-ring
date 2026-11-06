@@ -2,13 +2,29 @@ import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
 export function createGyuwonSpectacle(stage,{coarse=false}={}){
  const root=new THREE.Group();stage.add(root);const groups=new Map(),attacks=new Map();
- const gold=new THREE.MeshBasicMaterial({color:0xdca339,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false});
+ const gold=new THREE.MeshPhysicalMaterial({color:0xdca339,metalness:.66,roughness:.32,clearcoat:.38,transparent:true,opacity:.48,side:THREE.DoubleSide,depthWrite:false});
  const dust=new THREE.PointsMaterial({color:0xffcf65,size:coarse?.32:.2,transparent:true,opacity:.9,depthWrite:false});
  function solid(parent,geo,x=0,y=0,z=0,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,gold);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);const p=new THREE.Points(geo,dust);p.position.copy(m.position);p.scale.copy(m.scale);parent.add(p);return m;}
  const cube=new THREE.BoxGeometry(1,1,1,4,4,4),sphere=new THREE.SphereGeometry(1,20,14),cylinder=new THREE.CylinderGeometry(1,1,1,16,3),ring=new THREE.TorusGeometry(1,.035,6,80);
  for(const name of ['sword','circus','gamble','tsunami','chalk']){const g=new THREE.Group();g.name='gold-memory-'+name;root.add(g);groups.set(name,g);
   if(name==='sword'||name==='tsunami')for(let i=0;i<12;i++){const a=i*Math.PI/6,x=Math.sin(a)*65,z=Math.cos(a)*65;solid(g,cylinder,x,12,z,2,24,2);solid(g,cube,x,25,z,5,2,5);if(name==='tsunami')solid(g,ring,x,14,z,7,11,7);}
-  if(name==='circus')for(let row=0;row<3;row++)for(let i=0;i<60;i++){const a=i*Math.PI/30,r=48+row*8;solid(g,cube,Math.sin(a)*r,1+row*2,Math.cos(a)*r,2,2,2);solid(g,sphere,Math.sin(a)*r,3+row*2,Math.cos(a)*r,.6,.6,.6);}
+  if(name==='circus'){
+   // 360 independent meshes + point overlays used to be hundreds of draw calls.
+   // Two instanced batches preserve the entire three-ring stage silhouette.
+   const N=180,blocks=new THREE.InstancedMesh(cube,gold,N),orbs=new THREE.InstancedMesh(sphere,gold,N);
+   const dummy=new THREE.Object3D();let k=0;
+   for(let row=0;row<3;row++)for(let i=0;i<60;i++){
+    const a=i*Math.PI/30,r=48+row*8,x=Math.sin(a)*r,z=Math.cos(a)*r;
+    dummy.position.set(x,1+row*2,z);dummy.scale.set(2,2,2);dummy.updateMatrix();blocks.setMatrixAt(k,dummy.matrix);
+    dummy.position.set(x,3+row*2,z);dummy.scale.set(.6,.6,.6);dummy.updateMatrix();orbs.setMatrixAt(k,dummy.matrix);
+    k++;
+   }
+   blocks.instanceMatrix.needsUpdate=orbs.instanceMatrix.needsUpdate=true;
+   blocks.name='gyuwon-circus-stage-instanced-blocks';
+   orbs.name='gyuwon-circus-stage-instanced-orbs';
+   blocks.frustumCulled=orbs.frustumCulled=false;
+   g.add(blocks,orbs);
+  }
   if(name==='gamble'){const r=solid(g,ring,0,.1,0,45,45,45);r.rotation.x=Math.PI/2;for(let i=0;i<18;i++){const a=i*Math.PI/9;solid(g,cube,Math.sin(a)*42,.2,Math.cos(a)*42,3,.25,4);}}
  }
  const blackboard=document.createElement('canvas');blackboard.width=blackboard.height=1024;const ctx=blackboard.getContext('2d');ctx.fillStyle='#09211c';ctx.fillRect(0,0,1024,1024);ctx.strokeStyle='#d8b75e';ctx.lineWidth=3;ctx.font='48px serif';
@@ -33,7 +49,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
    for(let i=0;i<n;i++)vertices.push(vertices[i*3],vertices[i*3+1],vertices[i*3+2]-10);
    for(let i=0;i<front.length;i+=3)indices.push(front[i+2]+n,front[i+1]+n,front[i]+n);
    for(const {a,b,count}of edges.values())if(count===1)indices.push(a,b,a+n,b,b+n,a+n);
-   geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();const water=solid(g,geo);water.material=gold.clone();water.material.opacity=.55;const opening=solid(g,ring,h.gap,2.5,0,h.opening,2.7,1);opening.material=new THREE.MeshBasicMaterial({color:0xffedab});
+   geo.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();const water=solid(g,geo);water.material=new THREE.MeshPhysicalMaterial({color:0x85122b,metalness:0,roughness:.21,clearcoat:.8,clearcoatRoughness:.12,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:true});const opening=solid(g,ring,h.gap,2.5,0,h.opening,2.7,1);opening.material=new THREE.MeshBasicMaterial({color:0xffedab});
   }
   attacks.set(h.id,g);return g;
  }

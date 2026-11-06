@@ -78,7 +78,7 @@ const boundary=new THREE.Group();boundary.name='kwon-outer-columns';scene.add(bo
 const stoneMat=new THREE.MeshStandardMaterial({color:0x5a5f56,roughness:.9});for(let i=0;i<14;i++){const a=i/14*Math.PI*2,h=3.5+((i*37)%5)*1.1,m=new THREE.Mesh(new THREE.BoxGeometry(1.5,h,1.5),stoneMat);m.position.set(Math.sin(a)*26,h/2,Math.cos(a)*26);m.rotation.y=a+.3;m.castShadow=true;m.receiveShadow=true;boundary.add(m);}
 let sanctuary=null;arenaRuntime.load(()=>import('./environment.mjs?visual=royal-sword-shrine-20261105'),async({buildEnvironment})=>{sanctuary=buildEnvironment(scene,ground);await stanceReady;return arenaRuntime.load(()=>import('./kwon-visuals.mjs'),({installKwonVisuals})=>{installKwonVisuals({scene,renderer,ground,boss:B,sun,sanctuary,runtime:arenaRuntime});cinematic.apply(sanctuary);cinematic.apply(ground);});});
 const P=buildPlayer(WEAPON_KEYS),{rig,body,pivot,weaponRigs}=P;scene.add(rig);cinematic.apply(rig,{actor:true});const traitView=createBossHitTraitView(scene,body,$('arena'),{reduced:reduceMotion});startup.own('Arena trait view',()=>traitView.dispose());
-const B=buildBoss(),{root:bossRoot,model:bossModel,HEAD,boneMat,swordGroup,fallbackBlade}=B;scene.add(bossRoot);cinematic.apply(bossRoot,{actor:true});
+const B=buildBoss({coarse}),{root:bossRoot,model:bossModel,HEAD,boneMat,swordGroup,fallbackBlade}=B;scene.add(bossRoot);cinematic.apply(bossRoot,{actor:true});
 let stance=null,effects=null,skillFx=null,skillAudio=null;
 const stanceReady=arenaRuntime.load(()=>import('./boss-stance.mjs'),({createBossStance})=>{stance=createBossStance(B);});
 arenaRuntime.load(()=>import('./effects.mjs'),({createEffects})=>{effects=createEffects(scene,swordGroup,reduceMotion);});

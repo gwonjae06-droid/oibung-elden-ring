@@ -41,7 +41,7 @@ function tube(points,r0,r1,mat,seg,namespace=BASE_THREE){
 
 export function buildPlayer(weaponKeys){return buildPlayerAvatar(weaponKeys,THREE);}
 
-export function buildBoss(){
+export function buildBoss({coarse=false}={}){
  return runThreeStartup(THREE,(THREE,own)=>{
 
   const root=new THREE.Group();
@@ -51,7 +51,7 @@ export function buildBoss(){
   const hairMat=new THREE.MeshStandardMaterial({color:0x211a17,roughness:.95});
   const markMat=new THREE.MeshStandardMaterial({color:0x8a2b1f,roughness:.5,emissive:0x2a0804,emissiveIntensity:.6});
   const AB={c:[0,2.1,-1.5],r:[2.1,1.785,2.625]};
-  const abdomen=new THREE.Mesh(new THREE.SphereGeometry(1,64,44),carapace);
+  const abdomen=new THREE.Mesh(new THREE.SphereGeometry(1,coarse?36:64,coarse?24:44),carapace);
   abdomen.scale.set(AB.r[0],AB.r[1],AB.r[2]);abdomen.position.set(...AB.c);abdomen.castShadow=true;model.add(abdomen);
   for(let i=0;i<5;i++){
     const rg=ringAt(AB.c,AB.r,-.2-i*.78);
@@ -79,11 +79,11 @@ export function buildBoss(){
   const spines=new THREE.InstancedMesh(new THREE.ConeGeometry(.12,.7,6),joint,spinePlan.length);
   spinePlan.forEach(([x,z,s],i)=>{const e=ellipsoidPoint(AB.c,AB.r,x,z);if(!e.inside){dummy.position.set(0,-50,0);dummy.rotation.set(0,0,0);dummy.scale.setScalar(.0001);}else{dummy.position.set(e.point[0]+e.normal[0]*.2,e.point[1]+e.normal[1]*.2,e.point[2]+e.normal[2]*.2);dummy.lookAt(dummy.position.x+e.normal[0],dummy.position.y+e.normal[1],dummy.position.z+e.normal[2]);dummy.rotateX(Math.PI/2);dummy.scale.setScalar(s);}dummy.updateMatrix();spines.setMatrixAt(i,dummy.matrix);});
   spines.instanceMatrix.needsUpdate=true;spines.castShadow=true;model.add(spines);
-  const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,56,40),carapace);
+  const thorax=new THREE.Mesh(new THREE.SphereGeometry(1.5,coarse?32:56,coarse?24:40),carapace);
   thorax.scale.set(1,.8,1);thorax.position.set(0,2.1,.8);thorax.castShadow=true;model.add(thorax);
-  const waist=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,.9,32).rotateX(Math.PI/2),joint);waist.position.set(0,2.1,-.35);model.add(waist);
+  const waist=new THREE.Mesh(new THREE.CylinderGeometry(.5,.7,.9,coarse?20:32).rotateX(Math.PI/2),joint);waist.position.set(0,2.1,-.35);model.add(waist);
   const HEAD={x:0,y:2.75,z:1.75,r:1.12};
-  const bossHead=new THREE.Mesh(new THREE.SphereGeometry(HEAD.r,64,48),carapace);
+  const bossHead=new THREE.Mesh(new THREE.SphereGeometry(HEAD.r,coarse?32:64,coarse?24:48),carapace);
   bossHead.position.set(HEAD.x,HEAD.y,HEAD.z);bossHead.castShadow=true;model.add(bossHead);
   const glowMat=new THREE.MeshStandardMaterial({color:0x2a0606,emissive:0xcc2a1a,emissiveIntensity:.9,roughness:.2});
   const eyes=[];
