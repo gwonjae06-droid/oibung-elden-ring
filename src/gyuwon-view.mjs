@@ -19,7 +19,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const grid=new THREE.GridHelper(1200,120,0x71889d,0x71889d);grid.position.y=.005;grid.material.transparent=true;grid.material.opacity=.12;stage.add(grid);
  const edge=new THREE.Mesh(new THREE.RingGeometry(R.radius-.06,R.radius+.06,96),new THREE.MeshBasicMaterial({color:0x9bb6ca,transparent:true,opacity:.45,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=.025;stage.add(edge);
  // One instance per repeated desk part keeps distant furniture inexpensive.
- const positions=[];for(let x=-240;x<=240;x+=12)for(let z=-240;z<=240;z+=12)if(Math.hypot(x,z)>34)positions.push([x,z]);
+ const positions=[],span=coarse?180:240,pitch=coarse?18:12;for(let x=-span;x<=span;x+=pitch)for(let z=-span;z<=span;z+=pitch)if(Math.hypot(x,z)>34)positions.push([x,z]);
  const matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();
  function repeatedPart(dx,y,dz,w,h,d,color){const mesh=new THREE.InstancedMesh(boxGeo,mat(color),positions.length);mesh.name='gyuwon-endless-desks';positions.forEach(([x,z],i)=>{position.set(x+dx,y,z+dz);scale.set(w,h,d);matrix.compose(position,rotation,scale);mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=false;stage.add(mesh);}
  repeatedPart(0,1.6,0,2.5,.18,2,0x8d877e);repeatedPart(0,.8,0,.2,1.6,.2,0x68798b);
@@ -27,7 +27,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  // Sparse stars are above the horizon, leaving the floor warnings uncluttered.
  const stars=[];for(let i=0;i<360;i++){const yaw=i*2.3999632297,y=.08+((i*73)%353)/353*.85,r=Math.sqrt(1-y*y);stars.push(Math.sin(yaw)*r*500,y*500,Math.cos(yaw)*r*500);}
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));const starfield=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9db2cb,size:.55,transparent:true,opacity:.55,fog:false,depthWrite:false}));stage.add(starfield);
- const actor=createGyuwonActor(stage),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse});
+ const actor=createGyuwonActor(stage,{coarse}),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse});
  const ghosts=[-1,1].map(side=>{const rig=root.clone(true);rig.name='gyuwon-contradiction';rig.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false;}});stage.add(rig);return {rig,side};});
  const warnings=new THREE.Group();stage.add(warnings);const meshes=new Map();
  const circleGeo=new THREE.CircleGeometry(1,48),laneGeo=new THREE.PlaneGeometry(1,1);
