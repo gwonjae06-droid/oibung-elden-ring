@@ -85,7 +85,7 @@ test('a prolonged hug selects a telegraphed stomp rather than awarding automatic
  const hp=g.player.hp;
  step(g,1/120);
  assert.equal(g.boss.state,'windup');
- assert.equal(g.boss.pattern,'shove');
+ assert.equal(g.boss.pattern,'stomp');
  assert.equal(g.player.hp,hp);
  assert.equal(g.boss.hit,false);
 });
