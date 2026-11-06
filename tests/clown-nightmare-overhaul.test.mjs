@@ -8,8 +8,8 @@ import {createClownNightmareAnatomy} from '../src/clown-nightmare-anatomy.mjs';
 import {bossFoleySpec} from '../src/boss-foley-map.mjs';
 import {clownDangerSpotlightCue} from '../src/clown-danger-spotlight.mjs';
 
-test('nine eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
- assert.equal(HORROR_PATTERNS.length,9);
+test('twelve eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
+ assert.equal(HORROR_PATTERNS.length,12);
  const phase1=HORROR_PATTERNS.filter(k=>PATTERNS[k].phases.includes(1));
  assert.equal(phase1.length,4);
  for(const name of HORROR_PATTERNS){
@@ -22,6 +22,9 @@ test('nine eerie routines are registered with meaningful windup, recovery and th
  }
  assert.equal(horrorMinStage('curtainNightmare'),3);
  assert.equal(horrorMinStage('clockOfTeeth'),3);
+ assert.equal(horrorMinStage('stolenFace'),2);
+ assert.equal(horrorMinStage('mouthOfTheAudience'),3);
+ assert.equal(horrorMinStage('stageRupture'),3);
 });
 
 test('the third horror act starts at 25% HP without disrupting the physical phase-two head-mount',()=>{
