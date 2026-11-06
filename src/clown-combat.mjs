@@ -1088,13 +1088,18 @@ function tickClown(g, dt) {
     // Circus footwork is a real displacement, not a canned attack dash.
     // The player can see a side-step, a close-range withdrawal, or a chase
     // during the breathing room between performances.
-    const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
-      spacing:b.phase===2?6.6:7.7,
-      speed:PRESSURE.chase[b.phase===2?1:0],
-      sideSpeed:b.phase===2?4.0:3.25,
-      arena:BALL_LIMIT,phase:b.phase,farDistance:11
-    });
-    c.odo+=Math.hypot(motion.dx,motion.dz);
+    // Do not read the player's committed attack as a signal to dodge
+    // away. Close-range swings must remain punishable during their windup.
+    const committed=Boolean(p.action&&['attack','skill'].includes(p.action.kind)&&dist(b,p)<9);
+    if(!committed){
+      const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
+        spacing:b.phase===2?6.6:7.7,
+        speed:PRESSURE.chase[b.phase===2?1:0],
+        sideSpeed:b.phase===2?4.0:3.25,
+        arena:BALL_LIMIT,phase:b.phase,farDistance:11
+      });
+      c.odo+=Math.hypot(motion.dx,motion.dz);
+    }
     c.wait -= dt;
     if (c.wait <= 0)
       startClownPattern(
