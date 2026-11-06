@@ -45,6 +45,12 @@ function heightAt(type,x,y,seed){
  }
 }
 function bytes(size){return new Uint8Array(size*size*4);}
+const cachedSurfaceData=new Map();
+function cachedTextureData(type,size,seed){
+ const key=type+':'+size+':'+seed;
+ if(!cachedSurfaceData.has(key))cachedSurfaceData.set(key,textureData(type,size,seed));
+ return cachedSurfaceData.get(key);
+}
 function textureData(type,size,seed){
  const color=bytes(size),normal=bytes(size),roughness=bytes(size),profile=CINEMATIC_SURFACES[type];
  const shade={marble:[240,236,229],stone:[221,219,213],velvet:[235,229,232],wood:[228,218,209],
@@ -133,7 +139,7 @@ export function createCinematicWorld(scene,renderer,{profile='kwon',coarse=false
  let closed=false;
  function texturePack(kind){
   if(surfaces.has(kind))return surfaces.get(kind);
-  const n=coarse?64:256,d=buildCinematicTextureData(kind,n,47);
+  const n=coarse?64:256,d=cachedTextureData(kind,n,47);
   const pack={map:mapFromData(d.color,n,true),normalMap:mapFromData(d.normal,n),roughnessMap:mapFromData(d.roughness,n)};
   for(const t of Object.values(pack))owned.add(t);
   surfaces.set(kind,pack);return pack;

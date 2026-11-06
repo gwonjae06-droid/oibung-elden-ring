@@ -15,7 +15,9 @@ export function createClownHeadPool(factory,{prewarm=2}={}){
  let disposed=false;
  const build=()=>{const obj=factory();all.add(obj);return obj;};
  for(let i=0;i<prewarm;i++)available.push(build());
+ const ready=Promise.allSettled(available.map(head=>head.ready));
  return {
+  ready,
   acquire(){
    if(disposed)throw new Error('Clown head pool disposed');
    const obj=available.pop()??build();

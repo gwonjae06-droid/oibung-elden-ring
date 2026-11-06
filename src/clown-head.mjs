@@ -1,6 +1,22 @@
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import * as THREE from 'three';
 import {CLOWN_FACE,applyFaceAlpha} from './clown-face.mjs';
+// All visible/throwable heads share one asynchronous JPEG decode and alpha-mask
+// rasterization. Each head still owns its own texture for deterministic disposal.
+let sharedCanvasPromise=null;
+function clownFaceCanvas(){
+ if(!sharedCanvasPromise)sharedCanvasPromise=new Promise(resolve=>{
+  const image=new Image();image.onload=()=>{try{
+   const canvas=document.createElement('canvas');canvas.width=CLOWN_FACE.w;canvas.height=CLOWN_FACE.h;
+   const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
+   ctx.putImageData(applyFaceAlpha(ctx.getImageData(0,0,canvas.width,canvas.height)),0,0);
+   resolve(canvas);
+  }catch(error){console.error('Clown face rasterization failed',error);resolve(null);}};
+  image.onerror=()=>resolve(null);image.src='data:image/jpeg;base64,'+CLOWN_FACE.jpeg;
+ });
+ return sharedCanvasPromise;
+}
+
 import {HEAD_RADII,uvFor,morphHead,headPose} from './clown-morph.mjs';
 import {clownHeadMeshDetail} from './clown-photo-performance.mjs';
 export function createClownHead({projectile=false}={}){
@@ -14,7 +30,11 @@ export function createClownHead({projectile=false}={}){
  // visible without a per-frame bounding-sphere recalculation.
  if(projectile)front.frustumCulled=back.frustumCulled=false;
  group.add(back,front);let texture=null,disposed=false;
- const ready=new Promise(resolve=>{const img=new Image();img.onload=()=>{if(disposed){resolve(false);return;}try{const c=document.createElement('canvas');c.width=CLOWN_FACE.w;c.height=CLOWN_FACE.h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0);ctx.putImageData(applyFaceAlpha(ctx.getImageData(0,0,c.width,c.height)),0,0);texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;fm.map=fm.emissiveMap=texture;fm.color.setHex(0xffffff);fm.emissive.setHex(0x555555);fm.needsUpdate=true;resolve(true);}catch(e){console.error(e);resolve(false);}};img.onerror=()=>resolve(false);img.src='data:image/jpeg;base64,'+CLOWN_FACE.jpeg;});
+ const ready=clownFaceCanvas().then(c=>{if(disposed||!c)return false;try{
+   texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
+   fm.map=fm.emissiveMap=texture;fm.color.setHex(0xffffff);fm.emissive.setHex(0x555555);fm.needsUpdate=true;
+   return true;
+  }catch(e){console.error(e);return false;}});
  function setMorph(p,time=0){for(const part of[f,b]){morphHead(part.base,part.geo.attributes.position.array,p,time);part.geo.attributes.position.needsUpdate=true;part.geo.computeVertexNormals();if(!projectile)part.geo.computeBoundingSphere();}}
  function setPose(name,t=0,time=0){setMorph(headPose(name,t),time);}
  // Upload the first photo face texture before the shutter event, once the
