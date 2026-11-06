@@ -39,8 +39,13 @@ test('actual giant selects roulette after possession and announces its locked co
  for(let i=0;i<GIANT_NAMES.length;i++){
   s.state='recovery';s.t=GIANT.recovery+1;stepDice(g,.01);
   if(s.slot===6){roulette=true;assert.equal(s.state,'attack');
-   assert.equal(s.hazards.length,2);assert.match(s.name,/2발 예고/);
-   assert.ok(g.events.some(e=>e.type==='dice-gentleman-roulette'&&e.count===2));break;}
+   const locked=s.hazards.filter(h=>h.rouletteCoin).length;
+   // Pattern selection is shuffled each attempt; the roulette's salvo size
+   // is also selected per turn, so validate the announced LOCKED result.
+   assert.ok(locked>=2&&locked<=6);
+   assert.equal(s.hazards.length,locked);
+   assert.match(s.name,new RegExp(locked+'발 예고'));
+   assert.ok(g.events.some(e=>e.type==='dice-gentleman-roulette'&&e.count===locked));break;}
  }
  assert.ok(roulette,'randomized cycle must contain the ordinary roulette');
 });

@@ -1,5 +1,6 @@
 import {createChapterClock} from './chapter-environment.mjs';
 import {buildCasinoPhaseTheatre} from './casino-phase-theatre.mjs';
+import {createCasinoBreakawayTables} from './casino-table-destruction.mjs';
 export function casinoRoomPlan(mobile=false){
  const count=mobile?4:8,radius=150;
  return Array.from({length:count},(_,i)=>{const a=i===0?-Math.PI/2:(i+.5)/count*Math.PI*2,c=Math.cos(a),s=Math.sin(a);return {x:c*radius,z:s*radius,yaw:Math.atan2(-c,-s),seed:i*1.37};});
@@ -53,11 +54,13 @@ export function buildCasinoRoom(T,parent,{coarse=false,reduced=false}={}){
  const hoop=new T.TorusGeometry(16,.65,6,coarse?20:40),crystal=new T.OctahedronGeometry(1.8),glass=new T.MeshStandardMaterial({color:0xeadcc0,metalness:.25,roughness:.2}),chandeliers=[];
  for(const x of [-280,280]){const ring=mesh(hoop,gold,[x,68,0],[1,1,1]);chandeliers.push(ring);ring.rotation.x=Math.PI/2;for(let i=0;i<(coarse?8:16);i++){const a=i/(coarse?8:16)*Math.PI*2;mesh(crystal,glass,[x+Math.sin(a)*16,64-(i%3)*2,Math.cos(a)*16],[1,2,1]);}}
  const theatre=buildCasinoPhaseTheatre(T,root,{coarse,reduced});
+ const breakaway=createCasinoBreakawayTables(T,root,{coarse,reduced});
  root.userData.decorativeOnly=true;
  const clock=createChapterClock(),warm=new T.Color(0xe6b35e),alarm=new T.Color(0x682333),darkGold=new T.Color(0x90613a);
  return {root,update(time=0,game,dt){
   const mood=clock.update(time,game?.boss.phase||1,game?.status==='won',dt),t=Number.isFinite(time)?time:0;
   const act=theatre.update(game,t,dt);
+  breakaway.update(game,t);
   const giant=game?.dice?.giant,cinematicTime=giant?.state==='transition'?giant.t:giant?7:0;
   const alarmMix=Math.max(0,Math.min(1,(cinematicTime-3.85)/2.3));
   const feral=giant?.temperament==='feral',rage=giant?.rageBeat||0;

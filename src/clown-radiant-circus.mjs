@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {createClownEncoreTent} from './clown-tent-transformation.mjs';
+import {createClownStageMachinery} from './clown-stage-machinery.mjs';
 
 // All scenic construction is non-collidable and beyond the playable radius.
 // Only the decorated floor enters the arena. No damage/hitbox code lives here.
@@ -253,7 +254,7 @@ const WARM=[0xffe4a9,0xffcf7f,0xffd49a];
 const FRENZY=[0xf5cb80,0xf389b8,0x8bd8d3,0xb08ff2,0xffe4a9];
 export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='clown-radiant-nightmare-circus';scene.add(root);
- const scenery=makeScenery(root,coarse),lights=makeLights(root,coarse),tent=createClownEncoreTent(root,{coarse,reduced});
+ const scenery=makeScenery(root,coarse),lights=makeLights(root,coarse),tent=createClownEncoreTent(root,{coarse,reduced}),machinery=createClownStageMachinery(root,{coarse,reduced});
  let phase=0,clock=0,pulse=0,beat=0,spotMode='gold',cueLeft=0,focus=null,disposed=false;
  const box=new THREE.Vector3(),aim=new THREE.Vector3(),tmp=new THREE.Vector3();
  function recolor(next){
@@ -264,13 +265,13 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
   scenery.haloMat.color.setHex(next===2?0xffb8cc:0xffdb9c);
  }
  function reset(){
-  tent.reset();clock=0;pulse=0;beat=0;cueLeft=0;focus=null;spotMode='gold';
+  tent.reset();machinery.reset();clock=0;pulse=0;beat=0;cueLeft=0;focus=null;spotMode='gold';
   phase=0;recolor(1);
   lights.left.target.position.set(0,1,0);lights.right.target.position.set(4,1,-4);
  }
  function event(e,g){
   if(disposed||!e)return;
-  const type=e.type;
+  const type=e.type;machinery.event(e);
   if(type==='phase'||type==='clown-phase2'){recolor(2);pulse=.45;spotMode='frenzy';cueLeft=1.8;}
   else if(type==='clown-clap'||type==='clown-bounce'){pulse=Math.max(pulse,.5);spotMode='gold';cueLeft=.8;}
   else if(type==='clown-blast'||type==='clown-throw'||type==='clown-roll'){
@@ -284,7 +285,7 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  function update(g,dt=0){
   if(disposed||!g)return;
   const h=clamp(Number.isFinite(dt)?dt:0,0,.05),live=g.status==='playing';
-  tent.update(g,h);
+  tent.update(g,h);machinery.update(g,h);
   clock+=h;pulse=Math.max(0,pulse-h*1.6);cueLeft=Math.max(0,cueLeft-h);
   if(g?.boss?.phase===2)recolor(2);else if(g?.boss?.phase===1&&g.boss.state!=='transition')recolor(1);
   const p=g.boss||{x:0,z:0},mode=cueLeft>0?spotMode:(phase===2?'frenzy':'gold');
@@ -322,7 +323,7 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  }
  function dispose(){
   if(disposed)return;disposed=true;
-  tent.dispose();
+  tent.dispose();machinery.dispose();
   const geometries=new Set(),materials=new Set();
   root.traverse(o=>{
    if(o.geometry)geometries.add(o.geometry);
@@ -334,6 +335,6 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  }
  reset();
  return {root,event,update,reset,dispose,lights,tent,
-  stats:()=>({bulbs:scenery.bulbCount,columns:scenery.columns,realSpotlights:2+lights.fill.length,wideSpotlights:lights.fill.length,collidableProps:0,playableRadius:CIRCUS_LAYOUT.playableRadius}),
+  stats:()=>({bulbs:scenery.bulbCount,columns:scenery.columns,machinery:machinery.stats(),realSpotlights:2+lights.fill.length,wideSpotlights:lights.fill.length,collidableProps:0,playableRadius:CIRCUS_LAYOUT.playableRadius}),
   get phase(){return phase;},get disposed(){return disposed;}};
 }
