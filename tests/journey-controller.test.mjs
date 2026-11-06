@@ -48,6 +48,20 @@ test('controller grants four repeatable flames, replaces relic choices, and reco
  assert.doesNotMatch(f.dialog.html,/무기 진화 선택|도전 시련|연속 격파|무회복/);
  await f.click('home');await f.api.dispose();f.release();
 });
+test('after a boss clear, home is in the top-left header rather than next to the next-boss button',async()=>{
+ const f=rig();await f.click('new');await f.click('begin');
+ f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
+ const html=f.dialog.html;
+ const header=html.match(/<header class="j-top">([\s\S]*?)<\/header>/)?.[1];
+ const main=html.match(/<main class="j-main">([\s\S]*?)<\/main>/)?.[1];
+ assert.ok(header&&main);
+ assert.match(header,/data-j="home"/);
+ assert.doesNotMatch(main,/data-j="home"/);
+ assert.match(main,/data-j="next"/);
+ assert.equal((html.match(/data-j="home"/g)||[]).length,1);
+ await f.click('next');assert.equal(f.game().status,'playing');
+ await f.api.dispose();f.release();
+});
 test('loss and home discard the run while permanent kill records remain',async()=>{
  const f=rig();await f.click('new');await f.click('begin');f.game().status='lost';f.poll();assert.match(f.dialog.html,/처음부터 다시 도전/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run,null);
  await f.click('restart');assert.equal(f.game().status,'playing');await f.click('home');assert.doesNotMatch(f.dialog.html,/여정 이어가기/);assert.equal(JSON.parse(f.data.get(SAVE_KEY)).run,null);
