@@ -70,7 +70,7 @@ test('idle Kwon runs toward the distant player faster in both phases, keeping re
   g.boss.recovery=1;g.boss.t=0;
   const before={x:g.boss.x,z:g.boss.z};
   for(let i=0;i<30;i++)step(g,1/120);
-  assert.equal(g.boss.x,before.x,'boss cannot chase during player's punish window');
+  assert.equal(g.boss.x,before.x,"boss cannot chase during player recovery window");
   assert.equal(g.boss.z,before.z);
  }
 });
