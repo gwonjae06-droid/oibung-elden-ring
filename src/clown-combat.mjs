@@ -1091,9 +1091,19 @@ export function choosePattern(g) {
    preferred=[follow,...preferred];
   }
  }
+ // Reserve the first available post-transformation casts for unseen horrors.
+ // Without this, the final-act attacks are legal at 25% HP but are rarely
+ // selected before the player kills the boss. The full shuffle bag survives.
+ if(phase===2&&stage===3){
+  const finale=pool.filter(k=>horrorMinStage(k)===3&&!(c.used?.[k]>0));
+  if(finale.length)preferred=finale;
+ }else if(phase===2&&stage===2){
+  const hunts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&!(c.used?.[k]>0));
+  if(hunts.length)preferred=hunts;
+ }
  c.seq++;
- // Every ordinary performance appears once before that phase's bag refills.
- return drawPatternShuffle(g.patternShuffle,'clown-'+phase,pool,{preferred,avoid:c.last});
+ return drawPatternShuffle(g.patternShuffle,'clown-'+phase+'-act'+stage,pool,
+  {preferred,avoid:c.last});
 }
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');

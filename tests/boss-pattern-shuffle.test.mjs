@@ -49,6 +49,8 @@ test('clown cycles every regular circus show once, independently of phase and di
   const pool=Object.keys(CLOWN).filter(k=>k!=='shove'&&CLOWN[k].phases.includes(phase));
   const run=seed=>{
    const g=createClownGame('sword',{register:false,seed});g.boss.phase=phase;
+   // Include all final-act attacks when testing the complete phase-two deck.
+   if(phase===2)g.clown.horrorStage=3;
    g.player.x=8;g.player.z=g.boss.z+8;
    if(story)g.journeyBalance={mode:'story'};
    const result=[];
