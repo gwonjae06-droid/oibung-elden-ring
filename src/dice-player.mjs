@@ -14,7 +14,10 @@ export function createDicePlayerGame(weapon='sword'){
  Object.assign(g,{weapon,projectiles:[],nextId:0,stats:{hits:0,damage:0,dodges:0}});
  g.player=createPlayerState({x:spawn.x,z:spawn.z,yaw:-Math.PI/2});
  Object.assign(g.boss,{x:g.dice.pose.x,z:g.dice.pose.z,state:'dice',phase:1});
- g.dice.stun=0;g.dice.giantEnabled=true;return g;
+ g.dice.stun=0;g.dice.giantEnabled=true;
+  // Make the new count-revealing roulette the first special attack players see,
+  // rather than hiding it behind three long charge/jump/frenzy cycles.
+  g.dice.patternCount=3;return g;
 }
 export function actDice(g,type,input={}){
  if(g.status!=='playing'||g.dice.giant?.state==='transition')return false;
