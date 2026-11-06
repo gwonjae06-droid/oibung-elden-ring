@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {bloodOceanGeometry,BLOOD_OCEAN_VERTEX_FUNCTIONS,BLOOD_OCEAN_FRAGMENT_FUNCTIONS} from './blood-ocean-waves.mjs';
 
 // The sea occupies only the sanctuary OUTSIDE the circular combat floor.
 // No game logic reads these visuals for movement, hazards or collisions.
@@ -40,39 +41,46 @@ function droplets(radius,count){
 export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radius=28}={}){
  if(!Number.isFinite(radius)||radius<=0||radius>=CATHEDRAL_BLOOD_SEA.halfWidth)throw new Error('Invalid cathedral combat radius');
  const root=new THREE.Group();root.name='cathedral-crimson-blood-sea';parent.add(root);
- const uniforms={time:{value:0},frenzy:{value:0}};
- const water=new THREE.MeshPhysicalMaterial({
+ const uniforms={time:{value:0},frenzy:{value:0},detail:{value:coarse||reduced?0:1}};
+ // Standard shading avoids the expensive physical clearcoat path on a
+ // near-screen-sized surface. Moving normals and bright crest foam supply wetness.
+ const water=new THREE.MeshStandardMaterial({
   color:0x5c081d,emissive:0x28020e,emissiveIntensity:.33,
-  roughness:.19,metalness:.16,clearcoat:.9,clearcoatRoughness:.12,
-  side:THREE.DoubleSide
+  roughness:.31,metalness:.2,side:THREE.DoubleSide
  });
  water.onBeforeCompile=shader=>{
   shader.uniforms.uSeaTime=uniforms.time;
   shader.uniforms.uSeaFrenzy=uniforms.frenzy;
-  shader.vertexShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.vertexShader;
+  shader.uniforms.uSeaDetail=uniforms.detail;
+  shader.vertexShader=BLOOD_OCEAN_VERTEX_FUNCTIONS+'\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
+   // Moving surface normals create real, changing highlights. The arena floor
+   // itself stays flat so the blood-hazard warnings cannot be hidden.
+   float stepSize=.76;
+   vec2 p=position.xz;
+   float dx=(bloodSeaHeight(p+vec2(stepSize,0.0))-bloodSeaHeight(p-vec2(stepSize,0.0)))/(2.0*stepSize);
+   float dz=(bloodSeaHeight(p+vec2(0.0,stepSize))-bloodSeaHeight(p-vec2(0.0,stepSize)))/(2.0*stepSize);
+   objectNormal=normalize(vec3(-dx,1.0,-dz));`);
   shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
-    // Long heavy swells slide across the nave, while radial return waves
-    // dissipate at the dry marble shore. The shore must never rise above
-    // the rim or show a red seam on the player combat floor.
-    float radius=length(position.xz);
-    float shoreDamping=smoothstep(${seaBounds(radius).toFixed(3)},${(seaBounds(radius)+1.5).toFixed(3)},radius);
-    float directed=sin(dot(position.xz,vec2(.52,.28))-uSeaTime*.74);
-    float returnWave=sin(radius*.54-uSeaTime*.96+directed*.4);
-    transformed.y+=shoreDamping*(directed*.065+returnWave*.034)*(1.+uSeaFrenzy*.5);
-    vSeaSheen=.5+.5*sin(position.x*.46+position.z*.26-uSeaTime*.86);
-    vSeaCoord=position.xz;
-   `);
-  shader.fragmentShader='uniform float uSeaTime; uniform float uSeaFrenzy; varying float vSeaSheen; varying vec2 vSeaCoord;\n'+shader.fragmentShader;
+   float radius=length(position.xz);
+   float shoreDamping=smoothstep(28.550,30.050,radius);
+   float seaH=bloodSeaHeight(position.xz)*shoreDamping;
+   transformed.y+=seaH;
+   vSeaCrest=seaH;
+   vSeaCoord=position.xz;
+   vSeaSheen=.5+.5*sin(dot(position.xz,vec2(.29,.17))-uSeaTime*.9);
+  `);
+  shader.fragmentShader=BLOOD_OCEAN_FRAGMENT_FUNCTIONS+'\n'+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
-   // Coherent downstream ribbons, with a much slower cross-current,
-   // expose thickness without neon strobes or dense particles.
-   float along=dot(vSeaCoord,normalize(vec2(.85,.53)));
-   float crossFlow=dot(vSeaCoord,normalize(vec2(-.53,.85)));
-   float bend=sin(crossFlow*.2+uSeaTime*.25)*.8;
-   float current=sin(along*.66-uSeaTime*(.89+uSeaFrenzy*.17)+bend);
-   float crossCurrent=sin(crossFlow*.42+along*.17-uSeaTime*.46);
-   float sheen=clamp(.49+.18*current+.09*crossCurrent+.07*(vSeaSheen-.5),0.,1.);
-   diffuseColor.rgb*=mix(vec3(.75,.57,.65),vec3(1.32,.96,1.04),sheen);
+   // Cross-current marbling and intermittent milky-red foam at the crest.
+   // Color is decorative and NEVER determines danger or safe hitboxes.
+   float bend=sin(dot(vSeaCoord,vec2(.12,-.26))+uSeaTime*.31)*.62;
+   float ribbons=sin(dot(vSeaCoord,vec2(.32,.21))-uSeaTime*(.78+uSeaFrenzy*.12)+bend);
+   float crossFlow=sin(dot(vSeaCoord,vec2(-.41,.19))-uSeaTime*.57);
+   float pearlescence=clamp(.5+.23*ribbons+.12*crossFlow+.1*(vSeaSheen-.5),0.,1.);
+   diffuseColor.rgb*=mix(vec3(.54,.38,.47),vec3(1.48,1.06,1.02),pearlescence);
+   float foamEdge=smoothstep(.77,1.5,vSeaCrest+.21*ribbons);
+   diffuseColor.rgb+=vec3(.18,.065,.079)*foamEdge*(.45+.55*vSeaSheen);
   `);
  };
  const surface=new THREE.Mesh(geometryOutsideCombat(radius,coarse),water);
@@ -83,7 +91,7 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
  // horizon plane is deliberately much larger than the camera fog distance:
  // no shoreline or square edge can appear in normal play.
  const horizon=new THREE.Mesh(
-  new THREE.PlaneGeometry(1400,1400,coarse?24:64,coarse?24:64).rotateX(-Math.PI/2),water);
+  bloodOceanGeometry({coarse}),water);
  horizon.name='blood-sea-to-the-horizon';horizon.position.y=.068;
  horizon.visible=false;horizon.frustumCulled=false;root.add(horizon);
  // An expanding wash covers the previously dry battle disk during the cutscene.
@@ -135,7 +143,7 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
   const eased=v*v*(3-2*v),floodLevel=phase?(transition?eased:1):0;
   const tempest=game?.boss?.state==='pattern'&&
     ['tide','requiem','eclipse'].includes(game?.blood?.pattern)?1:0;
-  uniforms.time.value=t;uniforms.frenzy.value=phase+tempest*.65;
+  uniforms.time.value=t;uniforms.frenzy.value=phase+tempest*.92;
   const endless=floodLevel>.94;
   horizon.visible=endless;surface.visible=!endless;
   flood.visible=floodLevel>.01&&!endless;
@@ -175,7 +183,8 @@ export function createCathedralBloodSea(parent,{coarse=false,reduced=false,radiu
  update({time:0,boss:{phase:1}});
  return {root,surface,horizon,flood,water,shore,update,dispose,
   stats:()=>({radius,innerRadius:seaBounds(radius),halfWidth:CATHEDRAL_BLOOD_SEA.halfWidth,
-   halfLength:CATHEDRAL_BLOOD_SEA.halfLength,horizonRadius:700,unboundedSea:horizon.visible,
+   halfLength:CATHEDRAL_BLOOD_SEA.halfLength,horizonRadius:700,oceanVertices:horizon.geometry.getAttribute('position').count,
+   waveLayers:coarse?3:4,shaderDriven:true,unboundedSea:horizon.visible,
    floodVisible:flood.visible,ripples:spots.length,reflections:glints.length,
    isDecorative:true,damageSources:0})};
 }
