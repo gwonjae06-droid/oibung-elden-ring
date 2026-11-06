@@ -31,6 +31,11 @@ export function createSkillFx(scene,reduced=false,{makeBossSfx=createBossSfx,mak
   if(disposed)return;if(lastGame!==g){clear();lastGame=g;}bossSfx.event(ev,g);playerFx.event(ev,g);if(g.clown){clownFx||=createClownImpactFx(scene,{mobile,reduced});clownFx.event(ev,g);}
   const p=g.player,b=g.boss,f=ev.flavor,col=SKILL_COLORS[f]||SKILL_COLORS.white;
   if(ev.type==='skill-cast'){const fx=p.x+Math.sin(p.yaw)*3.2,fz=p.z+Math.cos(p.yaw)*3.2;if(f==='sword'){ring(p.x,p.z,2.6,SKILL_HEX.sword);pool.emit(p.x,1.2,p.z,n(34),col);}else if(f==='hammer'){ring(fx,fz,5,SKILL_HEX.hammer,.9);pool.emit(fx,.2,fz,n(42),[.7,.4,.22],true);pool.emit(fx,.5,fz,n(26),col);}else if(f==='bow'){ring(p.x,p.z,1.4,SKILL_HEX.bow,.5);pool.emit(p.x+Math.sin(p.yaw)*2,1.2,p.z+Math.cos(p.yaw)*2,n(24),col);}else{ring(p.x,p.z,f==='yellow'?3:2.2,SKILL_HEX[f]);pool.emit(p.x,1.4,p.z,n(f==='blue'?30:38),col);}}
+  else if(ev.type==='card-sigil-mark'){ring(b.x,b.z,1.2+ev.count*.3,0xf8d085,.4);pool.emit(b.x,2.2,b.z,n(9),[1,.72,.3]);}
+  else if(ev.type==='card-sigil-burst'){ring(b.x,b.z,4,0xfce1a1,.9);pool.emit(b.x,2.4,b.z,n(28),[1,.86,.44]);}
+  else if(ev.type==='hammer-absorbed'){pool.emit(p.x,1.25,p.z,n(4),SKILL_COLORS.hammer);}
+  else if(ev.type==='hammer-stored-release'){ring(p.x,p.z,2.0,0xe79b56,.42);}
+  else if(ev.type==='bow-burn-applied'){pool.emit(b.x,2.2,b.z,n(12),[1,.34,.08]);}
   else if(ev.type==='skill-stun'){ring(b.x,b.z,3.8,SKILL_HEX.yellow,.8);pool.emit(b.x,3,b.z,n(36),SKILL_COLORS.yellow);}
   else if(ev.type==='skill-heal'){ring(p.x,p.z,1.8,SKILL_HEX.heal);pool.emit(p.x,.6,p.z,n(24),SKILL_COLORS.heal);}
   else if(ev.type==='skill-ready'){ring(p.x,p.z,1.6,SKILL_HEX[f]||0xffffff,.55);pool.emit(p.x,1,p.z,n(14),col);}

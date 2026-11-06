@@ -19,11 +19,10 @@ test('Blood, Clown and first boss use identical baseline walk speed and diagonal
   near(Math.hypot(g.player.x-origin.x,g.player.z-origin.z),PLAYER_WALK_SPEED*.25,'diagonal normalization');
  }
 });
-test('blood retains standardized blue card boost and unique temporary chain debuff',()=>{
+test('Blood movement uses weapon base speed and keeps its unique temporary chain debuff',()=>{
  const g=blood();
- g.player.skill.blue=2;
- near(playerWalkSpeed(g.player),PLAYER_WALK_SPEED*1.5,'blue card boost');
- near(tick(g,stepBlood),PLAYER_WALK_SPEED*1.5*.25,'blue card travel');
+ near(playerWalkSpeed(g.player),PLAYER_WALK_SPEED,'base movement');
+ near(tick(g,stepBlood),PLAYER_WALK_SPEED*.25,'blood travel');
  const slowed=blood();slowed.blood.slow=2;
  near(tick(slowed,stepBlood),PLAYER_WALK_SPEED*.65*.25,'chain slow affects running');
  assert.ok(slowed.blood.slow>1.7);

@@ -1,5 +1,6 @@
 import {BOSS_HIT_TRAITS} from './boss-hit-traits.mjs';
 import {tickSkills} from './skills.mjs';
+import {tickWeaponBurn} from './weapon-abilities.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 
 // Boss-specific movement and collision remain with each encounter.
@@ -7,6 +8,7 @@ export function tickPlayerResources(game, dt) {
   const player = game.player;
   const charges = player.skill.charges;
   tickSkills(player.skill, game.weapon, dt);
+  tickWeaponBurn(game,dt);
   if (game.weapon === 'bow' && player.skill.charges > charges) {
     game.events.push({type: 'skill-ready', flavor: 'bow'});
   }

@@ -7,12 +7,40 @@ import {diceSegmentHit} from '../src/dice-hit.mjs';
 const tick=(g,t)=>{for(let s=0;s<t;s+=1/120)stepDicePlayer(g,1/120);};
 function target(w,weak=true){const g=createDicePlayerGame(w);g.player.x=g.dice.pose.x+(weak?6:0);g.player.z=g.dice.pose.z+(weak?0:6);g.dice.stun=999;return g;}
 for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' damages the photo face only',()=>{const g=target(weapon),before=g.player.stamina;assert.equal(actDice(g,'light'),true);assert.ok(g.player.stamina<before);tick(g,.8);assert.ok(g.boss.hp<g.boss.maxHp);assert.ok(g.stats.hits>0);});
-for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' is blocked by an armored face',()=>{const g=target(weapon,false);assert.equal(actDice(g,'light'),true);tick(g,.8);assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.stats.hits,0);assert.equal(g.stats.damage,0);assert.equal(g.player.skill.hammerHits,0);assert.ok(g.events.some(e=>e.type==='dice-blocked'));});
-test('sword haste and bow charge are inherited from shared skill rules',()=>{const sword=target('sword');assert.equal(actDice(sword,'skill'),true);assert.ok(sword.player.skill.haste>0);const bow=target('bow');assert.equal(actDice(bow,'skill'),true);assert.equal(bow.player.skill.charges,2);tick(bow,.7);assert.ok(bow.boss.hp<bow.boss.maxHp);});
-test('hammer lifesteal consumes charged hits and heals from photo damage',()=>{const g=target('hammer');g.player.skill.hammerHits=4;g.player.hp=60;assert.equal(actDice(g,'skill'),true);tick(g,.7);assert.equal(g.player.skill.hammerHits,0);assert.ok(g.player.hp>60);assert.ok(g.events.some(e=>e.type==='skill-heal'));});
-test('armored hits cannot heal or apply yellow stun',()=>{const hammer=target('hammer',false);hammer.player.skill.hammerHits=4;hammer.player.hp=60;actDice(hammer,'skill');tick(hammer,.7);assert.equal(hammer.player.hp,60);assert.ok(!hammer.events.some(e=>e.type==='skill-heal'));const cards=target('cards',false);cards.player.skill.cycle=1.21;actDice(cards,'skill');actDice(cards,'light');tick(cards,.6);assert.ok(!cards.events.some(e=>e.type==='skill-stun'));});
-test('piercing arrows stop on armor instead of damaging the hidden photo side',()=>{const g=target('bow',false);actDice(g,'skill');tick(g,.7);assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.projectiles.length,0);});
-test('yellow card applies one stun to its multi-projectile photo attack',()=>{const g=target('cards');g.player.skill.cycle=1.21;assert.equal(actDice(g,'skill'),true);assert.equal(actDice(g,'light'),true);tick(g,.6);assert.equal(g.events.filter(e=>e.type==='skill-stun').length,1);});
+for(const weapon of ['sword','hammer','bow','cards'])test(weapon+' is blocked by an armored face',()=>{const g=target(weapon,false);assert.equal(actDice(g,'light'),true);tick(g,.8);assert.equal(g.boss.hp,g.boss.maxHp);assert.equal(g.stats.hits,0);assert.equal(g.stats.damage,0);assert.equal(g.player.skill.sigilMarks,0);assert.ok(g.events.some(e=>e.type==='dice-blocked'));});
+test('casino inherits the new passive sword wave and active double-arrow backstep',()=>{
+ const sword=target('sword');sword.evolutions=['blade-wave'];
+ assert.equal(actDice(sword,'skill'),false);
+ assert.equal(actDice(sword,'light'),true);tick(sword,.3);
+ assert.ok(sword.events.some(e=>e.type==='shot'));
+ const bow=target('bow');bow.evolutions=['twin-arrow'];
+ assert.equal(actDice(bow,'skill'),true);tick(bow,.3);
+ assert.ok(bow.events.some(e=>e.type==='shot'));
+});
+test('casino returning hammer is launched as a real projectile',()=>{
+ const g=target('hammer');g.evolutions=['blood-hammer'];
+ assert.equal(actDice(g,'skill'),true);tick(g,.25);
+ assert.equal(g.projectiles.length,1);
+ assert.equal(g.projectiles[0].kind,'hammer-throw');
+});
+test('armored casino faces never award card healing or sigil marks',()=>{
+ const cards=target('cards',false);cards.evolutions=['wide-deck'];
+ assert.equal(actDice(cards,'light'),true);tick(cards,.6);
+ assert.equal(cards.player.skill.sigilMarks,0);
+ const blood=target('cards',false);blood.evolutions=['blood-deck'];
+ blood.player.hp=50;assert.equal(actDice(blood,'light'),true);tick(blood,.6);
+ assert.equal(blood.player.hp,50);
+});
+test('fire arrows stop on armored faces without applying burn',()=>{
+ const g=target('bow',false);g.evolutions=['piercing-arrow'];
+ assert.equal(actDice(g,'light'),true);tick(g,.7);
+ assert.equal(g.boss.hp,g.boss.maxHp);
+ assert.equal(g.weaponBurnStacks?.length||0,0);
+});
+test('casino skill no longer allows deprecated color card actives',()=>{
+ const g=target('cards');g.evolutions=['wide-deck'];
+ assert.equal(actDice(g,'skill'),false);
+});
 test('stun freezes the boss without blocking player movement',()=>{const g=createDiceGame(),t=g.dice.t,x=g.player.x;stepDice(g,.05,{x:-1,freezeBoss:true});assert.equal(g.dice.t,t);assert.ok(g.player.x<x);});
 test('frozen contact pushes a player out instead of killing',()=>{const g=createDiceGame();g.player.x=g.dice.pose.x;g.player.z=g.dice.pose.z;stepDice(g,.01,{freezeBoss:true});assert.equal(g.status,'playing');assert.equal(g.player.hp,g.player.maxHp);assert.equal(diceTouches(g.player,g.dice.pose),false);});
 test('projectiles hit the cube rather than empty space above it',()=>{const p=diceRollPose(DICE_BOARD[0],DICE_BOARD[1],0);assert.equal(diceSegmentHit({x:p.x-10,y:1.2,z:p.z},{x:p.x+10,y:1.2,z:p.z},p),true);assert.equal(diceSegmentHit({x:p.x-10,y:20,z:p.z},{x:p.x+10,y:20,z:p.z},p),false);});

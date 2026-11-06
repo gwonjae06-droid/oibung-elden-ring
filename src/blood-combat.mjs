@@ -10,6 +10,7 @@ import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} fr
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
+import {playerMeleeReach} from './weapon-abilities.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {claimPlayerProjectileHit,playerProjectileHitsCircle} from './player-projectile-data.mjs';
 import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
@@ -29,19 +30,26 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
- return {bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
+ const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,siphon:createBloodSiphonState()}};
+ Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
+  value:(amount,poise=0,{dot=false}={})=>{
+   const dealt=damageBlood(game,amount,null,{dot});
+   if(dealt>0){game.stats.damage+=dealt;if(!dot)game.stats.hits++;}
+   return dealt;
+  }});
+ return game;
 }
 export function actBlood(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
  if(!g.player.action)g.player.yaw=type==='roll'&&(input.x||input.z)?Math.atan2(input.x||0,input.z||0):Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
  return actPlayer(g,type);
 }
-export function damageBlood(g,amount,impact=null){
+export function damageBlood(g,amount,impact=null,{dot=false}={}){
  if(g.status!=='playing'||g.boss.state==='transition'||bloodBossAirborne(g)||!Number.isFinite(amount)||amount<=0)return 0;
  const b=g.boss,s=g.blood,damage=Math.min(amount,b.phase===1?Math.max(0,b.hp-1):b.hp);b.hp-=damage;
- if(damage)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
+ if(damage&&!dot)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
  if(b.phase===1&&b.hp<=b.maxHp*.5)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
@@ -211,21 +219,21 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
- tickPlayerAction(g,dt,w,{melee:a=>{
+ tickPlayerAction(g,dt,w,{backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},melee:a=>{
    if(bloodBossAirborne(g))return;
-   const reach=g.weapon==='hammer'?3.05:2.85;
+   const reach=playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85);
    const n=g.blood.heartNodes?.find(q=>q.hp>0&&Math.hypot(q.x-p.x,q.z-p.z)<reach+q.r&&
      Math.abs(Math.atan2(Math.sin(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw),Math.cos(Math.atan2(q.x-p.x,q.z-p.z)-a.yaw)))<.6);
    if(n&&severHeartNode(g,w.damage*a.mult,{x:n.x,z:n.z})){a.hit=true;return;}
    const impact=kwonMeleeContact(bloodHurtShapes(g),p,{reach,yaw:a.yaw,height:1.85,bladeRadius:.28});
-   if(impact){a.hit=true;hit(g,w.damage*a.mult,a,false,impact);}
+   if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a,false,impact);}
   }});
  if(g.status!=='playing')return;
  for(const q of g.projectiles){
   // Blood shots skim the cathedral floor rather than pitching up to a flying
   // target. Keep simulation height identical to the actual rendered mesh.
-  q.y=bloodProjectileGroundHeight(q);
-  const prev=advancePlayerProjectile(q,dt);
+  if(!q.returningHammer)q.y=bloodProjectileGroundHeight(q);
+  const prev=advancePlayerProjectile(q,dt,p);
   if(q.hit||q.bossHit||q.life<=0)continue;
   // An airborne boss does not intercept, consume, reward or take damage from
   // a floor-level shot. It simply passes underneath until he lands.
