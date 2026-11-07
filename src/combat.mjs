@@ -264,7 +264,11 @@ export function bodyPose(b) {
 export function kwonVisibleHurtShapes(b){
  const pose=bodyPose(b),cinema=cinematicPose(b),drag=kwonThirdBodyDrag(b);
  return kwonHurtShapes(b,{point:p=>{const q=bodyPoint(b,p);
-  return {x:q.x+drag.x,y:q.y+drag.y,z:q.z+drag.z};},
+  // When the jaw itself performs a low, retracted first-act slash, its head
+  // hurt volume follows the same visible skull. The torso never shifts.
+  const head=p.y===2.75&&p.z===1.75&&b.phase===1;
+  const near=head?kwonCloseSwordShift(b):{y:0,z:0};
+  return {x:q.x+drag.x,y:q.y+drag.y+near.y,z:q.z+drag.z+near.z};},
   angle:pose.angle+drag.tilt*.28,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
 }
 export function kwonBossAimPoint(b){
