@@ -32,12 +32,13 @@ export function beginLegacyEchoAttack(g,m,{zone,emit}){
  const aim=safe(g.player),from={x:m.x,z:m.z},angle=facing(from,aim);
  const distance=Math.hypot(aim.x-from.x,aim.z-from.z);
  const l=clamp(distance+1,4.8,10.6);
- const attack={kind:move,start:now,wind:warn,from,aim,yaw:angle,len:l,hit:false};
+ const attack={kind:move,start:now,wind:warn,from,aim,yaw:angle,len:l,hit:false,shots:[]};
  m.legacyAttack=attack;m.cast=warn+(move==='roll'?LEGACY_ECHO_CONFIG.travel:.4);
  m.cooldown=LEGACY_ECHO_CONFIG.cooldown+m.legacyIndex*.55;
  m.showCue=move;m.target=aim;
  const common={warn,source:'legacyEcho',miniOwner:m.id,major:false};
  if(move==='headBomb'){
+  attack.shots.push({x:aim.x,z:aim.z,wind:warn});
   zone(g,{shape:'circle',...aim,r:2.25,damage:LEGACY_ECHO_CONFIG.damage.headBomb,
    sound:'legacyHeadBomb',blast:true,...common});
  }else if(move==='clap'){
@@ -52,6 +53,7 @@ export function beginLegacyEchoAttack(g,m,{zone,emit}){
  }else{
   for(let i=0;i<2;i++){
    const q=safe({x:aim.x+Math.sin(angle+i*1.9)*2.85,z:aim.z+Math.cos(angle+i*1.9)*2.85});
+   attack.shots.push({x:q.x,z:q.z,wind:warn+i*.36});
    zone(g,{shape:'circle',...q,r:1.7,damage:LEGACY_ECHO_CONFIG.damage.juggle,
     sound:'legacyJuggle',...common,warn:warn+i*.36});
   }

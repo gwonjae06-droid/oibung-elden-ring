@@ -4,6 +4,7 @@ import {createGyuwonActor} from './gyuwon-actor.mjs';
 import {createGyuwonSpectacle} from './gyuwon-spectacle.mjs';
 import {createGyuwonPhilosophyFx} from './gyuwon-philosophy-fx.mjs';
 import {createGyuwonHazardFx} from './gyuwon-hazard-vfx.mjs';
+import {createGyuwonShadowHand} from './gyuwon-shadow-hand.mjs';
 import {GYUWON_RULES as R} from './gyuwon-data.mjs';
 
 export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
@@ -34,6 +35,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  // All attack warnings are 3D material fractures bound to authoritative collision footprints.
  const hazardFx=createGyuwonHazardFx(stage,{coarse});
+ const shadowHand=createGyuwonShadowHand(stage,{coarse});
  const studyTint=new THREE.Color(0x111b28),whiteTint=new THREE.Color(0xffffff),voidTint=new THREE.Color(0x010105);
  const studyFloor=new THREE.Color(0x354252),whiteFloor=new THREE.Color(0xe9e7e4),darkFloor=new THREE.Color(0x090810);
  let deathElapsed=0;
@@ -55,7 +57,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
    floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);
   spectacle.update(g,dt,deathElapsed);recall.update(g,dt);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
-  hazardFx.update(g);
+  hazardFx.update(g);shadowHand.update(g);
  }
- return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();shadowHand.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }

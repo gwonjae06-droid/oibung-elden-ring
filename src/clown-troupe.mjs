@@ -185,23 +185,37 @@ function castAttack(g,m,zone,emit){
  const p=g.player,role=m.role,s=CIRCUS_ROLES[role],warn=s.wind;
  if(m.legacy)return beginLegacyEchoAttack(g,m,{zone,emit});
  const aim=away({x:p.x,z:p.z});
- m.cast=warn+.35;m.showCue=role;m.target={...aim};
+ m.cast=warn+(g.clown.horrorStage>=2?1.7:.35);m.showCue=role;m.target={...aim};
  m.routine={pose:role==='chorister'?'sing':role==='acrobat'?'vault':
   role==='puppeteer'?'strings':role==='firekeeper'?'hoop':'mirror',
   start:g.clown.time,until:g.clown.time+warn+.5,wind:warn};
  if(role==='chorister'){
   const yaw=contactAngle(m,p),len=clamp(Math.hypot(m.x-p.x,m.z-p.z)+2,3,17);
   zone(g,{shape:'lane',x:m.x,z:m.z,yaw,len,w:2.6,warn,damage:s.attack,sound:'choir'});
+   if(g.clown.horrorStage>=2)zone(g,{shape:'lane',x:m.x,z:m.z,yaw:yaw+.32,len:Math.max(4,len-1),
+    w:2.0,warn:warn+1.05,damage:s.attack*.82,sound:'choir'});
  }else if(role==='acrobat'){
   zone(g,{shape:'circle',...aim,r:2.35,warn,damage:s.attack,sound:'acrobat'});
+   if(g.clown.horrorStage>=2){const side=m.id%2?1:-1;
+    const land=away({x:aim.x+side*4.1,z:aim.z+2.5});
+    zone(g,{shape:'circle',...land,r:2.15,warn:warn+1.16,damage:s.attack*.88,sound:'acrobat'});
+   }
  }else if(role==='puppeteer'){
   const q=away({x:p.x+Math.sin(m.age*2)*2.5,z:p.z+Math.cos(m.age*2)*2.5});
   zone(g,{shape:'circle',...q,r:2.9,warn,damage:s.attack,sound:'puppet'});
+   if(g.clown.horrorStage>=2){const opposite=away({x:aim.x-(q.x-aim.x),z:aim.z-(q.z-aim.z)});
+    zone(g,{shape:'circle',...opposite,r:2.3,warn:warn+1.28,damage:s.attack*.95,sound:'puppet'});
+   }
  }else if(role==='firekeeper'){
   zone(g,{shape:'circle',...aim,r:3.15,warn,damage:s.attack,sound:'infernalHoops'});
+   if(g.clown.horrorStage>=2){const side=away({x:aim.x+Math.sin(m.yaw+1.2)*5,z:aim.z+Math.cos(m.yaw+1.2)*5});
+    zone(g,{shape:'circle',...side,r:2.9,warn:warn+1.38,damage:s.attack*.83,sound:'infernalHoops'});
+   }
  }else{
   const side=Math.atan2(p.x-m.x,p.z-m.z)+((Math.floor(m.age)%2)?.3:-.3);
   zone(g,{shape:'lane',x:m.x,z:m.z,yaw:side,len:13,w:2.25,warn,damage:s.attack,sound:'falseRingmaster'});
+   if(g.clown.horrorStage>=2)zone(g,{shape:'lane',x:m.x,z:m.z,yaw:side-.56,len:11,
+    w:2.0,warn:warn+1.10,damage:s.attack*.95,sound:'falseRingmaster'});
  }
  emit(g,'clown-troupe-cast',{id:m.id,role,wind:warn,x:m.x,z:m.z});
 }
@@ -275,7 +289,7 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   if(miniTurn&&!m.legacy)continue;
   if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
   castAttack(g,m,zone,emit);
-  m.cooldown=m.legacy?Math.max(m.cooldown,6.4+i*.25):3.8+i*.27;
+  m.cooldown=m.legacy?Math.max(m.cooldown,6.4+i*.25):4.45+i*.27;
   t.globalCooldown=m.legacy?2.9:stage===3?1.2:stage===2?1.75:2.6;
   t.attackBeat++;
  }

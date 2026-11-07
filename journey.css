@@ -281,3 +281,13 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey .j-select-actions button.j-begin{min-height:38px;padding-block:5px}
  #journey .j-select{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
 }
+
+/* The last earned oath lights the mirror on the title mural. This is a clear
+   progression reward, NOT an authored ending choice. gyuwon is the save ID. */
+#journey[data-defeated~='gyuwon'] [data-emblem='mirror'] .mural-grooves,
+#journey[data-defeated~='gyuwon'] [data-boss='mirror'] .mural-grooves{
+ opacity:1;filter:drop-shadow(0 0 5px #ffe9a6) drop-shadow(0 0 20px #f5c46b);
+}
+#journey[data-defeated~='gyuwon'] [data-emblem='mirror'] .groove-inlay{
+ opacity:.9;filter:brightness(1.35) drop-shadow(0 0 16px #ffd77a);
+}

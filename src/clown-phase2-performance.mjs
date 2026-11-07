@@ -117,6 +117,15 @@ export function createClownPhase2Performance(scene,{coarse=false,reduced=false}=
   stageHalo.scale.setScalar(1+.12*Math.sin(time*3)*b.bind);
   shade.material.opacity=(reduced?.023:.055)*b.alive;
  }
+ let warmed=false;
+ function prewarm(renderer,camera){
+  if(warmed||!renderer?.compile||!camera)return false;
+  // Build/call shader programs while the loading overlay is present, never
+  // during the expensive unskippable phase-two coronation.
+  const visible=root.visible;root.visible=true;
+  try{renderer.compile(scene,camera);warmed=true;return true;}
+  finally{root.visible=visible;}
+ }
  function dispose(){if(disposed)return;disposed=true;reset();root.parent?.remove(root);disposeScene(root);}
- return {root,update,reset,dispose,stats:()=>({active:root.visible,maskCount:masks.length,strings:strands})};
+ return {root,update,reset,prewarm,dispose,stats:()=>({active:root.visible,prewarmed:warmed,maskCount:masks.length,strings:strands})};
 }
