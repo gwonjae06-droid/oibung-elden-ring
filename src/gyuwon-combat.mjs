@@ -36,7 +36,11 @@ export function actGyuwon(g,type,input={}){
 }
 export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  if(g.status!=='playing'||g.boss.state==='transition'||!Number.isFinite(amount)||amount<=0)return 0;
- if(g.boss.phase===2&&g.gyuwon.space==='white')return 0;
+ // White space absorbs the blow. Record it so the view can dissolve it into written glyphs.
+ if(g.boss.phase===2&&g.gyuwon.space==='white'){
+  if(!dot){g.gyuwon.absorbAt=g.time;g.gyuwon.absorbCount=(g.gyuwon.absorbCount||0)+1;}
+  return 0;
+ }
  const b=g.boss,s=g.gyuwon,damage=Math.min(amount,b.phase<3?Math.max(0,b.hp-1):b.hp);b.hp-=damage;
  if(damage&&!dot)emit(g,'boss-hit',{amount:damage,
   ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
