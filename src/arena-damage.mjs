@@ -13,6 +13,7 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
  if(!developer&&!dot)g.hitstop=Math.max(g.hitstop||0,big?.09:.035);
  if(b.hp<=0){
   b.hp=0;b.state='dead';b.queue=[];g.status='won';g.projectiles=[];g.bossShots=[];
+  if(Array.isArray(g.kwonFractures))g.kwonFractures.length=0;
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'defeated'});
   emit(g,'victory');return damage;
  }
