@@ -208,6 +208,24 @@ test('starting at final unlocked boss rewards only its clear and records that st
  await f.click('records');assert.match(f.dialog.html,/보스 선택 · 무두의 사유 최규원부터 · 1보스/);
  await f.api.dispose();f.release();
 });
+test('refund confirmation can be cancelled and never carries across weapon tabs',async()=>{
+ const profile=freshProfile();profile.forge.sword['blade-wave']=1;profile.earnedFlames=1;
+ const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ await f.click('forge');
+ await f.click('forge-refund-confirm');
+ assert.equal(saved().forge.sword['blade-wave'],1,'unconfirmed synthetic action must do nothing');
+ await f.click('forge-refund');
+ assert.match(f.dialog.html,/j-refund-confirm/);
+ await f.click('forge-refund-cancel');
+ assert.doesNotMatch(f.dialog.html,/data-j="forge-refund-confirm"/);
+ assert.equal(saved().forge.sword['blade-wave'],1);
+ await f.click('forge-refund');
+ await f.click('forge-weapon',{weapon:'bow'});
+ assert.doesNotMatch(f.dialog.html,/data-j="forge-refund-confirm"/,'changing weapon cancels refund');
+ await f.click('forge-refund-confirm');
+ assert.equal(saved().forge.sword['blade-wave'],1);
+ await f.api.dispose();f.release();
+});
 test('developer semicolon Easter egg only works in forge and persists two flames per real keypress',async()=>{
  const f=rig();
  const saved=()=>JSON.parse(f.data.get(SAVE_KEY));
