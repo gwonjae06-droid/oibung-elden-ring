@@ -35,11 +35,11 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const fxRoot=new THREE.Group();scene.add(fxRoot);
  const particles=createBloodParticles(fxRoot,fluid,quality,{reduced}),spells=createBloodSpellFx(fxRoot,fluid,particles,{reduced,coarse}),cathedral=createCathedralFx(fxRoot,fluid,quality,{reduced});
  const grandRites=createGrandBloodRites(fxRoot,fluid,{coarse,reduced});
- const bloodWhip=createBloodWhipView(fxRoot,{coarse,reduced});
  const siphonFx=createBloodSiphonFx(fxRoot,{coarse,reduced});
  const root=new THREE.Group();scene.add(root);
  const actor=new THREE.Group();root.add(actor);
  const regalia=createBloodRegalia(actor,{coarse,reduced});
+ const bloodWhip=createBloodWhipView(fxRoot,{coarse,reduced,hand:regalia.arms[1].hand});
  const surfaceFlow=createBloodSurfaceFlow(regalia.torso,fxRoot,fluid,{coarse,reduced});
  particles.setWallSplashListener(surfaceFlow.splashWall);
  // Keep the sculpted head at its original local rest coordinate but parent it
