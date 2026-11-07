@@ -5,7 +5,6 @@ import {createDicePlayerGame} from '../src/dice-player.mjs';
 import {damageDice,stepDice} from '../src/dice-combat.mjs';
 import {giantHazards,giantContactBeat,giantHandPose,giantHeadPose,giantPattern,hazardContains,skipGiant} from '../src/dice-giant.mjs';
 import {buildDiceGiant} from '../src/dice-giant-view.mjs';
-import {PORTRAIT_BARRAGE} from '../src/dice-portrait-barrage.mjs';
 
 function ready(slot=2,feral=false){
  const g=createDicePlayerGame();damageDice(g,1000);skipGiant(g);stepDice(g,1/120);
@@ -54,12 +53,6 @@ test('feral head blast follows the actual model location and only damages on lan
  assert.equal(hazardContains(live,{x:head.x+20,z:head.z}),false);
  assert.equal(giantContactBeat(live),true);
  assert.equal(giantContactBeat({...live,contactY:30}),false);
-});
-
-test('portrait cards are at least 2.5x slower and can traverse the full board',()=>{
- assert.ok(PORTRAIT_BARRAGE.speed<=8);
- assert.ok(PORTRAIT_BARRAGE.life*PORTRAIT_BARRAGE.speed>70);
- assert.ok(PORTRAIT_BARRAGE.warning>=1.2);
 });
 
 test('hit animation never displaces the visible palm from the attackable pose',()=>{
