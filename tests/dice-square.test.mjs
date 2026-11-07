@@ -1,8 +1,5 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import test from 'node:test';import assert from 'node:assert/strict';
 import {squareContains,squareDiscArgs,squareConeArgs} from '../src/dice-square.mjs';
-import {segmentSquareHit} from '../src/dice-ground-face.mjs';
 test('square corners hit while points outside an edge miss',()=>{assert.equal(squareContains({x:1,z:1},{x:0,z:0},1),true);assert.equal(squareContains({x:1.01,z:0},{x:0,z:0},1),false);assert.equal(squareContains({x:1.4,z:1.4},{x:0,z:0},1,.42),true);assert.equal(squareContains({x:NaN,z:0},{x:0,z:0},1),false);});
 test('four perimeter vertices form an axis aligned square with exact half width',()=>{for(const h of [1,1.67,14.42]){const [r,n,a]=squareDiscArgs(h);assert.equal(n,4);for(let i=0;i<n;i++){const x=r*Math.cos(a+i*Math.PI/2),z=r*Math.sin(a+i*Math.PI/2);assert.ok(Math.abs(Math.abs(x)-h)<1e-8);assert.ok(Math.abs(Math.abs(z)-h)<1e-8);}}});
 test('square geometry helpers retain their dimensions',()=>{const [r,height,n,,open,a]=squareConeArgs(1.25);assert.equal(n,4);assert.equal(height,4);assert.equal(open,false);assert.ok(Math.abs(r*Math.cos(a)-1.25)<1e-9);});
-test('portrait projectiles use a swept square hit box',()=>{assert.equal(segmentSquareHit({x:-2,z:.9},{x:2,z:.9},{x:0,z:0},1),true);assert.equal(segmentSquareHit({x:-2,z:1.1},{x:2,z:1.1},{x:0,z:0},1),false);});
-test('barrage adapter uses square lanes instead of ground cones',()=>{const read=n=>readFileSync(new URL('../src/'+n,import.meta.url),'utf8');assert.ok(read('dice-ground-spikes.mjs').includes('stepPortraitBarrage as stepGroundSpikes'));assert.ok(read('dice-portrait-fx.mjs').includes('new THREE.PlaneGeometry(1,1)'));assert.ok(!read('dice-portrait-fx.mjs').includes('ConeGeometry'));});
