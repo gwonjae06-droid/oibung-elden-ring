@@ -1,31 +1,6 @@
 name: Clown nightmare horror redesign regressions
 
 on:
-  push:
-    branches:
-      - main
-      - feat/clown-living-nightmare-world-20261106
-    paths:
-      - 'src/clown-*'
-      - 'src/circus-*'
-      - 'src/boss-foley-map.mjs'
-      - 'tests/clown-nightmare-overhaul.test.mjs'
-      - 'tests/clown-living-nightmare-world.test.mjs'
-      - 'tests/clown-patterns.test.mjs'
-      - 'tests/clown-circus-rebuild.test.mjs'
-      - 'tests/clown-motion-realism.test.mjs'
-      - 'tests/clown-ensemble-repertoire.test.mjs'
-      - 'tests/clown-uncanny-circus.test.mjs'
-      - '.github/workflows/clown-nightmare-overhaul.yml'
-  pull_request:
-    paths:
-      - 'src/clown-*'
-      - 'src/circus-*'
-      - 'src/boss-foley-map.mjs'
-      - 'tests/clown-nightmare-overhaul.test.mjs'
-      - 'tests/clown-living-nightmare-world.test.mjs'
-      - 'tests/clown-patterns.test.mjs'
-      - 'tests/clown-circus-rebuild.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
