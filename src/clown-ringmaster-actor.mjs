@@ -86,6 +86,7 @@ export function createClownActor({coarse=false}={}){
  const porcelainFace=blob(head,chalk,'hand-sculpted-porcelain-face',[0,-.025,.14],[.68,.89,.49]);
  const portraitSuppress=[];
  const brow=blob(head,bone,'furrowed-brow',[0,.40,.51],[.58,.16,.14]);brow.rotation.z=-.07;
+ portraitSuppress.push(brow);
  for(const side of [-1,1]){
   const socket=blob(head,voidMat,'sunken-eye-socket',[side*.31,.22,.552],[.245,.24,.09]);socket.rotation.z=side*.13;
   portraitSuppress.push(socket);
@@ -99,12 +100,12 @@ export function createClownActor({coarse=false}={}){
    tuft.rotation.z=side*(.25+n*.09);
   }
  }
- blob(head,velvet,'long-crooked-nose',[.02,-.04,.61],[.14,.20,.17]);
- blob(head,blood,'red-nose-scar',[.02,-.15,.72],[.11,.065,.05]);
+ portraitSuppress.push(blob(head,velvet,'long-crooked-nose',[.02,-.04,.61],[.14,.20,.17]));
+ portraitSuppress.push(blob(head,blood,'red-nose-scar',[.02,-.15,.72],[.11,.065,.05]));
  const jaw=new T.Group();jaw.position.set(0,-.45,.28);head.add(jaw);
  blob(jaw,voidMat,'deep-open-grin',[0,-.10,.32],[.43,.27,.11]);
  blob(jaw,chalk,'lower-porcelain-jaw',[0,-.30,.30],[.43,.15,.24]);
- makeCurve(head,[[-.53,-.31,.45],[-.27,-.49,.60],[0,-.54,.62],[.27,-.49,.60],[.53,-.31,.45]],.052,blood,'painted-permanent-grin');
+ portraitSuppress.push(makeCurve(head,[[-.53,-.31,.45],[-.27,-.49,.60],[0,-.54,.62],[.27,-.49,.60],[.53,-.31,.45]],.052,blood,'painted-permanent-grin'));
  for(let i=0;i<9;i++){const x=(i-4)*.081;
   const tooth=add(jaw,new T.ConeGeometry(.039,.17,coarse?5:9),bone,'uneven-individual-tooth',x,-.11,.423);
   tooth.rotation.z=i%2?.09:-.05;
@@ -246,6 +247,11 @@ export function createClownActor({coarse=false}={}){
   head.rotation.x=springs.step('head-pitch',-q.headCounter*.88+Math.sin(time*.88)*.022,step,15);
   head.rotation.z=springs.step('head-roll',clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17),step,12);
   head.scale.setScalar(p.headScale);
+  // His original photographed smile is the neutral facial identity. The
+  // separate sculptural jaw only tears open during authored horror attacks.
+  jaw.visible=!portrait.visible||(c.state==='pattern'&&
+   /directorCackle|unhingedClap|facePeelHunt|mouthOfTheAudience/.test(c.name||'')&&
+   c.pt>.78);
   jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09+
     (perf.act?.mode==='cackle'?.36+.10*Math.max(0,perf.act.beat):0),0,.72),step,20);
   hat.rotation.x=springs.step('hat-tilt',perf.act?.mode==='drum'?.07*perf.act.beat:
