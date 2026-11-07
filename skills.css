@@ -48,3 +48,13 @@ button.primary{background:linear-gradient(180deg,color-mix(in oklch,var(--color-
 #stick{box-shadow:inset 0 0 18px rgba(0,0,0,.45)}
 #hit-flash{background:radial-gradient(ellipse,transparent 30%,rgba(167,47,47,.5) 75%,rgba(120,20,20,.7))}
 @media (prefers-reduced-motion:reduce){.weapon:hover{transform:none}}
+
+/* Touch devices show essential skill name and recharge first, not small prose. */
+@media(pointer:coarse) and (orientation:landscape){
+ #arena .skill-hud{margin:4px 0;padding:5px 6px;background:#0a100ccc;border-color:#bba3786a}
+ #arena .skill-line{font-size:12px;gap:6px}
+ #arena .skill-line strong{font-size:13px}
+ #arena .skill-hud .meter{height:9px;margin:4px 0}
+ #arena .skill-hud p{display:none}
+ #arena .card-row i{width:15px;height:20px}
+}
