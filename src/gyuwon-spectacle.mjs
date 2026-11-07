@@ -102,9 +102,9 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  },clear,
   prewarm(renderer,camera,scene){
    if(!renderer?.compile||!scene)return;
-   const old=wavePool.group.visible;
-   try{wavePool.group.visible=true;renderer.compile(scene,camera);}
-   finally{wavePool.group.visible=old;}
+   const old=wavePool.group.visible,oldRoot=root.visible;
+   try{root.visible=true;wavePool.group.visible=true;renderer.compile(scene,camera);}
+   finally{wavePool.group.visible=old;root.visible=oldRoot;}
   },
   stats:()=>({liveAttackGroups:attacks.size,waveVertices:wavePool.stats().vertices,
    waveGeometryBuilds:1}),
