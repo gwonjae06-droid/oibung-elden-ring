@@ -8,9 +8,8 @@ const keys=Object.keys(NAMES);
 const maxOf=read=>Math.max(...keys.map(read));
 const asPercent=n=>Math.round(n*100)+'%';
 
-// Graph bars are relative rankings among the four weapons; their printed
-// values are the real, unmodified combat data. Defense is inverted because
-// receiving LESS damage is better.
+// Hex radar values are relative rankings among four weapons. Printed numbers
+// are the unmodified combat data. Defense is inverted: LESS damage is better.
 export function weaponStatRows(id){
  const weapon=Object.hasOwn(WEAPONS,id)?id:'sword';
  const w=WEAPONS[weapon],s=weaponStats(weapon);
@@ -33,9 +32,48 @@ export function weaponStatRows(id){
   })[label],0)/keys.length/max*100)
  }));
 }
+
+// Normalized radar geometry: the same combat-derived percentage that used to
+// drive the bars now determines each of the six hexagon vertices.
+const RADAR_AXES=Object.freeze(['공격','경직','체력','방어','이동','회피']);
+function radarXY(index,percentage,radius=84){
+ const v=Math.max(0,Math.min(100,Number(percentage)||0))/100;
+ const angle=-Math.PI/2+index*Math.PI/3;
+ return [(180+Math.cos(angle)*radius*v).toFixed(2),(135+Math.sin(angle)*radius*v).toFixed(2)];
+}
+export function radarVertices(values){
+ if(!Array.isArray(values)||values.length!==6)throw new RangeError('A six-axis radar requires six normalized stats');
+ return values.map((v,i)=>radarXY(i,v).join(',')).join(' ');
+}
+function radarDiagram(weapon,rows){
+ const axes=rows.slice(0,6);
+ const rings=[25,50,75,100].map(pct=>
+  '<polygon class="j-radar-ring" points="'+radarVertices(Array(6).fill(pct))+'"/>').join('');
+ const spokes=RADAR_AXES.map((_,i)=>{
+  const [x,y]=radarXY(i,100);
+  return '<line class="j-radar-ray" x1="180" y1="135" x2="'+x+'" y2="'+y+'"/>';
+ }).join('');
+ const labels=RADAR_AXES.map((label,i)=>{
+  const [x,y]=radarXY(i,100,116);
+  return '<text class="j-radar-label" x="'+x+'" y="'+y+'" text-anchor="middle" dominant-baseline="middle">'+label+'</text>';
+ }).join('');
+ const points=axes.map((r,i)=>{
+  const [x,y]=radarXY(i,r.percent);
+  return '<circle class="j-radar-node" cx="'+x+'" cy="'+y+'" r="2.8"/>';
+ }).join('');
+ return '<svg class="j-stat-radar" viewBox="0 0 360 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+NAMES[weapon]+' 능력치 육각형 비교: 금빛은 선택 무기, 회색 점선은 네 무기 평균">'+
+  '<title>'+NAMES[weapon]+' 능력치 육각형 비교</title><desc>공격력, 경직, 최대 체력, 방어 효율, 이동 속도, 회피 거리 순서로 네 무기 중 상대 수치를 비교합니다. 정확한 수치는 그래프 아래에 표시합니다.</desc>'+
+  rings+spokes+
+  '<polygon class="j-radar-average" points="'+radarVertices(axes.map(r=>r.averagePercent))+'"/>'+
+  '<polygon class="j-radar-current" points="'+radarVertices(axes.map(r=>r.percent))+'"/>'+
+  points+labels+'</svg>';
+}
 export function weaponStatChart(id,{profile=null}={}){
  const weapon=Object.hasOwn(NAMES,id)?id:'sword';
  const w=WEAPONS[weapon],rows=weaponStatRows(weapon);
+ const stats=rows.slice(0,6).map(row=>
+  '<div class="j-stat-fact"><dt>'+row.label+'</dt><dd>'+row.text+'</dd></div>').join('');
+ const recovery='<div class="j-stat-recovery"><span>기력 회복</span><strong>'+rows[6].text+'</strong></div>';
  const basic='<div class="j-stat-basics" aria-label="무기 공격 특성">'+
   '<span>기본 사거리 <strong>'+w.range+'</strong></span>'+
   '<span>기본 동작 <strong>'+(w.wind+w.active+w.end).toFixed(2)+'초</strong></span>'+
@@ -48,11 +86,10 @@ export function weaponStatChart(id,{profile=null}={}){
   '<small>기본 공격 수치에 포함되지 않는 스킬·추가 타격·특수 효과입니다.</small></div>':'';
  return '<section class="j-stat-chart" aria-label="'+NAMES[weapon]+' 능력치 그래프">'+
   '<div class="j-stat-heading"><h2>'+NAMES[weapon]+' · 능력치</h2><span>WEAPON PROFILE</span></div>'+
-  '<div class="j-stat-rows">'+rows.map(row=>
-   '<div class="j-stat-row"><div class="j-stat-label"><span>'+row.label+'</span><strong>'+row.text+'</strong></div>'+
-   '<div class="j-stat-track" role="meter" aria-label="'+row.label+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+row.percent+'" aria-valuetext="'+row.text+'"><span class="j-stat-fill" style="width:'+row.percent+'%"></span>'+
-   '<i class="j-stat-average" aria-hidden="true" style="left:'+row.averagePercent+'%"></i></div></div>'
-  ).join('')+'</div>'+
-  basic+'<p class="j-stat-note"><i class="j-stat-legend" aria-hidden="true"></i> 표시선은 네 무기 평균 · 막대는 네 무기 간 상대 비교이며 실제 수치를 함께 보여줍니다. 기본 공격의 수치는 각인 효과와 별도입니다.</p>'+
+  '<div class="j-stat-radar-frame">'+radarDiagram(weapon,rows)+
+  '<div class="j-radar-key" aria-label="차트 범례"><span class="j-radar-key-current">선택 무기</span><span class="j-radar-key-average">4종 평균</span></div></div>'+
+  '<dl class="j-stat-facts" aria-label="정확한 무기 능력치">'+stats+'</dl>'+
+  recovery+
+  basic+'<p class="j-stat-note">육각형은 네 무기의 상대 비교입니다. 수치는 실제 전투 기준이며, 각인 효과와 별도입니다.</p>'+
   upgrades+'</section>';
 }
