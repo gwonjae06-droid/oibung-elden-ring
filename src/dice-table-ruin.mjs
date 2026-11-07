@@ -22,7 +22,7 @@ export function tableRuinState(game){
   Math.sin(Math.PI*elapsed/2.2)**2:0;
  return {feral:true,slot,spin,breakPower:burst,waves};
 }
-export function buildDiceTableRuin(T,root,deck,{coarse=false,reduced=false}={}){
+export function buildDiceTableRuin(T,root,perimeter,{coarse=false,reduced=false}={}){
  const baseCrack=new T.BoxGeometry(1,.075,1),shardGeo=new T.BoxGeometry(1,1,1);
  const slitMat=new T.MeshBasicMaterial({color:0xef4258,transparent:true,opacity:.4,depthWrite:false});
  const shardsMat=new T.MeshStandardMaterial({color:0x9d613d,roughness:.6,metalness:.26,
@@ -31,7 +31,7 @@ export function buildDiceTableRuin(T,root,deck,{coarse=false,reduced=false}={}){
  const goldMat=new T.MeshBasicMaterial({color:0xffb96b,transparent:true,opacity:.55,depthWrite:false,side:T.DoubleSide});
  const dangerMat=new T.MeshBasicMaterial({color:0xf04449,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide});
  const fissures=new T.Group();fissures.name='sungwon-table-breaking-fissures';root.add(fissures);
- const cracks=Array.from({length:coarse?12:20},(_,i)=>{
+ const cracks=Array.from({length:coarse?17:28},(_,i)=>{
    const angle=i*2.39996323,reach=16+i%5*8;
    const m=new T.Mesh(baseCrack,slitMat);m.name='sungwon-table-crack';m.position.set(Math.sin(angle)*reach*.53,.21,Math.cos(angle)*reach*.53);
    m.scale.set(.18+(i%3)*.12,.08,reach);m.rotation.y=angle;fissures.add(m);return m;
@@ -39,10 +39,18 @@ export function buildDiceTableRuin(T,root,deck,{coarse=false,reduced=false}={}){
  const waves=Array.from({length:3},(_,i)=>{
   const m=new T.Mesh(ringGeo.clone(),i===0?dangerMat:goldMat);m.name='sungwon-table-visible-shockwave';m.position.y=.29+i*.018;m.visible=false;root.add(m);return m;
  });
- const shards=Array.from({length:coarse?16:36},(_,i)=>{
+ const shards=Array.from({length:coarse?24:46},(_,i)=>{
   const a=i*2.39996323,r=8+(i%7)*7,m=new T.Mesh(shardGeo,shardsMat);
   m.name='sungwon-casino-wood-shard';m.visible=false;root.add(m);
   return {m,a,r,vel:9+(i%6)*3,up:9+i%7*3,spin:2+i%5};
+ });
+ // Short-lived pooled dust rises from stationary floor fractures, not from the camera.
+ const dustGeo=new T.SphereGeometry(1,5,4);
+ const dustMat=new T.MeshBasicMaterial({color:0xae674a,transparent:true,opacity:.20,depthWrite:false});
+ const dust=Array.from({length:coarse?18:34},(_,i)=>{
+  const m=new T.Mesh(dustGeo,dustMat),a=i*2.39996323,r=12+i%7*5;
+  m.name='sungwon-stationary-table-impact-dust';m.visible=false;root.add(m);
+  return {m,a,r,drift:2.4+(i%6)*.8};
  });
  let angle=0,velocity=0,previousTime=0,owner=null;
  function update(g,dt=0){
@@ -51,10 +59,10 @@ export function buildDiceTableRuin(T,root,deck,{coarse=false,reduced=false}={}){
   const s=tableRuinState(g),h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
   const target=s.feral?(s.spin+.16):(g?.boss?.phase===2 ? .008 : 0);
   velocity+=(target-velocity)*(1-Math.exp(-h*(s.feral?2.6:3.4)));
-  angle+=velocity*h;deck.rotation.y=angle;
-  // The table's playable plane stays level. The rotating felt is circular,
-  // so visual motion never moves or invalidates a player's real hit position.
-  deck.position.y=0;
+  angle+=velocity*h;perimeter.rotation.y=angle;
+  // Keep the entire player floor and the camera frame stable. Only exterior
+  // brass rail / roulette props move; gameplay and collision remain unchanged.
+  perimeter.position.y=0;
   fissures.visible=s.feral;slitMat.opacity=s.feral?.30+s.breakPower*.56:0;
   cracks.forEach((m,i)=>{m.scale.x=(.17+(i%3)*.12)*(1+s.breakPower*.7);m.position.y=.21+.025*s.breakPower;});
   waves.forEach((m,i)=>{const w=s.waves[i];m.visible=Boolean(w?.visible);if(!w)return;
@@ -73,8 +81,16 @@ export function buildDiceTableRuin(T,root,deck,{coarse=false,reduced=false}={}){
     m.rotation.set(o.spin*t,o.a+o.spin*t*.37,o.spin*t*.7);
     m.scale.set(1.6+i%3*.65,.38+i%2*.23,2.8+i%5*.7);
   });
+  dust.forEach(o=>{
+   const m=o.m,show=burst>.025&&!reduced;
+   m.visible=show;if(!show)return;
+   const time=1-Math.sqrt(Math.max(0,1-burst)),radius=o.r+o.drift*time*4;
+   m.position.set(Math.sin(o.a)*radius,.45+o.drift*time*1.3,Math.cos(o.a)*radius);
+   m.scale.setScalar((1.3+o.r*.06)*(1+time*1.15));
+  });
+  dustMat.opacity=(reduced?0:.05+.2*burst);
   return s;
  }
- function reset(){owner=null;angle=velocity=previousTime=0;deck.rotation.y=0;waves.forEach(m=>m.visible=false);shards.forEach(o=>o.m.visible=false);fissures.visible=false;}
- reset();return {update,reset,stats:()=>({fissures:cracks.length,shards:shards.length,waves:waves.length,extraLights:0})};
+ function reset(){owner=null;angle=velocity=previousTime=0;perimeter.rotation.y=0;waves.forEach(m=>m.visible=false);shards.forEach(o=>o.m.visible=false);dust.forEach(o=>o.m.visible=false);fissures.visible=false;}
+ reset();return {update,reset,stats:()=>({fissures:cracks.length,shards:shards.length,dust:dust.length,waves:waves.length,extraLights:0})};
 }
