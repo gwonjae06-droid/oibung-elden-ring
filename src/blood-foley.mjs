@@ -7,7 +7,8 @@ export const BLOOD_FOLEY=Object.freeze({
  hit3:dir+'bloodhit3.mp3',
  hit4:dir+'bloodhit4.mp3',
  hit5:dir+'bloodhit5.mp3',
- splash:dir+'bloodsplash.mp3'
+ splash:dir+'bloodsplash.mp3',
+ tsunami:dir+'tsunami.mp3'
 });
 
 // Keep sound choices aligned with the actual combat pattern IDs.
@@ -45,6 +46,11 @@ export function bloodFoleySpec(ev,g){
  if(ev.type==='blood-sea-crash')
   return cue(BLOOD_FOLEY.splash,.52,1.75,.24,.6);
  if(g.boss?.state==='transition')return null;
+ // A single low, continuous natural-disaster roar begins as the REAL wave
+ // approaches the arena. Other splash events remain subtle and do not restart
+ // this special recording on every one of the four collision flanks.
+ if(ev.type==='blood-tsunami-approach')return g.boss?.phase===2&&g.blood.pattern==='requiem'?
+  cue(BLOOD_FOLEY.tsunami,.46,7.0,1.15,12):null;
  const id=ev.pattern||g.blood.pattern,key=BLOOD_ATTACK_SOUNDS[id];
  if(!key)return null;
  if(ev.type==='blood-warning')
