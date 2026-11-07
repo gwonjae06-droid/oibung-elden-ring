@@ -62,7 +62,17 @@ export function startGyuwonPattern(g,id){
  const traces=s.memory.length?s.memory:[{shape:'lane',x:p.x,z:p.z,yaw:aim,width:1.15,length:42,r:2}];
  for(const h of traces){hazard(g,h.shape,{...h,warn:1,age:0,hit:false,fired:false,damage:26,life:.3});hazard(g,h.shape,{...h,warn:g.boss.phase===2?1.85:2.25,age:0,hit:false,fired:false,damage:26,life:.3});}
  }
- if(id==='choice')for(let i=0;i<5;i++)if(i!==s.index%5)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI*2/5,arc:.5,r:26,warn:1.95+i*.15});
+ if(id==='choice'){
+  // At shared movement speed, a randomly distant safe fifth can be
+  // physically unreachable from the perimeter. Keep the player's CURRENT
+  // sector safe; a late, separately warned locked note then forces movement.
+  const sector=Math.PI*2/5,theta=(aim%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  const nearest=Math.round(theta/sector)%5;
+  for(let i=0;i<5;i++)if(i!==nearest)hazard(g,'cone',{
+   x:0,z:0,yaw:i*sector,arc:.5,r:26,warn:1.95+i*.15
+  });
+  hazard(g,'circle',{x:p.x,z:p.z,r:2.75,warn:2.95,life:.36,damage:24});
+ }
  if(id==='timetable')for(let i=0;i<4;i++)lane((i-1.5)*7,0,0,1.45+i*.6);
  if(id==='blank')hazard(g,'ring',{x:b.x,z:b.z,r:2,width:.6,grow:12,warn:1.4,life:2});
  if(id==='negate')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*5,z:p.z,r:3,warn:1.4+i*.4});
