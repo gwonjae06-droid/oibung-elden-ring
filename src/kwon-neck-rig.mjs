@@ -1,4 +1,5 @@
 import {createRecoilBank} from './animation-recoil.mjs';
+import {kwonCloseSwordShift,BOSS_SCALE} from './combat.mjs';
 const limit=(v,max)=>Number.isFinite(v)?Math.max(-max,Math.min(max,v)):0;
 export function kwonNeckOffsets(head){return {pivot:[head[0],head[1]-.65,head[2]-.25],head:[0,.65,.25]};}
 export function createKwonNeckMotion(){
@@ -27,6 +28,11 @@ export function createKwonNeckRig(T,torso,head,HEAD,model){
   const stage=b?.state==='windup'?-0.65:b?.state==='active'?0.9:b?.state==='recovery'?0.25:0;
   const drive=b?.phase===1?stage+(Number.isFinite(m?.lean)?m.lean*.45:0):0;
   const lag=recoil.step('helmet',drive,frozen?0:dt,{strength:1.2,frequency:17,limit:.058});
+  // The first-act jaw is part of the sword. Its neck follows the exact
+  // close-range sword retraction, so hit geometry and the mask remain joined.
+  const shift=b?.phase===1?kwonCloseSwordShift(b):{y:0,z:0};
+  joint.position.set(rest.pivot[0],rest.pivot[1]+shift.y/BOSS_SCALE,
+   rest.pivot[2]+shift.z/BOSS_SCALE);
   joint.rotation.set(p.pitch+lag,p.yaw,p.roll);
  },point(){head.getWorldPosition(v);model.worldToLocal(v);return {x:v.x,y:v.y,z:v.z};}};
 }
