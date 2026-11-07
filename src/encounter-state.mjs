@@ -10,7 +10,7 @@ export function createEncounterStore() {
   function read() {
     if (!current) return null;
     const {id, game} = current,
-      bossId = game.blood ? 'blood' : game.dice ? 'dice' : game.clown ? 'clown' : 'kwon',
+      bossId = game.gyuwon ? 'gyuwon' : game.blood ? 'blood' : game.dice ? 'dice' : game.clown ? 'clown' : 'kwon',
       status = game.status;
     const outcome =
       status === 'won' ? 'won' : status === 'lost' ? 'lost' : null;
