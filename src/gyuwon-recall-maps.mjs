@@ -16,7 +16,7 @@ export const RECALL_MAP_NAMES=Object.freeze({
 export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='gyuwon-real-boss-maps';scene.add(root);
  const maps=new Map();let active=null,disposed=false,focus=null,switches=0,
-   warmed=false,compiled=0,uploaded=0;
+   warmed=false,compiled=0,uploaded=0,preRendered=0;
  const gold=new THREE.Color(0xf1cb78);
  function prepare(id){
   if(maps.has(id))return maps.get(id);
@@ -76,7 +76,10 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
   // Synchronous pre-compilation runs behind the battle's initial intro gate;
   // no first-encounter memory switch needs to compile a new PBR shader.
   const visibility=[...maps.values()].map(x=>[x,x.group.visible]);
-  const textures=new Set();
+  const textures=new Set(),canPreRender=typeof renderer.setRenderTarget==='function'&&
+   typeof renderer.getRenderTarget==='function'&&typeof renderer.render==='function';
+  const previousTarget=canPreRender?renderer.getRenderTarget():null;
+  const target=canPreRender?new THREE.WebGLRenderTarget(16,16,{depthBuffer:true,stencilBuffer:false}):null;
   try{
    for(const entry of maps.values()){
     for(const item of maps.values())item.group.visible=item===entry;
@@ -89,11 +92,15 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
      }
     });
     renderer.compile(scene,camera);compiled++;
+    // This offscreen, 16px pass also uploads mesh buffers and instancing
+    // layouts. compile() alone warms shader programs but not vertex buffers.
+    if(target){renderer.setRenderTarget(target);renderer.render(scene,camera);preRendered++;}
    }
    if(typeof renderer.initTexture==='function')
     for(const tex of textures){renderer.initTexture(tex);uploaded++;}
    warmed=true;
   }finally{
+   if(target){renderer.setRenderTarget(previousTarget);target.dispose();}
    for(const [entry,visible]of visibility)entry.group.visible=visible;
    active=prior;
   }
@@ -134,7 +141,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
  return {root,update,prewarm,clear,
   stats:()=>({active:active?.group.name||null,loaded:maps.size,builds:maps.size,
    originalRoot:active?.group.getObjectByName(RECALL_MAP_NAMES[active.id])?.name||null,
-   switches,prewarmed:warmed,compiled,uploaded,
+   switches,prewarmed:warmed,compiled,uploaded,preRendered,
    cathedralOpacity:[...(maps.get('tsunami')?.ghostMaterials||[])][0]?.opacity??1}),
   dispose};
 }
