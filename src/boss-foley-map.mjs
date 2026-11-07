@@ -1,6 +1,7 @@
 // Boss-only recordings: never route these through player weapon events.
 import {BLOOD_FOLEY,bloodFoleySpec} from './blood-foley.mjs';
 import {clownNightmareRecording} from './clown-nightmare-sfx.mjs';
+import {clownEnsembleRecording} from './clown-ensemble-recordings.mjs';
 const dir='assets/sfx/';
 export const BOSS_FOLEY_FILES=Object.freeze({
  sword:Object.freeze({draw:dir+'u_dtbxmnju4i-taking-out-knife-217793.mp3',sharpen:dir+'dragon-studio-sharpening-blade-393850.mp3',swing:dir+'freesound_community-sword-sound-2-36274.mp3',flesh:dir+'universfield-sword-blade-slicing-flesh-352708.mp3'}),
@@ -33,7 +34,9 @@ export function bossFoleySpec(ev,g){
   case 'dice-possessed':return cue(f.coinSecond,.17,.75,.12,.5);
   default:return null;
  }}
- if(g.clown){const f=BOSS_FOLEY_FILES.clown;switch(type){
+ if(g.clown){const selected=clownEnsembleRecording(ev);
+  if(selected)return selected;
+  const f=BOSS_FOLEY_FILES.clown;switch(type){
   case 'clown-phase3':case 'clown-horror':return clownNightmareRecording(ev);
   case 'clown-shutter':return cue(f.shutter,.32,.32,.035,.13,1.15);
   case 'clown-telegraph':return cue(f.drum,.12,.4,.1,.35,.72);
