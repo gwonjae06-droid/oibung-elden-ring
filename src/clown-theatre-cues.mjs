@@ -7,6 +7,11 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:0));
 export function clownTheatreCueKind(z){
  if(!z||z.state!=='warn'||!Number.isFinite(z.warn)||z.warn<=0)return null;
  const s=String(z.sound||'');
+ if(/directorBaton|directorVerdict|directorCurtainBlade/i.test(s))return 'director-blade';
+ if(/directorStrings/i.test(s))return 'puppet';
+ if(/directorCackle/i.test(s))return 'choir';
+ if(/directorFireRing/i.test(s))return 'director-hoop';
+ if(/directorFinalStomp/i.test(s))return 'director-impact';
  if(/knifeJuggler/i.test(s))return 'knife';
  if(/drumLine/i.test(s))return 'drum';
  if(/trapezeWire/i.test(s))return 'trapeze';
@@ -19,10 +24,11 @@ export function clownTheatreCueKind(z){
  return null; // infernalHoops already renders sculptural, instanced fire
 }
 const ropeKind=new Set(['puppet','trapeze','curtain']);
-const ringKind=new Set(['choir','phantom','drum','trapdoor']);
+const ringKind=new Set(['choir','phantom','drum','trapdoor','director-hoop','director-impact']);
 const ringLabel=Object.freeze({
  choir:'resonant-choir-air-ring',phantom:'false-ringmaster-halo',
- drum:'bass-drum-concussive-wave',trapdoor:'opening-theatre-trapdoor-rim'
+ drum:'bass-drum-concussive-wave',trapdoor:'opening-theatre-trapdoor-rim',
+ 'director-hoop':'director-owned-burning-iron-ring','director-impact':'ringmasters-physical-palm-impact'
 });
 export function createClownTheatreCues(parent,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='nightmare-circus-performance-air-cues';parent.add(root);
@@ -56,7 +62,12 @@ export function createClownTheatreCues(parent,{coarse=false,reduced=false}={}){
    strings.name=kind==='puppet'?'tensioned-strings-over-actual-puppet-lane':
     kind==='trapeze'?'high-wire-aerial-acrobat-lines':'heavy-circus-velvet-silhouette-strings';
    strings.frustumCulled=false;strings.renderOrder=5;group.add(strings);positions=data;
-  }else if(kind==='knife'){
+  }else if(kind==='director-blade'){
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,1),
+     new THREE.MeshStandardMaterial({color:0xd5c8bb,roughness:.38,metalness:.76,
+      emissive:0x42323b,emissiveIntensity:.48,transparent:true,opacity:.62,depthWrite:false}));
+    body.name='director-baton-slashing-over-real-lane';group.add(body);props.push(body);
+   }else if(kind==='knife'){
    const steel=new THREE.MeshStandardMaterial({color:0xbac8ce,metalness:.75,
     roughness:.26,emissive:0x182b35,emissiveIntensity:.55});
    for(let i=0;i<(coarse?2:4);i++){
@@ -105,6 +116,10 @@ export function createClownTheatreCues(parent,{coarse=false,reduced=false}={}){
     if(kind==='trapdoor'){
      mesh.position.set(0,.06,0);mesh.rotation.set(Math.PI/2,0,0);
      mesh.scale.setScalar(Math.max(.4,z.r||2)*.89*(.55+.45*fraction));
+    }else if(kind==='director-hoop'||kind==='director-impact'){
+      mesh.position.set(0,kind==='director-hoop'?2.12:.22,0);
+      mesh.rotation.set(kind==='director-hoop'?0:Math.PI/2,0,Math.sin(time*.9)*.12);
+      mesh.scale.setScalar(Math.max(1,z.r||2)*(.72+.24*fraction));
     }else if(kind==='cannon'){
      mesh.position.set(0,1.1+3.2*(1-fraction),0);
      mesh.scale.setScalar(.6+fraction*.9);
@@ -115,6 +130,12 @@ export function createClownTheatreCues(parent,{coarse=false,reduced=false}={}){
      mesh.rotation.y=kind==='phantom'?time*.23:0;
      mesh.scale.setScalar(scale*(.67+i*.12)*(1+.14*fraction));
     }
+   }
+   if(kind==='director-blade'&&v.props[0]){
+    const blade=v.props[0],len=clamp(z.len||8,3,23);
+    blade.position.set(0,1.04+Math.sin(fraction*Math.PI)*.16,len*.5);
+    blade.scale.set(1,1,len);
+    blade.material.opacity=(reduced?.29:.56)*(.45+.55*fraction);
    }
    if(kind==='knife')for(let i=0;i<v.props.length;i++){
     const blade=v.props[i],lag=i/v.props.length*.18,travel=clamp((fraction-lag)/(1-lag));

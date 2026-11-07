@@ -8,6 +8,10 @@ export function clownCuePalette(z){
  if(/corpse|reprise/i.test(s))return {color:0x8c7d9c,rim:0xded0f4};
  if(/unisonSmile/i.test(s))return {color:0xd4a1af,rim:0xffdce5};
  if(/mouthless/i.test(s))return {color:0x89bdc6,rim:0xd5f8ff};
+ if(/directorBaton|directorVerdict|directorCurtainBlade/i.test(s))return {color:0xc6bdba,rim:0xfce8d8};
+ if(/directorCackle/i.test(s))return {color:0x9eb6ae,rim:0xe0e4cf};
+ if(/directorStrings/i.test(s))return {color:0xa78d91,rim:0xe6c8d0};
+ if(/directorFireRing/i.test(s))return {color:0xbd6149,rim:0xf8a67b};
  if(/knife|juggler/i.test(s))return {color:0xc4cdd2,rim:0xe4f1f2};
  if(/drum/i.test(s))return {color:0xc6ad75,rim:0xffe5ab};
  if(/trapeze|highWire|acrobat/i.test(s))return {color:0x99bfc4,rim:0xd8f8ff};
