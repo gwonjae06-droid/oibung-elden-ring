@@ -266,3 +266,6 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey[data-screen='home'] .j-menu{margin:10px auto;gap:4px}
  #journey .j-select{padding-bottom:calc(105px + env(safe-area-inset-bottom))}
 }
+
+/* Tall forge/record panels must begin at the scroll origin instead of being centered offscreen. */
+#journey .j-main{align-items:safe center}

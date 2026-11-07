@@ -43,6 +43,15 @@ try{
    });
    assert.ok(forge.branches>=2,s.name+' upgrade branches missing');
    assert.ok(forge.bounds.left>=-2&&forge.bounds.right<=s.width+2,s.name+' forge horizontally clipped');
+   if(forge.horizontalOverflow>2){
+    const offenders=await page.evaluate(()=>{
+     const d=document.querySelector('#journey .j-forge'),r=d.getBoundingClientRect();
+     return [...d.querySelectorAll('*')].map(el=>({el,rect:el.getBoundingClientRect()}))
+      .filter(({rect})=>rect.width&&rect.height&&(rect.left<r.left-3||rect.right>r.right+3))
+      .slice(0,16).map(({el,rect})=>({tag:el.tagName,cls:String(el.className?.baseVal??el.className??'').slice(0,100),left:Math.round(rect.left-r.left),right:Math.round(rect.right-r.right)}));
+    });
+    console.log('FORGE OVERFLOW DEBUG',s.name,JSON.stringify({overflow:forge.horizontalOverflow,offenders}));
+   }
    assert.ok(forge.horizontalOverflow<=2,s.name+' forge horizontal overflow: '+forge.horizontalOverflow);
    await page.screenshot({path:'artifacts/ui-responsive/'+s.name+'-forge.png'});
    if(s.width>s.height){
