@@ -50,6 +50,12 @@ try{
  const owned=await page.locator('#journey [data-branch="blade-wave"] .j-forge-owned').count();
  assert.equal(owned,2,'forged tiers were not restored after page reload');
  await page.locator('#journey [data-j="forge-refund"]').click();
+ assert.equal((await read()).forge.sword['blade-wave'],2,'refund needs confirmation');
+ assert.equal(await page.locator('#journey [data-j="forge-refund-confirm"]').isVisible(),true);
+ await page.locator('#journey [data-j="forge-refund-cancel"]').click();
+ assert.equal((await read()).forge.sword['blade-wave'],2,'cancel must preserve upgrades');
+ await page.locator('#journey [data-j="forge-refund"]').click();
+ await page.locator('#journey [data-j="forge-refund-confirm"]').click();
  saved=await read();
  assert.equal(saved.forge.sword['blade-wave'],0);
  assert.equal(saved.flames,7,'refund did not restore all spent points');
