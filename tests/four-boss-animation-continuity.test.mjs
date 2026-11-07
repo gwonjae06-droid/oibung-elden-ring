@@ -6,17 +6,20 @@ import {clownBeastPose} from '../src/clown-beast-pose.mjs';
 import {clownHurtShapes} from '../src/boss-hit-regions.mjs';
 import {giantHandGesture} from '../src/dice-giant-motion.mjs';
 
-test('clown quadruped folds smoothly after possession with hitboxes matching its pitch',()=>{
- const g=createClownGame('sword',{register:false});g.boss.phase=2;g.clown.horrorStage=2;g.clown.beastSince=g.clown.time;
- const first=clownBeastPose(g);assert.equal(first.entry,0);assert.ok(first.bodyHeight>8);
- let prior=first.pitch;
+test('clown briefly folds into a floor-supported crawl and returns to two feet',()=>{
+ const g=createClownGame('sword',{register:false});g.boss.phase=2;g.clown.horrorStage=2;
+ assert.equal(clownBeastPose(g).entry,0);
+ startClownPattern(g,'feralSkitter');
+ let last=0;
  for(let i=0;i<90;i++){
-  g.clown.time+=.01;const pose=clownBeastPose(g),shapes=clownHurtShapes(g);
-  assert.ok(pose.pitch+1e-8>=prior);assert.ok(shapes.some(q=>q.id==='head'));
+  g.clown.pt=i*.01;const pose=clownBeastPose(g),shapes=clownHurtShapes(g);
+  assert.ok(pose.pitch+1e-8>=last);
+  assert.ok(shapes.some(q=>q.id==='head'));
   assert.ok(!shapes.some(q=>q.id==='mount-head'||q.id==='ball'));
-  prior=pose.pitch;
+  last=pose.pitch;
  }
- assert.ok(clownBeastPose(g).entry>=.999);
+ assert.ok(clownBeastPose(g).entry>.99);
+ g.clown.pt=7.39;assert.equal(clownBeastPose(g).entry,0,'recover before next action');
 });
 test('toggling visual continuity cannot change damage, state, or giant palm contact',()=>{
  const g=createClownGame('sword',{register:false});

@@ -7,7 +7,7 @@ const TAU=Math.PI*2;
 const dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const minus=(a,b)=>a.map((v,i)=>v-b[i]);
 const length=v=>Math.hypot(...v);
-export function clownLegTarget(side,phase,activity,crouch=0){
+export function clownLegTarget(side,phase,activity,crouch=0,{bodyHeight=5.2,pitch=0,supportY=5.2}={}){
  const a=clamp(activity),p=((phase%1)+1)%1;
  const stance=p<.62,u=stance?smooth(p/.62):smooth((p-.62)/.38);
  // A planted shoe travels backward relative to the torso; during swing
@@ -15,7 +15,11 @@ export function clownLegTarget(side,phase,activity,crouch=0){
  const stride=stance?mix(.44,-.44,u):mix(-.44,.44,u);
  const lift=stance?0:Math.sin(Math.PI*u)*.28*a;
  const hip=[side*.45,1.25-crouch*.12,0];
- const desired=[side*(.55+.025*a),.10+lift,.25+stride*a*.78];
+ const z=.25+stride*a*.78;
+ // Plant shoe undersides on the ball (act one) or floor (act two), even when
+ // the animated torso pitches into its brief four-paw hunting silhouette.
+ const y=clamp((supportY+.58-bodyHeight+z*Math.sin(pitch))/Math.max(.45,Math.cos(pitch)),.1,1.2);
+ const desired=[side*(.55+.025*a),y+lift,z];
  // Keep thigh and shin at an anatomically fixed length. Clamp any extreme
  // animation target rather than silently stretching the bones each frame.
  const bone=.77,delta=minus(desired,hip),distance=length(delta),
@@ -32,7 +36,7 @@ export function clownLegTarget(side,phase,activity,crouch=0){
 export function createClownGait(){
  let owner=null,odo=0,activity=0;
  function reset(){owner=null;odo=0;activity=0;}
- function update(g,dt){
+ function update(g,dt,contact={}){
   const current=Number.isFinite(g?.clown?.odo)?g.clown.odo:0,h=clamp(dt,0,.05),
    state=g?.clown?.state;
   if(owner!==g){owner=g;odo=current;activity=0;}
@@ -41,7 +45,7 @@ export function createClownGait(){
   if(h>0){activity=mix(activity,velocity,1-Math.exp(-12*h));odo=current;}
   const phase=current/3.8;
   const crouch=clamp(g?.clown?.vis?.crouch||0);
-  const legs=[clownLegTarget(-1,phase,activity,crouch),clownLegTarget(1,phase+.5,activity,crouch)];
+  const legs=[clownLegTarget(-1,phase,activity,crouch,contact),clownLegTarget(1,phase+.5,activity,crouch,contact)];
   const running=state==='pattern'&&g?.clown?.name==='dash';
   const sway=activity*Math.sin(phase*TAU)*.024,weight=activity*(running?.08:.035);
   return {legs,bob:activity*Math.abs(Math.sin(phase*TAU))*.035,

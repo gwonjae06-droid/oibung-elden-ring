@@ -13,6 +13,7 @@ import {clownWeightAccent} from './boss-performance.mjs';
 import {createClownGait} from './clown-gait.mjs';
 import {createClownNightmareAnatomy} from './clown-nightmare-anatomy.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
+import {clownDismountPose,clownBallWorldPose,CLOWN_VISUAL_SCALE} from './clown-grounded-physics.mjs';
 import {createPoseContinuity} from './boss-animation-continuity.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor({coarse=false}={}){
@@ -60,7 +61,10 @@ export function createClownActor({coarse=false}={}){
   red.color.setHex(horror===3?0x471728:horror===2?0x741e36:0x981d38);
   white.color.setHex(horror===3?0xc5b5a5:horror===2?0xd8c4af:0xe8d5ad);
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
-  const footMotion=gait.update(g,dt),weightAccent=clownWeightAccent(g,A);
+  const groundBase=boss.phase===2?(boss.state==='transition'?clownDismountPose(boss.t).bodyY:Q.bodyHeight):5.2;
+  const airborne=boss.state==='transition'||(v.jump||0)>.02||(A.lift||0)>.25;
+  const footMotion=gait.update(g,dt,{bodyHeight:groundBase+(A.lift||0),pitch:Q.pitch,
+   supportY:airborne?groundBase+(A.lift||0):boss.phase===2?0:5.2}),weightAccent=clownWeightAccent(g,A);
   if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();gestureBlend.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
@@ -69,7 +73,20 @@ export function createClownActor({coarse=false}={}){
    tilt:v.tilt||0,headRoll:Q.active?Math.sin(time*2.1)*.16*(Q.third?1.4:1):0},
    dt,{owner:g,time:g.time,rate:c.state==='pattern'?25:13});
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
-  root.position.set(boss.x,v.jump*1.1,boss.z);root.rotation.y=A.facingYaw??c.yaw;body.position.y=(Q.active?Q.bodyHeight:(M?M.bodyY+M.lift:5.2)+rise+A.lift)+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0);body.scale.set(A.bodyX,A.bodyY,A.bodyZ);body.rotation.y=soft.twist;body.rotation.z=death?death.roll:soft.tilt*.13+footMotion.roll+weightAccent.roll+Q.bodyRoll;body.rotation.x=Q.active&&!death?Q.pitch+soft.lean*.12+footMotion.lean*.1:(death?death.pitch:(M&&v.neck>0?v.neck*.3:0))+soft.lean+footMotion.lean+weightAccent.pitch+(death?0:recoil.step('spine:impact',(A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,{strength:1.5,frequency:18,limit:.065}));torso.position.y=2.25-crouch*.25;
+  root.position.set(boss.x,Math.max(0,v.jump*1.1),boss.z);
+  root.rotation.y=A.facingYaw??c.yaw;
+  body.position.y=Math.max(0,groundBase+(A.lift||0)+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0));
+  body.scale.set(A.bodyX,A.bodyY,A.bodyZ);
+  body.rotation.y=soft.twist;
+  body.rotation.z=death?death.roll:soft.tilt*.13+footMotion.roll+weightAccent.roll+Q.bodyRoll;
+  const ordinaryPitch=(death?death.pitch:(v.neck>0?v.neck*.3:0))+soft.lean+footMotion.lean+weightAccent.pitch;
+  // Large cartoon lean angles used to pull the feet through the ground.
+  // Use a smaller supported hip rotation once dismounted.
+  body.rotation.x=boss.phase===2&&!death?Q.pitch+Math.max(-.22,Math.min(.25,ordinaryPitch*.32)):
+   ordinaryPitch+(death?0:recoil.step('spine:impact',
+    (A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,
+    {strength:1.5,frequency:18,limit:.065}));
+  torso.position.y=2.25-crouch*.25;
   // Compress the decorative chest during claps and heavy throws, then relax
   // behind the arm motion; palm endpoints and damage volumes never move.
   const compression=balance.step('spine:compress',Math.min(1,Math.max(0,A.clapClose??0,(v.glove||0)*.65,(A.smear||0)*.15)),dt,15);
@@ -79,10 +96,18 @@ export function createClownActor({coarse=false}={}){
   torso.rotation.y=balance.step('spine:y',-A.twist*.12+weightAccent.counterYaw,dt,12);
   torso.rotation.z=balance.step('spine:z',v.tilt*-.018+A.lean*.035,dt,10);
   torso.rotation.x=balance.step('spine:x',-compression*.09+A.lean*.05,dt,13);
-  ball.visible=!Q.active&&(!M||M.ball>0);ball.material.opacity=M?M.ball:1;ball.position.z=(M?M.ballZ:0)+(death?.ballShift||0);ball.rotation.z=-c.odo/2.6;ball.rotation.x=v.shake*Math.sin(time*24)*.025+(death?.ballShift||0)/2.6;
-  mount.group.visible=Boolean(M?.visible);
-  if(M?.visible){mount.group.position.set(0,M.y+rise-(death?.mountDrop||0),M.z+(death?.ballShift||0));mount.group.rotation.z=boss.state==='transition'?0:-c.odo/(2.6*M.scale);const reach=v.neckTarget?Math.hypot(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z):0;mount.group.rotation.y=v.neckTarget?Math.atan2(v.neckTarget.x-boss.x,v.neckTarget.z-boss.z)-c.yaw:0;mount.group.scale.set(M.scale,M.scale,M.scale*(1+v.neck*reach/2.28));mount.setMorph({inflate:2.6*A.headScale,stretch:-.04,jaw:.16+Math.sin(time*2)*.08,bulge:.2,wobble:.06},time);}
-  head.group.visible=F.bodyHead;h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
+  // The same physical sphere that supported act one swells, rolls across
+  // the floor and remains at the arena edge throughout act two.
+  const ballPose=clownBallWorldPose(g),localX=(ballPose.x-boss.x)/CLOWN_VISUAL_SCALE,
+   localZ=(ballPose.z-boss.z)/CLOWN_VISUAL_SCALE,cy=Math.cos(root.rotation.y),sy=Math.sin(root.rotation.y);
+  ball.visible=true;ball.material.opacity=1;
+  ball.scale.setScalar(ballPose.scale);
+  ball.position.set(localX*cy-localZ*sy,2.6*ballPose.scale,localX*sy+localZ*cy);
+  ball.rotation.z=boss.phase===2?-(ballPose.roll||0):-c.odo/2.6;
+  ball.rotation.x=v.shake*Math.sin(time*24)*.025;
+  // There is no second ghost head to vanish at the cutscene boundary.
+  mount.group.visible=false;
+    head.group.visible=F.bodyHead;h.set(0,4.7+(size-1)*.8-crouch*.25,0);body.updateWorldMatrix(true,false);
   if(F.bodyHead&&v.neckTarget&&v.neck>0){target.set(v.neckTarget.x,1.2+Math.max(0,A.headScale-1)*1.1,v.neckTarget.z);body.worldToLocal(target);h.lerp(target,v.neck);}
   if(F.bodyHead){head.group.position.copy(h);head.group.rotation.x=Q.active?Q.headCounter+v.neck*.20:v.neck*Math.PI;
     head.group.rotation.y=Q.active?Math.sin(time*3.8+v.tilt*3)*.12+v.tilt*.78:0;
@@ -99,12 +124,25 @@ export function createClownActor({coarse=false}={}){
     // Diagonal planted palms stay low as the boss actually travels; the
     // authored clap can lift them without making him stand upright.
     const perform=['unhingedClap','clap','invertedApplause','juggle'].includes(c.name);
-    const blend=(perform?.58:1)*Q.entry;
+    const blend=(perform?.35:1)*Q.entry;
     hand=hand.map((v,i)=>v*(1-blend)+paw[i]*blend);
+   }
+   if(Q.active){
+    const palm=body.localToWorld(new THREE.Vector3(...hand));
+    const sole=Math.max(.65,.52*CLOWN_VISUAL_SCALE*(1+Math.max(0,gloveCue)));
+    if(palm.y<sole){palm.y=sole;hand=body.worldToLocal(palm).toArray();}
    }
    const shoulder=[s*.9,3-crouch*.25,0],locked=Boolean(A.cameraGrip||A.clapClose!==null&&A.clapClose>.97||grip&&F.pose==='hold'||boss.state==='transition'),arm=L.arm.pose(shoulder,hand,dt,locked,g);hand=arm.hand;
    L.glove.scale.set((1+gloveCue*1.7)*A.glove,(1+gloveCue)*A.glove,(1+gloveCue*1.4)*A.glove);L.puff.position.set(...shoulder);L.cuff.scale.setScalar(Math.sqrt(A.glove));L.smear.visible=A.smear>.1;L.smear.position.set(...hand);L.smear.position.z-=.8;L.smear.scale.set(1,A.smear+1,1+A.smear*5);
-   const {hip,knee,foot}=footMotion.legs[s<0?0:1];link(L.thigh,hip,knee);link(L.shin,knee,foot);L.knee.position.set(...knee);L.shoe.position.set(...foot);L.shoe.rotation.x=footMotion.legs[s<0?0:1].anklePitch;L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
+   const {hip,knee,foot}=footMotion.legs[s<0?0:1];
+   let planted=foot,hinge=knee;
+   if(boss.phase===2&&boss.state!=='transition'&&(v.jump||0)<.02&&(A.lift||0)<.25){
+    const sole=body.localToWorld(new THREE.Vector3(...foot));
+    const minY=.55*CLOWN_VISUAL_SCALE*Math.max(.8,Math.abs(A.bodyY));
+    if(sole.y<minY){sole.y=minY;planted=body.worldToLocal(sole).toArray();
+     hinge=knee.map((q,i)=>q+(planted[i]-foot[i])*.45);}
+   }
+   link(L.thigh,hip,hinge);link(L.shin,hinge,planted);L.knee.position.set(...hinge);L.shoe.position.set(...planted);L.shoe.rotation.x=footMotion.legs[s<0?0:1].anklePitch;L.shoe.scale.set(1.3*A.shoe,.55,1.7*A.shoe);
   }
   nightmare.update(g,time,reduced);
  }

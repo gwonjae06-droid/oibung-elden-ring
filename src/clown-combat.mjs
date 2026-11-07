@@ -1,5 +1,6 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
-import {BEAST_PATTERNS} from './clown-beast-pose.mjs';
+import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
+import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {createBossAutonomy,stepBossAutonomy} from './boss-autonomy.mjs';
@@ -324,7 +325,7 @@ const definitions = [
   ['spotlightSweep', '스포트라이트 쇼', 4.4, 1.2, [1]],
   ['fireHoop', '불의 고리', 4.3, 1.2, [1]],
   ['humanCannon', '인간 대포', 5, 1.4, [2]],
-  // Ball-centred patterns: the phase-two clown rides a huge ball, so these use it as the weapon.
+  // These are thrown circus props after the giant balance ball rolls aside.
   ['ballRain', '공 폭우', 4.8, 1.3, [2]],
   ['bounceChain', '연쇄 공 튀기기', 5.6, 1.3, [2]],
   ['ballSpin', '회전 공 휩쓸기', 4.9, 1.3, [2]],
@@ -481,7 +482,7 @@ const RUN = {
         z: g.boss.z,
         // The four-legged face and forward paws fill a larger ground arc
         // than the old stage-one ball. The push is still harmless.
-        r: Math.max(g.boss.phase===2?6.3:3.5,...clownHurtShapes(g).filter(v=>v.id==='ball'||v.id==='mount-head')
+        r: Math.max(g.boss.phase===2?3.9:3.5,...clownHurtShapes(g).filter(v=>v.id==='ball'||v.id==='torso')
           .map(v=>v.rz*Math.sqrt(Math.max(0,1-((1.15-v.y)/(v.ry+.5))**2))+.65)),
         warn: 0.6,
         kind: 'push',
@@ -1114,6 +1115,7 @@ export function choosePattern(g) {
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');
   const c = g.clown;
+  c.beastRecoverAt=CRAWL_PATTERNS.includes(name)?PATTERNS[name].dur-PATTERNS[name].recover-1.05:null;
   c.used ||= {};
   c.used[name] = (c.used[name] || 0) + 1;
   Object.assign(c, {
@@ -1261,6 +1263,8 @@ export function createClownGame(weapon = 'sword', options) {
     vis: newVis(),
     horrorStage:1,
     beastSince:null,
+    beastRecoverAt:null,
+    stageBall:null,
   };
   return g;
 }
@@ -1281,6 +1285,7 @@ export function stepClown(g, dt, input = {}) {
     const e = g.events[i];
     if (e.type === 'skill-stun') c.stunT = 1;
     else if (e.type === 'phase') {
+      c.stageBall=createClownStageBall(b.x,b.z);
       Object.assign(c, {
         zones: [],
         bombs: [],
@@ -1307,6 +1312,8 @@ export function stepClown(g, dt, input = {}) {
       resetVis(c);
     }
   }
+  // Simulate the rolling stage prop during the transition, not just combat.
+  if(!frozen&&g.status==='playing')stepClownStageBall(g,dt);
   if (
     frozen ||
     g.status !== 'playing' ||

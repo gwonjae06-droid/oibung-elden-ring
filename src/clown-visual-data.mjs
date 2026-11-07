@@ -15,10 +15,11 @@ export function bombPose(q,phase=1){
  const startY=phase===2?4.6:q.from.y+(q.kind==='head'?1.92:0);
  return {x:q.kind==='roll'?q.px:q.from.x+(q.x-q.from.x)*k,z:q.kind==='roll'?q.pz:q.from.z+(q.z-q.from.z)*k,y:q.kind==='roll'?2.1:startY*(1-k)+2.1*k+Math.sin(Math.PI*k)*4,land,final,inflate:q.kind==='ball'?.45:land?3.1+final*.6:3.1,stretch:land?-.25*(1-final):.2,spin:q.kind==='roll'?Math.hypot(q.x-q.from.x,q.z-q.from.z)*k/2.1:k*2};
 }
-export function headFrame(g){const c=g.clown,b=g.boss,v=c.vis,
- feral=b.phase===2&&b.state!=='transition',
- m=b.phase===2&&!feral?mountPose(b.t,true):null;
- return {pose:m&&m.bodyHead?'inflate':v.pose,k:m&&m.bodyHead?sat(b.t/1.6):v.k,
- inflate:m&&m.bodyHead?m.inflate:null,stretch:0,burst:false,
- bodyHead:feral?true:m?m.bodyHead:true,mount:m};}
+export function headFrame(g){
+ const v=g.clown?.vis||{};
+ // Head stays physically attached. The cutscene sphere is the existing
+ // balance ball, never a detached clone that disappears after the cutscene.
+ return {pose:v.pose||'idle',k:v.k||0,inflate:null,stretch:0,
+  burst:false,bodyHead:true,mount:null};
+}
 export function selectedWeapon(weapon){return ['sword','hammer','bow','cards'].includes(weapon)?weapon:'sword';}

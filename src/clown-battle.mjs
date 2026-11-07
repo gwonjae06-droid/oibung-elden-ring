@@ -155,7 +155,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
    if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(b.x-p.x,b.z-p.z)-yaw),Math.cos(Math.atan2(b.x-p.x,b.z-p.z)-yaw))*Math.min(1,dt*7);
    const frame=matchedBossCamera('clown',{
     player:p,boss:b,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
-    headHeight:clownBeastPose(g).active?2.8:CLOWN_CAMERA.target,
+    headHeight:clownBeastPose(g).active?2.8:g.boss.phase===2?4.4:CLOWN_CAMERA.target,
     extraDistance:big // Maintain the transformation/inflation reveal.
    });
    camPos.set(frame.position.x,frame.position.y+big*.2,frame.position.z);

@@ -37,14 +37,16 @@ test('Clown riding ball is hittable in phase one with the real forward blade',()
  assert.equal(act(g,'light'),true);stepFor(g,stepClown,.5);
  assert.ok(g.boss.hp<hp,'player sword must connect with visible ball');
 });
-test('Clown phase-two paws, hunched torso and head replace the vanished ball hitbox',()=>{
- const g=clown(2),shapes=clownHurtShapes(g);
- assert.ok(shapes.some(v=>v.id==='head'));
- assert.ok(shapes.some(v=>v.id==='torso'));
- assert.ok(shapes.some(v=>v.id==='left-paw'));
- assert.ok(shapes.some(v=>v.id==='right-paw'));
- assert.ok(!shapes.some(v=>['ball','mount-head'].includes(v.id)),'no phantom riding ball');
- assert.ok(shapes.find(v=>v.id==='head').z>g.boss.z+3,'the crouched head leads the monster');
+test('Clown phase-two body stands on the floor and grows paws only during a hunt',()=>{
+ const g=clown(2),stand=clownHurtShapes(g);
+ assert.ok(stand.some(v=>v.id==='head')&&stand.some(v=>v.id==='torso'));
+ assert.ok(!stand.some(v=>['ball','mount-head','left-paw','right-paw'].includes(v.id)));
+ assert.ok(stand.find(v=>v.id==='head').y>stand.find(v=>v.id==='torso').y);
+ g.clown.state='pattern';g.clown.name='feralSkitter';g.clown.pt=1.9;
+ g.clown.beastRecoverAt=5;
+ const hunt=clownHurtShapes(g);
+ assert.ok(hunt.some(v=>v.id==='left-paw')&&hunt.some(v=>v.id==='right-paw'));
+ assert.ok(hunt.find(v=>v.id==='head').z>g.boss.z+2);
 });
 test('blood boss has robe, chest, arms, legs and head at true different heights',()=>{
  const g=blood(1),parts=bloodHurtShapes(g);
