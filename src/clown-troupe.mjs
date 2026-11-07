@@ -4,6 +4,7 @@
 const TAU=Math.PI*2;
 // Preconstructed once: no repeated collection allocation in the hot NPC loop.
 const CHOREOGRAPHED_SHOWS=new Set([
+ 'synchronizedHush','corpseMarionetteReprise','mouthlessLament',
  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
  'drumMarch','spotlightSweep','carousel','curtainCall',
@@ -29,7 +30,7 @@ function spawn(g,i){
   target:null,showCue:null,seenHit:null,routine:null};
 }
 export function createCircusTroupe(g){
- return {members:[],stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,beat:0};
+ return {members:[],fallen:[],reprise:null,hush:null,faceSync:null,stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,beat:0};
 }
 export function setCircusAct(g,stage){
  if(!g?.clown)return;
@@ -38,23 +39,32 @@ export function setCircusAct(g,stage){
  // After the unskippable transformation, a different corps enters from
  // the perimeter; corpses do not instant-respawn in the middle of a hit.
  t.stage=stage;t.members=[];t.cycle=0;t.globalCooldown=1.4;
+ t.reprise=null;t.hush=null;t.faceSync=null;
  for(let i=0;i<targetCount(stage);i++)t.members.push(spawn(g,i));
 }
 export function clearCircusTroupe(g){
  const t=g?.clown?.troupe;if(!t)return;
- t.members=[];t.show='';t.showAge=0;t.globalCooldown=3;
+ t.members=[];t.fallen=[];t.reprise=null;t.hush=null;t.faceSync=null;
+ t.show='';t.showAge=0;t.globalCooldown=3;
 }
 export function cueCircusShow(g,show){
  const t=g?.clown?.troupe;if(!t)return;
  t.show=show;t.showAge=0;t.cue++;
+ const now=g.clown?.time||0;
+ // Unison is an authored stage trick: brief motion silence, NOT a freeze
+ // of combat, warning clocks, player controls or their attack hitboxes.
+ if(show==='hush')t.hush={start:now,end:now+1.65};
+ if(show==='finale'&&(g.clown?.horrorStage||1)>=3)
+  t.faceSync={start:now+.6,end:now+9.0};
+
  // A real performer ensemble must be onstage before a choir, fire or
  // mirror attack can originate from their location. Reinforcements always
  // enter from the perimeter, and are capped to prevent an endless mob flood.
  const roleFor={chorus:'chorister',puppets:'puppeteer',fire:'firekeeper',
   twins:'mimic',stampede:'acrobat',finale:'chorister',
   juggle:'acrobat',drums:'acrobat',trapeze:'acrobat',
-  cannon:'mimic',curtain:'chorister'}[show];
- const required=show==='chorus'?3:show==='twins'?2:show==='stampede'?3:
+  cannon:'mimic',curtain:'chorister',hush:'mimic',mouthless:'chorister',reprise:'puppeteer'}[show];
+ const required=show==='chorus'||show==='mouthless'?3:show==='twins'?2:show==='stampede'?3:
   show==='finale'?3:show==='fire'?2:show==='drums'?3:2;
  let count=t.members.filter(m=>!m.down&&m.role===roleFor).length;
  const cap=targetCount(t.stage||1)+3;
@@ -73,6 +83,37 @@ export function cueCircusShow(g,show){
   t.members.push(spawn(g,t.cycle++));
 }
 export function circusTroupeAlive(g){return g?.clown?.troupe?.members?.filter(m=>!m.down)||[];}
+// Store the *last defeated people* as scenery-only corpses, not extra HP
+// or unkillable enemies. The last three can be pulled on literal puppet wires.
+export function beginCircusReprise(g,{duration=7.4}={}){
+ const t=g?.clown?.troupe;if(!t)return null;
+ const now=g.clown.time||0,p=g.player||g.boss;
+ const recent=(t.fallen||[]).filter(m=>now-m.time<48).slice(0,3);
+ const bodies=recent.map((m,i)=>({
+  id:'fallen-'+m.id,role:m.role,x:m.x,z:m.z,yaw:m.yaw,realCorpse:true,order:i
+ }));
+ // If no performer has died yet, discarded stage mannequins are used.
+ // They are visibly posed as inanimate dolls, not falsely resurrected NPCs.
+ for(let i=bodies.length;i<3;i++){
+  const angle=(i*2*Math.PI/3)+(t.cue||0)*.29,r=10.2;
+  const point=away({x:p.x+Math.sin(angle)*r,z:p.z+Math.cos(angle)*r});
+  bodies.push({id:'discarded-'+t.cue+'-'+i,role:'puppeteer',
+   x:point.x,z:point.z,yaw:angle+Math.PI,realCorpse:false,order:i});
+ }
+ t.reprise={start:now,end:now+Math.max(5,duration),bodies};
+ return t.reprise;
+}
+const smooth01=n=>{const t=clamp(n,0,1);return t*t*(3-2*t)};
+export function circusUncannyFrame(g){
+ const t=g?.clown?.troupe,now=g?.clown?.time||0;
+ if(!t)return {hush:0,face:0,unison:0};
+ const hush=t.hush&&now>=t.hush.start&&now<t.hush.end
+  ?smooth01((now-t.hush.start)/.24)*(1-smooth01((now-(t.hush.end-.25))/.25)):0;
+ const sync=t.faceSync,unison=sync&&now>=sync.start&&now<sync.end
+  ?smooth01((now-sync.start)/.9)*(1-smooth01((now-(sync.end-.7))/.7)):0;
+ return {hush,face:unison,unison};
+}
+
 // A real stage actor rehearses this exact beat. UI cannot create damage.
 export function stageCircusBeat(g,{role,index=0,pose='conductor',wind=1.3,hold=1.8}={}){
  const alive=circusTroupeAlive(g).filter(m=>m.role===role);
@@ -90,7 +131,10 @@ function damageMember(g,m,damage,emit){
  m.life=Math.max(0,m.life-damage);m.flash=.27;
  emit(g,'clown-troupe-hit',{id:m.id,role:m.role,amount:Math.round(damage),x:m.x,z:m.z});
  if(g.stats){g.stats.hits=(g.stats.hits||0)+1;}
- if(m.life===0){m.down=true;m.death=0;emit(g,'clown-troupe-down',{id:m.id,role:m.role,x:m.x,z:m.z});}
+ if(m.life===0){m.down=true;m.death=0;
+  const t=g.clown?.troupe;
+  if(t){t.fallen||=[];t.fallen.unshift({id:m.id,role:m.role,x:m.x,z:m.z,yaw:m.yaw,time:g.clown.time||0});t.fallen.length=Math.min(t.fallen.length,4);}
+  emit(g,'clown-troupe-down',{id:m.id,role:m.role,x:m.x,z:m.z});}
 }
 function playerContacts(g,t,emit){
  const p=g.player,a=p.action;
@@ -150,6 +194,9 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
  setCircusAct(g,stage);
  const h=clamp(dt,0,1/30);
  t.beat+=h;t.showAge+=h;if(t.showAge>10)t.show='';
+ if(t.reprise&&c.time>=t.reprise.end)t.reprise=null;
+ if(t.faceSync&&c.time>=t.faceSync.end)t.faceSync=null;
+ if(t.hush&&c.time>=t.hush.end)t.hush=null;
  t.globalCooldown=Math.max(0,t.globalCooldown-h);
  playerContacts(g,t,emit);
  const target=g.player,phase=b.phase,locked=Boolean(c.punish||c.stunT>0||c.noSeparate);
@@ -166,8 +213,10 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   const desiredRadius=s.range+(t.show==='chorus'?-1.5:0);
   const around={x:target.x+Math.sin(wave)*desiredRadius,z:target.z+Math.cos(wave)*desiredRadius};
   const acrobatRush=m.role==='acrobat'&&m.cast>0&&m.cast<.85&&m.cast>.28;
+  const silent=t.hush&&c.time<t.hush.start+.74;
+  const unison=t.faceSync&&c.time>=t.faceSync.start&&c.time<t.faceSync.start+.72;
   const safe=away(acrobatRush&&m.target?m.target:around),dx=safe.x-m.x,dz=safe.z-m.z,
-    len=Math.hypot(dx,dz),speed=acrobatRush?14:m.cast>0?.24:s.speed;
+    len=Math.hypot(dx,dz),speed=(silent||unison)?0:acrobatRush?14:m.cast>0?.24:s.speed;
   const accel=Math.min(1,8*h);
   m.vx+=((len>1e-4?dx/len*speed:0)-m.vx)*accel;
   m.vz+=((len>1e-4?dz/len*speed:0)-m.vz)*accel;
