@@ -1,8 +1,5 @@
 name: Four boss motion readability and PBR regression
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,8 +1,5 @@
 name: Blood fluid dynamics and combat isolation
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

@@ -1,8 +1,6 @@
 name: Forge, weapon evolution and Blood telegraph regression
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

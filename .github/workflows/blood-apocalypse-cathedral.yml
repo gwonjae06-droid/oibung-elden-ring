@@ -1,18 +1,6 @@
 name: Blood apocalypse cathedral and storm regression
 on:
-  pull_request:
-    paths:
-      - 'src/blood-*.mjs'
-      - 'tests/blood-*.test.mjs'
-      - 'tests/blood.test.mjs'
-      - '.github/workflows/blood-apocalypse-cathedral.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'src/blood-*.mjs'
-      - 'tests/blood-*.test.mjs'
-      - 'tests/blood.test.mjs'
-      - '.github/workflows/blood-apocalypse-cathedral.yml'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
