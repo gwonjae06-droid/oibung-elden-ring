@@ -56,7 +56,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   }
   if(h.visual==='ball')solid(g,sphere,0,0,0,h.r,h.r,h.r);
   if(h.visual==='dice'){solid(g,cube,0,0,0,7,7,7);for(let i=0;i<5;i++)solid(g,sphere,(i%2-.5)*3,0,3.6,.4,.4,.2);}
-  if(h.visual==='spotlight'){const m=solid(g,spotlightGeo,0,27,0,h.r,1,h.r);m.rotation.z=Math.PI;}
+  if(h.visual==='spotlight'){const m=solid(g,new THREE.ConeGeometry(1,55,20,1,true),0,27,0,h.r,1,h.r);m.rotation.z=Math.PI;}
   if(h.visual==='crowd')for(let i=0;i<5;i++){solid(g,cylinder,(i%2-.5)*2,1.5,-i*1.4,.5,3,.5);solid(g,sphere,(i%2-.5)*2,3.4,-i*1.4,.7,.7,.7);}
   if(h.visual==='wave'){
    // Geometry, surface shader, edge foam and its real opening were created
