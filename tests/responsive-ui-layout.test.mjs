@@ -22,7 +22,7 @@ test('cloned boss battle styles and boss health bar use narrow-safe dimensions',
  assert.match(css,/#arena \.boss-hud #boss-value\{display:none!important\}/);
  assert.match(css,/text-overflow:ellipsis/);
  for(const name of ['blood-ui','gyuwon-ui','dice-ui'])assert.match(read('src/'+name+'.mjs'),/style\.css\?v=ui-safe-layout-v2-20261107/);
- assert.match(html,/style\.css\?v=ui-safe-layout-v2-20261107/);
+ assert.match(html,/style\.css\?v=stat-marker-esc-fix-20261107/);
 });
 
 test('visible combat overlays cover the home button and no duplicate dice exits are rendered',()=>{
