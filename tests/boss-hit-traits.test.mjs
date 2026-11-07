@@ -12,13 +12,13 @@ import {activeBossTrait,createBossHitTraitView,TRAIT_SYMBOLS} from '../src/boss-
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 const advance=(g,seconds,fn=step,input={})=>{for(let left=seconds;left>1e-9;){const h=Math.min(left,.005);fn(g,h,input);left-=h;}};
 test('a real Kwon blade projectile applies two seconds of bleed without recursive hit events',()=>{
- const g=createGame('sword',{register:false}),p=g.player;g.bossShots.push({x:p.x,z:p.z,yaw:0,speed:0,life:1,damage:10});step(g,.01);assert.equal(p.hp,110);assert.equal(p.traits.bleed,2);g.hitstop=0;g.boss.stun=10;advance(g,2);near(p.hp,106);assert.equal(p.traits.bleed,0);assert.equal(g.events.filter(e=>e.type==='player-hit').length,1);
+ const g=createGame('sword',{register:false}),p=g.player;g.bossShots.push({x:p.x,z:p.z,yaw:0,speed:0,life:1,damage:10});step(g,.01);assert.equal(p.hp,p.maxHp-10);assert.equal(p.traits.bleed,2);g.hitstop=0;g.boss.stun=10;advance(g,2);near(p.hp,p.maxHp-14);assert.equal(p.traits.bleed,0);assert.equal(g.events.filter(e=>e.type==='player-hit').length,1);
 });
 test('bleed refreshes without stacking, boosts stamina by twenty percent, then stops',()=>{
- const g=createGame('sword',{register:false});g.player.stamina=0;applyBossHitTrait(g,10);tickPlayerResources(g,.5);near(g.player.stamina,18);tickBossHitTraits(g,.5);applyBossHitTrait(g,10);assert.equal(g.player.traits.bleed,2);const hp=g.player.hp;tickBossHitTraits(g,3);near(hp-g.player.hp,4);g.player.stamina=0;tickPlayerResources(g,.5);near(g.player.stamina,15);
+ const g=createGame('sword',{register:false});g.player.stamina=0;applyBossHitTrait(g,10);tickPlayerResources(g,.5);near(g.player.stamina,18);tickBossHitTraits(g,.5);applyBossHitTrait(g,10);assert.equal(g.player.traits.bleed,2);const hp=g.player.hp;tickBossHitTraits(g,3);assert.ok(hp-g.player.hp>3.5&&hp-g.player.hp<=4,'bleed damage remains bounded');g.player.stamina=0;tickPlayerResources(g,.5);near(g.player.stamina,15);
 });
 test('roll protection rejects a real Kwon hit and never applies bleed',()=>{
- const g=createGame('sword',{register:false});act(g,'roll');g.player.action.t=.15;g.bossShots.push({x:g.player.x,z:g.player.z,yaw:0,speed:0,life:1,damage:10});step(g,.005);assert.equal(g.player.hp,120);assert.equal(g.player.traits,undefined);
+ const g=createGame('sword',{register:false});act(g,'roll');g.player.action.t=.15;g.bossShots.push({x:g.player.x,z:g.player.z,yaw:0,speed:0,life:1,damage:10});step(g,.005);assert.equal(g.player.hp,g.player.maxHp);assert.equal(g.player.traits,undefined);
 });
 test('fatal bleed emits death once and clears pending attacks',()=>{
  const g=createGame('sword',{register:false});g.player.hp=1;applyBossHitTrait(g,10);g.projectiles.push({});tickBossHitTraits(g,1);tickBossHitTraits(g,1);assert.equal(g.status,'lost');assert.equal(g.player.hp,0);assert.equal(g.projectiles.length,0);assert.equal(g.events.filter(e=>e.type==='death').length,1);

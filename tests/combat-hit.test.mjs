@@ -21,11 +21,11 @@ test('one real sword hit on the first boss removes exactly the nerfed weapon dam
  assert.equal(before-g.boss.hp,WEAPONS.sword.damage);
  assert.equal(g.stats.damage,WEAPONS.sword.damage);
 });
-test('a hammer hit still charges the hammer skill through the shared settlement',()=>{
+test('a hammer normal hit does not grant an obsolete universal skill charge',()=>{
  const g=closeFight('hammer');
  swingUntilHit(g);
  assert.equal(g.stats.hits,1);
- assert.equal(g.player.skill.hammerHits,1);
+ assert.equal(g.player.skill.hammerHits,undefined);assert.equal(g.player.skill.storedDamage,0);
 });
 test('the arena fight no longer pays hit rewards on its own',()=>{
  const text=readFileSync(new URL('../src/combat.mjs',import.meta.url),'utf8');

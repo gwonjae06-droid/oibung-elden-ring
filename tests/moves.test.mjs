@@ -10,7 +10,7 @@ test('crescent wave now fires one large vertical sword projectile after an overh
   assert.equal(g.bossShots.length,1);
   assert.equal(g.bossShots[0].kind,KWON_WAVE.kind);
   assert.equal(g.bossShots[0].radius,KWON_WAVE.radius);
-  g.player.x=15;tick(g,1.5);assert.equal(g.player.hp,120);
+  g.player.x=15;tick(g,1.5);assert.equal(g.player.hp,g.player.maxHp);
 });
 test('melee and arrows can still hit the enlarged boss in phase two',()=>{
   for(const weapon of ['sword','bow']){
