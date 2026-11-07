@@ -71,3 +71,23 @@ export function bloodHurtShapes(g){
  return parts;
 }
 export const bloodAimPart=g=>bloodHurtShapes(g).find(x=>x.id==='chest')||g?.boss;
+
+// Gyuwon's hit volume follows his authored suit/limbs rather than the old
+// arbitrary 1.6m invisible circle. The absent second-phase head is *never*
+// targetable; actual rig proportions are the source of these dimensions.
+export function gyuwonHurtShapes(g){
+ if(!g?.gyuwon||!g?.boss)return [];
+ const b=g.boss,at=(id,x,y,z,rx,ry,rz)=>
+  ellipsoid(b,id,{x,y,z},rx,ry,rz);
+ const parts=[
+  at('tailored-torso',0,1.96,0,.63,.88,.53),
+  at('left-upper-arm',-.74,2.17,.01,.29,.53,.29),
+  at('right-upper-arm',.74,2.17,.01,.29,.53,.29),
+  at('left-leg',-.32,.76,0,.30,.75,.33),
+  at('right-leg',.32,.76,0,.30,.75,.33)
+ ];
+ if(b.phase===1||(b.state==='transition'&&(g.gyuwon.t||0)<2.65))
+  parts.push(at('anatomical-head',0,3.15,0,.47,.55,.48));
+ return parts;
+}
+export const gyuwonAimPart=g=>gyuwonHurtShapes(g).find(p=>p.id==='tailored-torso')||g?.boss;
