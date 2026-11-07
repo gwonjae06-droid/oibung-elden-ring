@@ -23,7 +23,7 @@ export const flameCounter=profile=>html(
  '<span class="j-flame-counter" aria-label="정화의 불꽃 ',safe(flameBalance(profile)),'개">',
  flameMark('tiny'),'<span>정화의 불꽃</span><strong>',safe(flameBalance(profile)),'</strong></span>'
 );
-export function forgeScreen(profile,weapon,{button,back,warning}){
+export function forgeScreen(profile,weapon,{button,back,warning,confirmRefund=false}){
  const w=Object.hasOwn(EVOLUTIONS,weapon)?weapon:'sword',balance=flameBalance(profile),owned=investedFlames(profile,w);
  const symbols={sword:'⚔',hammer:'◆',bow:'➶',cards:'✧'};
  const tabs=Object.entries(FORGE_WEAPON_NAMES).map(([id,label])=>button('forge-weapon',
@@ -61,13 +61,18 @@ export function forgeScreen(profile,weapon,{button,back,warning}){
   '<div class="j-forge-resources"><span>보유한 정화의 불꽃</span>',flameCounter(profile),
   '<small>누적 획득 ',safe(profile.earnedFlames),'개 · 총 투자 ',safe(investedFlames(profile)),'개</small></div>',
   '<nav class="j-forge-tabs" aria-label="진화할 무기 선택">',tabs,'</nav>',
-  weaponStatChart(w),
-  '<div class="j-forge-trees">',trees,'</div>',
+  '<div class="j-forge-detail"><div class="j-forge-weapon-info">',weaponStatChart(w,{profile}),'</div>',
+  '<div class="j-forge-trees">',trees,'</div></div>',
   '<div class="j-forge-bottom"><div><strong>',FORGE_WEAPON_NAMES[w],'에 투자한 불꽃 ',owned,
   '개</strong><p>반환하면 이 무기의 모든 진화가 해제되고 투자한 불꽃 ',owned,
   '개를 돌려받습니다. 다른 무기에 다시 투자할 수 있습니다.</p></div>',
   button('forge-refund','↶ 불꽃 반환 · +'+owned,'class="j-forge-refund" data-weapon="'+w+'" '+(owned?'':'disabled')),
-  '</div>',back(),warning(),'</div>');
+  '</div>',
+  confirmRefund&&owned?html('<div class="j-refund-confirm" role="group" aria-label="불꽃 반환 확인"><p><strong>',FORGE_WEAPON_NAMES[w],'의 현재 각인 ',owned,'개가 모두 해제됩니다.</strong> 정화의 불꽃 ',owned,'개가 반환됩니다. 계속하시겠습니까?</p><div>',
+   button('forge-refund-cancel','취소','class="j-refund-cancel"'),
+   button('forge-refund-confirm','모든 각인 해제 · 불꽃 반환','class="j-refund-accept"'),
+   '</div></div>'):'',
+  back(),warning(),'</div>');
 }
 export function flameRewardScreen(profile,bossName,{button,back,warning,complete=false}){
  return html('<div class="j-panel j-flame-result"><p class="j-kicker">PURIFICATION · 시련의 잔불</p>',
