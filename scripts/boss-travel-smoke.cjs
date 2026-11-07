@@ -63,6 +63,20 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   await page.setViewportSize({width:844,height:390});
   await page.locator('[data-j="begin"]').scrollIntoViewIfNeeded();
   assert.ok(await page.locator('[data-j="begin"]').isVisible());
+  const position=await page.evaluate(()=>{
+   const dialog=document.getElementById('journey');
+   const limit=dialog.scrollHeight-dialog.clientHeight;
+   if(limit<=0)return {before:0,after:0,focus:true};
+   dialog.scrollTop=Math.min(150,limit);
+   const weapon=document.querySelector('[data-j="weapon"][data-weapon="bow"]');
+   weapon.focus({preventScroll:true});
+   const before=dialog.scrollTop;
+   weapon.click();
+   const current=document.querySelector('[data-j="weapon"][data-weapon="bow"]');
+   return {before,after:dialog.scrollTop,focus:document.activeElement===current};
+  });
+  assert.equal(position.after,position.before,'reselecting a weapon must not jump the scroll position');
+  assert.equal(position.focus,true,'focus must stay on the selected weapon');
   const buttonBox=await page.locator('[data-j="begin"]').boundingBox();
   assert.ok(buttonBox.y+buttonBox.height<=390&&buttonBox.y>=0,'departure button should remain in the mobile viewport');
   const bounds=await page.locator('.j-boss-chooser').boundingBox();assert.ok(bounds.width<=844&&bounds.x>=0);
