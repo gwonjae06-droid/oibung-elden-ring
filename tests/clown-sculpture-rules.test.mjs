@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const clown=readFileSync(new URL('../src/clown-actor.mjs',import.meta.url),'utf8');
-const battle=readFileSync(new URL('../src/clown-battle.mjs',import.meta.url),'utf8');
-test('clown uses curved sculpted anatomy, woven material, mobile LOD and no flat toy torso',()=>{
- assert.match(clown,/new THREE\.LatheGeometry/);
- assert.match(clown,/MeshPhysicalMaterial/);
- assert.match(clown,/coarse\?32:72/);
- assert.match(clown,/stitched panels/);
- assert.doesNotMatch(clown,/new THREE\.SphereGeometry\(1,20,16\)/);
- assert.match(battle,/createClownActor\(\{coarse\}\)/);
+const actor=readFileSync(new URL('../src/clown-ringmaster-actor.mjs',import.meta.url),'utf8');
+const scene=readFileSync(new URL('../src/clown-battle.mjs',import.meta.url),'utf8');
+test('actual live clown uses articulated asymmetrical PBR ringmaster, not photograph spheres',()=>{
+ assert.match(actor,/LatheGeometry/);
+ assert.match(actor,/MeshPhysicalMaterial/);
+ assert.match(actor,/solid-floor-contact-shoe/);
+ assert.match(actor,/hand-sculpted-porcelain-face/);
+ assert.match(actor,/antique-conductor-baton/);
+ assert.match(scene,/clown-ringmaster-actor.mjs/);
+ assert.match(scene,/createCircusTroupeView/);
+ assert.doesNotMatch(scene,/createClownActor\(\{coarse\}\).*createClownHead/s);
 });

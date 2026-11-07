@@ -24,18 +24,20 @@ const far={x:8,y:1.75,z:0},farEnd={x:5,y:1.75,z:0};
 test('Kwon and clown never share the same hard-coded boss hurtbox',()=>{
  const k=createGame('sword',{register:false}),c=clown(1);
  assert.ok(encounterBossHurtShapes(k).some(x=>x.id==='abdomen'));
- assert.deepEqual(encounterBossHurtShapes(c).map(x=>x.id),['ball','torso','head']);
+ assert.deepEqual(encounterBossHurtShapes(c).map(x=>x.id),['coat','torso','head','left-leg','right-leg']);
  assert.ok(!encounterBossHurtShapes(c).some(x=>x.id==='abdomen'));
 });
-test('Clown riding ball is hittable in phase one with the real forward blade',()=>{
+test('New sculpted ringmaster has a real low coat and no invisible balance-ball collider',()=>{
  const g=clown(1),shapes=clownHurtShapes(g);
- assert.equal(shapes[0].id,'ball');
+ assert.equal(shapes[0].id,'coat');
+ assert.ok(!shapes.some(x=>x.id==='ball'||x.id==='mount-head'));
+ assert.ok(shapes.some(x=>x.id==='left-leg'&&x.y>0));
  assert.ok(kwonMeleeContact(shapes,{x:0,z:0},{reach:2.85,yaw:Math.PI,height:1.85}));
  assert.equal(kwonMeleeContact(shapes,{x:8,z:0},{reach:2.85,yaw:Math.PI,height:1.85}),null);
  assert.equal(kwonProjectileContact(shapes,{x:0,y:14,z:0},{x:0,y:14,z:-8}),null,'a high shot cannot hit an invisible cylinder');
  const hp=g.boss.hp;g.player.z=0;g.player.yaw=Math.PI;
  assert.equal(act(g,'light'),true);stepFor(g,stepClown,.5);
- assert.ok(g.boss.hp<hp,'player sword must connect with visible ball');
+ assert.ok(g.boss.hp<hp,'player sword must connect with the visible sculpted coat');
 });
 test('Clown phase-two body stands on the floor and grows paws only during a hunt',()=>{
  const g=clown(2),stand=clownHurtShapes(g);
