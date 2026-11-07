@@ -83,9 +83,9 @@ test('winning during the warning clears the cells and stops further attacks',()=
  const time=g.time;advance(g,3);assert.equal(g.time,time);
 });
 
-test('the old chain and portrait attacks are off in a normal fight',()=>{
+test('retired projectile and chain attack data cannot surface in a normal fight',()=>{
  assert.equal('faceAttacks' in createDiceGame().dice,false);
  const g=ready(0,1,[0,0,0,1],{x:-60,z:60});
- for(let i=0;i<1200&&g.status==='playing';i++){stepDice(g,.05);assert.equal(g.dice.groundSpikes,null);}
+ for(let i=0;i<1200&&g.status==='playing';i++){stepDice(g,.05);assert.equal('groundSpikes' in g.dice,false);}
  assert.ok(!g.events.some(e=>/portrait|sweep/.test(e.type)));
 });
