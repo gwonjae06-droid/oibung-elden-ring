@@ -7,7 +7,9 @@ on:
       - 'src/dice-giant-motion.mjs'
       - 'src/dice-giant-view.mjs'
       - 'src/dice-giant-throw-speed.mjs'
-      - 'src/dice-portrait-barrage.mjs'
+      - 'src/dice-combat.mjs'
+      - 'src/dice-battle.mjs'
+      - 'tests/dice-retired-photo-chain.test.mjs'
       - 'tests/dice-giant-contact-sync.test.mjs'
       - 'tests/dice-giant-throw-speed.test.mjs'
   push:
@@ -34,7 +36,8 @@ jobs:
           node --check src/dice-giant-motion.mjs
           node --check src/dice-giant-view.mjs
           node --check src/dice-giant-throw-speed.mjs
-          node --check src/dice-portrait-barrage.mjs
+          node --check src/dice-combat.mjs
+          node --check src/dice-battle.mjs
       - name: Giant throwing, collision, animation and casino checks
         run: >
           node --test
@@ -45,6 +48,6 @@ jobs:
           tests/dice-giant-motion.test.mjs
           tests/dice-giant.test.mjs
           tests/dice-giant-overhaul.test.mjs
-          tests/dice-ground-spikes.test.mjs
+          tests/dice-retired-photo-chain.test.mjs
           tests/dice-player.test.mjs
           tests/dice-giant-render-lifecycle.test.mjs
