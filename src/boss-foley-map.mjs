@@ -43,6 +43,10 @@ export function bossFoleySpec(ev,g){
   if(selected)return selected;
   const f=BOSS_FOLEY_FILES.clown;switch(type){
   case 'clown-phase3':case 'clown-horror':return clownNightmareRecording(ev);
+  case 'clown-legacy-echo-cast':return ev.kind==='headBomb'?cue(f.shutter,.19,.54,.13,.24,.92):
+    ev.kind==='roll'?cue(f.ball,.21,.74,.12,.22,.83):
+    ev.kind==='clap'?cue(f.drum,.20,.72,.14,.28,.91):cue(f.ball,.16,.53,.12,.26,1.06);
+  case 'clown-impact':if(/^legacy/.test(ev.key||''))return cue(f.shatter,.18,.58,.14,.18,.91);break;
   case 'clown-shutter':return cue(f.shutter,.32,.32,.035,.13,1.15);
   case 'clown-telegraph':return cue(f.drum,.12,.4,.1,.35,.72);
   case 'clown-zone':

@@ -150,3 +150,25 @@ for(const name of newShows)test(name+' actually appears, signals physical cast a
  assert.equal(g.clown.state,'idle');
  assert.equal(g.status,'playing');
 });
+
+test('one or two legacy mini Seulwoo performers actively cast during real phase-two fights, not just standing as decoration',()=>{
+ const g=init(15);
+ g.player.invuln=10000;
+ g.player.hp=100000;
+ let casts=0,originalBossAttacks=0,normalCasts=0,rollDistance=0;
+ const minis=g.clown.troupe.members.filter(m=>m.legacy);
+ for(let i=0;i<60*125&&g.status==='playing';i++){
+  stepClown(g,1/60);
+  for(const e of g.events){
+   if(e.type==='clown-legacy-echo-cast')casts++;
+   if(e.type==='clown-ringmaster-attack')originalBossAttacks++;
+   if(e.type==='clown-troupe-cast')normalCasts++;
+  }
+  g.events.length=0;
+ }
+ assert.ok(casts>=2,'the original miniature needs independent attack turns (got '+casts+')');
+ assert.ok(originalBossAttacks>=4,'ringmaster must continue leading the battle');
+ assert.ok(normalCasts>=1,'ordinary cast must still be active');
+ assert.ok(minis.every(m=>m.life===m.maxHp),'attacks do not consume the mini HP');
+ assert.equal(g.boss.phase,2,'independent mini moves must not trigger another phase');
+});

@@ -74,6 +74,9 @@ export function stepLegacyEcho(g,m,{hurt}={}){
   const pos=safe({x:a.from.x+Math.sin(a.yaw)*a.len*eased,
    z:a.from.z+Math.cos(a.yaw)*a.len*eased});
   m.x=pos.x;m.z=pos.z;m.yaw=a.yaw;
+  // The exact swept distance drives the old striped ball rotation as well
+  // as the articulated clown gait; an unmoving old ball looked fake.
+  m.step+=Math.hypot(pos.x-old.x,pos.z-old.z);
   if(!a.hit&&segmentDistance(g.player,old,pos)<1.12){
    a.hit=true;if(typeof hurt==='function')hurt(g,LEGACY_ECHO_CONFIG.damage.roll,'legacyEcho-'+m.id);
   }
