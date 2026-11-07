@@ -13,6 +13,37 @@ const COLOR=Object.freeze({
  paradox:0x976d8a,erasure:0xb6ada9,counterproof:0x7a608d,
  sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2
 });
+// Every pattern has its own motion language. h: fragment height, jitter: tremble while charging
+// (stops at impact so the hit lands on the exact footprint), spin: ring/circle turn rate (rad/s),
+// pulse: glow beat while charging, snap: how hard the strike pops. Cosmetic only: footprint,
+// timing and draw-call count are untouched.
+const STYLE=Object.freeze({
+ // Phase one - the exam: precise strokes, scribbles and echoes.
+ line:{h:1.20,jitter:0,spin:0,pulse:5,snap:.5},
+ mark:{h:.90,jitter:.05,spin:0,pulse:9,snap:.4},
+ repeat:{h:1.00,jitter:.03,spin:0,pulse:12,snap:.3},
+ choice:{h:1.05,jitter:0,spin:0,pulse:4,snap:.6},
+ contradiction:{h:1.10,jitter:.06,spin:0,pulse:7,snap:.5},
+ timetable:{h:1.25,jitter:0,spin:0,pulse:3,snap:.5},
+ blank:{h:.70,jitter:0,spin:.8,pulse:2,snap:1.0},
+ // Phase two - proof and refutation.
+ negate:{h:1.00,jitter:.05,spin:0,pulse:8,snap:.5},
+ reverse:{h:1.05,jitter:0,spin:-1.2,pulse:3,snap:.5},
+ stop:{h:1.45,jitter:0,spin:0,pulse:1.5,snap:.2},
+ verdict:{h:1.50,jitter:0,spin:0,pulse:3,snap:.9},
+ mirror:{h:1.20,jitter:.02,spin:0,pulse:6,snap:.6},
+ axiom:{h:1.00,jitter:0,spin:1.5,pulse:4,snap:.7},
+ paradox:{h:1.10,jitter:.05,spin:-2.0,pulse:10,snap:.7},
+ erasure:{h:.80,jitter:.03,spin:0,pulse:11,snap:1.0},
+ counterproof:{h:1.30,jitter:0,spin:2.0,pulse:5,snap:.8},
+ // Phase three - remembered giants.
+ sword:{h:2.00,jitter:0,spin:0,pulse:3,snap:1.2},
+ circus:{h:1.10,jitter:.08,spin:0,pulse:8,snap:.6},
+ gamble:{h:1.00,jitter:0,spin:1.0,pulse:6,snap:.7},
+ chalk:{h:.90,jitter:.03,spin:0,pulse:5,snap:.5}
+});
+const STYLE_DEFAULT=Object.freeze({h:1,jitter:0,spin:0,pulse:5,snap:.5});
+const WHITE=new THREE.Color(0xffffff);
 // White space only RECORDS a proof (calm chalk); the dark space REALIZES it (ink fracture).
 const PREVIEW_COLOR=0xe6e1d4,INK_COLOR=0x4b3a6e,INK_GLOW=0x8a63d6;
 // Erased wrong answers: after a wrong-answer note is struck, a pale trace lingers and flickers
@@ -143,30 +174,35 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    }
    const charge=clamp(h.age/Math.max(.01,h.warn)),hit=h.age>=h.warn;
    const impact=hit?smooth((h.age-h.warn)/Math.max(.08,h.life)):0;
-   mesh.position.set(f.x,.005,f.z);
-   mesh.rotation.y=f.kind===3||f.kind===4?f.yaw:0;
+   const strength=smooth(charge),flash=hit?1-impact:0;
+   const st=STYLE[s.pattern]||STYLE_DEFAULT,round=f.kind===1||f.kind===2;
+   // Tremble while charging only; at impact the fragments sit exactly on the real footprint.
+   const jit=hit?0:st.jitter*strength;
+   mesh.position.set(f.x+jit*Math.sin(g.time*41+h.id*1.7),.005,f.z+jit*Math.cos(g.time*37+h.id*2.3));
+   mesh.rotation.y=(f.kind===3||f.kind===4?f.yaw:0)+(round?st.spin*h.age:0);
+   const beat=hit?0:.07*Math.sin(h.age*st.pulse*2)*strength;
    // Fragments rise visibly BEFORE impact, rather than appearing as a faint
    // near-flat decal. Preserve authored footprint, timing and draw-call count.
-   const strength=smooth(charge),flash=hit?1-impact:0;
    const mat=mesh.material;
    if(h.preview){
     // White space: a calm chalk record. It never reads as a live threat.
-    mesh.scale.y=.30+.55*strength;
+    mesh.scale.y=(.30+.55*strength)*(.55+.45*st.h);
     mat.opacity=hit?.16+.14*flash:.20+.30*strength;
-    mat.emissiveIntensity=.06+.10*strength;
+    mat.emissiveIntensity=.06+.10*strength+beat*.5;
     mat.color.setHex(PREVIEW_COLOR);mat.emissive.setHex(PREVIEW_COLOR);
    }else if(h.inkFinger){
     // Dark space: the recorded proof becomes real. Ink fractures climb higher and flare on impact.
-    mesh.scale.y=.55+1.0*strength+.45*flash;
+    mesh.scale.y=(.55+1.0*strength+.45*flash)*(.7+.3*st.h);
     mat.opacity=Math.min(1,.40+.38*strength+.25*flash);
-    mat.emissiveIntensity=.18+.30*strength+.60*flash;
+    mat.emissiveIntensity=.18+.30*strength+.60*flash+beat;
     mat.color.setHex(INK_COLOR);mat.emissive.setHex(INK_GLOW);
     mesh.position.y=.005+flash*.05;
    }else{
-    mesh.scale.y=.42+.82*strength+.18*(1-impact)*(hit?1:0);
-    mat.opacity=.32+.35*strength+(hit?.10*(1-impact):0);
-    mat.emissiveIntensity=.12+.13*strength;
-    mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
+    mesh.scale.y=(.42+.82*strength)*st.h+(.18+.4*st.snap)*flash;
+    mat.opacity=Math.min(1,.32+.35*strength+(hit?.10*(1-impact):0));
+    mat.emissiveIntensity=.12+.13*strength+beat+.25*st.snap*flash;
+    mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.color.lerp(WHITE,.35*flash);
+    mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
    }
   }
   for(const [id,c] of corridors)if(!liveCorridors.has(id)){release(c);corridors.delete(id);}
