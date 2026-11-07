@@ -37,7 +37,8 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  scene.traverse(o=>{if(o.isHemisphereLight){o.color.setHex(0xffe3c4);o.groundColor.setHex(0x2a0c18);o.intensity=1.5;}else if(o.isDirectionalLight)o.color.setHex(0xfff1da);});
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(420,420).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({map:carpetTexture(),color:0xffffff,roughness:.95}));floor.position.y=-64;floor.receiveShadow=true;root.add(floor);
  buildRouletteTable(THREE,root);const rouletteWheel=root.getObjectByName('roulette-numbered-wheel');
- const deck=new THREE.Group();deck.name='sungwon-rotating-casino-felt';root.add(deck);
+ const deck=new THREE.Group();deck.name='sungwon-stable-casino-floor';root.add(deck);
+ const perimeter=new THREE.Group();perimeter.name='sungwon-rotating-casino-perimeter';root.add(perimeter);
  const m4=new THREE.Matrix4(),col=new THREE.Color();
  const felt=new THREE.Mesh(new THREE.CircleGeometry(97.5,96).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x07563c,roughness:.95}));felt.position.y=0;felt.receiveShadow=true;root.add(felt);
  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(gridLines(),3));const lines=new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:C.gold}));lines.position.y=.05;root.add(lines);
@@ -47,8 +48,15 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  const cs=chipStacks(coarse?16:28),chipMesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(2.2,2.2,1,16),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5,metalness:.1}),cs.length);
  cs.forEach((c,i)=>{m4.makeScale(1,c.height,1).setPosition(c.x,c.height/2,c.z);chipMesh.setMatrixAt(i,m4);chipMesh.setColorAt(i,col.setHex(C.chips[c.color]));});
  chipMesh.instanceMatrix.needsUpdate=true;chipMesh.instanceColor.needsUpdate=true;chipMesh.castShadow=true;deck.add(chipMesh);
- for(const piece of [rouletteWheel,root.getObjectByName('roulette-brass-rail'),felt,lines])if(piece)deck.add(piece);
- const tableRuin=buildDiceTableRuin(THREE,root,deck,{coarse,reduced});
+ // The playable felt, chips, grid, and player-facing landmarks never rotate.
+ // Only the large exterior brass ring and roulette mechanism circle the arena.
+ for(const piece of [felt,lines])if(piece)deck.add(piece);
+ for(const piece of [rouletteWheel,root.getObjectByName('roulette-brass-rail')])if(piece)perimeter.add(piece);
+ const trimGeo=new THREE.TorusGeometry(91,1.45,8,coarse?48:96);
+ const trimMat=new THREE.MeshStandardMaterial({color:0xb88a41,metalness:.88,roughness:.29});
+ const outerTrim=new THREE.Mesh(trimGeo,trimMat);outerTrim.name='sungwon-outer-ring-whirling-brass';
+ outerTrim.rotation.x=-Math.PI/2;outerTrim.position.y=.24;perimeter.add(outerTrim);
+ const tableRuin=buildDiceTableRuin(THREE,root,perimeter,{coarse,reduced});
  const lights=[];for(let i=0;i<(coarse?2:4);i++){const L=new THREE.PointLight(C.neon[i%2],coarse?3500:5000,220,2);L.position.set(i<2?-110:110,26,i%2?-110:110);L.userData.base=L.intensity;root.add(L);lights.push(L);}
  function updateNeon(g){const t=Number.isFinite(g.time)?g.time:0;ringMat.color.setScalar(.75+.25*Math.sin(t*2.2));lights.forEach((L,i)=>{L.color.setHex(g.dice.giant?(g.dice.giant.temperament==='feral'?0xc83732:0xe4b974):C.neon[i%2]);L.intensity=L.userData.base*(g.status==='won'?.16:1)*(1+.12*Math.sin(t*3.1+i*1.7));});}
  // A small projected body shadow replaces the full coloured target tile.
