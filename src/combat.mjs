@@ -626,9 +626,16 @@ export function swordPose(b) {
       y: mix(neck.y, grip.y, equip),
       z: mix(neck.z, grip.z, equip) + offset,
     };
-  if (b.state === 'transition') {
-    yaw = mix(0, -1.25, q.equip);
-    pitch = mix(0.15, -0.6, q.equip);
+  if(b.state==='transition'){
+    if(b.phase===3){
+      const c=kwonThirdTransition(b.t);
+      // The sword drags the wrist first; the torso follows much later.
+      yaw=mix(-.35,-1.3,c.bladeWake);
+      pitch=mix(.1,-1.08,c.bladeWake)+.34*c.skyScar;
+      offset=mix(0,1.15,c.bodyPulled);
+    }else{
+      yaw=mix(0,-1.25,q.equip);pitch=mix(.15,-.6,q.equip);
+    }
   }
   return {...root, yaw, pitch, length: SWORD.length};
 }
@@ -731,13 +738,14 @@ function hurtPlayer(g, damage,cut=true) {
 }
 // Pure melee is initiated only in genuine striking range; dash or visible
 // ranged attacks can begin farther away when they have real reach.
-const KWON_REACH_MOVES=new Set(['rush','leap','wave','spiderPrison','graveSword','livingSword','lastStance']);
+const KWON_REACH_MOVES=new Set(['rush','leap','wave','spiderPrison','graveSword','livingSword','lastStance',
+ 'puppetLunge','skyRend','earthRend','heavenSplit']);
 function canCastKwonMove(name,range){
  return range<=KWON_RANGE_PRESSURE.engageDistance||
   range>KWON_RANGE_PRESSURE.farDistance&&KWON_REACH_MOVES.has(name);
 }
 function pursueKwon(g,dt,range){
- const b=g.boss,phase=b.phase===2?2:1,far=range>KWON_RANGE_PRESSURE.farDistance;
+ const b=g.boss,phase=b.phase===3?3:b.phase===2?2:1,far=range>KWON_RANGE_PRESSURE.farDistance;
  const turnRate=far?4.6:3.6;
  b.yaw+=clamp(angleDelta(b.yaw,toward(b,g.player)),-dt*turnRate,dt*turnRate);
  b.aim=b.yaw;
@@ -769,7 +777,7 @@ export function step(g, dt, input = {}) {
     if (b.t >= CINEMATIC) {
       b.state = 'idle';
       b.t = 0;
-      b.wait = 0.55;
+      b.wait = b.phase===3?.38:.55;
       emit(g, 'armed');
     }
     return;
@@ -848,6 +856,7 @@ export function step(g, dt, input = {}) {
     }
   }
   g.bossShots = g.bossShots.filter((q) => q.life > 0);
+  if(!g.clown)advanceKwonFractures(g,dt,damage=>hurtPlayer(g,damage));
   if (g.status !== 'playing') return;
   if (b.stun > 0) {
     b.stun = Math.max(0, b.stun - dt);
@@ -858,7 +867,7 @@ export function step(g, dt, input = {}) {
   b.t += dt;
   const cfg = patternConfig(b);
   if (b.state === 'stagger') {
-    if (b.t >= (b.phase === 2 ? 1.3 : 2.1)) {
+    if (b.t >= (b.phase>=2 ? 1.3 : 2.1)) {
       b.state = 'idle';
       b.t = 0;
       b.wait = 0.35;
@@ -887,7 +896,7 @@ export function step(g, dt, input = {}) {
        const opening=b.pendingOpening||chooseOpening(g);
        if(after<=KWON_RANGE_PRESSURE.engageDistance||
           after>KWON_RANGE_PRESSURE.farDistance&&
-          KWON_RANGE_PRESSURE.openings[b.phase===2?2:1].includes(opening)){
+          KWON_RANGE_PRESSURE.openings[b.phase===3?3:b.phase===2?2:1].includes(opening)){
         b.pendingOpening=null;
         beginSequence(g,opening);
        }else b.pendingOpening=opening;
@@ -896,7 +905,7 @@ export function step(g, dt, input = {}) {
   } else if (b.state === 'windup') {
     if (b.pattern === 'rush' && b.t < 0.18)
       moveBoss(b, 0, dt, b.sequence % 2 ? 8 : -8);
-    if (b.t < cfg.wind * (b.phase === 2 ? 0.68 : 0.55)) {
+    if (b.t < cfg.wind * (b.phase>=2 ? 0.68 : 0.55)) {
       const target =
           b.pattern === 'backsweep'
             ? b.turnTarget
@@ -920,6 +929,14 @@ export function step(g, dt, input = {}) {
   } else if (b.state === 'active') {
     // Sample the actual blade before moving/turning this frame.
     const previousSword=swordSegment({...b,t:Math.max(0,b.t-dt)});
+    // Slash and rift are synchronized at the sword's late active contact.
+    if(b.phase===3&&!b.riftFired&&['skyRend','earthRend','heavenSplit'].includes(b.pattern)
+       &&b.t>=cfg.active*(b.pattern==='heavenSplit'?.7:.62)){
+      b.riftFired=true;
+      const fractures=makeKwonFractures(b,b.pattern,g.nextId);
+      g.nextId+=fractures.length;g.kwonFractures.push(...fractures);
+      emit(g,'kwon-rift-release',{name:b.pattern,x:b.x,z:b.z});
+    }
     // One broad vertical slash leaves the sword at the midpoint of its fall.
     if(['spiderPrison','graveSword','livingSword','lastStance'].includes(b.pattern)&&!b.waveFired&&b.t>=cfg.active*.38){
       b.waveFired=true;
@@ -949,11 +966,12 @@ export function step(g, dt, input = {}) {
       const x=b.x+Math.sin(b.yaw)*4,z=b.z+Math.cos(b.yaw)*4;
       g.bossShots.push({id:g.nextId++,kind:KWON_WAVE.kind,x,z,yaw:b.yaw,
         variant:b.waveVariant,radius:KWON_WAVE.radius,
-        speed:b.phase===2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,minArmTime:.2,
+        speed:b.phase>=2?KWON_WAVE.speedSecond:KWON_WAVE.speedFirst,minArmTime:.2,
         life:KWON_WAVE.lifetime,age:0,damage:cfg.damage});
       emit(g,'boss-shot',{x,z,kind:KWON_WAVE.kind,variant:b.waveVariant});
     }
-    if (b.pattern === 'rush') moveBoss(b, b.phase === 2 ? 31 : 23, dt);
+    if(b.pattern==='puppetLunge'&&dist(b,p)>3.15)moveBoss(b,26,dt);
+    else if(b.pattern==='rush')moveBoss(b,b.phase>=2?31:23,dt);
     else if (b.pattern === 'thrust') moveBoss(b, 19, dt);
     else if (b.pattern === 'jab') moveBoss(b, 10, dt);
     else if (b.pattern === 'retreat') moveBoss(b, -9, dt);
@@ -1018,7 +1036,7 @@ export function step(g, dt, input = {}) {
       // Recovery remains a full punish window. Only the next idle step
       // gains time to run towards a distant target before attacking again.
       b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
-        ?KWON_RANGE_PRESSURE.chaseWait:(b.phase===2?.58:.68)*BOSS_TEMPO.gap;
+        ?KWON_RANGE_PRESSURE.chaseWait:(b.phase===3?.45:b.phase===2?.58:.68)*BOSS_TEMPO.gap;
       b.punishable = false;
       b.from = null;
     }
