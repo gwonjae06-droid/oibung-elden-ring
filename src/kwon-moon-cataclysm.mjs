@@ -1,7 +1,7 @@
 // Kwon's second unskippable act-three cinematic and deterministic moon debris.
 // This is pure simulation: THREE never owns a gameplay collider.
 export const KWON_MOON=Object.freeze({
- threshold:500,cinematic:8.1,slashTimes:[1.38,2.62,3.93],
+ threshold:900,cinematic:8.1,slashTimes:[1.38,2.62,3.93],
  waveTimes:[0,3.45,6.9],fall:2.6,stormEnd:11.4,maxMeteors:9,
 });
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
