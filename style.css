@@ -126,3 +126,41 @@ body:has(>#arena){background:#050608;overflow:hidden}
  #arena .boss-hud .boss-line h2{font-size:13px}
  #arena #touch{bottom:8px}
 }
+
+
+/* Responsive UI collision guards shared by the main arena and shadow-root battles.
+   Keep the short viewport within the visible area; scroll the menu, not the 3D scene. */
+#arena{min-height:0}
+#arena .overlay{max-height:100dvh;overscroll-behavior:contain;scrollbar-width:thin}
+#arena .menu-panel,#arena .small-panel{min-width:0;max-width:100%;overflow-wrap:anywhere}
+#arena .weapon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#arena .weapon,#arena .weapon small{min-width:0;overflow-wrap:anywhere}
+#arena .hud .stat .meter,#arena .hud .skill-line,#arena .hud .skill-line strong{min-width:0}
+#arena .hud .skill-line strong{overflow-wrap:anywhere}
+#arena .boss-hud .boss-line>div,#arena .boss-hud .boss-line h2{min-width:0}
+#arena .boss-hud .boss-line h2{overflow-wrap:anywhere}
+@media(pointer:fine) and (max-height:520px){
+ #arena .overlay{align-items:flex-start;padding-top:48px;padding-bottom:18px}
+ #arena .menu-panel,#arena .small-panel{margin-block:0 12px}
+ #arena .hud{top:64px}
+}
+@media(pointer:coarse) and (orientation:landscape){
+ #arena .hud .skill-line{flex-wrap:wrap;gap:3px}
+ #arena .hud .skill-line strong{font-size:clamp(10px,1.5vw,12px)}
+ #arena .boss-hud .boss-line h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-width:600px){
+ #arena #stick{width:88px;height:88px}
+ #arena #thumb{width:36px;height:36px}
+ #arena .touch-actions{grid-template-columns:repeat(3,48px);gap:4px}
+ #arena .touch-actions button{width:48px;height:48px;min-height:48px;padding:3px;font-size:11px}
+ #arena .boss-hud .boss-line h2{font-size:11px}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:340px){
+ #arena .hud{top:44px;padding:4px 6px}
+ #arena .hud .player-line,#arena .hud .flask-line{font-size:10px;margin-bottom:2px}
+ #arena .hud .stat{margin:2px 0;gap:3px}
+ #arena .hud #skill-hud{margin-top:2px;padding:2px 4px}
+ #arena .hud .meter{height:6px}
+ #arena .top-actions button{min-height:34px;padding:3px 5px}
+}

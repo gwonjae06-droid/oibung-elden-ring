@@ -1,0 +1,47 @@
+name: Responsive UI browser smoke
+on:
+  pull_request:
+    paths:
+      - 'style.css'
+      - 'journey.css'
+      - 'forge.css'
+      - 'src/hud-layout.mjs'
+      - 'src/blood-ui.mjs'
+      - 'src/dice-ui.mjs'
+      - 'src/gyuwon-ui.mjs'
+      - 'spider-combat.html'
+      - 'tests/responsive-ui-layout.test.mjs'
+      - 'scripts/ui-responsive-smoke.mjs'
+      - '.github/workflows/responsive-ui-smoke.yml'
+  workflow_dispatch:
+concurrency:
+  group: responsive-ui-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  responsive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser smoke dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Check responsive stylesheet and cache invariants
+        run: node --test tests/responsive-ui-layout.test.mjs tests/ui-polish.test.mjs tests/mobile-landscape.test.mjs
+      - name: Browser responsive screenshots and bounds checks
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/odenring-ui-http.log 2>&1 &
+          sleep 2
+          node scripts/ui-responsive-smoke.mjs
+      - name: Save layouts for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odenring-responsive-ui
+          path: artifacts/ui-responsive/
+          retention-days: 7
+          if-no-files-found: warn

@@ -46,9 +46,11 @@ const CSS = `
  #arena .brand strong::after{font-size:13px}
 }
 @media(pointer:coarse) and (orientation:landscape){
- #arena .boss-hud{bottom:max(8px,env(safe-area-inset-bottom))!important;width:min(620px,48vw)!important;padding:4px 8px}
- #arena .boss-hud .boss-line{display:flex;margin-bottom:3px;gap:6px}
- #arena .boss-hud .boss-line h2{font-size:12px}
+ #arena .boss-hud{top:auto!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;width:min(320px,30vw)!important;min-width:0;padding:4px 7px}
+ #arena .boss-hud .boss-line{display:block;min-width:0;margin-bottom:3px}
+ #arena .boss-hud .boss-line>div{min-width:0}
+ #arena .boss-hud #boss-value{display:none!important}
+ #arena .boss-hud .boss-line h2{font-size:clamp(11px,1.55vw,14px);min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  #arena .boss-hud #phase-label{display:none}
  #arena .boss-hud .meter.boss{height:10px}
 }
