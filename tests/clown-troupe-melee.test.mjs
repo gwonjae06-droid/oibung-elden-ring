@@ -48,9 +48,9 @@ test('normal journey has tougher living actors including real strongman and blad
  g.clown.horrorStage=2;setCircusAct(g,2);
  assert.ok(g.clown.troupe.members.some(m=>m.role==='bladeDancer'));
 });
-for(const [stage,role,minHits] of [[1,'strongman',1],[2,'bladeDancer',2]]){
+for(const [stage,role,minHits] of [[1,'strongman',1],[2,'bladeDancer',2],[3,'bladeDancer',3]]){
  test(role+' melee has a conspicuous, locked windup and physically close hits',()=>{
-  const {g,m}=setup(stage,role),r=perform({g},3.1);
+  const {g,m}=setup(stage,role),r=perform({g},4);
   assert.equal(r.casts.filter(c=>c.melee&&c.id===m.id).length,1);
   const cast=r.casts.find(c=>c.melee&&c.id===m.id);
   const warning=r.zones.find(z=>z.source==='troupe-melee'&&z.owner===m.id);
@@ -64,7 +64,7 @@ for(const [stage,role,minHits] of [[1,'strongman',1],[2,'bladeDancer',2]]){
   assert.ok(r.hits.every(hit=>hit.damage>0&&hit.damage<=CIRCUS_ROLES[role].attack));
  });
  test(role+' misses when the player retreats during the windup',()=>{
-  const r=perform(setup(stage,role),3.1,{escape:true});
+  const r=perform(setup(stage,role),4,{escape:true});
   assert.equal(r.hits.length,0);
  });
 }
