@@ -13,6 +13,8 @@ const COLOR=Object.freeze({
  paradox:0x976d8a,erasure:0xb6ada9,counterproof:0x7a608d,
  sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2
 });
+// White space only RECORDS a proof (calm chalk); the dark space REALIZES it (ink fracture).
+const PREVIEW_COLOR=0xe6e1d4,INK_COLOR=0x4b3a6e,INK_GLOW=0x8a63d6;
 export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprint(h);
 
 // Every triangle is an upright, irregular fragment. Its base touches the floor
@@ -107,11 +109,27 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    mesh.rotation.y=f.kind===3||f.kind===4?f.yaw:0;
    // Fragments rise visibly BEFORE impact, rather than appearing as a faint
    // near-flat decal. Preserve authored footprint, timing and draw-call count.
-   const strength=smooth(charge);
-   mesh.scale.y=.42+.82*strength+.18*(1-impact)*(hit?1:0);
-   mesh.material.opacity=.32+.35*strength+(hit?.10*(1-impact):0);
-   mesh.material.emissiveIntensity=.12+.13*strength;
-   mesh.material.color.setHex(COLOR[s.pattern]||0x9c9ca5);
+   const strength=smooth(charge),flash=hit?1-impact:0;
+   const mat=mesh.material;
+   if(h.preview){
+    // White space: a calm chalk record. It never reads as a live threat.
+    mesh.scale.y=.30+.55*strength;
+    mat.opacity=hit?.16+.14*flash:.20+.30*strength;
+    mat.emissiveIntensity=.06+.10*strength;
+    mat.color.setHex(PREVIEW_COLOR);mat.emissive.setHex(PREVIEW_COLOR);
+   }else if(h.inkFinger){
+    // Dark space: the recorded proof becomes real. Ink fractures climb higher and flare on impact.
+    mesh.scale.y=.55+1.0*strength+.45*flash;
+    mat.opacity=Math.min(1,.40+.38*strength+.25*flash);
+    mat.emissiveIntensity=.18+.30*strength+.60*flash;
+    mat.color.setHex(INK_COLOR);mat.emissive.setHex(INK_GLOW);
+    mesh.position.y=.005+flash*.05;
+   }else{
+    mesh.scale.y=.42+.82*strength+.18*(1-impact)*(hit?1:0);
+    mat.opacity=.32+.35*strength+(hit?.10*(1-impact):0);
+    mat.emissiveIntensity=.12+.13*strength;
+    mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
+   }
   }
   for(const [id,state]of states)if(!live.has(id)){release(state);states.delete(id);}
  }

@@ -24,7 +24,20 @@ export const GYUWON_GESTURES=Object.freeze({
  reverse:[.62,1.39,.24],stop:[1.28,.38,-.22],paradox:[1.18,1.30,.18],erasure:[1.42,.52,-.16],counterproof:[.40,1.44,.23],
  sword:[1.32,1.42,-.35],circus:[.58,1.48,.27],gamble:[.45,1.55,-.20],tsunami:[1.48,1.42,-.30],chalk:[1.36,.54,.20]
 });
-export function gyuwonRawMotion(g){
+// Phase one is the frightened student, not yet a god: trembling wrists, hurried
+// page-flicks and nervous glances. Purely cosmetic; ramps in from t=0 so idle poses are unchanged.
+function anxiety(g,m){
+ const b=g?.boss,s=g?.gyuwon,t=g?.time;
+ if(!b||!s||b.phase!==1||b.state==='dead'||b.state==='transition'||!Number.isFinite(t))return m;
+ const ramp=Math.min(1,t/.5),calm=(b.state==='pattern'?.45:1)*ramp;
+ const tremor=(Math.sin(t*37)+Math.sin(t*23.3+1.3))*.5*.022*calm;
+ const flip=Math.pow(Math.max(0,Math.sin(t*5.2)),3)*.14*calm;
+ const glance=Math.sin(t*1.7)*Math.max(0,Math.sin(t*.43))*.07*calm;
+ return {...m,leftWrist:m.leftWrist+tremor,rightWrist:m.rightWrist-tremor*1.2,
+  rightElbow:m.rightElbow-flip*.5,book:m.book+flip,
+  headYaw:m.headYaw+glance,headPitch:m.headPitch+Math.abs(tremor)*1.5};
+}
+function baseMotion(g){
  const b=g?.boss,s=g?.gyuwon;if(!b||!s||b.state==='dead')return {...NEUTRAL};
  if(b.state==='transition'){
   const r=ease((s.t||0)/2.8);
@@ -68,6 +81,7 @@ export function gyuwonRawMotion(g){
   weightShift:twist*(prep*.11+power*.24),
   book:-.6+left*(prep*.18+strike*.28)};
 }
+export function gyuwonRawMotion(g){return anxiety(g,baseMotion(g));}
 export function createGyuwonMotionDirector(){
  const pose=createPoseContinuity();let owner=null,lastPos=null,speed=0,facing=0;
  function reset(){pose.reset();owner=null;lastPos=null;speed=0;facing=0;}

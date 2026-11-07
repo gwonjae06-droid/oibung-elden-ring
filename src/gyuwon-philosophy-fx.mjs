@@ -72,7 +72,7 @@ export function createGyuwonPhilosophyFx(scene,{coarse=false,reduced=false}={}){
  }
  let lastTime=0;
  function reset(){
-  lastTime=0;root.visible=false;
+  lastTime=0;root.visible=false;root.position.x=0;
   for(const [name,g] of groups){weights.set(name,0);g.visible=false;}
  }
  function update(game,dt=0){
@@ -84,6 +84,18 @@ export function createGyuwonPhilosophyFx(scene,{coarse=false,reduced=false}={}){
   shadow.color.lerp(new THREE.Color(white?0x807f91:0xb4a7cf),1-Math.exp(-2*h));
   pillars.rotation.y=0; // Instanced architecture never changes the playable collision ring.
   const t=Number.isFinite(game.time)?game.time:lastTime;lastTime=t;
+  // White RECORDS: the sculpture is inscribed brighter as more proofs are queued.
+  // Dark REALIZES: the sculpture flares and shudders as a recorded proof lands.
+  const queued=Math.min(1,(s.proofQueue?.length||0)/Math.max(1,s.whiteQuota||2));
+  const striking=!white&&b.state==='pattern'&&(s.hazards||[]).some(x=>!x.preview&&x.damage>0&&x.age>=x.warn&&x.age<x.warn+.4);
+  const k=1-Math.exp(-6*h);
+  gold.opacity+=((white?.5+.3*queued:.6)-gold.opacity)*k;
+  gold.emissive.setHex(accent);
+  gold.emissiveIntensity+=((white?.04+.22*queued:.03)-gold.emissiveIntensity)*k;
+  shadow.emissive.setHex(0x5a3d9a);
+  shadow.emissiveIntensity+=((striking?.7:.06)-shadow.emissiveIntensity)*k;
+  shadow.opacity+=((striking?.68:.46)-shadow.opacity)*k;
+  root.position.x=reduced||!striking?0:Math.sin(t*90)*.07;
   root.rotation.y=reduced?0:Math.sin(t*.16)*.07;
   for(const [name,g] of groups){
    const want=s.pattern===name&&b.state==='pattern'?1:0;
