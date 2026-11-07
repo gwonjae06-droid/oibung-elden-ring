@@ -1208,6 +1208,10 @@ function tickClown(g, dt) {
       c.odo+=Math.hypot(motion.dx,motion.dz);
     }
     c.wait -= dt;
+    // Finish any already-telegraphed small echo attack before beginning the
+    // director's next show: never stack two unrelated surprise hits.
+    if(c.wait<=0&&c.horrorStage===2&&c.troupe?.members?.some(m=>m.legacyAttack&&!m.down))
+      c.wait=.08;
     if (c.wait <= 0)
       startClownPattern(
         g,
@@ -1257,7 +1261,7 @@ function updateClown(g, dt) {
   updateBombs(g, dt);
   updateZones(g, dt);
   updateWaves(g, dt);
-  stepCircusTroupe(g,dt,{zone,emit});
+  stepCircusTroupe(g,dt,{zone,emit,hurt});
   if (g.status !== 'playing') return;
   if (c.stunT > 0) c.stunT = Math.max(0, c.stunT - dt);
   else tickClown(g, dt);

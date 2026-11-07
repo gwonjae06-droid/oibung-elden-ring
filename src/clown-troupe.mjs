@@ -1,3 +1,4 @@
+import {LEGACY_ECHO_CONFIG,legacyEchoCount,createLegacyEcho,beginLegacyEchoAttack,stepLegacyEcho} from './clown-legacy-echo.mjs';
 // Independently simulated, targetable nightmare-circus ensemble.
 // Every attack uses the same telegraphed zone engine as the ringmaster.
 // There is no decorative "mob" which can damage without a real cue.
@@ -13,7 +14,8 @@ export const CIRCUS_ROLES=Object.freeze({
  acrobat:{hp:85,speed:5.2,range:7.5,attack:16,wind:1.05},
  puppeteer:{hp:100,speed:2.0,range:11,attack:15,wind:1.4},
  firekeeper:{hp:90,speed:2.1,range:9.7,attack:16,wind:1.45},
- mimic:{hp:65,speed:4.4,range:8.2,attack:12,wind:1.20}
+ mimic:{hp:65,speed:4.4,range:8.2,attack:12,wind:1.20},
+ legacyEcho:{hp:LEGACY_ECHO_CONFIG.hp,speed:LEGACY_ECHO_CONFIG.speed,range:LEGACY_ECHO_CONFIG.range,attack:11,wind:LEGACY_ECHO_CONFIG.telegraph}
 });
 const targetCount=stage=>stage>=3?7:stage===2?5:3;
 const away=p=>{const d=Math.hypot(p.x,p.z);return d>23?{x:p.x*23/d,z:p.z*23/d}:p};
@@ -36,6 +38,10 @@ export function setCircusAct(g,stage){
  t.stage=stage;t.members=[];t.cycle=0;t.globalCooldown=1.4;
  t.reprise=null;t.hush=null;t.faceSync=null;
  for(let i=0;i<targetCount(stage);i++)t.members.push(spawn(g,i));
+ // One or two small original ringmasters emerge AFTER the main director's
+ // unskippable transformation, without their own transition cutscene.
+ if(stage===2)for(let i=0;i<Math.min(LEGACY_ECHO_CONFIG.max,legacyEchoCount(g));i++)
+  t.members.push(createLegacyEcho(g,i));
 }
 export function clearCircusTroupe(g){
  const t=g?.clown?.troupe;if(!t)return;
@@ -155,7 +161,7 @@ function playerContacts(g,t,emit){
    if(m.down||m.seenHit===a)continue;
    const d=Math.hypot(m.x-p.x,m.z-p.z);
    const yaw=contactAngle(p,m),dif=Math.atan2(Math.sin(yaw-a.yaw),Math.cos(yaw-a.yaw));
-   const reach=g.weapon==='hammer'?4.0:3.6;
+   const reach=(g.weapon==='hammer'?4.0:3.6)+(m.legacy?.25:0);
    if(d>reach||Math.abs(dif)>.78)continue;
    m.seenHit=a;
    damageMember(g,m,g.weapon==='hammer'?70:45,emit);
@@ -167,7 +173,7 @@ function playerContacts(g,t,emit){
   if(q.hit||q.bossHit||q.life<=0)continue;
   for(const m of t.members){
    if(m.down)continue;
-   const range=m.role==='acrobat'?1.05:1.15;
+   const range=m.legacy?1.33:m.role==='acrobat'?1.05:1.15;
    if(Math.hypot(q.x-m.x,q.z-m.z)<range){
     q.hit=true;q.life=0;
     damageMember(g,m,q.damage||32,emit);break;
@@ -177,6 +183,7 @@ function playerContacts(g,t,emit){
 }
 function castAttack(g,m,zone,emit){
  const p=g.player,role=m.role,s=CIRCUS_ROLES[role],warn=s.wind;
+ if(m.legacy)return beginLegacyEchoAttack(g,m,{zone,emit});
  const aim=away({x:p.x,z:p.z});
  m.cast=warn+.35;m.showCue=role;m.target={...aim};
  if(role==='chorister'){
@@ -195,7 +202,7 @@ function castAttack(g,m,zone,emit){
  }
  emit(g,'clown-troupe-cast',{id:m.id,role,wind:warn,x:m.x,z:m.z});
 }
-export function stepCircusTroupe(g,dt,{zone,emit}){
+export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
  if(!g?.clown||!g?.boss||g.status!=='playing')return;
  const t=g.clown.troupe;if(!t)return;
  const c=g.clown,b=g.boss,stage=c.horrorStage||1;
@@ -214,28 +221,44 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   m.age+=h;m.flash=Math.max(0,m.flash-h);
   if(m.routine&&c.time>=m.routine.until)m.routine=null;
   if(m.down){m.death+=h;continue;}
+  const wasRolling=m.legacyAttack?.kind==='roll';
+  if(m.legacyAttack)stepLegacyEcho(g,m,{hurt});
   if(m.cast>0){m.cast=Math.max(0,m.cast-h);m.cooldown=Math.max(m.cooldown,m.cast+.8);}
   else m.cooldown-=h;
   // The full ensemble continually repositions, not a fixed texture
   // billboard. Accelerations and damping prevent teleporting footwork.
-  const wave=i*Math.PI*.48+t.beat*.13*(phase===2?1.35:1);
-  const desiredRadius=s.range+(t.show==='chorus'?-1.5:0);
+  // Living performers sweep their own orbital lanes around the player,
+  // rather than barely rotating at 0.13 radians/sec. The alternating lanes
+  // and clearance avoid clumping them into a single unreadable mob blob.
+  const side=i%2?-1:1,orbitSpeed=(.25+(i%3)*.065)*(stage===3?1.18:1);
+  const wave=i*TAU/Math.max(3,t.members.length)+t.beat*orbitSpeed*side;
+  const desiredRadius=s.range+(t.show==='chorus'?-1.5:0)+
+   Math.sin(t.beat*.7+i*2.4)*(m.legacy?.45:.85);
   const around={x:target.x+Math.sin(wave)*desiredRadius,z:target.z+Math.cos(wave)*desiredRadius};
   const acrobatRush=m.role==='acrobat'&&m.cast>0&&m.cast<.85&&m.cast>.28;
   const silent=t.hush&&c.time<t.hush.start+.74;
   const unison=t.faceSync&&c.time>=t.faceSync.start&&c.time<t.faceSync.start+.72;
-  const safe=away(acrobatRush&&m.target?m.target:around),dx=safe.x-m.x,dz=safe.z-m.z,
-    len=Math.hypot(dx,dz),speed=(silent||unison)?0:acrobatRush?14:m.cast>0?.24:s.speed;
-  const accel=Math.min(1,8*h);
+  let dx=safe.x-m.x,dz=safe.z-m.z;
+  // A weak separation force stops living cast members from intersecting
+  // one another or the ringmaster's torso. It is movement-only, never damage.
+  for(const other of t.members){if(other===m||other.down)continue;
+   const ox=m.x-other.x,oz=m.z-other.z,d2=ox*ox+oz*oz;
+   if(d2>1e-4&&d2<6.25){dx+=ox/d2*3.8;dz+=oz/d2*3.8;}}
+  const bx=m.x-b.x,bz=m.z-b.z,bd=bx*bx+bz*bz;
+  if(bd>1e-4&&bd<12.25){dx+=bx/bd*6;dz+=bz/bd*6;}
+  const len=Math.hypot(dx,dz),speed=(silent||unison||wasRolling)?0:acrobatRush?12.5:m.cast>0?.18:s.speed;
+  const accel=Math.min(1,(m.legacy?5.4:m.role==='acrobat'?8.2:6.2)*h);
   m.vx+=((len>1e-4?dx/len*speed:0)-m.vx)*accel;
   m.vz+=((len>1e-4?dz/len*speed:0)-m.vz)*accel;
   // Apply friction to physical velocity, then stay inside the arena.
   m.vx*=Math.exp(-h*1.1);m.vz*=Math.exp(-h*1.1);
   const oldX=m.x,oldZ=m.z;
-  m.x+=m.vx*h;m.z+=m.vz*h;
+  if(wasRolling){m.vx=0;m.vz=0;}
+  else{m.x+=m.vx*h;m.z+=m.vz*h;}
   const bounded=away(m);m.x=bounded.x;m.z=bounded.z;
   m.step+=Math.hypot(m.x-oldX,m.z-oldZ);
-  m.yaw=contactAngle(m,target);
+  m.motionLean=clamp((m.vx*Math.cos(m.yaw)-m.vz*Math.sin(m.yaw))*.065,-.24,.24);
+  if(!wasRolling)m.yaw=contactAngle(m,target);
   // Do not stack all performer attacks simultaneously outside a deliberate
   // choreographed show, nor attack into the boss's punish / cutscene window.
   const authored=c.state==='pattern';
