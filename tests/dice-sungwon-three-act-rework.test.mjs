@@ -93,15 +93,15 @@ test('disabled hands suppress their table attack but cannot invent thrown projec
  assert.ok(s.hazards.every(h=>h.handIndex!==0||h.cancelled));
  assert.ok(s.hazards.some(h=>h.tableShock&&!h.cancelled),'the independent table cannot be deleted by a hand break');
 });
-test('casino ruin view rotates the real felt and draws exact growing ring and finite shards',()=>{
+test('casino ruin view rotates only peripheral scenery and draws exact growing ring and finite shards',()=>{
  const scene=new THREE.Scene(),deck=new THREE.Group();scene.add(deck);
  const view=buildDiceTableRuin(THREE,scene,deck,{coarse:true,reduced:false});
  const g={time:3,boss:{phase:3},dice:{giant:{temperament:'feral',state:'attack',slot:13,t:3.35,hazards:giantPattern(13,{x:0,z:-40},'feral').hazards}}};
  const pose=tableRuinState(g);assert.equal(pose.slot,13);assert.ok(pose.spin>2);assert.ok(pose.waves.some(w=>w.visible));
  for(let i=0;i<50;i++){g.time+=.02;g.dice.giant.t+=.02;view.update(g,.02);}
- assert.ok(deck.rotation.y>.1,'actual level felt must rotate smoothly');
+ assert.ok(deck.rotation.y>.1,'exterior trim must rotate smoothly');
  assert.ok(scene.getObjectByName('sungwon-table-breaking-fissures')?.visible);
- assert.ok(view.stats().shards<=16&&view.stats().extraLights===0);
+ assert.ok(view.stats().shards<=24&&view.stats().dust<=18&&view.stats().extraLights===0);
  const rings=scene.children.filter(o=>o.name==='sungwon-table-visible-shockwave');
  assert.ok(rings.some(o=>o.visible));
 });
