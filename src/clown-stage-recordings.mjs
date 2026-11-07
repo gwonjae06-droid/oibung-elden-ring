@@ -36,6 +36,7 @@ export function createClownRecordedFoley({AudioClass=globalThis.Audio,
   }catch{stopVoice(v);return false;}
  }
  function update(dt=0){
+  if(muted()){stop();return;}
   const h=clamp(dt,0,.1);if(!h||disposed)return;
   for(const v of [...active]){
    v.left-=h;

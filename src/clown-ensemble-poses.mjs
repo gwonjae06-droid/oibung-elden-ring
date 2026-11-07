@@ -4,6 +4,7 @@
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 const smooth=x=>{const a=clamp(x);return a*a*(3-2*a)};
 const DANCE=Object.freeze([
+ ['finale',/allCast|grandFinale|requiem|finale/i],
  ['juggle',/juggle|relay|knife|drumMarch/i],
  ['drum',/drum|percussion|march/i],
  ['vault',/tightrope|trapeze|stampede|acrobat/i],
