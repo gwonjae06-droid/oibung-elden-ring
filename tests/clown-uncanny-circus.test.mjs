@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createClownGame,startClownPattern,stepClown,PATTERNS,LIVE_REPERTOIRE} from '../src/clown-combat.mjs';
 import {setCircusAct,cueCircusShow,stageCircusBeat,stepCircusTroupe,
- beginCircusReprise,circusUncannyFrame} from '../src/clown-troupe.mjs';
+ beginCircusReprise,circusUncannyFrame,circusHorrorMusicGain} from '../src/clown-troupe.mjs';
 import {clownTheatreCueKind} from '../src/clown-theatre-cues.mjs';
 import {createCircusTroupeView} from '../src/clown-troupe-view.mjs';
 import {clownEnsembleRecording} from '../src/clown-ensemble-recordings.mjs';
@@ -120,4 +120,19 @@ test('first-act synchronized silence is only a visual and sound cue, never direc
  assert.match(sfx.file,/audiencewhisper\.mp3$/);
  assert.equal(clownTheatreCueKind({state:'warn',warn:1.4,sound:'corpseRepriseStrings'}),'puppet');
  assert.equal(clownTheatreCueKind({state:'warn',warn:1.4,sound:'mouthlessChoir'}),'choir');
+});
+
+test('stage-one synchronized stop and stage-three common face briefly duck the real MP3 without stopping it',()=>{
+ const g=createClownGame('sword',{register:false});
+ g.clown.horrorStage=1;setCircusAct(g,1);
+ assert.equal(circusHorrorMusicGain(g),1);
+ cueCircusShow(g,'hush');g.clown.time+=.7;
+ assert.ok(circusHorrorMusicGain(g)<.20,'audience whisper dominates the silence');
+ g.clown.time+=2;
+ assert.equal(circusHorrorMusicGain(g),1,'score returns on cue without restart');
+ g.boss.phase=2;g.clown.horrorStage=3;setCircusAct(g,3);
+ cueCircusShow(g,'finale');g.clown.time+=1.16;
+ assert.ok(circusHorrorMusicGain(g)<.25);
+ g.clown.time+=1.5;
+ assert.equal(circusHorrorMusicGain(g),1,'theatrical duck ends before finale attacks');
 });

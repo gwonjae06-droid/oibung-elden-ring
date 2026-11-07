@@ -114,6 +114,20 @@ export function circusUncannyFrame(g){
  return {hush,face:unison,unison};
 }
 
+// Master MP3 is pulled down for less than two seconds when all figures
+// freeze simultaneously; it is never stopped, restarted or desynchronized.
+export function circusHorrorMusicGain(g){
+ const t=g?.clown?.troupe,c=g?.clown;if(!t||!c)return 1;
+ const now=c.time||0;
+ if(t.hush&&now>=t.hush.start&&now<t.hush.end)
+  return Math.max(.08,1-.92*circusUncannyFrame(g).hush);
+ const sync=t.faceSync;
+ if(sync&&now>=sync.start&&now<sync.start+1.12){
+  const u=(now-sync.start)/1.12;
+  return Math.max(.13,1-.87*Math.sin(Math.PI*u));
+ }
+ return 1;
+}
 // A real stage actor rehearses this exact beat. UI cannot create damage.
 export function stageCircusBeat(g,{role,index=0,pose='conductor',wind=1.3,hold=1.8}={}){
  const alive=circusTroupeAlive(g).filter(m=>m.role===role);
