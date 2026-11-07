@@ -52,6 +52,17 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   left.position.x=-.26;right.position.x=.26;
   pool.push({id:null,group,cracks,rock,sky,voidMat,edgeMat});
  }
+ // The moon is a sculpted PBR body split by the SAME travelling sword front.
+ // It never adds a hitbox and is built once, not every animation frame.
+ const moon=new THREE.Group();moon.name='kwon-split-falling-moon';moon.userData.decorativeOnly=true;root.add(moon);
+ const moonLeftGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,0,Math.PI,0,Math.PI);
+ const moonRightGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,Math.PI,Math.PI,0,Math.PI);
+ const moonStone=new THREE.MeshStandardMaterial({color:0xaba69a,roughness:.98,metalness:.015,emissive:0x3b3536,emissiveIntensity:.18,side:THREE.DoubleSide});
+ const lunarA=new THREE.Mesh(moonLeftGeo,moonStone),lunarB=new THREE.Mesh(moonRightGeo,moonStone);
+ lunarA.name='kwon-moon-left-hemisphere';lunarB.name='kwon-moon-right-hemisphere';moon.add(lunarA,lunarB);
+ const lunarDust=new THREE.MeshStandardMaterial({color:0x675d57,roughness:.98});
+ const chipGeo=new THREE.DodecahedronGeometry(.64,coarse?0:1),lunarChips=[];
+ for(let i=0;i<12;i++){const chip=new THREE.Mesh(chipGeo,lunarDust);chip.scale.set(.45+(i%3)*.18,.4+(i%4)*.2,.48);moon.add(chip);lunarChips.push(chip);}
  const transition=new THREE.Group();transition.name='kwon-sword-possession-sky-wound';
  const omenMat=new THREE.MeshStandardMaterial({color:0x231927,emissive:0x8f3c54,
   emissiveIntensity:.65,transparent:true,opacity:0,depthWrite:false,
@@ -109,6 +120,23 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
    if(!o)continue;
    drawFracture(o,q);
   }
+  moon.visible=active;
+  if(active){
+   const q=rifts.find(a=>a.pattern==='heavenSplit'||a.pattern==='skyRend');
+   const open=q?clamp(kwonFractureFront(q)/Math.max(1,q.length)):0;
+   const falling=q?clamp((q.age-q.delay-q.length/q.speed)/1.35):0;
+   const transitionScars=b.state==='transition'?kwonThirdTransition(b.t).skyScar:0;
+   const split=Math.max(open,transitionScars*.18);
+   moon.position.set(b.x+Math.sin((b.yaw||0)+1.08)*43,51-18*falling*falling,
+    b.z+Math.cos((b.yaw||0)+1.08)*43);
+   moon.rotation.y=(b.yaw||0)+.7;
+   lunarA.position.x=-split*2.6;lunarB.position.x=split*2.6;
+   lunarA.rotation.z=-split*.15;lunarB.rotation.z=split*.15;
+   for(let i=0;i<lunarChips.length;i++){const c=lunarChips[i],a=i*Math.PI*2/12;
+    c.position.set(Math.sin(a)*(1.9+split*4.5),Math.cos(a*1.7)*2.6-split*split*(i%3+1)*.45,Math.cos(a)*.7);
+    c.visible=split>.05;
+   }
+  }
   const cinematic=active&&b.state==='transition';
   transition.visible=cinematic;
   if(cinematic){
@@ -123,9 +151,9 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
  function dispose(){
   if(disposed)return;disposed=true;reset();scene.remove(root);
   for(const o of pool){o.voidMat.dispose();o.edgeMat.dispose();}
-  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo])g.dispose();
-  for(const m of [crackMat,stoneMat,omenMat])m.dispose();
+  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo,moonLeftGeo,moonRightGeo,chipGeo])g.dispose();
+  for(const m of [crackMat,stoneMat,omenMat,moonStone,lunarDust])m.dispose();
  }
  return {root,update,reset,dispose,stats:()=>({pool:POOLS,crackInstances:POOLS*SEGMENTS,
-  live:pool.filter(o=>o.id!==null).length})};
+  live:pool.filter(o=>o.id!==null).length,moonPieces:14})};
 }

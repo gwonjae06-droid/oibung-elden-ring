@@ -36,8 +36,11 @@ test('the memory arena follows a real cast, never an unrelated stage timer',()=>
  advance(g,2.1);assert.equal(g.boss.state,'recovery');
  assert.equal(g.gyuwon.stageIndex,1);
  g.gyuwon.recover=0;advance(g,.01);
- assert.equal(g.gyuwon.stageIndex,2,'next memory cast actually advances the stage');
- assert.equal(g.events.filter(e=>e.type==='memory-stage').length,born+1);
+ assert.equal(g.gyuwon.stageIndex,1,'the same recalled room performs multiple moves');
+ assert.equal(g.gyuwon.memoryRun,2);
+ assert.equal(g.events.filter(e=>e.type==='memory-stage').length,born);
+ startGyuwonPattern(g,'circus');
+ assert.equal(g.gyuwon.stageIndex,2,'the next real boss room changes only on a new memory family');
 });
 
 test('repeat attacks replay only bounded physical traces',()=>{
@@ -70,12 +73,17 @@ test('every attack uses a distinct finite hand/head direction on the same rig',(
  }
 });
 
-test('recovery reserves a planted counterattack beat before the boss advances',()=>{
- const g=createGyuwonGame();g.player.x=24;g.player.z=0;g.boss.phase=2;
+test('Gyuwon is stationary and only relocates after a visible teleport charge',()=>{
+ const g=createGyuwonGame();g.player.x=24;g.player.z=0;
  startGyuwonPattern(g,'verdict');
- g.boss.state='recovery';g.gyuwon.recover=GYUWON_PATTERNS.verdict.recover;
- const x=g.boss.x,z=g.boss.z;advance(g,.45);
- assert.ok(Math.hypot(g.boss.x-x,g.boss.z-z)<.02,'landing cannot immediately become a chase');
- advance(g,.70);
- assert.ok(Math.hypot(g.boss.x-x,g.boss.z-z)>.1,'measured approach starts after the punish beat');
+ g.boss.state='recovery';g.gyuwon.recover=2.3;
+ const x=g.boss.x,z=g.boss.z;advance(g,1.1);
+ assert.equal(g.boss.x,x);assert.equal(g.boss.z,z,'stationary caster has no sliding chase');
+ g.gyuwon.casts=3;g.gyuwon.recover=.001;advance(g,.01);
+ assert.ok(g.gyuwon.teleport,'teleport is telegraphed before any displacement');
+ assert.equal(g.boss.x,x);assert.equal(g.boss.z,z);
+ advance(g,1.28);
+ assert.equal(g.gyuwon.teleport,null);
+ assert.ok(Math.hypot(g.boss.x-x,g.boss.z-z)>1);
 });
+

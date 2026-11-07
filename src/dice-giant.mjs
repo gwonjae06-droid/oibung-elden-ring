@@ -7,9 +7,10 @@ import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
 import {giantReadableWarning} from './attack-readability.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
+import {eightBallPosition} from './dice-eight-ball.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4*BOSS_TEMPO.gap,feralRecovery:1.5*BOSS_TEMPO.gap,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
-export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀'];
-export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','주먹으로 찢는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서','광란의 탁자 회전','도박판 분쇄','카지노 전복'];
+export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀','검은 8번공 · 쿠션 두 번'];
+export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','주먹으로 찢는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서','광란의 탁자 회전','도박판 분쇄','카지노 전복','천공의 8번공 · 지면 침식'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
 export const HAND_REST=Object.freeze([{x:-22,y:2,z:-64},{x:22,y:2,z:-64}]);
 const sat=v=>Math.max(0,Math.min(1,v));
@@ -74,6 +75,8 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
     {...circle(x,z,9,2.2,1.45,36),handIndex:0,active:.3}
   ];
   // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
+ if(slot===14)hazards=[{...circle(-48,clamp(z,-43,43),3.5,0,1.8,31),
+  eightBall:true,active:6.4,handIndex:null}];
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+([6,12].includes(slot)?' · '+hazards.length+'발 예고':'')+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
@@ -138,19 +141,22 @@ function feralPattern(index,player,healthRatio=1){
   {...rect(28,clamp(z,-43,43),24,37,1.6,1.6),handIndex:1,damage:35,active:.32},
   tableWave(3,1.35,1.7,30,true)
  ];
+ if(slot===16)hazards=Array.from({length:3},(_,i)=>({
+  ...circle(clamp(x+(i-1)*18,-43,43),clamp(z+(i%2?11:-11),-42,42),3.5,
+   i*1.45,1.7,39),eightBall:true,skyfall:true,active:.7,handIndex:null}));
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'feral'},h)).map(giantReadableWarning);
  return {slot,name:FERAL_NAMES[slot],hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament:'feral'},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
 }
 // Which table object a hazard is built from. The view and the hands both read this so they always agree.
 export function giantPropType(s,h){
- if(!s||!h||h.headSlam||h.shape==='ring')return null;
+ if(!s||!h||h.eightBall||h.headSlam||h.shape==='ring')return null;
  if(s.temperament==='feral')return s.slot===1?'chip':null;
  if(s.slot===6)return 'coin';
  return ({1:'chip',2:'dice',3:'coin',4:'chess',9:'chip',11:'chip',12:'coin'})[s.slot]||null;
 }
 // 'throw' = polite flick/lowering of a hand in front of the body, 'reach' = the hand goes to the target and slams.
 function handKind(s,h){
- if(h.headSlam||h.shape==='ring'||h.tableShock)return null;
+ if(h.eightBall||h.headSlam||h.shape==='ring'||h.tableShock)return null;
  // Visible dice/chips/coins/chess pieces must be thrown, never mimicked by phantom palms.
  if(giantPropType(s,h))return 'throw';
  if(s.temperament==='feral')return [0,1,3,4,5,6,8,10,12,13,15].includes(s.slot)?'reach':null;
@@ -241,6 +247,10 @@ export function giantHazards(g){
   const base={...h,age,live,r:radius};
   if(!live)return base;
   if(h.tableShock)return {...base,contactKind:live?'table':null};
+   if(h.eightBall){
+    const pos=eightBallPosition(h,Math.max(0,age-h.warn));
+    return {...base,x:pos.x,z:pos.z,r:3.5,shape:'circle',contactKind:live?(h.skyfall?'eight-ball-fall':'eight-ball-roll'):null};
+   }
   const prop=giantPropType(s,h);
   if(prop)return {...base,shape:'circle',r:prop==='coin'?3.8:prop==='dice'?4.3:prop==='chess'?3.4:3.1,contactKind:'prop'};
   if(h.headSlam){const head=giantHeadPose(g);return {...base,shape:'circle',x:head.x,z:head.z,r:10.6,contactY:head.y,contactKind:'head'};}
@@ -253,7 +263,8 @@ export function giantHazards(g){
 export function giantContactBeat(h){
  if(!h?.live||!h.contactKind)return false;
  const after=h.age-h.warn;
- if(h.contactKind==='table')return after>=0&&after<=h.active;
+ if(h.contactKind==='table'||h.contactKind==='eight-ball-roll')return after>=0&&after<=h.active;
+ if(h.contactKind==='eight-ball-fall')return after>=.32&&after<=.48;
  if(after<0||after>.14)return false;
  if(h.contactKind==='palm')return h.contactY<=14.5;
  if(h.contactKind==='head')return h.contactY<=16;
@@ -356,7 +367,7 @@ export function nextGiantPressureSlot(g){
  // Limit the priority to the opening casts, then exhaust every remaining slot
  // exactly once via the original seeded, phase-specific shuffle bag.
  const count=s.phaseCastCount||0;
- const signature=feral?[7,13,14,15]:[6,12,13,10];
+ const signature=feral?[16,7,13,14,15]:[14,6,12,13,10];
  const early=count<signature.length;
  const selected=drawPatternShuffle(g.dice.patternShuffle,'giant-'+(feral?'feral':'controlled'),slots,
   {preferred:early?signature:favored,avoid:s.lastPressureSlot});
@@ -408,6 +419,7 @@ export function stepGiant(g,dt,frozen=false){
    if(!contact?.contactKind)continue;
    h.impactAnnounced=true;
    if(h.tableShock){g.events.push({type:'dice-table-rupture',x:0,z:0,slot:q.slot,reverse:Boolean(h.reverse)});continue;}
+   if(h.eightBall){g.events.push({type:'dice-giant-eight-ball-impact',x:contact.x,z:contact.z,skyfall:Boolean(h.skyfall)});continue;}
    if(h.headSlam)g.events.push({type:'dice-giant-head-impact',x:contact.x,z:contact.z,rapid:Boolean(h.rapid),strength:h.rapid?.76:1});
    else g.events.push({type:giantPropType(q,h)?'dice-giant-prop-impact':'dice-giant-palm-impact',
     x:contact.x,z:contact.z,handIndex:h.handIndex,slot:q.slot});

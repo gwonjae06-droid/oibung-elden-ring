@@ -1,0 +1,46 @@
+name: Four-boss production pass regression
+on:
+  pull_request:
+    paths:
+      - 'src/gyuwon-*.mjs'
+      - 'src/kwon-third-phase-view.mjs'
+      - 'src/clown-*.mjs'
+      - 'src/dice-*.mjs'
+      - 'tests/four-boss-expansion.test.mjs'
+      - 'tests/gyuwon.test.mjs'
+      - 'tests/gyuwon-choreography.test.mjs'
+      - 'journey.css'
+      - '.github/workflows/four-boss-production-pass.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install graphics engine
+        run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0
+      - name: Check all changed JavaScript syntax
+        run: |
+          for f in src/gyuwon-combat.mjs src/gyuwon-actor.mjs src/gyuwon-view.mjs src/gyuwon-spectacle.mjs src/gyuwon-shadow-hand.mjs src/kwon-third-phase-view.mjs src/clown-troupe.mjs src/clown-legacy-echo.mjs src/clown-legacy-echo-view.mjs src/clown-phase2-performance.mjs src/clown-battle.mjs src/dice-eight-ball.mjs src/dice-eight-ball-view.mjs src/dice-giant.mjs src/dice-battle.mjs tests/four-boss-expansion.test.mjs; do node --check "$f"; done
+      - name: Verify readable attacks, shared mechanics and final-boss timing
+        run: |
+          node --test \
+            tests/four-boss-expansion.test.mjs \
+            tests/gyuwon.test.mjs \
+            tests/gyuwon-choreography.test.mjs \
+            tests/gyuwon-pattern-exposure.test.mjs \
+            tests/gyuwon-unified-combat-rig.test.mjs \
+            tests/gyuwon-production-rules.test.mjs \
+            tests/gyuwon-recall.test.mjs \
+            tests/gyuwon-memory-performance.test.mjs \
+            tests/gyuwon-performance-readability.test.mjs \
+            tests/clown-act-two-revival.test.mjs \
+            tests/clown-uncanny-circus.test.mjs \
+            tests/kwon-third-phase.test.mjs \
+            tests/dice-giant.test.mjs

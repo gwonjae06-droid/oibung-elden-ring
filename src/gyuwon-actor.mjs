@@ -10,6 +10,15 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  const cloth=new THREE.MeshPhysicalMaterial({color:0xc5ced5,roughness:.91,sheen:0.3,sheenRoughness:.86});
  const pants=new THREE.MeshStandardMaterial({color:0x232b3d,roughness:.88});
  const skin=new THREE.MeshPhysicalMaterial({color:0xc6a68e,roughness:.76,clearcoat:.035});
+ // Source: the uploaded assets/choi.png, curved over the actual sculpted face.
+ let photo=null;
+ if(typeof document!=='undefined'&&typeof document.createElementNS==='function'){
+  try{photo=new THREE.TextureLoader().load(new URL('../assets/choi.png',import.meta.url).href);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;}
+  catch(error){console.warn('Gyuwon portrait unavailable',error);}
+ }
+ const faceSkin=skin.clone();
+ if(photo){faceSkin.map=photo;faceSkin.color.setHex(0xf5ede2);}
+
  const hair=new THREE.MeshStandardMaterial({color:0x191b23,roughness:.94});
  const shirt=new THREE.MeshStandardMaterial({color:0xdce0dd,roughness:.95});
  const leather=new THREE.MeshStandardMaterial({color:0x151923,roughness:.63});
@@ -134,7 +143,11 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    z+(z>0?cheek+bridge+chin:0));
  }
  faceGeo.computeVertexNormals();
- const face=mesh(head,faceGeo,skin,0,0,0,'gyuwon-anatomical-face');
+ const face=mesh(head,faceGeo,faceSkin,0,0,0,'gyuwon-anatomical-face');
+ const faceUv=faceGeo.getAttribute('uv');
+ for(let i=0;i<faceUv.count;i++){const x=facePos.getX(i),y=facePos.getY(i),z=facePos.getZ(i);
+  if(z>0)faceUv.setXY(i,Math.max(.05,Math.min(.95,.5+x*.78)),Math.max(.06,Math.min(.94,.51+y*.82)));}
+ faceUv.needsUpdate=true;
  face.scale.set(.88,1.14,.91);
  const jaw=mesh(head,new THREE.SphereGeometry(.29,minor,coarse?12:24),skin,0,-.30,.13,'gyuwon-jaw');
  jaw.scale.set(1,.57,1.15);
@@ -161,6 +174,14 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  mesh(book,new THREE.BoxGeometry(.76,.135,.96),leather,0,0,0,'gyuwon-book-cover');
  mesh(book,new THREE.BoxGeometry(.68,.095,.89),paper,0,.08,0,'gyuwon-book-pages');
  for(let i=0;i<6;i++)mesh(book,new THREE.BoxGeometry(.7,.004,.89),ink,0,.031+i*.009,0,'gyuwon-page-edge');
+ // The same photographed likeness returns as a suspended godlike 3D visage.
+ const divineFace=new THREE.Group();divineFace.name='gyuwon-divine-portrait';root.add(divineFace);
+ const godSkin=faceSkin.clone();godSkin.transparent=true;godSkin.opacity=.84;
+ const god=mesh(divineFace,new THREE.SphereGeometry(.92,coarse?24:48,coarse?18:32),
+  godSkin,0,0,0,'gyuwon-god-face');god.scale.set(1.17,1.38,.45);
+ mesh(divineFace,new THREE.TorusGeometry(1.28,.044,8,coarse?32:72),
+  new THREE.MeshStandardMaterial({color:0xf0d3a7,metalness:.69,roughness:.29,emissive:0x896344,emissiveIntensity:.43}),
+  0,0,-.25,'gyuwon-portrait-mandorla');
  const halo=mesh(root,new THREE.TorusGeometry(.73,.025,coarse?6:12,coarse?48:112),new THREE.MeshStandardMaterial({color:0xffd56d,emissive:0xc18d35,emissiveIntensity:.6,metalness:.7,roughness:.27}),0,3.45,0,'gyuwon-final-halo');
  const pages=[],pageGeo=new THREE.PlaneGeometry(.45,.65,coarse?3:8,coarse?4:10);
  const uv=pageGeo.attributes.position;
@@ -185,6 +206,10 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   head.scale.setScalar(visibleHead);head.visible=visibleHead>.01;
   neck.visible=visibleHead>.01;neck.scale.y=Math.max(.001,visibleHead);
   halo.visible=b.phase>1;halo.rotation.z=t*.3;
+  divineFace.visible=b.phase===3&&g.status==='playing';
+  divineFace.position.set(0,6.9+Math.sin(t*.75)*.28,-2.25);
+  divineFace.rotation.y=Math.sin(t*.22)*.14;
+  divineFace.scale.setScalar(.78+.05*Math.sin(t*.8));
   arms[0].rotation.x=p.leftArm;arms[0].rotation.z=p.twist*.12;
   arms[1].rotation.x=p.rightArm;arms[1].rotation.z=-p.twist*.18;
   forearms[0].rotation.x=p.leftElbow??-.1;
@@ -222,5 +247,5 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    item.visible=b.phase>1;item.position.set(Math.sin(a)*1.6,2+Math.sin(a*2)*.4,Math.cos(a)*1.6);
    item.rotation.set(.3+Math.sin(t+i)*.08,a,.2);
   }
- }};
+ },dispose(){photo?.dispose();faceSkin.dispose();godSkin.dispose();}};
 }

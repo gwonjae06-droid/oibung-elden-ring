@@ -11,6 +11,10 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
  const root=new THREE.Group();root.name='original-seulwoo-mini-midbosses';root.userData.decorativeOnly=true;
  scene.add(root);
  const actors=new Map();let disposed=false;
+ const bulletGeo=new THREE.SphereGeometry(.44,coarse?12:24,coarse?9:18);
+ const bulletMat=new THREE.MeshPhysicalMaterial({color:0x681d2a,roughness:.36,metalness:.24,clearcoat:.45});
+ const stripeGeo=new THREE.TorusGeometry(.445,.048,6,coarse?16:32);
+ const stripeMat=new THREE.MeshStandardMaterial({color:0xeccba3,roughness:.55,metalness:.18});
  const smooth=u=>{const k=Math.min(1,Math.max(0,u));return k*k*(3-2*k);};
  function make(m){
   let actor=null;
@@ -40,8 +44,15 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
     projectile.group.visible=false;root.add(projectile.group);
    }catch(e){console.warn('Mini original head projectile unavailable',e);}
   }
+  const bullets=[];
+  for(let i=0;i<2;i++){
+   const bullet=new THREE.Group();bullet.name='mini-original-clown-physical-juggling-projectile';
+   bullet.add(new THREE.Mesh(bulletGeo,bulletMat));
+   const stripe=new THREE.Mesh(stripeGeo,stripeMat);stripe.rotation.x=Math.PI/2;bullet.add(stripe);
+   bullet.visible=false;root.add(bullet);bullets.push(bullet);
+  }
   if(onActorCreated)onActorCreated(actor.root);
-  return {actor,projectile,id:m.id,ready:actor.head?.ready||Promise.resolve(false)};
+  return {actor,projectile,bullets,id:m.id,ready:actor.head?.ready||Promise.resolve(false)};
  }
  function update(g,dt=1/60){
   if(disposed)return;
@@ -78,11 +89,23 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
      p.setMorph?.({inflate:1+(.65*w),jaw:.15*w,wobble:.12},clock);
     }
    }
+   for(let i=0;i<x.bullets.length;i++){
+    const shot=a?.kind==='juggle'?a.shots?.[i]:null,obj=x.bullets[i];
+    obj.visible=!m.down&&Boolean(shot)&&elapsed<shot.wind;
+    if(!obj.visible)continue;
+    const travel=smooth((elapsed-.12)/Math.max(.2,shot.wind-.12));
+    obj.position.set(a.from.x+(shot.x-a.from.x)*travel,
+     1.45+Math.sin(travel*Math.PI)*(2.5+i*.65),
+     a.from.z+(shot.z-a.from.z)*travel);
+    obj.rotation.set(clock*(i?1.6:1.1),clock*(i?1.2:-1.1),0);
+    obj.scale.setScalar(.75+.35*travel);
+   }
   }
   for(const [id,x] of actors)if(!seen.has(id)){
    root.remove(x.actor.root);disposeScene(x.actor.root);
    x.actor.head?.dispose?.();
    if(x.projectile){root.remove(x.projectile.group);x.projectile.dispose?.();}
+   for(const shot of x.bullets)root.remove(shot);
    actors.delete(id);
   }
  }
@@ -90,9 +113,10 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
   for(const [id,x] of actors){
    root.remove(x.actor.root);disposeScene(x.actor.root);x.actor.head?.dispose?.();
    if(x.projectile){root.remove(x.projectile.group);x.projectile.dispose?.();}
+   for(const shot of x.bullets)root.remove(shot);
    actors.delete(id);
   }
  }
- function dispose(){if(disposed)return;disposed=true;clear();root.parent?.remove(root);}
+ function dispose(){if(disposed)return;disposed=true;clear();root.parent?.remove(root);bulletGeo.dispose();bulletMat.dispose();stripeGeo.dispose();stripeMat.dispose();}
  return {root,update,clear,dispose,stats:()=>({miniMidbosses:actors.size,originalRigs:actors.size})};
 }

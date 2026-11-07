@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
 import {createGyuwonMemoryWave} from './gyuwon-memory-wave.mjs';
 export function createGyuwonSpectacle(stage,{coarse=false}={}){
- const root=new THREE.Group();stage.add(root);const groups=new Map(),attacks=new Map();
+ const root=new THREE.Group();stage.add(root);const groups=new Map(),attacks=new Map(),free=new Map();
  const gold=new THREE.MeshPhysicalMaterial({color:0xdca339,metalness:.66,roughness:.32,clearcoat:.38,transparent:true,opacity:.48,side:THREE.DoubleSide,depthWrite:false});
  const dust=new THREE.PointsMaterial({color:0xffcf65,size:coarse?.32:.2,transparent:true,opacity:.9,depthWrite:false});
  function solid(parent,geo,x=0,y=0,z=0,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,gold);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);const p=new THREE.Points(geo,dust);p.position.copy(m.position);p.scale.copy(m.scale);parent.add(p);return m;}
@@ -68,7 +68,10 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  }
 
  const streamGeo=new THREE.BufferGeometry(),stream=[];for(let i=0;i<(coarse?900:2400);i++){const a=i*2.39996,r=25+(i%113);stream.push(Math.sin(a)*r,(i%97)*.8,Math.cos(a)*r);}streamGeo.setAttribute('position',new THREE.Float32BufferAttribute(stream,3));const streamPoints=new THREE.Points(streamGeo,dust);root.add(streamPoints);
- function make(h){const g=h.visual==='wave'?wavePool.group:new THREE.Group();root.add(g);
+ function make(h){
+  const cached=free.get(h.visual);
+  if(h.visual!=='wave'&&cached?.length){const reused=cached.pop();reused.visible=true;attacks.set(h.id,reused);return reused;}
+  const g=h.visual==='wave'?wavePool.group:new THREE.Group();g.userData.memoryVisual=h.visual;root.add(g);
   if(h.visual==='sword'){
    const blade=new THREE.Mesh(bladeGeometry,swordMetal);blade.name='gyuwon-memory-forged-sword';
    g.add(blade);
@@ -93,7 +96,9 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   if(group===wavePool.group){
    group.visible=false;group.position.set(0,0,0);attacks.delete(id);return;
   }
-  group.removeFromParent();
+  const key=group.userData.memoryVisual,bucket=free.get(key)||[];
+   if(key&&bucket.length<6){group.visible=false;bucket.push(group);free.set(key,bucket);attacks.delete(id);return;}
+   group.removeFromParent();
   const geometries=new Set(),materials=new Set();
   group.traverse(o=>{
    if(o.geometry&&!sharedGeometries.has(o.geometry))geometries.add(o.geometry);
@@ -107,7 +112,16 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  function clear(){
   for(const [id,group] of attacks)releaseAttack(id,group);
  }
- return {update(g,dt,death){const s=g.gyuwon,b=g.boss,won=g.status==='won';root.visible=b.phase===3||won;for(const[name,v]of groups){v.visible=!won&&name===s.stageMemory;if(v.visible){const build=Math.min(1,Math.max(.08,s.stageTime)/.35);v.position.y=(1-build)*-5;v.traverse(o=>{if(o.userData.baseOpacity!==undefined)o.material.opacity=o.userData.baseOpacity*build;});}};if(writingShader)writingShader.uniforms.writing.value=Math.min(1,Math.max(.05,s.t/3));roll.rotation.y=g.time*.6;streamPoints.rotation.y=g.time*.04;streamPoints.position.y=won?death*10:0;streamPoints.visible=b.phase===3||won;
+ let lastStage=null,lastBuild=-1;
+ return {update(g,dt,death){const s=g.gyuwon,b=g.boss,won=g.status==='won';root.visible=b.phase===3||won;
+  const current=won?null:s.stageMemory,build=Math.min(1,Math.max(.08,s.stageTime)/.35);
+  if(current!==lastStage||Math.abs(build-lastBuild)>.025){
+   for(const[name,v]of groups){v.visible=!won&&name===current;if(v.visible){
+    v.position.y=(1-build)*-5;
+    v.traverse(o=>{if(o.userData.baseOpacity!==undefined)o.material.opacity=o.userData.baseOpacity*build;});
+   }}
+   lastStage=current;lastBuild=build;
+  }if(writingShader)writingShader.uniforms.writing.value=Math.min(1,Math.max(.05,s.t/3));roll.rotation.y=g.time*.6;streamPoints.rotation.y=g.time*.04;streamPoints.position.y=won?death*10:0;streamPoints.visible=b.phase===3||won;
   const live=new Set();for(const h of s.hazards){if(!h.visual)continue;live.add(h.id);const v=attacks.get(h.id)||make(h),p=hazardPosition(h),active=h.age>=h.warn;v.visible=b.phase===3;
    v.position.set(p.x,0,p.z);v.rotation.y=h.yaw||0;
    if(h.visual==='sword'){v.position.set(h.x,0,h.z);v.rotation.set(0,h.yaw||0,Math.max(0,1-h.age/h.warn)*-.9);}
@@ -148,7 +162,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
     warmupBlade.visible=oldBlade;warmupOrb.visible=oldOrb;
    }
   },
-  stats:()=>({liveAttackGroups:attacks.size,waveVertices:wavePool.stats().vertices,
+  stats:()=>({liveAttackGroups:attacks.size,pooledAttackGroups:[...free.values()].reduce((n,v)=>n+v.length,0),waveVertices:wavePool.stats().vertices,
    waveGeometryBuilds:1}),
   dispose(){
    clear();root.remove(wavePool.group);wavePool.dispose();

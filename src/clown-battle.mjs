@@ -156,8 +156,17 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   ['Clown close callback',()=>onClose({weapon,status:g.status,practice})]
  ]);
  function releaseZone(group){scene.remove(group);disposeScene(group);}
+ let sceneryElapsed=0;
  function sync(dt){
-  const b=g.boss,p=g.player,c=g.clown;actor.update(g,impact.frozen?0:dt);troupeView.update(g,dt);legacyEchoes.update(g,dt);actor.root.scale.setScalar(CLOWN_SIZE);actor.root.position.y*=CLOWN_SIZE;actor.root.rotation.x=actor.root.rotation.z=0;impact.bossPose(actor.root);P.rig.position.set(p.x,0,p.z);P.rig.rotation.y=p.action?.yaw??p.yaw;const v=input(),walk=posePlayer(P,g.time*7,p.action?0:Math.hypot(v.x,v.z)*4.7);swayCape(P,g.time,0);P.body.position.y=1+walk.bob;P.body.rotation.x=0;P.pivot.rotation.x=0;const a=p.action;if(a&&(a.kind==='attack'||a.kind==='skill')){P.arms.R.rotation.x=0;P.pivot.rotation.x=-1.5+Math.sin(clamp(a.t/a.total,0,1)*Math.PI)*2.9;}else if(a?.kind==='charging'){P.pivot.rotation.x=-1.4;P.body.rotation.x=-.12;}else if(a?.kind==='roll')P.body.rotation.x=a.t/a.total*Math.PI*2;else if(a?.kind==='hurt')P.body.rotation.x=-.3;P.rig.rotation.x=P.rig.rotation.z=0;impact.playerPose(P.rig);mark.position.set(p.x,.06,p.z);
+  const b=g.boss,p=g.player,c=g.clown;
+  // During the non-skippable transformation scenery runs at a bounded 20Hz,
+  // while actor, hurtboxes, player and cutscene beats remain full-rate.
+  sceneryElapsed+=Math.max(0,dt);
+  const sceneryTick=b.state!=='transition'||sceneryElapsed>=.05;
+  const sceneryDt=sceneryElapsed;
+  if(sceneryTick)sceneryElapsed=0;
+  actor.update(g,impact.frozen?0:dt);
+  if(sceneryTick){troupeView.update(g,sceneryDt);legacyEchoes.update(g,sceneryDt);}actor.root.scale.setScalar(CLOWN_SIZE);actor.root.position.y*=CLOWN_SIZE;actor.root.rotation.x=actor.root.rotation.z=0;impact.bossPose(actor.root);P.rig.position.set(p.x,0,p.z);P.rig.rotation.y=p.action?.yaw??p.yaw;const v=input(),walk=posePlayer(P,g.time*7,p.action?0:Math.hypot(v.x,v.z)*4.7);swayCape(P,g.time,0);P.body.position.y=1+walk.bob;P.body.rotation.x=0;P.pivot.rotation.x=0;const a=p.action;if(a&&(a.kind==='attack'||a.kind==='skill')){P.arms.R.rotation.x=0;P.pivot.rotation.x=-1.5+Math.sin(clamp(a.t/a.total,0,1)*Math.PI)*2.9;}else if(a?.kind==='charging'){P.pivot.rotation.x=-1.4;P.body.rotation.x=-.12;}else if(a?.kind==='roll')P.body.rotation.x=a.t/a.total*Math.PI*2;else if(a?.kind==='hurt')P.body.rotation.x=-.3;P.rig.rotation.x=P.rig.rotation.z=0;impact.playerPose(P.rig);mark.position.set(p.x,.06,p.z);
   const live=new Set();for(const z of c.zones){
     if(!clownDangerSpotlightCue(z))continue;
     live.add(z.id);let m=zones.get(z.id);
@@ -166,7 +175,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
    }for(const[id,m]of zones)if(!live.has(id)){releaseZone(m);zones.delete(id);}
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:headPool.acquire();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph&&o.group.visible)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){releaseBombVisual(o);bombs.delete(id);}
   playerProjectiles.update(g);
-  nightmare.update(g,dt);livingWorld.update(g,dt);circus.update(g,dt);
+  if(sceneryTick){nightmare.update(g,sceneryDt);livingWorld.update(g,sceneryDt);circus.update(g,sceneryDt);}
   coronation.update(g,dt);const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent='';
   // The huge-ball transformation is retired: do not pull camera away
    // from the new grounded human-scale horror performance.
@@ -194,6 +203,10 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   quality.sample(realDt,ready&&!introGate.blocked&&!paused&&g.status==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);width=viewport.width;height=viewport.height;atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&!paused&&g.status==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.clown.name,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
  }
  const cameraVisibility=createCameraVisibility(scene,{roots:[circus.root,atmosphere.root,livingWorld.root],targets:()=>[{x:g.player.x,y:1.4,z:g.player.z},{x:g.boss.x,y:clownBeastPose(g).active?2.8:4.5,z:g.boss.z,radius:5}]});startup.own('Clown camera visibility',()=>cameraVisibility.dispose());eventScope.add(()=>cameraVisibility.dispose());
- installChargeInput(shadow,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&!paused&&g.status==='playing',listen:(...args)=>eventScope.listen(...args),act:actPlayer});eventScope.ownHandlers(shadow);eventScope.add(()=>{clearMovement(keys,stick);queued=null;drag=false;releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickId);});eventScope.listen(window,'pagehide',event=>{if(!event.persisted)close();});reset();warmup=createBattleVisualWarmup({renderer,scene,camera,assets:[actor.head.ready,headPool.ready],container:d});startup.own('Clown visual warmup',()=>warmup.dispose());const battleLoop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Battle frame failed',error);close();}});startup.own('Battle loop',()=>battleLoop.dispose());const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!introGate.blocked&&!paused&&g.status==='playing',intro:introGate.begin,pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),close}));startup.own('Battle session',unbindSession);battleLoop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);warmup.start().then(()=>{if(!closed)introGate.whenReady(!g.introControlled);});return {close,dispose:close,get closed(){return closed;}};
+ installChargeInput(shadow,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&!paused&&g.status==='playing',listen:(...args)=>eventScope.listen(...args),act:actPlayer});eventScope.ownHandlers(shadow);eventScope.add(()=>{clearMovement(keys,stick);queued=null;drag=false;releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickId);});eventScope.listen(window,'pagehide',event=>{if(!event.persisted)close();});reset();warmup=createBattleVisualWarmup({renderer,scene,camera,assets:[actor.head.ready,headPool.ready],container:d});startup.own('Clown visual warmup',()=>warmup.dispose());const battleLoop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Battle frame failed',error);close();}});startup.own('Battle loop',()=>battleLoop.dispose());const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!introGate.blocked&&!paused&&g.status==='playing',intro:introGate.begin,pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),close}));startup.own('Battle session',unbindSession);battleLoop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);warmup.start().then(()=>{
+  if(closed)return;
+  try{coronation.prewarm(renderer,camera);}catch(error){console.warn('Clown coronation shader prewarm failed',error);}
+  introGate.whenReady(!g.introControlled);
+ });return {close,dispose:close,get closed(){return closed;}};
  });
 }
