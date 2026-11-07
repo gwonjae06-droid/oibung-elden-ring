@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import {runThreeStartup} from './runtime/three-startup.mjs';
+import {clownFaceCanvas} from './clown-head.mjs';
+import {CLOWN_FACE} from './clown-face.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance,ringmasterGesture} from './clown-ringmaster-pose.mjs';
 import {createClownGait} from './clown-gait.mjs';
 import {solveFixedLimb,smoothYaw,stageFootTarget} from './clown-performance-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
-// All old photographic head, balance-ball, cartoon sausage limbs and ghost
-// mount are deliberately excluded from this replacement actor.
+// The original *recognizable O Seulwoo portrait* belongs on the real
+// ringmaster's curved, articulated 3D face, never on a projectile or a flat
+// camera-facing billboard. The head-and-body rig remains grounded.
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 export function createClownActor({coarse=false}={}){
  return runThreeStartup(THREE,(T)=>{
@@ -80,12 +83,14 @@ export function createClownActor({coarse=false}={}){
  const neck=blob(body,bone,'long-exposed-neck',[0,4.18,0],[.20,.53,.22]);
  const head=new T.Group();head.name='sculpted-ringmaster-face';head.position.set(0,4.73,0);body.add(head);
  blob(head,leather,'slick-back-skull',[0,0,-.08],[.76,.99,.62]);
- blob(head,chalk,'hand-sculpted-porcelain-face',[0,-.025,.14],[.68,.89,.49]);
+ const porcelainFace=blob(head,chalk,'hand-sculpted-porcelain-face',[0,-.025,.14],[.68,.89,.49]);
+ const portraitSuppress=[];
  const brow=blob(head,bone,'furrowed-brow',[0,.40,.51],[.58,.16,.14]);brow.rotation.z=-.07;
  for(const side of [-1,1]){
   const socket=blob(head,voidMat,'sunken-eye-socket',[side*.31,.22,.552],[.245,.24,.09]);socket.rotation.z=side*.13;
-  blob(head,eyeMat,'asymmetric-amber-glassy-eye',[side*.30,.21,.626],[side<0?.075:.093,.097,.04]);
-  blob(head,black,'constricted-pupil',[side*.30,.21,.665],[.039,.06,.017]);
+  portraitSuppress.push(socket);
+  portraitSuppress.push(blob(head,eyeMat,'asymmetric-amber-glassy-eye',[side*.30,.21,.626],[side<0?.075:.093,.097,.04]));
+  portraitSuppress.push(blob(head,black,'constricted-pupil',[side*.30,.21,.665],[.039,.06,.017]));
   blob(head,blood,'cracked-red-tear-paint',[side*.37,-.11,.576],[.045,.27,.018]);
   makeCurve(head,[[side*.43,-.28,.48],[side*.57,-.52,.34],[side*.48,-.67,.27]],
     .018,blood,'hairline-porcelain-crack');
@@ -104,6 +109,63 @@ export function createClownActor({coarse=false}={}){
   const tooth=add(jaw,new T.ConeGeometry(.039,.17,coarse?5:9),bone,'uneven-individual-tooth',x,-.11,.423);
   tooth.rotation.z=i%2?.09:-.05;
  }
+ // The source is the original face already bundled in this repository.
+ // Wrap it onto a FRONT HEMISPHERE of the actual sculpted face. The curved
+ // vertex normals share the skull's coordinate system, so every turn, jaw
+ // motion and cutscene keeps the human face attached in world 3D space.
+ const patchGeo=new T.SphereGeometry(1,coarse?28:56,coarse?20:42,0,Math.PI);
+ const uv=patchGeo.attributes.uv,pos=patchGeo.attributes.position;
+ const {crop}=CLOWN_FACE;
+ for(let i=0;i<pos.count;i++){
+  const X=pos.getX(i),Y=pos.getY(i);
+  const u=crop.x0+(crop.x1-crop.x0)*(.5+.5*X);
+  const v=1-(crop.y0+(crop.y1-crop.y0)*(.5-.5*Y));
+  uv.setXY(i,u,v);
+ }
+ uv.needsUpdate=true;
+ const portraitMaterial=new T.MeshPhysicalMaterial({
+  color:0xffffff,roughness:.87,metalness:0,clearcoat:.06,
+  transparent:true,alphaTest:.075,side:T.FrontSide,depthWrite:true,
+  polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1
+ });
+ const portrait=new T.Mesh(patchGeo,portraitMaterial);
+ portrait.name='o-seulwoo-original-face-curved-uv-skin';
+ portrait.position.set(0,-.025,.14);
+ portrait.scale.set(.687,.897,.499);
+ portrait.castShadow=!coarse;portrait.visible=false;
+ head.add(portrait);
+ // A feathered photographic complexion blends naturally into the sculpted
+ // cheek and jaw. No paper plane, billboard or entire sphere photo sticker.
+ let portraitTexture=null,portraitDisposed=false;
+ const portraitReady=clownFaceCanvas().then(source=>{
+  if(!source||portraitDisposed||typeof document==='undefined')return false;
+  const canvas=document.createElement('canvas');
+  canvas.width=source.width;canvas.height=source.height;
+  const ctx=canvas.getContext('2d');if(!ctx)return false;
+  ctx.drawImage(source,0,0);
+  const image=ctx.getImageData(0,0,canvas.width,canvas.height),w=canvas.width,h=canvas.height;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+   const u=((x+.5)/w-crop.x0)/(crop.x1-crop.x0);
+   const v=((y+.5)/h-crop.y0)/(crop.y1-crop.y0);
+   const edge=Math.min(u,1-u,v,1-v),f=Math.max(0,Math.min(1,edge/.135));
+   const feather=f*f*(3-2*f);
+   image.data[(y*w+x)*4+3]=Math.round(image.data[(y*w+x)*4+3]*feather);
+  }
+  ctx.putImageData(image,0,0);
+  if(portraitDisposed)return false;
+  portraitTexture=new T.CanvasTexture(canvas);
+  portraitTexture.colorSpace=T.SRGBColorSpace;
+  portraitTexture.anisotropy=coarse?1:4;
+  portraitMaterial.map=portraitTexture;
+  portraitMaterial.needsUpdate=true;
+  portrait.visible=true;
+  // The original photographed eyes are authoritative. Do not paint a
+  // second set of pupils over the recognizable human face.
+  for(const detail of portraitSuppress)detail.visible=false;
+  return true;
+ }).catch(()=>false);
+ // Scene-resource disposal is invoked by the battle startup owner; the
+ // promise checks attachment so it cannot materialize after a teardown.
  // Tall ringmaster hat: layered crown, curved brim, hatband and iron laurels.
  const hat=new T.Group();hat.position.set(0,.92,-.05);head.add(hat);
  const brim=add(hat,new T.CylinderGeometry(.88,.91,.1,coarse?20:48),leather,'real-thickness-tall-hat-brim');
@@ -270,6 +332,8 @@ export function createClownActor({coarse=false}={}){
   crimson.color.setHex(phase?0x591425:0x7d2433);
   if(g.status==='won'){body.rotation.z=clamp((c.time||0)*.2,0,1.15);}
  }
- return {root,update,head:{ready:Promise.resolve(true)},maskStyle:'sculpted',isRebuiltRingmaster:true};
+ return {root,update,
+  head:{ready:portraitReady,portrait,source:'clown-face.mjs'},
+  maskStyle:'sculpted-with-original-face',isRebuiltRingmaster:true};
  });
 }

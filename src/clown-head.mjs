@@ -4,7 +4,9 @@ import {CLOWN_FACE,applyFaceAlpha} from './clown-face.mjs';
 // All visible/throwable heads share one asynchronous JPEG decode and alpha-mask
 // rasterization. Each head still owns its own texture for deterministic disposal.
 let sharedCanvasPromise=null;
-function clownFaceCanvas(){
+export function clownFaceCanvas(){
+ // Runtime servers and pure-node scene tests have no DOM or Image decoder.
+ if(typeof Image==='undefined'||typeof document==='undefined')return Promise.resolve(null);
  if(!sharedCanvasPromise)sharedCanvasPromise=new Promise(resolve=>{
   const image=new Image();image.onload=()=>{try{
    const canvas=document.createElement('canvas');canvas.width=CLOWN_FACE.w;canvas.height=CLOWN_FACE.h;
