@@ -25,7 +25,7 @@ export function runStageVariant(name,g,c,a,t,api){
    for(let lane=0;lane<5;lane++)if(lane!==gap){const x=(lane-2)*6,from={x,y:2.1,z:-14*direction},to={x,z:14*direction};heads.push({from,to});api.bomb(g,{kind:'head',from,...from,fly:.001,warn:.7,r:2.1});}
    c.f[key]=heads;api.emit(g,'clown-stomp');
   }
-  if(cross(a,t,start+.7))for(const h of c.f[key]||[]){api.bomb(g,{kind:'roll',from:{...h.from},x:h.to.x,z:h.to.z,px:h.from.x,pz:h.from.z,fly:0,travel:.8,warn:.8,r:2.1});api.emit(g,'clown-roll');}
+  if(cross(a,t,start+.7))for(const h of c.f[key]||[]){api.bomb(g,{kind:'roll',from:{...h.from},x:h.to.x,z:h.to.z,px:h.from.x,pz:h.from.z,fly:0,windup:.35,travel:.8,warn:1.15,r:2.1});api.emit(g,'clown-roll');}
  }
  return true;
 }

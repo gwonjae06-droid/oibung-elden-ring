@@ -270,7 +270,10 @@ function updateBombs(g, dt) {
       const p = rollPosition(q);
       q.px = p.x;
       q.pz = p.z;
-      if (!q.hit && was <= q.travel) {
+      // Only the truly moving head can contact the player. The stage/encore
+        // launch windup is a separate, non-damaging anticipation period.
+        const windup = q.windup || 0;
+        if (!q.hit && q.t >= windup && was <= windup + q.travel) {
         const a = c.prevPlayer || g.player,
           b = g.player;
         if (
