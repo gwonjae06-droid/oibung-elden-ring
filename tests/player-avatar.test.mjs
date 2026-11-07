@@ -78,3 +78,24 @@ test('all weapons brace the helmet, shoulders and knees during attacks without e
   assert.equal(g.player.x,0);assert.equal(g.player.z,0);assert.equal(g.boss.x,0);
  }
 });
+
+test('equipped weapon alone is visible across all four loadouts, including hammer throw',async()=>{
+ const scene=new THREE.Scene(),p=buildPlayer(weapons);scene.add(p.rig);
+ const fx=createPlayerPolish(scene,{makeSound:()=>({update(){},clear(){},play(){},dispose(){return {errors:[]};}})});
+ const g=game('sword');g.projectiles=[];
+ const expected=weapon=>{
+  for(const id of weapons)assert.equal(p.weaponRigs[id].visible,id===weapon,weapon+': unexpected '+id+' mesh');
+ };
+ // The same character rig is reused when weapon selection changes; the polish
+ // layer must never reveal the hammer under a sword, bow, or card model.
+ for(const weapon of ['sword','bow','cards','hammer','sword','cards']){
+  g.weapon=weapon;g.time+=1/60;fx.update(1/60,g);expected(weapon);
+ }
+ g.weapon='hammer';g.projectiles=[{kind:'hammer-throw',life:.5}];g.time+=1/60;
+ fx.update(1/60,g);
+ assert.equal(p.weaponRigs.hammer.visible,false,'throwing hides the held hammer');
+ for(const id of ['sword','bow','cards'])assert.equal(p.weaponRigs[id].visible,false);
+ g.projectiles[0].life=0;g.time+=1/60;fx.update(1/60,g);expected('hammer');
+ g.weapon='bow';g.time+=1/60;fx.update(1/60,g);expected('bow');
+ await fx.dispose();disposeScene(scene);
+});
