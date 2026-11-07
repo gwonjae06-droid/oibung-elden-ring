@@ -47,10 +47,26 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  }
  spoke.instanceMatrix.needsUpdate=true;roll.add(spoke);
  const circusMemory=groups.get('circus');
+ // Two folded, torn velvet wings frame the remembered troupe instead of
+ // opaque rectangular curtain blocks. Shared geometry is static across casts.
+ const velvet=new THREE.MeshStandardMaterial({color:0x3d1424,roughness:.97,metalness:0,
+  side:THREE.DoubleSide,transparent:true,opacity:.91,depthWrite:false});
+ const clothGeometries=[];
  for(const side of [-1,1]){
-  const curtain=solid(circusMemory,cube,side*21,14,0,1,28,29);
-  curtain.rotation.z=side*.12;
+  const clothGeo=new THREE.PlaneGeometry(16,27,coarse?12:28,coarse?8:24);
+  const pos=clothGeo.getAttribute('position');
+  for(let i=0;i<pos.count;i++){
+   const x=pos.getX(i),y=pos.getY(i);
+   pos.setZ(i,Math.sin((x+8)*1.65)*.6+Math.sin(y*.28+x*.53)*.18);
+   if(y< -11.5)pos.setY(i,y-Math.sin(x*.82+side)*(.8+(-11.5-y)*.14));
+  }
+  clothGeo.computeVertexNormals();clothGeometries.push(clothGeo);
+  const curtain=new THREE.Mesh(clothGeo,velvet);
+  curtain.name='gyuwon-recalled-circus-velvet';
+  curtain.position.set(side*21,13.7,-19);
+  curtain.rotation.y=side*.24;circusMemory.add(curtain);
  }
+
  const streamGeo=new THREE.BufferGeometry(),stream=[];for(let i=0;i<(coarse?900:2400);i++){const a=i*2.39996,r=25+(i%113);stream.push(Math.sin(a)*r,(i%97)*.8,Math.cos(a)*r);}streamGeo.setAttribute('position',new THREE.Float32BufferAttribute(stream,3));const streamPoints=new THREE.Points(streamGeo,dust);root.add(streamPoints);
  function make(h){const g=h.visual==='wave'?wavePool.group:new THREE.Group();root.add(g);
   if(h.visual==='sword'){
@@ -71,8 +87,8 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   }
   attacks.set(h.id,g);return g;
  }
- const sharedGeometries=new Set([cube,sphere,cylinder,ring,bladeGeometry]),
-  sharedMaterials=new Set([gold,dust,swordMetal]);
+ const sharedGeometries=new Set([cube,sphere,cylinder,ring,bladeGeometry,...clothGeometries]),
+  sharedMaterials=new Set([gold,dust,swordMetal,velvet]);
  function releaseAttack(id,group){
   if(group===wavePool.group){
    group.visible=false;group.position.set(0,0,0);attacks.delete(id);return;
