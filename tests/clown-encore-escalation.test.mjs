@@ -42,15 +42,21 @@ test('new clown performances use delayed real hazards and moving physical attack
    assert.ok(Math.hypot(g.boss.x,g.boss.z+6)>1,'boss must physically pursue the player');
  }
 });
-test('new phase-two premieres get actual screen time before the player reaches the final act',()=>{
- for(const [stage,names] of [[2,['funeralParade','brokenHorses']],[3,['audienceJudgement','marionetteDevour']]]){
-  const g=createClownGame('sword',{register:false,seed:53});g.boss.phase=2;g.clown.horrorStage=stage;
+test('new ensemble premieres start stage two and finale, while old acts stay in the shuffle',()=>{
+ for(const [stage,names] of [
+  [2,['candlelightChoir','marionetteGallows','emberCarouselRevue']],
+  [3,['allCastRequiem','audienceJudgement']]
+ ]){
+  const g=createClownGame('sword',{register:false,seed:53});
+  g.boss.phase=2;g.clown.horrorStage=stage;
   const seen=new Set();
-  for(let i=0;i<2;i++){
+  for(let i=0;i<names.length;i++){
    const id=choosePattern(g);seen.add(id);startClownPattern(g,id);g.clown.last=id;
   }
-  assert.deepEqual([...seen].sort(),names.sort());
+  assert.deepEqual([...seen].sort(),[...names].sort());
  }
+ for(const id of ['funeralParade','brokenHorses','marionetteDevour'])
+  assert.ok(PATTERNS[id],id+' must remain authored after the new ensemble expansion');
 });
 test('legacy beast attacks gain extra recovery-aware beats',()=>{
  for(const id of ['feralSkitter','reverseCrawl','facePeelHunt','ceilingPounce','unhingedClap']){
