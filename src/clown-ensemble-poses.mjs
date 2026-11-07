@@ -56,6 +56,7 @@ export const ENSEMBLE_DISPLAY_STYLE=Object.freeze({
  vault:{lift:.42,lean:.37},strings:{lift:0,lean:-.12},
  sing:{lift:.08,lean:-.10},hoop:{lift:.04,lean:-.22},
  mirror:{lift:.05,lean:.26},cannon:{lift:.06,lean:.55},
+ crush:{lift:0,lean:-.32},slash:{lift:.08,lean:-.18},
  trapdoor:{lift:.02,lean:.13},curtain:{lift:.03,lean:-.18},
  finale:{lift:.08,lean:-.09},hush:{lift:0,lean:-.03}
 });

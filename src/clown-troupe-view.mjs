@@ -37,7 +37,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
  function actor(role){
   const group=new THREE.Group();group.name='circus-member-'+role;root.add(group);
   const body=new THREE.Group();group.add(body);let mask,shoulders=[],legs=[],fire=[],strings=[],head,jaw;
-  const clothes=role==='acrobat'?mat.cyan:role==='firekeeper'?mat.crimson:mat.velvet;
+  const clothes=role==='acrobat'?mat.cyan:role==='firekeeper'||role==='strongman'?mat.crimson:role==='bladeDancer'?mat.black:mat.velvet;
   const torso=oval(body,clothes,'volumetric-theatre-costume',0,1.42,0,.56,.9,.36);
   const skirt=add(body,new THREE.ConeGeometry(.73,1.14,coarse?10:22,1,true),clothes,'ragged-velvet-coat-hem',0,.7,0);
   skirt.rotation.y=.21;
@@ -107,6 +107,32 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    const wreath=add(body,new THREE.TorusGeometry(1.06,.06,8,coarse?24:52),mat.gilt,'rear-acrobat-hoop',0,1.55,-.33);
    wreath.rotation.y=.3;
    oval(body,mat.crimson,'harlequin-shoulder-pennant',-.72,1.75,-.12,.23,.25,.40);
+  }
+  if(role==='strongman'){
+   // Physically gripped cudgel attached to the right arm's animated joint.
+   const right=shoulders[1];
+   const grip=add(right,new THREE.CylinderGeometry(.075,.095,1.45,coarse?8:13),
+    mat.gilt,'strongman-held-cudgel-handle',.17,-1.19,.38);
+   grip.rotation.x=.25;
+   const club=add(right,new THREE.CylinderGeometry(.41,.48,.8,coarse?10:18),
+    mat.black,'strongman-weighted-stage-mallet',.17,-1.91,.49);
+   club.rotation.z=Math.PI/2;
+   for(const side of[-1,1])oval(body,mat.gilt,'strongman-heavy-shoulder-plate',
+    side*.58,1.95,0,.27,.29,.28);
+  }
+  if(role==='bladeDancer'){
+   for(const side of[-1,1]){
+    const hand=shoulders[side>0?1:0];
+    const guard=add(hand,new THREE.CylinderGeometry(.16,.16,.11,8),
+     mat.gilt,'blade-dancer-handguard',side*.19,-.77,.24);
+    guard.rotation.z=Math.PI/2;
+    const blade=add(hand,new THREE.ConeGeometry(.15,1.22,coarse?6:12),
+     mat.ivory,'blade-dancer-handheld-scythe',side*.2,-1.36,.41);
+    blade.rotation.x=-.42;blade.rotation.z=side*.13;
+   }
+   const plume=add(head,new THREE.ConeGeometry(.34,.9,coarse?8:14),mat.crimson,
+    'blade-dancer-torn-feather-plume',0,.76,-.12);
+   plume.rotation.z=.28;
   }
   if(role==='mimic'){
    const hat=add(head,new THREE.CylinderGeometry(.29,.43,.75,coarse?12:24),mat.black,'false-ringmaster-tall-hat',0,.88,-.1);
@@ -287,11 +313,12 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     sway+moving*.035+style.lift*routine.weight,h,14);
    v.body.rotation.set(
     v.springs.step('pitch',m.down?Math.min(1.2,m.death*3):
-     style.lean*routine.weight+(m.cast>0?-.07:0)-moving*.065,h,15),0,
+     style.lean*routine.weight+((routine.pose==='crush'||routine.pose==='slash')&&routine.elapsed>=routine.wind?.40*routine.weight:0)+(m.cast>0?-.07:0)-moving*.065,h,15),0,
     v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):
      sway*.4+(m.motionLean||0)+(routine.pose==='mirror'?.18*routine.weight*routine.beat:0),h,12));
    v.skirt.rotation.x=v.springs.step('skirt',-.05+moving*.2+m.cast*.024,h,9);
-   v.torso.scale.y=.9*(1+.18*choirRise*(.45+.55*Math.abs(routine.beat)));
+   v.torso.scale.x=m.role==='strongman'?.74:.56;
+    v.torso.scale.y=(m.role==='strongman'?1.14:.9)*(1+.18*choirRise*(.45+.55*Math.abs(routine.beat)));
    v.head.scale.set(1+.055*choirRise,1+.10*choirRise,1+.04*choirRise);
    for(let i=0;i<2;i++){
     const side=i?1:-1,L=v.legs[i],phase=circusFootPhasing(m.step*3.0,moving,side),
@@ -320,6 +347,15 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     else if(pose==='sing'||pose==='finale'){spread=side*(-1.1*weight);reach=(-.72+.18*accent)*weight;}
     else if(pose==='hoop'){spread=side*(-.7*weight);reach=(-1.75+.13*accent)*weight;}
     else if(pose==='mirror'){spread=side*(-1.15*weight);reach=(-.98+.25*accent)*weight;}
+    else if(pose==='crush'){
+     const strike=routine.elapsed>=routine.wind;
+     spread=side*(-.3-.2*weight);reach=(strike?.48:-2.1)*weight;
+    }
+    else if(pose==='slash'){
+     const strike=routine.elapsed>=routine.wind;
+     spread=side*(-.48-.38*weight);reach=(strike?-.12:-1.65)*weight+
+      (side>0?1:-1)*accent*.30*weight;
+    }
     else if(pose==='cannon'){spread=side*(-.35*weight);reach=(-.85+.15*accent)*weight;}
     else if(pose==='curtain'){spread=side*(-1.35*weight);reach=(-.70+.14*accent)*weight;}
     arm.rotation.z=v.springs.step('arm-spread-'+side,spread,h,16);

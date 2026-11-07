@@ -57,18 +57,13 @@ test('slow third-act attacks preserve readable windups, long heavy recoveries, a
  }
  assert.ok(Object.keys(PHASE_THREE).length>=7);
 });
-test('screen half-cleave only starts after the actual rift release and does not hit by itself',()=>{
- const b={phase:3,state:'transition',t:2.25},scene={boss:b,kwonFractures:[]};
- assert.ok(kwonThirdScreenRift(scene).amount>.1,'betrayal has cinematic split');
- b.t=4.35;assert.ok(kwonThirdScreenRift(scene).amount>.1,'sky tear splits world');
- b.t=CINEMATIC;assert.equal(kwonThirdScreenRift(scene).amount,0);
- b.state='active';scene.kwonFractures=makeKwonFractures({x:0,z:0,yaw:0},'heavenSplit',11);
- const q=scene.kwonFractures[0];
- assert.equal(kwonThirdScreenRift(scene).amount,0);
- q.age=q.delay+.4;assert.ok(kwonThirdScreenRift(scene).amount>0);
- assert.equal(kwonFractureContact(q,{x:4,z:11}),false,'a side dodge remains safe despite visual tearing');
- scene.kwonFractures=[];assert.equal(kwonThirdScreenRift(scene).amount,0);
+test('world fracture damage stays bound to real 3D travelling strike, never a full-screen mask',()=>{
+ const boss={x:0,z:0,yaw:0};
+ const cracks=makeKwonFractures(boss,'heavenSplit',11);
+ assert.equal(cracks.length,5);
+ assert.ok(cracks.every(q=>!kwonFractureContact(q,{x:4,z:11})));
 });
+
 test('3D self-betrayal, ground fracture and severed moon mesh pool remain bounded',()=>{
  const scene=new THREE.Scene(),view=createKwonThirdPhaseView(scene);
  const boss={x:0,z:0,yaw:0,phase:3,state:'transition',t:2.3};
@@ -77,20 +72,16 @@ test('3D self-betrayal, ground fracture and severed moon mesh pool remain bounde
  assert.ok(view.root.getObjectByName('kwon-betrayal-wound-rift'));
  boss.state='active';boss.t=.45;g.kwonFractures=makeKwonFractures(boss,'heavenSplit',30);
  g.kwonFractures[0].age=.9;view.update(g);
- assert.equal(view.stats().live,2);
+ assert.equal(view.stats().live,5);
  assert.ok(view.root.getObjectByName('kwon-split-falling-moon'));
  view.dispose();assert.equal(scene.children.length,0);view.dispose();
 });
-test('arena wires an independent 3D blade, body IK, one-pass screen cut, lifecycle cleanup, and non-text cutscenes',()=>{
- const arena=read('src/arena.mjs'),stance=read('src/boss-stance.mjs'),screen=read('src/kwon-world-cleave.mjs');
- assert.match(arena,/swordGroup\.parent!==bossRoot/);
- assert.match(arena,/swordGroup\.parent!==bossModel/);
- assert.match(arena,/swordGroup\.scale\.set/);
- assert.match(arena,/worldCleave\.update\(game\)/);
- assert.match(arena,/worldCleave\.reset\(\)/);
- assert.match(stance,/drag=kwonThirdBodyDrag\(b\)/);
- assert.match(stance,/gripMode=false/);
- assert.match(stance,/caption\.textContent=''/);
- assert.match(screen,/hasExtraWebGL:false/);
- assert.doesNotMatch(screen,/renderer\.render|requestAnimationFrame|toDataURL/);
+test('detached 3D blade and broken world wiring preserve natural limbs and no screen overlay',()=>{
+ const arena=read('src/arena.mjs'),stance=read('src/boss-stance.mjs');
+ for(const expected of ['swordGroup.parent!==bossRoot','swordGroup.parent!==bossModel',
+  'swordGroup.scale.set','brokenWorld.update(game','brokenWorld.reset()',
+  'lunarStorm.update(game)'])assert.ok(arena.includes(expected),expected);
+ for(const expected of ['drag=kwonThirdBodyDrag(b)','gripMode=false',"caption.textContent=''"])
+  assert.ok(stance.includes(expected),expected);
+ assert.ok(!arena.includes('worldCleave')&&!arena.includes('createKwonWorldCleave'));
 });

@@ -1,10 +1,15 @@
-name: Kwon possessed sword and world cleave
+name: Kwon lunar cataclysm and shattered 3D battlefield
 on:
   pull_request:
     paths:
       - 'src/kwon-third-phase.mjs'
       - 'src/kwon-third-phase-view.mjs'
-      - 'src/kwon-world-cleave.mjs'
+      - 'src/kwon-shattered-world.mjs'
+      - 'src/kwon-moon-cataclysm.mjs'
+      - 'src/kwon-moon-cataclysm-view.mjs'
+      - 'src/arena-damage.mjs'
+      - 'src/environment.mjs'
+      - 'tests/kwon-moon-cataclysm.test.mjs'
       - 'src/combat.mjs'
       - 'src/boss-stance.mjs'
       - 'src/arena.mjs'
@@ -28,10 +33,11 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: All modified modules parse
         run: |
-          for f in src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/kwon-world-cleave.mjs src/combat.mjs src/arena.mjs src/boss-stance.mjs tests/kwon-possession-cinematic.test.mjs; do node --check "$f"; done
+          for f in src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/kwon-shattered-world.mjs src/kwon-moon-cataclysm.mjs src/kwon-moon-cataclysm-view.mjs src/arena-damage.mjs src/environment.mjs src/combat.mjs src/arena.mjs src/boss-stance.mjs tests/kwon-possession-cinematic.test.mjs tests/kwon-moon-cataclysm.test.mjs; do node --check "$f"; done
       - name: Possession, exact hitboxes, old moves and phase choreography
         run: |
           node --test \
+            tests/kwon-moon-cataclysm.test.mjs \
             tests/kwon-possession-cinematic.test.mjs \
             tests/kwon-third-phase.test.mjs \
             tests/kwon-anatomical-hurtbox.test.mjs \
@@ -40,7 +46,8 @@ jobs:
             tests/kwon-ranged-pressure.test.mjs \
             tests/kwon-stance-rig.test.mjs \
             tests/kwon-torso-rig.test.mjs \
-            tests/kwon-leg-rig.test.mjs
+            tests/kwon-leg-rig.test.mjs \
+            tests/combat.test.mjs
   visual:
     runs-on: ubuntu-latest
     timeout-minutes: 14
@@ -51,7 +58,7 @@ jobs:
           node-version: '22'
       - name: Install browser preview dependencies
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
-      - name: Render sword betrayal, collapsed puppet, split world at two sizes
+      - name: Render shattered 3D battlefield and moon cutting cinematic on desktop/mobile
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/kwon-possession-http.log 2>&1 &
           sleep 2
@@ -60,7 +67,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: kwon-possession-screenshots
+          name: kwon-lunar-cataclysm-screenshots
           path: artifacts/kwon-possession/
           retention-days: 7
           if-no-files-found: ignore
