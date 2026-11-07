@@ -87,7 +87,7 @@ test('repeat memory hazards reuse the pooled wave and do not leak shader/geometr
   assert.equal(fx.stats().waveGeometryBuilds,1);
   let compiles=0;
   fx.prewarm({compile(){compiles++;}},new THREE.PerspectiveCamera(),scene);
-  assert.equal(compiles,1);
+  assert.equal(compiles,5,'all five distinct memory VFX shaders compile before a stage change');
   fx.dispose();assert.equal(disposed,1);
  });
 });
