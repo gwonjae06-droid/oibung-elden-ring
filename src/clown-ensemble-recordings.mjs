@@ -13,7 +13,11 @@ export const CLOWN_ENSEMBLE_RECORDINGS=Object.freeze({
  cannon:{file:dir+'dragon-studio-hard-heavy-impact-515256.mp3',volume:.24,duration:.87,fade:.2,rate:.92},
  curtain:{file:dir+'clothbreath.mp3',volume:.19,duration:1.42,fade:.22,rate:.94},
  finale:{file:dir+'nightmaretransition.mp3',volume:.27,duration:1.75,fade:.3,rate:1},
- bell:{file:dir+'bell.mp3',volume:.16,duration:1.26,fade:.25,rate:.93}
+ bell:{file:dir+'bell.mp3',volume:.16,duration:1.26,fade:.25,rate:.93},
+ hush:{file:dir+'audiencewhisper.mp3',volume:.18,duration:1.38,fade:.3,rate:.9},
+ reprise:{file:dir+'bodycreak.mp3',volume:.24,duration:1.10,fade:.2,rate:.8},
+ mouthless:{file:dir+'womanvoice.mp3',volume:.22,duration:1.65,fade:.35,rate:.88},
+ unison:{file:dir+'childfunny.mp3',volume:.18,duration:.88,fade:.24,rate:.84}
 });
 export function clownEnsembleRecording(event){
  const ev=event||{},kind=String(ev.kind||'');
@@ -21,6 +25,7 @@ export function clownEnsembleRecording(event){
   return {...CLOWN_ENSEMBLE_RECORDINGS[kind],minGap:kind==='choir'?.68:kind==='drum'?.25:.36,natural:true};
  if(ev.type==='clown-troupe-show'){
   const show=String(ev.show||'');
+  if(['hush','reprise','mouthless'].includes(show))return {...CLOWN_ENSEMBLE_RECORDINGS[show],minGap:1.2,natural:true};
   const intro=/requiem|finale|curtain/i.test(show)?'finale':
    /chorus|choir|candle/i.test(show)?'choir':
    /drum|stampede/i.test(show)?'bell':
@@ -30,7 +35,10 @@ export function clownEnsembleRecording(event){
  }
  if(ev.type==='clown-impact'){
   const sound=String(ev.key||'');
-  const kind=/cannon/i.test(sound)?'cannon':
+  const kind=/corpseReprise/i.test(sound)?'reprise':
+   /unisonSmile/i.test(sound)?'unison':
+   /mouthlessChoir/i.test(sound)?'mouthless':
+   /cannon/i.test(sound)?'cannon':
    /drum/i.test(sound)?'drum':
    /knife/i.test(sound)?'knife':
    /trapeze|wire|acrobat/i.test(sound)?'rope':

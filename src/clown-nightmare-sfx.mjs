@@ -33,6 +33,8 @@ const pick=Object.freeze({
  curtain:'breathingCurtain','curtain-hit':'breathingCurtain',
  teeth:'openJaw','teeth-end':'openJaw',face:'splittingFace',
  mouth:'openJaw','stage-break':'stageShift',
+ 'unison-hush':'emptySeats','reprise-rise':'breakingBody',
+ 'mouthless-song':'emptySeats','all-faces-one':'splittingFace',
 });
 export function clownNightmareRecording(ev){
  if(!ev||typeof ev!=='object')return null;

@@ -5,7 +5,9 @@ const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 const smooth=x=>{const a=clamp(x);return a*a*(3-2*a)};
 const DANCE=Object.freeze([
  ['finale',/allCast|grandFinale|requiem|finale/i],
- ['juggle',/juggle|relay|knife|drumMarch/i],
+ ['juggle',/juggle|relay|knife/i],
+ ['hush',/synchronizedHush/i],
+ ['sing',/mouthless|lament/i],
  ['drum',/drum|percussion|march/i],
  ['vault',/tightrope|trapeze|stampede|acrobat/i],
  ['trapdoor',/trapdoor|maskedTrapdoor/i],
@@ -48,5 +50,5 @@ export const ENSEMBLE_DISPLAY_STYLE=Object.freeze({
  sing:{lift:.08,lean:-.10},hoop:{lift:.04,lean:-.22},
  mirror:{lift:.05,lean:.26},cannon:{lift:.06,lean:.55},
  trapdoor:{lift:.02,lean:.13},curtain:{lift:.03,lean:-.18},
- finale:{lift:.08,lean:-.09}
+ finale:{lift:.08,lean:-.09},hush:{lift:0,lean:-.03}
 });

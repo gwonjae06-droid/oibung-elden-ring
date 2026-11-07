@@ -1063,6 +1063,7 @@ Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
 Object.assign(RUN,Object.fromEntries(Object.entries(REMASTERED_CIRCUS_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export const LIVE_REPERTOIRE=Object.freeze([
+ 'synchronizedHush','corpseMarionetteReprise','mouthlessLament',
  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
  'drumMarch','spotlightSweep','carousel','curtainCall',
@@ -1084,7 +1085,7 @@ export function choosePattern(g) {
  const repertoire=new Set(LIVE_REPERTOIRE);
  const pool=Object.keys(PATTERNS).filter(k=>repertoire.has(k)&&k!=='shove'
   &&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
- const close=new Set(['drumMarch','knifeJugglerRelay','maskedTrapdoor','ringmasterDoubleAct','carousel','ballSpin',
+ const close=new Set(['synchronizedHush','drumMarch','knifeJugglerRelay','maskedTrapdoor','ringmasterDoubleAct','carousel','ballSpin',
   'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
  let preferred=d<5.5?pool.filter(k=>close.has(k))
   :d>12?pool.filter(k=>!close.has(k)):[];
@@ -1119,7 +1120,7 @@ export function choosePattern(g) {
   if(debut.length)preferred=debut;
   else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
-  const debut=pool.filter(k=>['candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
+  const debut=pool.filter(k=>['corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
  }
  c.seq++;
