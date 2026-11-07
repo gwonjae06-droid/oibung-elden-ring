@@ -10,7 +10,7 @@ export function poseGyuwonHorizonCamera(camera,target,g,options={}){
  const s=gyuwonHorizonShot(g,options);if(!s.active)return s;
  const p=g.player;
  // Reveal from outside the recalled cathedral so its rear wall cannot hide the horizon.
- camera.position.lerp({x:s.gap+18,y:14,z:s.z+95},s.weight);
+ camera.position.lerp({x:s.gap+150,y:22,z:s.z+260},s.weight);
  target.lerp({x:s.gap,y:18,z:s.z},s.weight);
  camera.fov+=(55-camera.fov)*s.weight;camera.updateProjectionMatrix();return s;
 }
