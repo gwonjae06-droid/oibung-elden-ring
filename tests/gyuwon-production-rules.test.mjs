@@ -13,9 +13,10 @@ const tick=(g,t)=>{for(let i=0;i<Math.ceil(t*120);i++)stepGyuwon(g,1/120);};
 
 test('every named Gyuwon gesture is defined exactly once, including the five courtroom actions',()=>{
  const s=source('gyuwon-motion.mjs');
+ const definitions=s.slice(s.indexOf('GYUWON_MOTION_STYLE='),s.indexOf('});',s.indexOf('GYUWON_MOTION_STYLE=')));
  assert.deepEqual(Object.keys(GYUWON_MOTION_STYLE).sort(),Object.keys(GYUWON_PATTERNS).sort());
  for(const id of Object.keys(GYUWON_PATTERNS)){
-  assert.equal((s.match(new RegExp('\\\\b'+id+':\\\\[','g'))||[]).length,1,'duplicate / missing '+id);
+  assert.equal(definitions.split(id+':[').length-1,1,'duplicate / missing '+id);
  }
  assert.doesNotMatch(source('gyuwon-combat.mjs'),/export function skipGyuwonTransition/);
 });
