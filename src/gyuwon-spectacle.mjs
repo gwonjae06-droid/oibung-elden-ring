@@ -8,7 +8,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  const dust=new THREE.PointsMaterial({color:0xffcf65,size:coarse?.32:.2,transparent:true,opacity:.9,depthWrite:false});
  function solid(parent,geo,x=0,y=0,z=0,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,gold);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);const p=new THREE.Points(geo,dust);p.position.copy(m.position);p.scale.copy(m.scale);parent.add(p);return m;}
  const cube=new THREE.BoxGeometry(1,1,1,4,4,4),sphere=new THREE.SphereGeometry(1,20,14),cylinder=new THREE.CylinderGeometry(1,1,1,16,3),ring=new THREE.TorusGeometry(1,.035,6,80);
- const spotlightGeo=new THREE.ConeGeometry(1,55,20,1,true);
+ // Cheap individual spotlights are disposed on expiry; only the expensive tsunami is pooled.
  const bladeOutline=new THREE.Shape();
  bladeOutline.moveTo(-2.7,0);bladeOutline.lineTo(2.7,0);
  bladeOutline.lineTo(3.2,130);bladeOutline.lineTo(2.5,151);
