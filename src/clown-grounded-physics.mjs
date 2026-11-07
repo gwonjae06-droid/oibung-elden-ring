@@ -30,7 +30,10 @@ export const createClownStageBall=(x=0,z=0)=>({
 export function stepClownStageBall(g,dt){
  if(!g?.clown||g.boss?.phase!==2)return;
  const c=g.clown,b=g.boss,p=g.player,h=Math.max(0,Math.min(Number.isFinite(dt)?dt:0,1/30));
- const ball=c.stageBall||(c.stageBall=createClownStageBall(b.x,b.z));
+ // An encounter reconstructed directly in phase two starts with the ball
+ // already parked, never intersecting the grounded clown at the origin.
+ const ball=c.stageBall||(c.stageBall=createClownStageBall(
+  b.state==='transition'?b.x:b.x-15,b.state==='transition'?b.z:b.z-7));
  const time=b.state==='transition'?b.t:5.2;
  ball.scale=phaseTwoBallScale(time);ball.r=CLOWN_BALL_RADIUS*CLOWN_VISUAL_SCALE*ball.scale;
  if(!ball.launched&&time>=1.75){ball.launched=true;ball.vx=-15;ball.vz=-7;}

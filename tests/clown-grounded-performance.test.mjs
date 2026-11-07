@@ -62,3 +62,11 @@ test('the actor and real hurt regions rise together during the visible leap',asy
  const planted=clownHurtShapes(g).find(s=>s.id==='head').y;
  assert.ok(lifted>planted,'airborne head and chest hitboxes must follow the actual rig lift');
 });
+
+test('phase-two restoration parks the sphere instead of spawning it through the clown',()=>{
+ const g=createClownGame('sword',{register:false});g.boss.phase=2;
+ g.clown.stageBall=null;
+ stepClownStageBall(g,1/120);
+ assert.ok(Math.hypot(g.clown.stageBall.x-g.boss.x,g.clown.stageBall.z-g.boss.z)>10);
+ assert.ok(Number.isFinite(g.clown.stageBall.r));
+});
