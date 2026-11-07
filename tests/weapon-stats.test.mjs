@@ -108,5 +108,6 @@ test('remaining combat damage handlers share the same incoming scaling and weapo
  assert.equal(SKILLS.bow.name,'궁술');
  assert.deepEqual(Object.keys(SKILLS),['sword','hammer','bow','cards']);
  const journey=readFileSync(new URL('../src/journey.mjs',import.meta.url),'utf8');
- assert.match(journey,/j-weapon-statline/);
+ assert.match(journey,/weaponStatChart\(weapon\)/);
+  assert.match(journey,/bossChooser\(\)/);
 });
