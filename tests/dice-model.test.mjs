@@ -9,7 +9,7 @@ test('the stolen body is a finely tessellated suited gentleman',()=>{
  const {group}=buildGentlemanTorso(T,mats());
  assert.ok(triangles(group)>3500,'torso triangle count '+triangles(group));
  const names=new Set();group.traverse(o=>{if(o.isMesh)names.add(o.material.color.getHex());});
- assert.ok(group.children.length>=8,'jacket, shoulders and front details exist');
+ let detailedMeshes=0;group.traverse(o=>{if(o.isMesh)detailedMeshes++;});assert.ok(detailedMeshes>=12,'jacket, sculpted shoulders and nested tailored details are present');
 });
 test('each hand has four three-joint fingers and a two-joint thumb that can curl',()=>{
  const hand=buildGentlemanHand(T,mats(),1);

@@ -33,24 +33,38 @@ test('Clown accepted damage stuns for .7 seconds and blocks all four weapons and
 test('invulnerability prevents clown stun, and pause leaves its clock untouched',()=>{
  const g=createClownGame();g.player.invuln=1;assert.equal(hurt(g,10,'no'),false);assert.equal(g.player.traits,undefined);g.player.invuln=0;hurt(g,10,'yes');tickBossHitTraits(g,0);assert.equal(g.player.traits.stun,.7);
 });
-test('all actual dice phase-one body contacts replace instant death with bounded crush',()=>{
- const g=createDicePlayerGame();g.player.x=g.player.z=0;g.player.invuln=99;Object.assign(g.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:0}});stepDicePlayer(g,.01);
- assert.equal(g.status,'playing');assert.equal(g.player.hp,120-DICE_PATTERNS.stompDamage);assert.equal(g.player.action.kind,'crushed');assert.equal(actDice(g,'roll'),false);assert.equal(g.events.some(e=>e.type==='death'),false);advance(g,.45,stepDicePlayer);assert.equal(g.events.filter(e=>e.type==='player-crushed').length,1);
+test('a telegraphed phase-one charge respects invulnerability and never fabricates crush events',()=>{
+ const g=createDicePlayerGame(),hp=g.player.hp;
+ g.player.x=g.player.z=0;g.player.invuln=99;
+ Object.assign(g.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:60},pose:{...g.dice.pose,x:0,z:0}});
+ stepDicePlayer(g,.01);
+ assert.equal(g.status,'playing');
+ assert.equal(g.player.hp,hp,'ordinary charge must obey invulnerability');
+ assert.equal(g.events.filter(e=>e.type==='player-crushed').length,0);
 });
 test('crush prevents player input for one second, then restores attacks without altering collision state',()=>{
  const g=createDicePlayerGame();g.dice.state='recovery';g.dice.t=-100;g.player.x=20;g.player.z=20;applyBossHitTrait(g,20,{boss:'dice'});const {x,z}=g.player;
  advance(g,.99,stepDicePlayer,{x:1,z:1});near(g.player.x,x);near(g.player.z,z);assert.ok(playerIncapacitated(g.player));advance(g,.01,stepDicePlayer);assert.equal(playerIncapacitated(g.player),false);assert.equal(actDice(g,'light'),true);
 });
-test('ordinary low-health crush can still defeat and phase-two legacy crush stays unchanged',()=>{
- for(const phase of [1,2]){const g=createDiceGame();g.boss.phase=phase;g.player.hp=phase===1?20:120;g.player.x=g.player.z=0;Object.assign(g.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:0}});stepDice(g,.01);assert.equal(g.status,'lost');assert.equal(g.player.hp,0);assert.equal(g.events.filter(e=>e.type==='death').length,1);}
+test('low-health ordinary charge may kill but never bypasses explicit roll protection',()=>{
+ const g=createDiceGame();g.player.hp=20;g.player.x=g.player.z=0;
+ Object.assign(g.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:60},pose:{...g.dice.pose,x:0,z:0}});
+ stepDice(g,.01);
+ assert.equal(g.status,'lost');assert.equal(g.player.hp,0);
+ assert.equal(g.events.filter(e=>e.type==='death').length,1);
+ const protectedHit=createDiceGame();protectedHit.player.invuln=1;protectedHit.player.x=protectedHit.player.z=0;
+ Object.assign(protectedHit.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:60},pose:{...protectedHit.dice.pose,x:0,z:0}});
+ stepDice(protectedHit,.01);
+ assert.equal(protectedHit.player.hp,protectedHit.player.maxHp);
+ assert.equal(protectedHit.status,'playing');
 });
 test('Blood heals from accepted damage only, caps at max health and does not drain during roll protection',()=>{
- const hit=(roll=false)=>{const g=createBloodGame();g.boss.hp=4000;g.player.x=0;g.player.z=-5;startBloodPattern(g,'burst');if(roll)g.player.invuln=10;advance(g,1.4,stepBlood);return g;};
+ const hit=(roll=false)=>{const g=createBloodGame();g.boss.hp=4000;g.player.x=0;g.player.z=-5;startBloodPattern(g,'burst');if(roll)g.player.invuln=10;advance(g,g.blood.hazards[0].warn+.3,stepBlood);return g;};
  const g=hit();assert.equal(g.player.hp,82);near(g.boss.hp,4009.5);assert.ok(g.player.traits.drain>0);const missed=hit(true);assert.equal(missed.boss.hp,4000);assert.equal(missed.player.traits,undefined);
  g.boss.hp=g.boss.maxHp-1;applyBossHitTrait(g,20,{boss:'blood'});assert.equal(g.boss.hp,g.boss.maxHp);
 });
 test('drain is proportional to actual health lost, while terminal state cannot heal or retain icons',()=>{
- const g=createBloodGame();g.boss.hp=4000;g.player.hp=3;g.player.x=0;g.player.z=-5;startBloodPattern(g,'burst');advance(g,1.4,stepBlood);assert.equal(g.status,'lost');near(g.boss.hp,4000.75);assert.equal(activeBossTrait(g),null);applyBossHitTrait(g,100,{boss:'blood'});near(g.boss.hp,4000.75);clearBossHitTraits(g);assert.equal(g.player.traits.drain,0);
+ const g=createBloodGame();g.boss.hp=4000;g.player.hp=3;g.player.x=0;g.player.z=-5;startBloodPattern(g,'burst');advance(g,g.blood.hazards[0].warn+.3,stepBlood);assert.equal(g.status,'lost');near(g.boss.hp,4000.75);assert.equal(activeBossTrait(g),null);applyBossHitTrait(g,100,{boss:'blood'});near(g.boss.hp,4000.75);clearBossHitTraits(g);assert.equal(g.player.traits.drain,0);
 });
 test('trait presentation contains only SVG shapes, restores body squash and disposes pooled resources',()=>{
  for(const symbol of Object.values(TRAIT_SYMBOLS))assert.doesNotMatch(symbol,/<(?:text|title|foreignObject)\b/i);
