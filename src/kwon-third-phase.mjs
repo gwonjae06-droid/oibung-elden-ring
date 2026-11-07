@@ -52,7 +52,8 @@ export function kwonThirdSwordDrive(b){
  if(b?.phase!==3||b.state==='dead')return {lead:0,pull:0,weight:0};
  if(b.state==='transition'){
   const c=kwonThirdTransition(b.t);
-  return {lead:c.bladeWake,pull:c.bodyPulled,weight:c.collapse};
+  return {lead:c.bladeWake*(1-c.skyScar)+.16*c.skyScar,
+   pull:c.bodyPulled*(1-c.skyScar)+.12*c.skyScar,weight:c.collapse};
  }
  const cfg=KWON_THIRD_PATTERNS[b.pattern];
  if(!cfg||!['windup','active','recovery'].includes(b.state))return {lead:.16,pull:.12,weight:0};
