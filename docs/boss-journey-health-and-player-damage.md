@@ -41,10 +41,10 @@
 | 배서준 | 2 | 패턴별 20~42. 혈익 강하 38, 피의 일식 42, 붉은 날개 34, 혈우 20 | 피격 시 보스 흡혈 25%, 별도 혈해 흡수 최대 5회 |
 
 **주의 및 활성화 여부**
-- 박성원 구버전의 `dice.faceAttacks` 사진 투사체(18 피해)와 사슬 휩쓸기(22 피해)는 기본값 `false`로, 일반 여정에서 활성화되지 않는 호환/테스트 기능이다.
+- 박성원 2페이즈의 사진 투사체와 황금 사슬 공격은 일반 패턴과 거대 박성원 패턴 모두에서 데이터·시전 로직·이펙트 모듈을 제거했다. 얼굴 사진 텍스처와 3페이즈의 별도 테이블 파괴 패턴은 유지한다.
 - `src/dice-combat.mjs`에는 2페이즈 이상에서 구르는 주사위 몸체에 깔리면 즉사한다는 호환 분기가 남아 있으나, 일반 여정에서는 2페이즈 진입 즉시 `beginGiant()`로 거인 전투로 전환되므로 통상 적용되는 페이즈2 공격이라고 안내하지 않는다.
 - 배서준의 혈해 주기적 체력 회복은 변경된 여정 HP 5,820의 5%=**291**씩 최대 5회(합계 최대 **1,455**). 보스가 플레이어에게 피해를 줄 때의 흡혈 25%는 별도이며, 현재 코드에서는 2페이즈 반피 상한과 별도이다.
 - 한 차례 피격 뒤 기본 무적시간: 이권재·오슬우 약 0.32초, 박성원 거인 패턴 0.55초, 배서준 0.65초. 일부 특수 압사는 이러한 일반 무적 판정의 예외다.
 - 개발용 독립 전투 초기 HP와 오래된 설계 문서의 박성원 3000/배서준 6400은 **일반 여정 HP가 아니다**. 숨겨진 보스 이동 전투도 여정 배율을 적용하지 않는다. 이 문서의 표 수치를 일반 여정 설명의 기준으로 사용한다.
 
-검사할 소스: `src/combat.mjs`, `src/clown-combat.mjs`, `src/clown-pressure.mjs`, `src/dice-combat.mjs`, `src/dice-giant.mjs`, `src/dice-portrait-barrage.mjs`, `src/dice-chain-sweep.mjs`, `src/blood-combat.mjs`, `src/boss-hit-traits.mjs`.
+검사할 소스: `src/combat.mjs`, `src/clown-combat.mjs`, `src/clown-pressure.mjs`, `src/dice-combat.mjs`, `src/dice-giant.mjs`, `src/blood-combat.mjs`, `src/boss-hit-traits.mjs`.
