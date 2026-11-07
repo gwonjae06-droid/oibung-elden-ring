@@ -12,7 +12,7 @@ export function bloodWhipPath(whip,progress=1){
  return {x:whip.x+whip.dx*f,z:whip.z+whip.dz*f};
 }
 export function bloodWhipExtension(whip){
- return clamp((whip.age-BLOOD_WHIP.warning)/BLOOD_WHIP.extension);
+ return .19+.81*clamp((whip.age-BLOOD_WHIP.warning)/BLOOD_WHIP.extension);
 }
 export function bloodWhipContact(whip,player){
  if(!whip||!player||whip.age<BLOOD_WHIP.warning||
