@@ -18,7 +18,7 @@ export function ringmasterPerformance(g){
 export function ringmasterGesture(g){
  const c=g?.clown||{},name=c.name||'',stage=c.horrorStage||1,t=finite(c.pt);
  const act=ringmasterActMotion(name,t,g?.status==='playing'&&c.state==='pattern');
- const conducting=/choir|Chorus|choral|finale|Finale|conductor|orchestra|choirOf|requiem/i.test(name);
+ const conducting=/choir|Chorus|choral|finale|Finale|conductor|orchestra|choirOf|requiem|mouthless|lament/i.test(name);
  const puppets=/puppet|marionette|funeral|strings|procession/i.test(name);
  const flames=/hoop|fire|infernal|cinder/i.test(name);
  const phantom=/twin|ghost|double|vanishing/i.test(name);

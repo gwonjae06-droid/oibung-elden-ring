@@ -72,14 +72,14 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
   const c=g.clown||{},b=g.boss||{},name=c.name||'',age=Math.max(0,c.pt-(c.state==='pattern'? .7:0)),
    stage=c.horrorStage||1,live=g.status==='playing',evil=stage===3;
   const ghostShow=live&&(name==='wrongTwin'||name==='foldedCrawl'||name==='mouthOfTheAudience'),maskShow=live&&(name==='porcelainRain'||name==='clockOfTeeth'||name==='hatchingBalloons'||name==='stolenFace'),
-   seatShow=live&&(name==='emptyAudience'||name==='mouthOfTheAudience'||evil),shadowShow=live&&(name==='livingShadow'||name==='wrongTwin'||name==='stageRupture');
+   seatShow=live&&(name==='emptyAudience'||name==='mouthOfTheAudience'||name==='synchronizedHush'||name==='mouthlessLament'||evil),shadowShow=live&&(name==='livingShadow'||name==='wrongTwin'||name==='stageRupture'||name==='corpseMarionetteReprise');
   const active=live?(evil?1:stage===2?.7:.35):0;
   phantomMat.opacity=(ghostShow?.34:seatShow?.28:0)*active;
   porcelain.opacity=(maskShow?.72:ghostShow?.36:0)*active;
   socket.opacity=(maskShow?.7:ghostShow?.65:0)*active;
   eye.opacity=seatShow?.52*active:0;
   shadowMat.opacity=shadowShow?.22*active:0;
-  curtainMat.opacity=live&&(name==='curtainNightmare'||name==='stageRupture')?.64:evil?.18:0;
+  curtainMat.opacity=live&&(name==='curtainNightmare'||name==='stageRupture'||name==='corpseMarionetteReprise')?.64:evil?.18:0;
   for(let i=0;i<ghosts.length;i++){
    const q=ghosts[i];q.visible=ghostShow;
    if(!ghostShow)continue;

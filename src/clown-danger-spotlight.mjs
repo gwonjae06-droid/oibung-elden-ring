@@ -5,6 +5,9 @@ const safe=n=>Number.isFinite(n)?n:0;
 // danger circle. Avoid losing the real hitbox silhouette in warm stage haze.
 export function clownCuePalette(z){
  const s=String(z?.sound||z?.waveKind||'');
+ if(/corpse|reprise/i.test(s))return {color:0x8c7d9c,rim:0xded0f4};
+ if(/unisonSmile/i.test(s))return {color:0xd4a1af,rim:0xffdce5};
+ if(/mouthless/i.test(s))return {color:0x89bdc6,rim:0xd5f8ff};
  if(/knife|juggler/i.test(s))return {color:0xc4cdd2,rim:0xe4f1f2};
  if(/drum/i.test(s))return {color:0xc6ad75,rim:0xffe5ab};
  if(/trapeze|highWire|acrobat/i.test(s))return {color:0x99bfc4,rim:0xd8f8ff};

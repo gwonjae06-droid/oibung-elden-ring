@@ -18,6 +18,9 @@ export function nightmareWorldState(game){
  const pattern=c.state==='pattern'?c.name:null, t=Number.isFinite(c.time)?c.time:0;
  let mode='carnival';
  if(['wrongTwin','mirrorStage','facePeelHunt','vanishingAct'].includes(pattern))mode='mirror';
+ else if(pattern==='synchronizedHush'||pattern==='mouthlessLament')mode='audience';
+ else if(pattern==='corpseMarionetteReprise')mode='flesh';
+ else if(pattern==='allCastRequiem'||pattern==='midnightGrandFinale')mode='void';
  else if(['emptyAudience','echoApplause','offbeatClap','funeralParade','audienceJudgement'].includes(pattern))mode='audience';
  else if(['curtainNightmare','stageCapsize','stageRupture','ceilingPounce'].includes(pattern))mode='inversion';
  else if(['foldedCrawl','hatchingBalloons','stolenFace','feralSkitter','reverseCrawl','brokenHorses','marionetteDevour'].includes(pattern))mode='flesh';

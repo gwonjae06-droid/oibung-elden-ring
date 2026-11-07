@@ -205,6 +205,7 @@ export function createClownActor({coarse=false}={}){
     else if(mode==='strings'||mode==='trapdoor')special=[s*1.80,3.0+(s>0?beat:-beat)*.21,1.26];
     else if(mode==='hoop')special=[s*1.93,3.26,1.0];
     else if(mode==='mirror')special=[s*1.46,2.92+.24*beat,.92];
+    else if(mode==='hush')special=[s*1.40,2.34,.66];
     else if(mode==='cannon')special=[s*1.32,2.32,1.84];
     else if(mode==='curtain')special=[s*2.18,2.88,1.28];
     target=target.map((x,i)=>x*(1-weight)+special[i]*weight);

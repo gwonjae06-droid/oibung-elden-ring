@@ -14,8 +14,8 @@ export function clownTheatreCueKind(z){
  if(/maskedCannon/i.test(s))return 'cannon';
  if(/curtainEcho/i.test(s))return 'curtain';
  if(/choir|chorus|requiemChoir|spotlightChoir/i.test(s))return 'choir';
- if(/puppet|marionette|requiemStrings/i.test(s))return 'puppet';
- if(/falseRingmaster|wrongTwin|mirror/i.test(s))return 'phantom';
+ if(/puppet|marionette|requiemStrings|corpseReprise/i.test(s))return 'puppet';
+ if(/falseRingmaster|wrongTwin|mirror|unisonSmile/i.test(s))return 'phantom';
  return null; // infernalHoops already renders sculptural, instanced fire
 }
 const ropeKind=new Set(['puppet','trapeze','curtain']);
