@@ -123,7 +123,7 @@ function zone(g, z) {
     ...z,
   };
   g.clown.zones.push(q);
-  emit(g, 'clown-zone', {id: q.id, shape: q.shape, warn: q.warn});
+  emit(g, 'clown-zone', {id: q.id, shape: q.shape, warn: q.warn, sound:q.sound||null});
   return q;
 }
 function cone(

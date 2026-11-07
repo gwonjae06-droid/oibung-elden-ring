@@ -40,7 +40,12 @@ export function bossFoleySpec(ev,g){
   case 'clown-phase3':case 'clown-horror':return clownNightmareRecording(ev);
   case 'clown-shutter':return cue(f.shutter,.32,.32,.035,.13,1.15);
   case 'clown-telegraph':return cue(f.drum,.12,.4,.1,.35,.72);
-  case 'clown-zone':return ev.warn>=.5?cue(f.ball,.12,.3,.08,.28,ev.shape==='cone'?1.1:.8):null;
+  case 'clown-zone':
+   // A staged percussion/choir/knife formation already has recorded
+   // instrument preparation. Never add an unrelated tennis-ball sample
+   // to each of its many concurrent danger-zone warnings.
+   if(/knife|drum|trapeze|trapdoor|mirror|cannon|curtain|choir|requiem|infernalHoops|puppet|marionette/i.test(ev.sound||''))return null;
+   return ev.warn>=.5?cue(f.ball,.12,.3,.08,.28,ev.shape==='cone'?1.1:.8):null;
   case 'clown-roll':return cue(f.ball,.2,.32,.08,.18,.85);
   case 'clown-juggle':return cue(f.ball,.26,.7,.13,.18);
   case 'clown-drum':case 'clown-stomp':return cue(f.drum,.32,1.05,.18,.2);
