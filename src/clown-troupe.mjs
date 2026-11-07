@@ -2,6 +2,13 @@
 // Every attack uses the same telegraphed zone engine as the ringmaster.
 // There is no decorative "mob" which can damage without a real cue.
 const TAU=Math.PI*2;
+// Preconstructed once: no repeated collection allocation in the hot NPC loop.
+const CHOREOGRAPHED_SHOWS=new Set([
+ 'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
+ 'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
+ 'drumMarch','spotlightSweep','carousel','curtainCall',
+ 'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale'
+]);
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 const ROLES=Object.freeze(['chorister','acrobat','puppeteer','firekeeper','mimic','chorister','acrobat','puppeteer']);
@@ -173,12 +180,7 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   m.yaw=contactAngle(m,target);
   // Do not stack all performer attacks simultaneously outside a deliberate
   // choreographed show, nor attack into the boss's punish / cutscene window.
-  const authored=c.state==='pattern'&&new Set([
-  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
-  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
-  'drumMarch','spotlightSweep','carousel','curtainCall',
-  'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale'
- ]).has(c.name);
+  const authored=c.state==='pattern'&&CHOREOGRAPHED_SHOWS.has(c.name);
   if(locked||authored||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
   if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
   castAttack(g,m,zone,emit);
