@@ -22,7 +22,7 @@ test('actual boss maps are built once, keep source geometry, switch exclusively 
  const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);let maps;
  try{
   maps=createGyuwonRecallMaps(scene,{coarse:true,reduced:true});assert.equal(maps.stats().builds,4);
-  const g=waveGame();for(let pass=0;pass<3;pass++)for(const id of Object.keys(RECALL_MAP_NAMES)){g.gyuwon.stageMemory=id;maps.update(g);assert.equal(maps.stats().originalRoot,RECALL_MAP_NAMES[id]);assert.equal(maps.root.children.filter(o=>o.visible).length,1);assert.equal(maps.stats().builds,4);assert.equal(scene.background.getHex(),0xffffff);}
+  const g=waveGame();for(let pass=0;pass<3;pass++)for(const id of Object.keys(RECALL_MAP_NAMES)){g.gyuwon.stageMemory=id;maps.update(g);assert.equal(maps.stats().originalRoot,RECALL_MAP_NAMES[id]);assert.equal(maps.root.children.filter(o=>o.visible).length,1);assert.equal(maps.stats().builds,4);if(id==='circus'){let batches=0;maps.root.getObjectByName('clown-circus').traverse(o=>{if(o.isInstancedMesh&&o.count>10)batches++;});assert.ok(batches>=2,'original circus crowd remains instanced');}assert.equal(scene.background.getHex(),0xffffff);}
   g.boss.phase=2;maps.update(g);assert.equal(maps.root.children.filter(o=>o.visible).length,0);g.boss.phase=3;g.status='won';maps.update(g);assert.equal(maps.stats().active,null);
  }finally{maps?.dispose();globalThis.document=previous;}
  assert.equal(scene.getObjectByName('gyuwon-real-boss-maps'),undefined);

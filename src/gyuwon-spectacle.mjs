@@ -1,3 +1,4 @@
+import {disposeScene} from './runtime/scene-resources.mjs';
 import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
 export function createGyuwonSpectacle(stage,{coarse=false}={}){
@@ -65,5 +66,5 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   // Expired hazards must release geometry immediately, even while another
   // patterned strike is still active. Otherwise each pattern grows GPU memory.
   for(const[id,v]of attacks)if(!live.has(id))releaseAttack(id,v);
- },clear,stats:()=>({liveAttackGroups:attacks.size}),dispose(){clear();tex.dispose();}};
+ },clear,stats:()=>({liveAttackGroups:attacks.size}),dispose(){clear();disposeScene(root,{extras:[...sharedGeometries,...sharedMaterials]});root.removeFromParent();}};
 }
