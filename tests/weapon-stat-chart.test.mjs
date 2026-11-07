@@ -21,6 +21,10 @@ test('every weapon graph uses the same live values as combat',()=>{
   const chart=weaponStatChart(id);
   assert.equal((chart.match(/role="meter"/g)||[]).length,7);
   assert.match(chart,/aria-valuetext=/);
+  assert.equal((chart.match(/j-stat-average/g)||[]).length,7);
+  assert.match(chart,/기본 사거리/);
+  assert.match(chart,/기본 동작/);
+  assert.match(chart,/기력 소모/);
   assert.match(chart,/실제|상대 비교/);
  }
 });
@@ -36,4 +40,14 @@ test('smithy shows the selected weapon chart next to the persistent forge tree',
  assert.match(html,/j-stat-chart/);
  assert.match(html,/j-forge-trees/);
  assert.doesNotMatch(html,/지름길|불꽃을 사용해 해금된/);
+});
+
+test('forge chart distinguishes permanent skill effects from basic damage',()=>{
+ const p=freshProfile();
+ p.flames=2;p.earnedFlames=2;p.forge.sword['blade-wave']=1;
+ const html=weaponStatChart('sword',{profile:p});
+ assert.match(html,/현재 강화 · 검기 1각인/);
+ assert.match(html,/각인 효과와 별도/);
+ const unowned=weaponStatChart('bow',{profile:p});
+ assert.match(unowned,/미각인/);
 });
