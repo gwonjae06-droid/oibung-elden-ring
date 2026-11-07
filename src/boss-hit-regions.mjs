@@ -1,7 +1,6 @@
 // Shared, deterministic hurt regions derived from each boss' authored model
 // dimensions and the same phase/pose data used by its visual rig. No Three.js
 // dependency: combat and browser draw the same simulation-time silhouette.
-import {headFrame} from './clown-visual-data.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance} from './clown-ringmaster-pose.mjs';

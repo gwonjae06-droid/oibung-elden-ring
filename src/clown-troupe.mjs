@@ -40,12 +40,28 @@ export function clearCircusTroupe(g){
 export function cueCircusShow(g,show){
  const t=g?.clown?.troupe;if(!t)return;
  t.show=show;t.showAge=0;t.cue++;
- // One curtain call may summon replacements, but only when a real authored
- // troupe pattern happens. Enemies already defeated stay defeated otherwise.
- if(t.members.filter(m=>!m.down).length<2){
-  const limit=targetCount(t.stage||1);
-  for(let i=0;i<Math.min(3,limit);i++)t.members.push(spawn(g,(t.cycle++%ROLES.length)));
+ // A real performer ensemble must be onstage before a choir, fire or
+ // mirror attack can originate from their location. Reinforcements always
+ // enter from the perimeter, and are capped to prevent an endless mob flood.
+ const roleFor={chorus:'chorister',puppets:'puppeteer',fire:'firekeeper',
+  twins:'mimic',stampede:'acrobat',finale:'chorister'}[show];
+ const required=show==='chorus'?3:show==='twins'?2:show==='stampede'?3:
+  show==='finale'?3:show==='fire'?2:2;
+ let count=t.members.filter(m=>!m.down&&m.role===roleFor).length;
+ const cap=targetCount(t.stage||1)+3;
+ for(let i=0;i<ROLES.length&&count<required&&t.members.filter(m=>!m.down).length<cap;i++){
+  if(ROLES[i]!==roleFor)continue;
+  const guest=spawn(g,i);guest.showGuest=true;
+  const r=18,angle=(t.cue+i)*TAU/9;
+  guest.x=g.boss.x+Math.sin(angle)*r;guest.z=g.boss.z+Math.cos(angle)*r;
+  const bound=away(guest);guest.x=bound.x;guest.z=bound.z;
+  guest.cooldown=1.6;
+  t.members.push(guest);count++;
  }
+ // If an act starts after a player has eliminated most of the cast,
+ // the next entrance is deliberate, not an instant silent resurrection.
+ if(t.members.every(m=>m.down)&&t.members.length<cap)
+  t.members.push(spawn(g,t.cycle++));
 }
 export function circusTroupeAlive(g){return g?.clown?.troupe?.members?.filter(m=>!m.down)||[];}
 function contactAngle(a,b){return Math.atan2(b.x-a.x,b.z-a.z);}

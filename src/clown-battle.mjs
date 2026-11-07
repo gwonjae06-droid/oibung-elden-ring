@@ -31,7 +31,6 @@ import {createClownNightmareTheatre} from './clown-nightmare-theatre.mjs';
 import {createClownLivingWorld} from './clown-nightmare-world.mjs';
 import {createClownCircusStage} from './clown-radiant-circus.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
-import {createClownHead} from './clown-head.mjs';
 import {createClownHeadPool} from './clown-photo-performance.mjs';
 import {bombPose,selectedWeapon} from './clown-visual-data.mjs';
 import {createAudio} from './audio.mjs';

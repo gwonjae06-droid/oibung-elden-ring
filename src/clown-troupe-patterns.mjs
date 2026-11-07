@@ -5,6 +5,10 @@ const TAU=Math.PI*2;
 const cross=(a,t,x)=>a<x&&t>=x;
 const safe=p=>{const r=Math.hypot(p.x,p.z);return r>22.5?{x:p.x*22.5/r,z:p.z*22.5/r}:p;};
 const point=(p,a,r)=>safe({x:p.x+Math.sin(a)*r,z:p.z+Math.cos(a)*r});
+const performer=(g,role,index=0)=>{
+ const cast=(g.clown?.troupe?.members||[]).filter(m=>!m.down&&m.role===role);
+ return cast[index%Math.max(1,cast.length)]||g.boss;
+};
 const shout=(g,c,api,show)=>api.once(c,'troupe-show-'+show,()=>{
  cueCircusShow(g,show);api.emit(g,'clown-troupe-show',{show});return true;
 });
@@ -29,9 +33,10 @@ function puppetOverture(g,c,a,t,api){
  shout(g,c,api,'puppets');
  const p=api.once(c,'puppet-centre',()=>safe({...g.player}));
  for(let i=0;i<5;i++)if(cross(a,t,.3+i*.9)){
-  const q=point(p,(i%2?1:-1)*Math.PI/2,i%2?4.7:5.8),
-   towards=Math.atan2(p.x-q.x,p.z-q.z);
-  api.zone(g,{shape:'lane',x:q.x,z:q.z,yaw:towards,len:9,w:2.7,warn:1.35,damage:22,sound:'puppet'});
+  const doll=performer(g,'puppeteer',i),q=safe({x:doll.x,z:doll.z}),
+   towards=Math.atan2(p.x-q.x,p.z-q.z),distance=Math.hypot(p.x-q.x,p.z-q.z);
+  doll.cast=Math.max(doll.cast||0,1.35);
+  api.zone(g,{shape:'lane',x:q.x,z:q.z,yaw:towards,len:Math.min(19,distance+2),w:2.7,warn:1.35,damage:22,sound:'puppet'});
  }
 }
 function infernalHoops(g,c,a,t,api){
@@ -51,8 +56,10 @@ function choirOfAshes(g,c,a,t,api){
  // Alternate notes come from physically present choristers, never
  // all directions at once. A pair of adjacent aisles is always free.
  for(let i=0;i<6;i++)if(cross(a,t,.35+i*.82)&&i!==gap&&i!==(gap+1)%6){
-  const edge=point(p,i*TAU/6,12),yaw=Math.atan2(p.x-edge.x,p.z-edge.z);
-  api.zone(g,{shape:'lane',...edge,yaw,len:15,w:2.7,warn:1.36,damage:24,sound:'choir'});
+  const singer=performer(g,'chorister',i),edge=safe({x:singer.x,z:singer.z}),
+   yaw=Math.atan2(p.x-edge.x,p.z-edge.z),len=Math.min(20,Math.hypot(p.x-edge.x,p.z-edge.z)+2);
+  singer.cast=Math.max(singer.cast||0,1.36);
+  api.zone(g,{shape:'lane',...edge,yaw,len,w:2.7,warn:1.36,damage:24,sound:'choir'});
  }
  if(cross(a,t,5.15))api.zone(g,{shape:'circle',...p,r:4.7,warn:1.45,damage:28,sound:'choir'});
 }
