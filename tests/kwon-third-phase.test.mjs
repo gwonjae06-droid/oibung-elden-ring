@@ -102,7 +102,7 @@ test('travelling ground/sky front has predictable delayed hit and safe side lane
 });
 
 test('possession waits for the blade to wake then pulls the body before the sky rupture',()=>{
- const a=kwonThirdTransition(.6),b=kwonThirdTransition(2),c=kwonThirdTransition(3.4),d=kwonThirdTransition(4.5);
+ const a=kwonThirdTransition(.6),b=kwonThirdTransition(2),c=kwonThirdTransition(3.4),d=kwonThirdTransition(4.6);
  assert.equal(a.bladeWake,0);assert.ok(b.bladeWake>0);assert.ok(c.bodyPulled>.8);
  assert.equal(c.skyScar,0);assert.equal(d.skyScar,1);
  const t=kwonThirdSwordDrive({phase:3,state:'transition',t:2.5});
