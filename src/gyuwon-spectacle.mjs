@@ -1,3 +1,4 @@
+import {disposeScene} from './runtime/scene-resources.mjs';
 import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
 export function createGyuwonSpectacle(stage,{coarse=false}={}){
@@ -7,25 +8,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  function solid(parent,geo,x=0,y=0,z=0,sx=1,sy=1,sz=1){const m=new THREE.Mesh(geo,gold);m.position.set(x,y,z);m.scale.set(sx,sy,sz);parent.add(m);const p=new THREE.Points(geo,dust);p.position.copy(m.position);p.scale.copy(m.scale);parent.add(p);return m;}
  const cube=new THREE.BoxGeometry(1,1,1,4,4,4),sphere=new THREE.SphereGeometry(1,20,14),cylinder=new THREE.CylinderGeometry(1,1,1,16,3),ring=new THREE.TorusGeometry(1,.035,6,80);
  for(const name of ['sword','circus','gamble','tsunami','chalk']){const g=new THREE.Group();g.name='gold-memory-'+name;root.add(g);groups.set(name,g);
-  if(name==='sword'||name==='tsunami')for(let i=0;i<12;i++){const a=i*Math.PI/6,x=Math.sin(a)*65,z=Math.cos(a)*65;solid(g,cylinder,x,12,z,2,24,2);solid(g,cube,x,25,z,5,2,5);if(name==='tsunami')solid(g,ring,x,14,z,7,11,7);}
-  if(name==='circus'){
-   // 360 independent meshes + point overlays used to be hundreds of draw calls.
-   // Two instanced batches preserve the entire three-ring stage silhouette.
-   const N=180,blocks=new THREE.InstancedMesh(cube,gold,N),orbs=new THREE.InstancedMesh(sphere,gold,N);
-   const dummy=new THREE.Object3D();let k=0;
-   for(let row=0;row<3;row++)for(let i=0;i<60;i++){
-    const a=i*Math.PI/30,r=48+row*8,x=Math.sin(a)*r,z=Math.cos(a)*r;
-    dummy.position.set(x,1+row*2,z);dummy.scale.set(2,2,2);dummy.updateMatrix();blocks.setMatrixAt(k,dummy.matrix);
-    dummy.position.set(x,3+row*2,z);dummy.scale.set(.6,.6,.6);dummy.updateMatrix();orbs.setMatrixAt(k,dummy.matrix);
-    k++;
-   }
-   blocks.instanceMatrix.needsUpdate=orbs.instanceMatrix.needsUpdate=true;
-   blocks.name='gyuwon-circus-stage-instanced-blocks';
-   orbs.name='gyuwon-circus-stage-instanced-orbs';
-   blocks.frustumCulled=orbs.frustumCulled=false;
-   g.add(blocks,orbs);
-  }
-  if(name==='gamble'){const r=solid(g,ring,0,.1,0,45,45,45);r.rotation.x=Math.PI/2;for(let i=0;i<18;i++){const a=i*Math.PI/9;solid(g,cube,Math.sin(a)*42,.2,Math.cos(a)*42,3,.25,4);}}
+
  }
  const blackboard=document.createElement('canvas');blackboard.width=blackboard.height=1024;const ctx=blackboard.getContext('2d');ctx.fillStyle='#09211c';ctx.fillRect(0,0,1024,1024);ctx.strokeStyle='#d8b75e';ctx.lineWidth=3;ctx.font='48px serif';
  for(let i=0;i<9;i++){ctx.fillStyle='#d8b75e';ctx.fillText(['∑ x² + y² = ∞','∫ f(x) dx = ?','∀x ∃y : x ≠ y','lim n → ∞'][i%4],30,80+i*110);ctx.strokeRect(720,30+i*110,60,60);ctx.beginPath();ctx.moveTo(830,30+i*110);ctx.lineTo(900,90+i*110);ctx.moveTo(900,30+i*110);ctx.lineTo(830,90+i*110);ctx.stroke();}
@@ -83,5 +66,5 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   // Expired hazards must release geometry immediately, even while another
   // patterned strike is still active. Otherwise each pattern grows GPU memory.
   for(const[id,v]of attacks)if(!live.has(id))releaseAttack(id,v);
- },clear,stats:()=>({liveAttackGroups:attacks.size}),dispose(){clear();tex.dispose();}};
+ },clear,stats:()=>({liveAttackGroups:attacks.size}),dispose(){clear();disposeScene(root,{extras:[...sharedGeometries,...sharedMaterials]});root.removeFromParent();}};
 }

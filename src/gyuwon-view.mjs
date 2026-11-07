@@ -1,3 +1,4 @@
+import {createGyuwonRecallMaps} from './gyuwon-recall-maps.mjs';
 import * as THREE from 'three';
 import {createGyuwonActor} from './gyuwon-actor.mjs';
 import {createGyuwonSpectacle} from './gyuwon-spectacle.mjs';
@@ -30,10 +31,11 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));const starfield=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9db2cb,size:.55,transparent:true,opacity:.55,fog:false,depthWrite:false}));stage.add(starfield);
  const actor=createGyuwonActor(stage,{coarse}),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse}),philosophy=createGyuwonPhilosophyFx(stage,{coarse,reduced});
  const ghosts=[-1,1].map(side=>{const rig=root.clone(true);rig.name='gyuwon-contradiction';rig.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false;}});stage.add(rig);return {rig,side};});
+ const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  const warnings=new THREE.Group();stage.add(warnings);const meshes=new Map();
  const circleGeo=new THREE.CircleGeometry(1,48),laneGeo=new THREE.PlaneGeometry(1,1);
  let deathElapsed=0;
- function clear(){deathElapsed=0;spectacle.clear();philosophy.reset();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
+ function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
  function update(g,dt=0){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
@@ -43,11 +45,11 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   edge.material.opacity=b.phase===3?.25:b.phase===2?.20:.45;
   for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
   scene.background.setHex(white?0xffffff:voidSpace?0x010105:0x111b28);
-  scene.fog.color.copy(scene.background);
+  scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
   // A continuous, non-colliding floor makes metaphysical spaces legible.
-  floor.visible=!won;floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
+  floor.visible=!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
   warnings.visible=!won;
-  spectacle.update(g,dt,deathElapsed);philosophy.update(g,dt);
+  spectacle.update(g,dt,deathElapsed);recall.update(g);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);
    if(!m){const geometry=h.shape==='ring'?new THREE.RingGeometry(Math.max(.01,h.r-h.width),h.r+h.width,64):h.shape==='cone'?new THREE.CircleGeometry(h.r,40,-Math.PI/2-h.arc,h.arc*2):h.shape==='wave'?new THREE.PlaneGeometry(h.opening*2,42):h.shape==='lane'?laneGeo:circleGeo;m=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:0xcce8f8,roughness:.64,metalness:.08,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
@@ -57,5 +59,5 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   }
   for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();meshes.delete(id);}
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:meshes.size,stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();philosophy.dispose();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
+ return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:meshes.size,recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();recall.dispose();philosophy.dispose();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
 }
