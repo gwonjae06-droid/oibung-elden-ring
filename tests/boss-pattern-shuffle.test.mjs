@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createPatternShuffle,drawPatternShuffle} from '../src/pattern-shuffle.mjs';
 import {createGame,chooseOpening,beginSequence,PHASE_ONE,SEQUENCES} from '../src/combat.mjs';
-import {createClownGame,choosePattern,startClownPattern,PATTERNS as CLOWN} from '../src/clown-combat.mjs';
+import {createClownGame,choosePattern,startClownPattern,PATTERNS as CLOWN,LIVE_REPERTOIRE} from '../src/clown-combat.mjs';
+import {horrorMinStage} from '../src/clown-horror-patterns.mjs';
 import {createDiceGame,stepDice} from '../src/dice-combat.mjs';
 import {DICE_RULES as DICE} from '../src/dice-data.mjs';
 import {nextGiantPressureSlot,GIANT_NAMES,FERAL_NAMES,giantPattern} from '../src/dice-giant.mjs';
@@ -44,9 +45,10 @@ test('first boss uses each legal opening once per phase, with no repeat and rand
   for(let k=1;k<a.length;k++)assert.notEqual(a[k],a[k-1]);
  }
 });
-test('clown cycles every regular circus show once, independently of phase and difficulty',()=>{
+test('clown cycles every CURRENT director/troupe show once per phase and horror stage',()=>{
  for(const phase of [1,2])for(const story of [false,true]){
-  const pool=Object.keys(CLOWN).filter(k=>k!=='shove'&&CLOWN[k].phases.includes(phase));
+  const stage=phase===2?3:1;
+  const pool=LIVE_REPERTOIRE.filter(k=>CLOWN[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
   const run=seed=>{
    const g=createClownGame('sword',{register:false,seed});g.boss.phase=phase;
    // Include all final-act attacks when testing the complete phase-two deck.

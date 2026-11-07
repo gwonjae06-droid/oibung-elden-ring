@@ -32,10 +32,10 @@ test('New sculpted ringmaster has a real low coat and no invisible balance-ball 
  assert.equal(shapes[0].id,'coat');
  assert.ok(!shapes.some(x=>x.id==='ball'||x.id==='mount-head'));
  assert.ok(shapes.some(x=>x.id==='left-leg'&&x.y>0));
- assert.ok(kwonMeleeContact(shapes,{x:0,z:0},{reach:2.85,yaw:Math.PI,height:1.85}));
+ assert.ok(kwonMeleeContact(shapes,{x:g.boss.x,z:g.boss.z+2.35},{reach:2.85,yaw:Math.PI,height:1.85}));
  assert.equal(kwonMeleeContact(shapes,{x:8,z:0},{reach:2.85,yaw:Math.PI,height:1.85}),null);
  assert.equal(kwonProjectileContact(shapes,{x:0,y:14,z:0},{x:0,y:14,z:-8}),null,'a high shot cannot hit an invisible cylinder');
- const hp=g.boss.hp;g.player.z=0;g.player.yaw=Math.PI;
+ const hp=g.boss.hp;g.player.z=g.boss.z+2.35;g.player.yaw=Math.PI;
  assert.equal(act(g,'light'),true);stepFor(g,stepClown,.5);
  assert.ok(g.boss.hp<hp,'player sword must connect with the visible sculpted coat');
 });

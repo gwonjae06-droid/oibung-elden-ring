@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {HARD_STORY_HP_SCALE,JOURNEY_BOSS_HP} from '../src/journey-balance.mjs';
 import {freshProfile,newRun,configureJourney} from '../src/journey-state.mjs';
 import {createGame,chooseOpening,SEQUENCES} from '../src/combat.mjs';
-import {createClownGame,choosePattern} from '../src/clown-combat.mjs';
+import {createClownGame,choosePattern,PATTERNS as CLOWN,LIVE_REPERTOIRE} from '../src/clown-combat.mjs';
 import {createDicePlayerGame} from '../src/dice-player.mjs';
 import {createBloodGame,damageBlood} from '../src/blood-combat.mjs';
 import {createBloodPatternDeck,nextBloodPattern} from '../src/blood-pattern-director.mjs';
@@ -69,11 +69,19 @@ test('Kwon story prioritizes real combos at close and far ranges',()=>{
  assert.ok(Object.hasOwn(SEQUENCES,chooseOpening(g)),'far attack must be a real authored sequence');
 });
 
-test('Clown story links its existing performance after ball cannon',()=>{
- const g=story(createClownGame('sword',{register:false}),1);
- g.boss.phase=2;g.clown.last='ballCannon';
+test('Clown story chooses legal live ensemble performances, never retired ball tricks',()=>{
+ const g=story(createClownGame('sword',{register:false,seed:67}),1);
+ g.boss.phase=2;g.clown.horrorStage=2;g.clown.last='ballCannon';
  g.player.x=g.boss.x;g.player.z=g.boss.z+8;
- assert.equal(choosePattern(g),'bounceChain');
+ const seen=new Set();
+ for(let i=0;i<70;i++){
+  const next=choosePattern(g);
+  assert.ok(LIVE_REPERTOIRE.includes(next),next);
+  assert.ok(CLOWN[next].phases.includes(2),next);
+  assert.notEqual(next,'bounceChain','the retired ball-chain is not an active encore');
+  seen.add(next);g.clown.last=next;
+ }
+ assert.ok(seen.size>=8,'the director and troupe must not be stuck repeating a single act');
 });
 
 test('Giant story offers distinct slots in its weighted controlled and feral cycles',()=>{

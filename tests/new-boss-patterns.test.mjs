@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PATTERNS as KWON,SEQUENCES,PHASE_ONE,ORDER,CLOSE,createGame,beginSequence,chooseOpening,angleDelta} from '../src/combat.mjs';
-import {PATTERNS as CLOWN,createClownGame,startClownPattern,stepClown} from '../src/clown-combat.mjs';
+import {PATTERNS as KWON,SEQUENCES,PHASE_ONE,ORDER,CLOSE,createGame,beginSequence,chooseOpening} from '../src/combat.mjs';
+import {PATTERNS as CLOWN,createClownGame,choosePattern,startClownPattern,LIVE_REPERTOIRE} from '../src/clown-combat.mjs';
+import {horrorMinStage} from '../src/clown-horror-patterns.mjs';
 
 test('new first-boss combos reuse existing moves and are in the opening rotation',()=>{
  for(const [phase,map,keys] of [[1,PHASE_ONE,['feint','skewer']],[2,SEQUENCES,['afterimage','widow']]])
@@ -25,53 +26,40 @@ test('an opening never repeats immediately when several are available',()=>{
  }
 });
 
-function run(key,phase){
- const g=createClownGame(),def=CLOWN[key],seen=new Map();let peak=0;
- g.boss.phase=phase;g.player.invuln=1e6;startClownPattern(g,key);
- for(let i=0;i<Math.ceil((def.dur+.1)*120);i++){
-  stepClown(g,1/120,{});peak=Math.max(peak,g.clown.zones.length);
-  for(const z of g.clown.zones)if(!seen.has(z.id))seen.set(z.id,{...z,originX:g.boss.x,originZ:g.boss.z});
+test('the live circus rotates authored director/troupe actions, not removed ball era attacks',()=>{
+ const retired=['humanCannon','ballCannon','bounceChain','ballRain','ballSpin'];
+ assert.ok(LIVE_REPERTOIRE.includes('directorBatonRake'));
+ assert.ok(LIVE_REPERTOIRE.includes('directorStringLash'));
+ assert.ok(LIVE_REPERTOIRE.includes('maskedCannonade'));
+ for(const id of retired){
+  assert.ok(CLOWN[id],'archived move data should remain compatible');
+  assert.ok(!LIVE_REPERTOIRE.includes(id),id+' must not return to the current battle');
  }
- return {g,zones:[...seen.values()],peak};
-}
+ assert.equal(new Set(LIVE_REPERTOIRE).size,LIVE_REPERTOIRE.length);
+ for(const id of LIVE_REPERTOIRE){
+  const p=CLOWN[id];
+  assert.ok(p,id+' has no authored definition');
+  assert.ok(p.precast>0&&p.dur>p.precast+p.recover,id+' must have a physical windup and a counter window');
+ }
+});
 
-for(const [key,phases] of [['spotlightSweep',[1,2]],['fireHoop',[1,2]],['humanCannon',[2]]])
- for(const phase of phases)test(key+' phase '+phase+' is telegraphed, bounded and inside the arena',()=>{
-  const {zones,peak}=run(key,phase);
-  assert.ok(zones.length>=3,key);
-  assert.ok(peak<=40,'too many simultaneous zones: '+peak);
-  for(const z of zones){
-   assert.ok(z.warn>=.8,key+' warning '+z.warn);
-   assert.ok(z.damage>=20&&z.damage<=40,key+' damage '+z.damage);
-   if(z.shape==='circle')assert.ok(Math.hypot(z.x,z.z)<=23&&z.r>0);
-   if(z.shape==='lane'){assert.ok(Number.isFinite(z.len)&&z.len>0&&z.len<=30);assert.ok(z.w>=5);}
+test('current 1P / 2P / horror-finale selection stays stage-legal and exhaustive',()=>{
+ for(const [phase,stage] of [[1,1],[2,2],[2,3]]){
+  const g=createClownGame('sword',{register:false,seed:411+phase*10+stage});
+  g.boss.phase=phase;g.clown.horrorStage=stage;
+  g.player.x=4;g.player.z=g.boss.z+7;
+  const pool=LIVE_REPERTOIRE.filter(k=>CLOWN[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
+  assert.ok(pool.length>=8,'the current stage must include a real repertoire');
+  const seen=[];
+  for(let n=0;n<pool.length;n++){
+   const key=choosePattern(g);
+   assert.ok(pool.includes(key),'out-of-stage or retired move: '+key);
+   startClownPattern(g,key);
+   assert.ok(g.events.some(e=>e.type==='clown-telegraph'&&e.key===key),'authored intro missing: '+key);
+   seen.push(key);
+   g.clown.last=key;
   }
- });
-
-test('the cannon is a phase two pattern aimed at the player before it fans out',()=>{
- assert.deepEqual(CLOWN.humanCannon.phases,[2]);
- const {g,zones}=run('humanCannon',2),lanes=zones.filter(z=>z.shape==='lane');
- assert.equal(lanes.length,3);
- assert.ok(Math.abs(angleDelta(lanes[0].yaw,Math.atan2(g.player.x-lanes[0].originX,g.player.z-lanes[0].originZ)))<1e-6);
- const a=angleDelta(lanes[0].yaw,lanes[1].yaw),b=angleDelta(lanes[0].yaw,lanes[2].yaw);
- assert.ok(Math.abs(Math.abs(a)-.42)<1e-6&&Math.abs(Math.abs(b)-.42)<1e-6&&a*b<0);
-});
-
-test('spotlights step from the boss toward the locked target and the last one is largest',()=>{
- for(const [phase,count] of [[1,4],[2,5]]){
-  const {g,zones}=run('spotlightSweep',phase);
-  assert.equal(zones.length,count);
-  const d=zones.map(z=>Math.hypot(z.x-z.originX,z.z-z.originZ));
-  for(let i=1;i<d.length;i++)assert.ok(d[i]>d[i-1]);
-  assert.equal(Math.max(...zones.map(z=>z.r)),zones[zones.length-1].r);
- }
-});
-
-test('fire hoops ring the clown at widening radii and each ring keeps a gap',()=>{
- for(const [phase,rings] of [[1,2],[2,3]]){
-  const {g,zones}=run('fireHoop',phase),radii=new Set(zones.map(z=>Math.round(Math.hypot(z.x-z.originX,z.z-z.originZ)*10)/10));
-  assert.ok(radii.size<=rings&&radii.size>=Math.min(2,rings));
-  for(const r of radii)assert.ok([6,10.2,14.4].some(v=>Math.abs(v-r)<.11),'radius '+r);
-  assert.ok(zones.length<rings*12);
+  assert.deepEqual([...seen].sort(),[...pool].sort(),'every live move must be selectable once per shuffle cycle');
+  assert.ok(seen.every((id,i)=>i===0||id!==seen[i-1]),'no accidental immediate repeat');
  }
 });

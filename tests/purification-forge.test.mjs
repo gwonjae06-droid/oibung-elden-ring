@@ -136,7 +136,8 @@ test('rendered Korean forge offers each tier, refund and the victory flame',()=>
  assert.match(gained,/정화의 불꽃을 획득했습니다/);
  assert.match(gained,/data-j="flame-next"/);
  assert.doesNotMatch(gained,/data-j="relic"/);
- assert.match(gained,/해금된 마지막 보스로 건너뛸/);
+ assert.match(gained,/해금한 보스에게는 시련 시작 화면에서 자유롭게 이동할 수 있습니다/);
+ assert.doesNotMatch(gained,/해금된 마지막 보스로 건너뛸/);
  assert.doesNotMatch(gained,/부활/);
 });
 

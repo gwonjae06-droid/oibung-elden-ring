@@ -29,7 +29,7 @@ test('Clown signatures are assigned to the appropriate phases and have precast &
 
 test("Sungwon's new casino attacks respect limb tags, positive warnings and the feral head",()=>{
   const player={x:4,z:-39};
-  assert.equal(GIANT_NAMES.length,16);
+  assert.equal(GIANT_NAMES.length,14,'controlled-phase deck excludes retired attacks');
   assert.equal(FERAL_NAMES.length,16);
   for(const i of [11,12,13]){
     const p=giantPattern(i,player);
