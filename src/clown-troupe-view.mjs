@@ -268,7 +268,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   }
  }
  function update(g,dt=1/60){
-  const troupe=g?.clown?.troupe,alive=troupe?.members||[],seen=new Set(),time=g?.time||0,
+  const troupe=g?.clown?.troupe,alive=(troupe?.members||[]).filter(m=>!m.legacy),seen=new Set(),time=g?.time||0,
    uncanny=circusUncannyFrame(g),h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
   for(const m of alive){
    seen.add(m.id);let v=live.get(m.id);if(!v){v=actor(m.role);live.set(m.id,v);}
@@ -287,9 +287,9 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     sway+moving*.035+style.lift*routine.weight,h,14);
    v.body.rotation.set(
     v.springs.step('pitch',m.down?Math.min(1.2,m.death*3):
-     style.lean*routine.weight+(m.cast>0?-.07:0),h,15),0,
+     style.lean*routine.weight+(m.cast>0?-.07:0)-moving*.065,h,15),0,
     v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):
-     sway*.4+(routine.pose==='mirror'?.18*routine.weight*routine.beat:0),h,12));
+     sway*.4+(m.motionLean||0)+(routine.pose==='mirror'?.18*routine.weight*routine.beat:0),h,12));
    v.skirt.rotation.x=v.springs.step('skirt',-.05+moving*.2+m.cast*.024,h,9);
    v.torso.scale.y=.9*(1+.18*choirRise*(.45+.55*Math.abs(routine.beat)));
    v.head.scale.set(1+.055*choirRise,1+.10*choirRise,1+.04*choirRise);
@@ -325,13 +325,13 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     arm.rotation.z=v.springs.step('arm-spread-'+side,spread,h,16);
     arm.rotation.x=v.springs.step('arm-reach-'+side,reach,h,17);
    }
-   v.head.rotation.x=v.springs.step('mask-head',m.cast>0?-.17:Math.sin(time*.8+m.id)*.055,h,12);
+   v.head.rotation.x=v.springs.step('mask-head',m.cast>0?-.17:Math.sin(time*.8+m.id)*.055-moving*.055,h,12);
    v.head.rotation.z=v.springs.step('mask-performer-tilt',
     uncanny.hush*.25+uncanny.unison*.19+
     (routine.pose==='mirror'?.24*routine.weight:
     routine.pose==='sing'?.09*routine.beat*routine.weight:0),h,11);
    v.head.rotation.y=v.springs.step('unison-neck-turn',
-    uncanny.hush*-.34+uncanny.unison*.32,h,16);
+    uncanny.hush*-.34+uncanny.unison*.32+(routine.weight<.02?Math.sin(time*.9+m.id)*.14:0),h,16);
    // The mouth geometry's authored Y radius is .08, not 1. The old
    // assignment inflated singers' mouths into a giant slab on every note.
    const mouthless=m.role==='chorister'&&(troupe?.stage||1)>=2;

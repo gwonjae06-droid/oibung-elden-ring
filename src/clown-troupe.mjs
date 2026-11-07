@@ -186,6 +186,9 @@ function castAttack(g,m,zone,emit){
  if(m.legacy)return beginLegacyEchoAttack(g,m,{zone,emit});
  const aim=away({x:p.x,z:p.z});
  m.cast=warn+.35;m.showCue=role;m.target={...aim};
+ m.routine={pose:role==='chorister'?'sing':role==='acrobat'?'vault':
+  role==='puppeteer'?'strings':role==='firekeeper'?'hoop':'mirror',
+  start:g.clown.time,until:g.clown.time+warn+.5,wind:warn};
  if(role==='chorister'){
   const yaw=contactAngle(m,p),len=clamp(Math.hypot(m.x-p.x,m.z-p.z)+2,3,17);
   zone(g,{shape:'lane',x:m.x,z:m.z,yaw,len,w:2.6,warn,damage:s.attack,sound:'choir'});
