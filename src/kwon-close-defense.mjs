@@ -21,7 +21,7 @@ export function kwonCloseSituation(b,p){
   Math.abs(offset)<KWON_CLOSE_DEFENSE.frontArc?'front':'flank'};
 }
 export function chooseKwonCloseDefense(b,p){
- if(!b||b.state!=='idle'||b.stun>0||b.punishable||b.closeCooldown>0)return null;
+ if(!b||b.state!=='idle'||b.stun>0||b.punishable||b.closeCooldown>0||b.closeGrace>0)return null;
  const info=kwonCloseSituation(b,p);
  if(!info||info.distance>=KWON_CLOSE_DEFENSE.range)return null;
  const held=finite(b.hug)?b.hug:0;

@@ -145,7 +145,7 @@ export const KWON_RANGE_PRESSURE=Object.freeze({
  // Stay close enough to land the visible sword, not 6-8m away.
  farDistance:12,
  engageDistance:5.4,
- spacing:3.6,
+ spacing:4.3,
  sideSpeed:1.25,
  chaseSpeed:Object.freeze({1:13.2,2:13.6,3:14.3}),
  approachSpeed:Object.freeze({1:11.6,2:12.2,3:12.9}),
@@ -156,6 +156,14 @@ export const KWON_RANGE_PRESSURE=Object.freeze({
     'jawSnare','afterimage','widow','royalHunt','draw']),
    3:KWON_THIRD_FAR,
   })
+});
+// A finished sequence must leave a real retaliation beat for slow melee weapons.
+// Kwon retains aggressive distance closing outside that earned window.
+export const KWON_COUNTERPLAY=Object.freeze({
+ comboRecovery:Object.freeze({1:.38,2:.42,3:.58}),
+ finisherRecovery:Object.freeze({1:1.25,2:1.40,3:1.50}),
+ postComboWait:Object.freeze({1:.85,2:.80,3:.72}),
+ holdDistance:6.4,
 });
 export const CLOSE = {
   3:KWON_THIRD_CLOSE,
@@ -406,6 +414,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       stun: 0,
       hug: 0,
       closeCooldown: 0,
+      closeGrace: 0,
       from: null,
       zone: null,
       turnTarget: 0,
@@ -931,6 +940,7 @@ export function step(g, dt, input = {}) {
   }
   b.poise = Math.max(0, b.poise - dt * 5);
   b.closeCooldown = Math.max(0, (b.closeCooldown||0)-dt);
+  b.closeGrace = Math.max(0, (b.closeGrace||0)-dt);
   b.t += dt;
   const cfg = patternConfig(b);
   if (b.state === 'stagger') {
@@ -954,8 +964,14 @@ export function step(g, dt, input = {}) {
       b.lastOpening='close-'+counter;
       startPattern(g,counter,{closeDefense:true});
     }else{
-      // Closing the distance takes priority over medium-range melee.
-      pursueKwon(g,dt,dist(p,b));
+      // The player has earned breathing room: turn in place nearby instead of
+      // shuffling into the player's sword and hammer during the punish beat.
+      const gap=dist(p,b);
+      if(b.closeGrace>0&&gap<=KWON_COUNTERPLAY.holdDistance){
+        const facing=toward(b,p);
+        b.yaw+=clamp(angleDelta(b.yaw,facing),-dt*3.6,dt*3.6);
+        b.aim=b.yaw;
+      }else pursueKwon(g,dt,gap);
       b.wait-=dt;
       const after=dist(p,b);
       if(b.wait<=0&&(after<=KWON_RANGE_PRESSURE.engageDistance||
@@ -1083,7 +1099,10 @@ export function step(g, dt, input = {}) {
       b.state = 'recovery';
       b.t = 0;
       b.punishable = b.queue.length === 0;
-      b.recovery = b.punishable ? cfg.recover : b.phase===3?.58:.13;
+      const phase=b.phase===3?3:b.phase===2?2:1;
+      b.recovery = b.punishable
+        ? Math.max(cfg.recover,KWON_COUNTERPLAY.finisherRecovery[phase])
+        : Math.max(b.phase===3?.58:.13,KWON_COUNTERPLAY.comboRecovery[phase]);
       emit(g, b.punishable ? 'opening' : 'combo-gap');
     }
   } else if (b.state === 'recovery' && b.t >= b.recovery) {
@@ -1102,8 +1121,12 @@ export function step(g, dt, input = {}) {
       b.t = 0;
       // Recovery remains a full punish window. Only the next idle step
       // gains time to run towards a distant target before attacking again.
-      b.wait = dist(p,b)>KWON_RANGE_PRESSURE.farDistance
+      const phase=b.phase===3?3:b.phase===2?2:1;
+      const normalWait=dist(p,b)>KWON_RANGE_PRESSURE.farDistance
         ?KWON_RANGE_PRESSURE.chaseWait:(b.phase===3?.45:b.phase===2?.58:.68)*BOSS_TEMPO.gap;
+      b.closeGrace=KWON_COUNTERPLAY.postComboWait[phase];
+      b.wait=Math.max(normalWait,b.closeGrace);
+      b.hug=0; // an attack's recovery is not prolonged face-hugging
       b.punishable = false;
       b.from = null;
     }

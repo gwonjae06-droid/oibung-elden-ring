@@ -3,7 +3,7 @@ import {BOSS_TEMPO} from '../src/boss-tempo.mjs';
 import assert from 'node:assert/strict';
 import {
  createGame,chooseOpening,beginSequence,step,startPattern,
- KWON_RANGE_PRESSURE,PHASE_ONE,SEQUENCES,PATTERNS
+ KWON_RANGE_PRESSURE,KWON_COUNTERPLAY,PHASE_ONE,SEQUENCES,PATTERNS
 } from '../src/combat.mjs';
 
 function chooseAtRange(phase,seed,{story=false,range=20}={}){
@@ -82,8 +82,8 @@ test('finishing a distant sword combo gives Kwon a short visible pursuit interva
   b.queue=[];b.recovery=.7;b.t=.69;
   step(g,.02);
   assert.equal(b.state,'idle');
-  if(range>KWON_RANGE_PRESSURE.farDistance)
-   assert.equal(b.wait,KWON_RANGE_PRESSURE.chaseWait);
-  else assert.equal(b.wait,.68*BOSS_TEMPO.gap);
+  const standard=range>KWON_RANGE_PRESSURE.farDistance
+   ?KWON_RANGE_PRESSURE.chaseWait:.68*BOSS_TEMPO.gap;
+  assert.equal(b.wait,Math.max(standard,KWON_COUNTERPLAY.postComboWait[1]));
  }
 });
