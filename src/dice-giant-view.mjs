@@ -230,7 +230,7 @@ export function buildDiceGiant(scene,{coarse=false}={}){
    if(!h)return;
    const charge=ease(h.age/Math.max(.1,h.warn));
    m.position.set(h.x,.13,h.z);m.rotation.y=(i%3)*.32;
-   m.scale.setScalar((h.headSlam?9:prop?3.5:8)*(0.72+.25*charge));
+   m.scale.setScalar(Math.min(5.6,(h.headSlam?9:prop?3.5:8)*(0.72+.25*charge)));
    if(f.visible){f.position.set(h.x,.16,h.z);f.rotation.y=(time*.12+i)*.35;
     f.scale.setScalar(2.1+charge*2.3);
     fillWarnMat.opacity=.09+.08*charge;
