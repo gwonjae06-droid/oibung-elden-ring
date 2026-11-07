@@ -14,7 +14,7 @@ export function stepBossAutonomy(s,b,p,dt,{speed=5.5,sideSpeed=3,spacing=7,arena
  const h=Math.min(dt,1/30);s.clock+=h;
  const px=p.x-b.x,pz=p.z-b.z,dist=Math.hypot(px,pz),fx=dist>.001?px/dist:0,fz=dist>.001?pz/dist:1;
  // Close-range footwork yields only slightly; a boss should not endlessly kite melee.
- const radial=dist>farDistance?1:dist>spacing?clamp((dist-spacing)*.36,0,.8):-Math.min(.10,(spacing-dist)*.055);
+ const radial=dist>farDistance?1:dist>spacing?clamp((dist-spacing)*.36,0,.8):-Math.min(.16,(spacing-dist)*.055);
  // An alternating winding walk: side steps while close, fast purposeful
  // pursuit if far away; a brief retreat if crowded rather than standing still.
  const lateralWave=Math.cos(s.clock*.63+s.phase+phase*.27);
