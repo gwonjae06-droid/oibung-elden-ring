@@ -1,3 +1,4 @@
+import {createGyuwonRecallMaps} from './gyuwon-recall-maps.mjs';
 import * as THREE from 'three';
 import {createGyuwonActor} from './gyuwon-actor.mjs';
 import {createGyuwonSpectacle} from './gyuwon-spectacle.mjs';
@@ -29,10 +30,11 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));const starfield=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9db2cb,size:.55,transparent:true,opacity:.55,fog:false,depthWrite:false}));stage.add(starfield);
  const actor=createGyuwonActor(stage),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse});
  const ghosts=[-1,1].map(side=>{const rig=root.clone(true);rig.name='gyuwon-contradiction';rig.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false;}});stage.add(rig);return {rig,side};});
+ const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  const warnings=new THREE.Group();stage.add(warnings);const meshes=new Map();
  const circleGeo=new THREE.CircleGeometry(1,48),laneGeo=new THREE.PlaneGeometry(1,1);
  let deathElapsed=0;
- function clear(){deathElapsed=0;spectacle.clear();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
+ function clear(){deathElapsed=0;spectacle.clear();recall.clear();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
  function update(g,dt=0){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
@@ -40,8 +42,8 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!voidSpace;
   for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
   scene.background.setHex(white?0xffffff:voidSpace?0x010105:0x111b28);
-  scene.fog.color.copy(scene.background);floor.visible=!voidSpace;warnings.visible=!won;
-  spectacle.update(g,dt,deathElapsed);
+  scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;floor.visible=!voidSpace;warnings.visible=!won;
+  spectacle.update(g,dt,deathElapsed);recall.update(g);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);
    if(!m){const geometry=h.shape==='ring'?new THREE.RingGeometry(Math.max(.01,h.r-h.width),h.r+h.width,64):h.shape==='cone'?new THREE.CircleGeometry(h.r,40,-Math.PI/2-h.arc,h.arc*2):h.shape==='wave'?new THREE.PlaneGeometry(h.opening*2,42):h.shape==='lane'?laneGeo:circleGeo;m=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:0xcce8f8,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
@@ -51,5 +53,5 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   }
   for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();meshes.delete(id);}
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'prototype',stats:()=>({warnings:meshes.size}),dispose(){clear();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
+ return {root,update,clear,event(){},shake(){},occlude(){},quality:'prototype',stats:()=>({warnings:meshes.size,recall:recall.stats()}),dispose(){clear();recall.dispose();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
 }

@@ -58,7 +58,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    ${choices}</section>`;
  }
  function home(resetSkip=true,bonus=0){secret.reset();screen='home';profile.run=null;if(resetSkip){skipSelected=false;skipStage=null;}persist();
-  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p><div class="j-menu">${button('new','시련 시작','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div>${skipOffer()}<div class="j-links">${button('practice-gyuwon','최규원 연습')}${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
+  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p><div class="j-menu">${button('new','시련 시작','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div>${skipOffer()}<div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
  }
  function select(){screen='select';const offer=skipOffer();show(`<div class="j-panel"><h1>${TRIAL_NAME}</h1><p>대장간의 영구 무기 각인은 모든 전투에 적용됩니다.<br>패배·중단·새로고침 시 도전은 종료됩니다. 불꽃 지름길을 사용하지 않으면 첫 보스부터 시작합니다.</p>${offer}<div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small><small class="j-weapon-statline">${weaponStatLabel(id)}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div>${button('begin',skipSelected?'불꽃 1개로 선택한 무기 출정':'선택한 무기로 출정','class="j-primary"')}${back()}${warning()}</div>`);}
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
@@ -126,10 +126,6 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
 }finally{busy=false;}}
  async function click(e){const b=e.target.closest('[data-j]');if(!b||busy||disposed)return;const action=b.dataset.j;
   if(action==='secret-tap'&&screen==='home'){if(secret.tap(performance.now()))home(false,grantForgeDeveloperFlames(profile));return;}
-  if(action==='practice-gyuwon'&&screen==='home'||action==='secret-retry'&&screen==='secret-result'){
-   profile.run={...newRun(weapon),stage:BOSSES.indexOf('gyuwon'),secret:true};await launch();return;
-  }
-  if(action==='secret-menu'){await goHome();return;}
   if(action==='home'){await goHome();return;}
   if(action==='forge'&&screen==='home'){forgeWeapon=weapon;forge();return;}
   if(action==='forge-weapon'&&screen==='forge'){
