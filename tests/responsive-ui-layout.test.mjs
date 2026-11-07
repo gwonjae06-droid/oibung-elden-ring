@@ -33,3 +33,12 @@ test('visible combat overlays cover the home button and no duplicate dice exits 
  assert.doesNotMatch(read('src/dice-ui.mjs'),/광대전 결과로/);
  assert.match(read('spider-combat.html'),/gyuwon-ui\.mjs\?v=ui-safe-layout-v2-20261107/);
 });
+
+
+test('the five-boss journey never exposes the retired Kwon-only selection UI',()=>{
+ const css=read('style.css'),arena=read('src/arena.mjs'),html=read('spider-combat.html');
+ assert.match(css,/body\[data-journey\] #arena > #menu\{display:none!important\}/);
+ assert.match(arena,/\$\('menu'\)\.hidden=mode!=='menu'\|\|Boolean\(document\.body\?\.dataset\?\.journey\)/);
+ assert.match(arena,/if\(e\.code==='Escape'\)\{e\.preventDefault\(\);if\(e\.repeat\)return;/);
+ assert.match(html,/stat-marker-esc-fix-20261107/);
+});

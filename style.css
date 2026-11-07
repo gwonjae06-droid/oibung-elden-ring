@@ -189,3 +189,7 @@ body:has(>#arena){background:#050608;overflow:hidden}
  #arena .top-actions button{min-height:32px;padding-block:3px}
  #arena .overlay{padding-inline:12px;padding-block:12px}
 }
+
+/* Journeys own all boss selection. Never expose the retired Kwon-only overlay
+   when a cinematic closes the Journey dialog or Escape toggles pause. */
+body[data-journey] #arena > #menu{display:none!important}

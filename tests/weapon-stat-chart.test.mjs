@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 import {WEAPON_STATS} from '../src/weapon-stats.mjs';
 import {weaponStatRows,weaponStatChart} from '../src/weapon-stat-chart.mjs';
@@ -50,4 +51,12 @@ test('forge chart distinguishes permanent skill effects from basic damage',()=>{
  assert.match(html,/각인 효과와 별도/);
  const unowned=weaponStatChart('bow',{profile:p});
  assert.match(unowned,/미각인/);
+});
+
+
+test('weapon average markers are local to each meter and cannot draw white lines over the whole page',()=>{
+ const css=readFileSync(new URL('../journey.css',import.meta.url),'utf8');
+ assert.match(css,/#journey \.j-stat-track\{position:relative;isolation:isolate;height:8px;/);
+ assert.match(css,/#journey \.j-stat-average\{position:absolute;top:0;bottom:0;width:2px;max-height:100%/);
+ assert.equal((weaponStatChart('sword').match(/class="j-stat-average"/g)||[]).length,7);
 });
