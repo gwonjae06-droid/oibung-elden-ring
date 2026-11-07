@@ -41,31 +41,64 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  }
  for(const y of [-.18,-.35,-.52])
   mesh(torso,new THREE.SphereGeometry(.028,minor,coarse?10:16),ink,.10,y,.46,'gyuwon-jacket-button');
- const legs=[],feet=[];
+ // A genuinely connected two-bone leg rig. Every knee and shin spans
+ // its current hip/ankle positions; shoes are always planted on y=0 ground.
+ const legs=[],feet=[],boneAxis=new THREE.Vector3(0,1,0),
+  boneDirection=new THREE.Vector3(),boneMidpoint=new THREE.Vector3();
+ const setBone=(bone,from,to)=>{
+  boneDirection.subVectors(to,from);
+  const length=boneDirection.length();
+  bone.position.copy(boneMidpoint.copy(from).addScaledVector(boneDirection,.5));
+  bone.quaternion.setFromUnitVectors(boneAxis,boneDirection.normalize());
+  bone.scale.y=Math.max(.02,length);
+ };
+ const thighProfile=lathe([[.18,-.5],[.21,-.39],[.235,-.13],[.26,.17],[.29,.43],[.22,.5]],minor);
+ const shinProfile=lathe([[.135,-.5],[.15,-.4],[.17,-.2],[.19,.15],[.21,.42],[.18,.5]],minor);
+ const kneeGeo=new THREE.SphereGeometry(.205,minor,coarse?12:24);
  for(const side of [-1,1]){
-  const hip=new THREE.Group();hip.position.set(side*.31,1.28,0);root.add(hip);legs.push(hip);
-  const leg=mesh(hip,lathe([[.08,-.82],[.16,-.78],[.20,-.57],[.23,-.27],[.22,-.11],[.26,.02],[.23,.11],[.08,.12]]),pants,0,0,0,'gyuwon-tailored-leg');
-  leg.scale.z=.92;
-  mesh(hip,curve([[side*.09,-.08,.17],[side*.09,-.34,.17],[side*.09,-.65,.13]],.008),thread,0,0,0,'gyuwon-trouser-seam');
-  const shoe=mesh(root,new THREE.SphereGeometry(.25,detail,coarse?16:28),leather,side*.32,.15,.15,'gyuwon-leather-shoe');
-  shoe.scale.set(1.12,.51,1.62);feet.push(shoe);
+  const hip=new THREE.Vector3(side*.31,1.27,0),
+    knee=new THREE.Vector3(side*.31,.72,.08),
+    ankle=new THREE.Vector3(side*.32,.17,.10);
+  const thigh=mesh(root,thighProfile,pants,0,0,0,'gyuwon-tailored-leg');
+  const shin=mesh(root,shinProfile,pants,0,0,0,'gyuwon-rigged-shin');
+  const joint=mesh(root,kneeGeo,pants,side*.31,.72,.08,'gyuwon-rigged-knee');
+  const shoe=mesh(root,new THREE.SphereGeometry(.25,detail,coarse?16:28),
+   leather,side*.32,.15,.15,'gyuwon-leather-shoe');
+  shoe.scale.set(1.12,.51,1.62);
   const sole=mesh(shoe,new THREE.BoxGeometry(.46,.09,.76),ink,0,-.27,0,'gyuwon-shoe-sole');
   sole.castShadow=false;
+  legs.push({side,hip,knee,ankle,thigh,shin,joint,shoe});
+  feet.push(shoe);
+  setBone(thigh,knee,hip);setBone(shin,ankle,knee);
  }
  const bodyMaterials=[cloth,pants,skin,hair],originalColors=bodyMaterials.map(m=>m.color.clone()),goldColor=new THREE.Color(0xffd56d);
- // Independent finger joints bend with the actual cast instead of remaining as static curves.
- const arms=[],fingerChains=[];
+ // Shoulder -> upper sleeve -> elbow -> forearm -> wrist -> fingers.
+ // Parenting upper body joints to the leaning chest prevents arm gaps.
+ const arms=[],forearms=[],wrists=[],fingerChains=[];
+ const neck=mesh(torso,new THREE.CylinderGeometry(.15,.195,.51,minor),skin,0,.89,0,'gyuwon-rigged-neck');
+ const shoulderGeometry=new THREE.SphereGeometry(.28,minor,coarse?10:20);
  for(const side of [-1,1]){
-  const arm=new THREE.Group();arm.position.set(side*.64,2.58,0);root.add(arm);arms.push(arm);
-  const sleeve=mesh(arm,lathe([[.08,-1.09],[.16,-1.03],[.19,-.80],[.23,-.50],[.20,-.23],[.27,.03],[.23,.14],[0,.17]],minor),cloth,side*.035,-.10,0,'gyuwon-sculpted-sleeve');
+  const arm=new THREE.Group();arm.name=side<0?'gyuwon-left-shoulder-rig':'gyuwon-right-shoulder-rig';
+  arm.position.set(side*.64,.63,0);torso.add(arm);arms.push(arm);
+  mesh(arm,shoulderGeometry,cloth,0,0,0,'gyuwon-rigged-shoulder');
+  const sleeve=mesh(arm,lathe([[.17,-.65],[.22,-.58],[.20,-.40],[.245,-.16],[.27,.04],[.24,.13]],minor),
+   cloth,side*.025,-.01,0,'gyuwon-sculpted-sleeve');
   sleeve.scale.z=.91;
-  mesh(arm,lathe([[.14,-.05],[.18,.0],[.16,.10],[.13,.14]],minor),shirt,side*.035,-1.14,0,'gyuwon-cuff');
-  const palm=mesh(arm,new THREE.SphereGeometry(.17,minor,coarse?10:18),skin,side*.035,-1.22,0,'gyuwon-palm');
+  const elbow=new THREE.Group();elbow.name='gyuwon-elbow-pivot';elbow.position.set(side*.03,-.67,0);
+  arm.add(elbow);forearms.push(elbow);
+  mesh(elbow,new THREE.SphereGeometry(.185,minor,coarse?10:20),cloth,0,0,0,'gyuwon-sculpted-elbow');
+  mesh(elbow,lathe([[.14,-.57],[.175,-.51],[.195,-.30],[.21,-.13],[.18,.065]],minor),
+   cloth,0,-.01,0,'gyuwon-rigged-forearm');
+  mesh(elbow,lathe([[.14,-.045],[.185,0],[.16,.10],[.135,.13]],minor),
+   shirt,0,-.56,0,'gyuwon-cuff');
+  const wrist=new THREE.Group();wrist.name='gyuwon-wrist-pivot';
+  wrist.position.set(0,-.62,0);elbow.add(wrist);wrists.push(wrist);
+  const palm=mesh(wrist,new THREE.SphereGeometry(.17,minor,coarse?10:18),skin,0,0,0,'gyuwon-palm');
   palm.scale.set(.85,1.13,.56);
   function articulatedDigit(x,y,z,lengths,index,thumb=false){
    const digit=new THREE.Group();digit.position.set(x,y,z);
    digit.rotation.z=thumb?side*.44:(index-1.5)*.08;
-   arm.add(digit);
+   wrist.add(digit);
    let parent=digit;
    const joints=[];
    for(let j=0;j<lengths.length;j++){
@@ -81,12 +114,12 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    fingerChains.push({joints,side,index,thumb});
   }
   for(let i=0;i<4;i++){
-   const x=side*.035+(i-1.5)*.066;
-   articulatedDigit(x,-1.308,-.01,[.071,.067,.049],i);
+   const x=(i-1.5)*.066;
+   articulatedDigit(x,-.09,-.01,[.071,.067,.049],i);
   }
-  articulatedDigit(side*.17,-1.22,.04,[.095,.073],4,true);
+  articulatedDigit(side*.14,.02,.04,[.095,.073],4,true);
  }
- const head=new THREE.Group();head.name='gyuwon-head';head.position.y=3.15;root.add(head);
+ const head=new THREE.Group();head.name='gyuwon-head';head.position.y=1.20;torso.add(head);
  // One continuous sculpted face surface: temple, cheekbone, bridge and jaw.
  const faceGeo=new THREE.SphereGeometry(.5,detail,coarse?26:48);
  const facePos=faceGeo.getAttribute('position');
@@ -124,7 +157,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const a=(i/Math.max(1,(coarse?6:13)-1)-.5)*2.25;
   mesh(head,curve([[Math.sin(a)*.34,.43,Math.cos(a)*.31],[Math.sin(a)*.41,.29,Math.cos(a)*.35],[Math.sin(a)*.39,.20,Math.cos(a)*.40]],.025),hair,0,0,0,'gyuwon-hair-strand');
  }
- const book=new THREE.Group();arms[0].add(book);book.position.set(-.1,-1,.35);book.rotation.x=-.6;
+ const book=new THREE.Group();wrists[0].add(book);book.position.set(-.1,-.02,.35);book.rotation.x=-.6;
  mesh(book,new THREE.BoxGeometry(.76,.135,.96),leather,0,0,0,'gyuwon-book-cover');
  mesh(book,new THREE.BoxGeometry(.68,.095,.89),paper,0,.08,0,'gyuwon-book-pages');
  for(let i=0;i<6;i++)mesh(book,new THREE.BoxGeometry(.7,.004,.89),ink,0,.031+i*.009,0,'gyuwon-page-edge');
@@ -142,15 +175,23 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   root.position.set(b.x,g.status==='won'?death*death*1.5:0,b.z);
   root.rotation.y=p.facing;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
-  torso.rotation.set(p.lean*.42,p.twist*.28,p.twist*.16);
-  torso.position.y=1.95-p.steps*.035;
-  head.rotation.set(p.headPitch,p.headYaw,Math.sin(t*2)*.02);
+  torso.rotation.set(p.lean*.42,p.twist*.28,p.twist*.10+(p.weightShift||0)*.035);
+  const breath=Math.sin(t*1.9)*.007;
+  torso.position.y=1.95-p.steps*.035+breath;
+  head.rotation.set(p.headPitch,p.headYaw,Math.sin(t*2)*.012);
+  neck.rotation.z=(p.weightShift||0)*.018;
   // Phase transformation retains the previous head pose until the story beat completes.
   const visibleHead=b.phase===1?1:transition?Math.max(.001,1-(s.t||0)/3):.001;
   head.scale.setScalar(visibleHead);head.visible=visibleHead>.01;
+  neck.visible=visibleHead>.01;neck.scale.y=Math.max(.001,visibleHead);
   halo.visible=b.phase>1;halo.rotation.z=t*.3;
   arms[0].rotation.x=p.leftArm;arms[0].rotation.z=p.twist*.12;
-  arms[1].rotation.x=p.rightArm;arms[1].rotation.z=-p.twist*.18;book.rotation.x=p.book;
+  arms[1].rotation.x=p.rightArm;arms[1].rotation.z=-p.twist*.18;
+  forearms[0].rotation.x=p.leftElbow??-.1;
+  forearms[1].rotation.x=p.rightElbow??-.1;
+  wrists[0].rotation.x=p.leftWrist??0;
+  wrists[1].rotation.x=p.rightWrist??0;
+  book.rotation.x=p.book;
    // Joint curls follow the same attack movement and relax after each cast.
    const effort=b.state==='pattern'?
     Math.min(1,(Math.abs(p.leftArm+.5)+Math.abs(p.rightArm))*.40):0;
@@ -161,11 +202,21 @@ export function createGyuwonActor(stage,{coarse=false}={}){
     middle.rotation.x=.11+amount*.65;
     if(tip)tip.rotation.x=.08+amount*.40;
    }
-  for(let i=0;i<legs.length;i++){
-   const phase=t*8+(i?Math.PI:0),swing=Math.sin(phase)*p.steps;
-   legs[i].rotation.x=swing*.12;
-   feet[i].position.z=.15+swing*.12;
-   feet[i].position.y=.15+Math.max(0,swing)*.035;
+  for(const leg of legs){
+   const phase=t*7.2+(leg.side<0?0:Math.PI),
+    swing=Math.sin(phase)*p.steps,
+    lift=Math.max(0,swing)*.18;
+   // Knees always join the current thigh and calf. The shoe never sinks
+   // below the table and returns to the same planted rest coordinates.
+   leg.hip.set(leg.side*.31,1.27+(p.weightShift||0)*leg.side*.025,0);
+   leg.ankle.set(leg.side*.32,.17+lift,.10+swing*.19);
+   leg.knee.set(leg.side*.315,.72+lift*.36,
+    .055+swing*.10+Math.abs(swing)*.14);
+   setBone(leg.thigh,leg.knee,leg.hip);
+   setBone(leg.shin,leg.ankle,leg.knee);
+   leg.joint.position.copy(leg.knee);
+   leg.shoe.position.set(leg.ankle.x,.15+lift,leg.ankle.z+.07);
+   leg.shoe.rotation.x=swing*.06;
   }
   for(let i=0;i<pages.length;i++){const item=pages[i],a=t*.6+i*Math.PI/3;
    item.visible=b.phase>1;item.position.set(Math.sin(a)*1.6,2+Math.sin(a*2)*.4,Math.cos(a)*1.6);
