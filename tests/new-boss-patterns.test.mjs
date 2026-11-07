@@ -51,7 +51,7 @@ test('current 1P / 2P / horror-finale selection stays stage-legal and exhaustive
   const pool=LIVE_REPERTOIRE.filter(k=>CLOWN[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
   assert.ok(pool.length>=8,'the current stage must include a real repertoire');
   const seen=[];
-  for(let n=0;n<pool.length;n++){
+  for(let n=0;n<pool.length*8;n++){
    const key=choosePattern(g);
    assert.ok(pool.includes(key),'out-of-stage or retired move: '+key);
    startClownPattern(g,key);
@@ -59,7 +59,7 @@ test('current 1P / 2P / horror-finale selection stays stage-legal and exhaustive
    seen.push(key);
    g.clown.last=key;
   }
-  assert.deepEqual([...seen].sort(),[...pool].sort(),'every live move must be selectable once per shuffle cycle');
+  assert.deepEqual([...new Set(seen)].sort(),[...pool].sort(),'every live move must eventually appear across separate director and troupe decks');
   assert.ok(seen.every((id,i)=>i===0||id!==seen[i-1]),'no accidental immediate repeat');
  }
 });

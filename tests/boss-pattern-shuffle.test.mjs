@@ -45,26 +45,40 @@ test('first boss uses each legal opening once per phase, with no repeat and rand
   for(let k=1;k<a.length;k++)assert.notEqual(a[k],a[k-1]);
  }
 });
-test('clown cycles every CURRENT director/troupe show once per phase and horror stage',()=>{
+test('clown alternates director and troupe shuffle bags while keeping each real deck exhaustive',()=>{
  for(const phase of [1,2])for(const story of [false,true]){
   const stage=phase===2?3:1;
   const pool=LIVE_REPERTOIRE.filter(k=>CLOWN[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
   const run=seed=>{
    const g=createClownGame('sword',{register:false,seed});g.boss.phase=phase;
-   // Include all final-act attacks when testing the complete phase-two deck.
-   if(phase===2)g.clown.horrorStage=3;
-   g.player.x=8;g.player.z=g.boss.z+8;
+   g.clown.horrorStage=stage;g.player.x=8;g.player.z=g.boss.z+8;
    if(story)g.journeyBalance={mode:'story'};
-   const result=[];
-   for(let i=0;i<pool.length*2;i++){
-    const id=choosePattern(g);result.push(id);startClownPattern(g,id);g.clown.last=id;
+   const drawn=[],cycles=new Map();
+   for(let i=0;i<pool.length*8;i++){
+    const before=Object.fromEntries(Object.entries(g.patternShuffle.bags)
+      .map(([key,bag])=>[key,{cycle:bag.cycles,remaining:bag.queue.length}]));
+    const name=choosePattern(g);
+    assert.ok(pool.includes(name),'retired or out-of-stage attack: '+name);
+    const changed=Object.entries(g.patternShuffle.bags).filter(([key,bag])=>
+      !before[key]||bag.cycles!==before[key].cycle||bag.queue.length!==before[key].remaining);
+    assert.equal(changed.length,1,'each cast consumes exactly one of the director/troupe/premiere decks');
+    const [key,bag]=changed[0],cycle=key+':'+bag.cycles;
+    const authorized=bag.signature.split('\u0000'),seen=cycles.get(cycle)||new Set();
+    assert.ok(authorized.includes(name),'the selected move is not part of its own shuffle deck');
+    assert.ok(!seen.has(name),'duplicate attack before completing deck '+cycle+': '+name);
+    seen.add(name);cycles.set(cycle,seen);
+    if(!bag.queue.length)assert.equal(seen.size,authorized.length,'an exhausted deck must use every authored move');
+    if(drawn.length)assert.notEqual(name,drawn.at(-1),'consecutive same attack');
+    drawn.push(name);startClownPattern(g,name);g.clown.last=name;
    }
-   return result;
+   equalPool([...new Set(drawn)],pool);
+   assert.ok([...cycles.keys()].some(k=>k.endsWith('-director:2'))||phase===2,
+      'the director must eventually reshuffle rather than vanish');
+   return drawn;
   };
   const a=run(101),b=run(101),c=run(102);
-  assert.deepEqual(a,b);assert.notDeepEqual(a,c);
-  for(let i=0;i<2;i++)equalPool(a.slice(i*pool.length,(i+1)*pool.length),pool);
-  for(let i=1;i<a.length;i++)assert.notEqual(a[i],a[i-1]);
+  assert.deepEqual(a,b,'same seed gives same full performance');
+  assert.notDeepEqual(a,c,'different attempts vary');
  }
 });
 test('Sungwon casino cycles every roulette/physical attack once, then reshuffles',()=>{
