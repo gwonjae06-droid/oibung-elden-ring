@@ -2,7 +2,7 @@
 // Every hit is authored through the authoritative delayed combat-zone API;
 // cast animation, optional props, lighting and Foley never cause damage.
 // The four restored vintage routines retain their original pattern IDs.
-import {cueCircusShow,stageCircusBeat,circusTroupeAlive} from './clown-troupe.mjs';
+import {cueCircusShow,stageCircusBeat,circusTroupeAlive,beginCircusReprise} from './clown-troupe.mjs';
 const TAU=Math.PI*2;
 const cross=(a,t,x)=>a<x&&t>=x;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
@@ -38,6 +38,9 @@ const actorLane=(api,g,actor,target,opts={})=>{
 // DISTINCT NEW ROLES AND FORMATIONS - lengths are body-clock seconds excluding
 // the existing standardized pre-cast. Last attacks land before recovery.
 export const ENSEMBLE_DEFINITIONS=Object.freeze([
+ ['synchronizedHush','모두가 웃음을 멈추는 순간',6.65,1.45,[1,2],1],
+ ['corpseMarionetteReprise','죽은 단원들의 재공연',8.45,1.8,[2],2],
+ ['mouthlessLament','입 없는 합창단의 진혼가',8.0,1.75,[2],2],
  ['knifeJugglerRelay','칼 저글러들의 릴레이',7.1,1.45,[1,2],1],
  ['midnightDrumline','한밤의 북소리 대열',7.4,1.55,[1,2],1],
  ['tightropeExecution','허공의 곡예단',7.7,1.65,[1,2],1],
@@ -52,6 +55,53 @@ export const ENSEMBLE_DEFINITIONS=Object.freeze([
 ]);
 // Each singer or acrobat prepares on the ACTUAL puppet mesh. The warning
 // origin is frozen at cast time so movement cannot drag a hitbox onto a player.
+// FIRST ACT: silence and impossible unison, then a true telegraphed strike.
+// The first 0.7 seconds leave the player fully free to reposition.
+function synchronizedHush(g,c,a,t,api){
+ curtain(g,c,api,'hush','hush');
+ const target=api.once(c,'hush-target',()=>bound(g.player));
+ if(cross(a,t,.18))api.emit(g,'clown-horror',{cue:'unison-hush'});
+ for(let i=0;i<3;i++)if(cross(a,t,1.25+i*1.23)){
+  const r=i===1?'chorister':'mimic';
+  const performer=beat(api,g,c,'hush-actor'+i,t,{
+   role:r,roleIndex:i,pose:i===1?'sing':'mirror',sound:i===1?'choir':'mask',
+   wind:1.37,hold:1.78
+  });
+  const p=move(target,(i-1)*.58,2.3);
+  actorLane(api,g,performer,p,{w:2.35,warn:1.37,damage:22,sound:'unisonSmile'});
+ }
+}
+// SECOND ACT: defeated actors return once, hanging on visible puppet strings.
+// The source body is captured from the actual fallen cast; when nobody has
+// fallen, only clearly lifeless stage mannequins fill missing positions.
+function corpseMarionetteReprise(g,c,a,t,api){
+ curtain(g,c,api,'reprise','reprise');
+ const reprise=api.once(c,'reprise-bodies',()=>beginCircusReprise(g,{duration:7.3}));
+ const focus=api.once(c,'reprise-focus',()=>bound(g.player));
+ if(cross(a,t,.3))api.emit(g,'clown-horror',{cue:'reprise-rise'});
+ for(let i=0;i<4;i++)if(cross(a,t,.84+i*1.16)){
+  const body=reprise?.bodies[i%Math.max(1,reprise.bodies.length)]||g.boss;
+  beat(api,g,c,'dead-strings'+i,t,{role:'puppeteer',roleIndex:i,pose:'strings',
+   sound:'puppet',wind:1.45});
+  const aimed=move(focus,(i%2?1:-1)*.16,i===3?1.75:0);
+  actorLane(api,g,body,aimed,{w:2.28,warn:1.45,damage:26,sound:'corpseRepriseStrings'});
+ }
+}
+// SECOND ACT: porcelain seals the singers' mouths. Their torsos inflate
+// and the emitted harmonics are the only threatening objects. There is a
+// deliberate escape aisle between successive singer lanes.
+function mouthlessLament(g,c,a,t,api){
+ curtain(g,c,api,'mouthless','mouthless');
+ const focus=api.once(c,'mouthless-focus',()=>bound(g.player));
+ if(cross(a,t,.4))api.emit(g,'clown-horror',{cue:'mouthless-song'});
+ for(let i=0;i<5;i++)if(cross(a,t,.82+i*.95)){
+  const singer=beat(api,g,c,'sealed-singer'+i,t,{
+   role:'chorister',roleIndex:i,pose:'sing',sound:'choir',wind:1.45,hold:1.9
+  });
+  const target=move(focus,i%2?.34:-.34,i===4?2.3:0);
+  actorLane(api,g,singer,target,{w:2.55,warn:1.45,damage:24,sound:'mouthlessChoir'});
+ }
+}
 function knifeJugglerRelay(g,c,a,t,api){
  curtain(g,c,api,'juggle','juggle');
  const p=api.once(c,'knife-snapshot',()=>bound(g.player));
@@ -153,6 +203,7 @@ function curtainOfLostVoices(g,c,a,t,api){
 }
 function allCastRequiem(g,c,a,t,api){
  curtain(g,c,api,'finale','finale');
+ if(cross(a,t,.25))api.emit(g,'clown-horror',{cue:'all-faces-one'});
  const anchor=api.once(c,'requiem-center',()=>bound(g.player)),gap=c.seq%10;
  for(let i=0;i<10;i++)if(cross(a,t,.30+i*.67)){
   const roles=['chorister','acrobat','puppeteer','firekeeper','mimic'],r=roles[i%roles.length],
@@ -198,6 +249,6 @@ function curtainCall(g,c,a,t,api){
   actorLane(api,g,singer,p,{w:2.45,warn:1.32,damage:24,sound:'curtainEcho'});
  }
 }
-export const ENSEMBLE_RUN=Object.freeze({knifeJugglerRelay,midnightDrumline,tightropeExecution,maskedTrapdoor,ringmasterDoubleAct,
+export const ENSEMBLE_RUN=Object.freeze({synchronizedHush,corpseMarionetteReprise,mouthlessLament,knifeJugglerRelay,midnightDrumline,tightropeExecution,maskedTrapdoor,ringmasterDoubleAct,
  emberCarouselRevue,candlelightChoir,marionetteGallows,maskedCannonade,curtainOfLostVoices,allCastRequiem});
 export const REMASTERED_CIRCUS_RUN=Object.freeze({drumMarch,spotlightSweep,carousel,curtainCall});
