@@ -4,8 +4,7 @@
 import {headFrame} from './clown-visual-data.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
-import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
-import {cartoonPose} from './clown-cartoon.mjs';
+import {ringmasterPerformance} from './clown-ringmaster-pose.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
 
 const CLOWN_SCALE=1.25;
@@ -19,71 +18,33 @@ const ellipsoid=(b,id,p,rx,ry,rz)=>{
  const q=rotate(b,p);return {...q,id,rx,ry,rz,yaw:b.yaw||0};
 };
 export function clownHurtShapes(g){
- if(!g?.clown||!g.boss)return [];
- const b=g.boss,v=g.clown.vis||{},F=headFrame(g),M=F.mount,Q=clownBeastPose(g),
-  A=clownSpectaclePose(g,cartoonPose(g.clown.name,g.clown.pt,b.phase,g.clown.state==='pattern'&&b.state!=='transition'&&g.status==='playing')),
-  jump=(v.jump||0)*1.1,shapes=[];
- if(b.phase===2){
-  // Upright baseline and temporary crawl share the real torso's animation
-  // lift and tilt; moving jumps never leave hittable air below the body.
-  const frame=clownContactFrame(g,A,Q),sy=Math.cos(frame.pitch),sz=Math.sin(frame.pitch),
-   crouch=v.crouch||0,lift=frame.height+(v.jump||0)*1.1,
-   scaleY=A.bodyY||1;
-  const torsoY=(2.25-crouch*.25)*scaleY;
-  const headSize=A.headScale||1,headY=(4.7+(headSize-1)*.8-crouch*.25)*scaleY;
-  shapes.push(ellipsoid(b,'torso',
-   {x:0,y:(lift+torsoY*sy)*CLOWN_SCALE,z:torsoY*sz*CLOWN_SCALE},
-   1.05*(A.bodyX||1)*CLOWN_SCALE,1.28*scaleY*CLOWN_SCALE,
-   .83*(A.bodyZ||1)*CLOWN_SCALE));
-  shapes.push(ellipsoid(b,'head',
-   {x:0,y:(lift+headY*sy)*CLOWN_SCALE,z:headY*sz*CLOWN_SCALE},
-   .84*headSize*(A.bodyX||1)*CLOWN_SCALE,1.0*headSize*scaleY*CLOWN_SCALE,
-   .88*headSize*(A.bodyZ||1)*CLOWN_SCALE));
-  if(Q.entry>.75)for(const side of [-1,1]){
-   const paw=clownBeastPaw(Q,side,0),localY=paw[1]*scaleY;
-   const wy=Math.max(.72,lift+localY*sy-paw[2]*sz);
-   const wz=localY*sz+paw[2]*sy;
-   shapes.push(ellipsoid(b,side<0?'left-paw':'right-paw',
-    {x:paw[0]*CLOWN_SCALE,y:wy*CLOWN_SCALE,z:wz*CLOWN_SCALE},
-    .52*CLOWN_SCALE,.48*CLOWN_SCALE,.63*CLOWN_SCALE));
-  }
-  return shapes;
- }
- if(b.phase===1){
-  // Original balance ball: radius 2.6, centred 2.6m above the ground.
-  shapes.push(ellipsoid(b,'ball',{x:0,y:(2.6+jump)*CLOWN_SCALE,z:M?.ballZ||0},
-   2.6*CLOWN_SCALE,2.6*CLOWN_SCALE,2.6*CLOWN_SCALE));
- }
- if(M?.visible){
-  // Inflated, rideable detached clown head, using the same morph and scale
-  // that actor.update applies. Body parts stay above it; no phantom ground torso.
-  const scale=PHASE_MOUNT_SCALE*CLOWN_SCALE*2.6*(A.headScale||1);
-  const lift=2.6*PHASE_MOUNT_SCALE*((A.headScale||1)-1);
-  shapes.push(ellipsoid(b,'mount-head',
-   {x:0,y:(M.y+lift+jump)*CLOWN_SCALE,z:M.z||0},
-   .84*scale,1.02*scale,.88*scale*(1+Math.max(0,v.neck||0)*.25)));
- }
- // The clown's actual shoulders and head rise well above the ground ball.
- // Modifiers affect the torso rather than inflating the entire ground hitbox.
- const rise=M?2.6*M.scale*((A.headScale||1)-1):0;
- const bodyBase=(M?M.bodyY+M.lift:5.2)+rise+(A.lift||0);
- const bodyY=(bodyBase+2.25-(v.crouch||0)*.25)*CLOWN_SCALE;
- const bodyS=A.bodyX||1,vertical=A.bodyY||1,depth=A.bodyZ||1;
- shapes.push(ellipsoid(b,'torso',{x:0,y:bodyY+jump*CLOWN_SCALE,z:0},
-  1.05*CLOWN_SCALE*bodyS,1.28*CLOWN_SCALE*vertical,.83*CLOWN_SCALE*depth));
- if(F.bodyHead){
-  const p={...F},inflate=F.inflate??1;
-  const size=(inflate||1)*(A.headScale||1);
-  const neckY=4.7+(size-1)*.8-(v.crouch||0)*.25;
-  const headY=(bodyBase+neckY*vertical+jump)*CLOWN_SCALE;
-  shapes.push(ellipsoid(b,'head',{x:0,y:headY,z:0},
-   .84*CLOWN_SCALE*size*bodyS,1*CLOWN_SCALE*size*vertical,.88*CLOWN_SCALE*size*depth));
+ if(!g?.clown||!g?.boss)return [];
+ const b=g.boss,v=g.clown.vis||{},Q=clownBeastPose(g),A=ringmasterPerformance(g),
+  frame=clownContactFrame(g,A,Q),sy=Math.cos(frame.pitch),sz=Math.sin(frame.pitch),
+  vertical=A.bodyY||1,lift=frame.height+Math.max(0,v.jump||0)*1.1,
+  shapes=[];
+ const at=(id,x,y,z,rx,ry,rz)=>{
+  const py=y*vertical,wy=(lift+py*sy-z*sz)*CLOWN_SCALE,
+    wz=(py*sz+z*sy)*CLOWN_SCALE;
+  shapes.push(ellipsoid(b,id,{x:x*CLOWN_SCALE,y:wy,z:wz},
+   rx*CLOWN_SCALE,ry*vertical*CLOWN_SCALE,rz*CLOWN_SCALE));
+ };
+ // Contact volumes follow actual coat, upright torso and face. The retired
+ // circus sphere and photo-head are not invisible targets after removal.
+ at('coat',0,1.25,0,.72,1.09,.66);
+ at('torso',0,2.56,0,1.0,1.32,.73);
+ const size=A.headScale||1;
+ at('head',0,4.73,0,.77*size,.94*size,.63*size);
+ for(const side of[-1,1])at(side<0?'left-leg':'right-leg',side*.50,.83,.08,.31,.73,.39);
+ if(Q.entry>.75)for(const side of[-1,1]){
+  const paw=clownBeastPaw(Q,side,0);
+  at(side<0?'left-paw':'right-paw',paw[0],paw[1],paw[2],.38,.37,.43);
  }
  return shapes;
 }
 export function clownAimPart(g){
  const parts=clownHurtShapes(g);
- return parts.find(s=>s.id==='mount-head')||parts.find(s=>s.id==='ball')||parts[0]||g?.boss;
+ return parts.find(p=>p.id==='torso')||parts.find(p=>p.id==='coat')||parts[0]||g?.boss;
 }
 
 export function bloodHurtShapes(g){

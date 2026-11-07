@@ -16,8 +16,8 @@ export function clownDismountPose(time){
 export function clownContactFrame(g,animation,beast){
  const boss=g?.boss||{},a=animation||{},q=beast||{};
  const base=boss.phase===2
-  ?boss.state==='transition'?clownDismountPose(boss.t).bodyY:q.bodyHeight||0
-  :5.2;
+  ?q.bodyHeight||0
+  :0;
  const pitch=boss.phase===2
   ?(q.pitch||0)+Math.max(-.22,Math.min(.25,(a.lean||0)*.32))
   :0;

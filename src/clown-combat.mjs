@@ -1,5 +1,6 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
+import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe} from './clown-troupe.mjs';
 import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -1065,7 +1066,19 @@ export function choosePattern(g) {
   c.seq++;return 'shove';
  }
  const stage=g.clown.horrorStage||1;
- const pool=Object.keys(PATTERNS).filter(k=>k!=='shove'&&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
+ // The old giant-ball and photograph-shooting tricks stay testable only:
+ // live performance uses a coherent ensemble-centered director's repertoire.
+ const repertoire=new Set([
+  'ghostProcession','puppetOverture','infernalHoops',
+  'choirOfAshes','curtainStampede','midnightGrandFinale',
+  'wrongTwin','mirrorStage','puppetFuneral','fireHoop',
+  'echoApplause','laughContagion','emptyAudience',
+  'curtainNightmare','audienceJudgement','funeralParade',
+  'facePeelHunt','stolenFace','brokenHorses','unhingedClap',
+  'vanishingAct','marionetteDevour'
+ ]);
+ const pool=Object.keys(PATTERNS).filter(k=>repertoire.has(k)&&k!=='shove'
+  &&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
  const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',
   'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
  let preferred=d<5.5?pool.filter(k=>close.has(k))
@@ -1210,6 +1223,7 @@ function updateClown(g, dt) {
   updateBombs(g, dt);
   updateZones(g, dt);
   updateWaves(g, dt);
+  stepCircusTroupe(g,dt,{zone,emit});
   if (g.status !== 'playing') return;
   if (c.stunT > 0) c.stunT = Math.max(0, c.stunT - dt);
   else tickClown(g, dt);
@@ -1261,6 +1275,7 @@ export function createClownGame(weapon = 'sword', options) {
     beastSince:null,
     beastRecoverAt:null,
     stageBall:null,
+    troupe:createCircusTroupe(g),
   };
   return g;
 }
@@ -1281,7 +1296,7 @@ export function stepClown(g, dt, input = {}) {
     const e = g.events[i];
     if (e.type === 'skill-stun') c.stunT = 1;
     else if (e.type === 'phase') {
-      c.stageBall=createClownStageBall(b.x,b.z);
+      clearCircusTroupe(g);
       Object.assign(c, {
         zones: [],
         bombs: [],
@@ -1304,12 +1319,12 @@ export function stepClown(g, dt, input = {}) {
       });
       emit(g, 'clown-phase2');
     } else if (e.type === 'victory') {
+      clearCircusTroupe(g);
       Object.assign(c, {zones: [], bombs: [], waves: [], state: 'defeated'});
       resetVis(c);
     }
   }
-  // Simulate the rolling stage prop during the transition, not just combat.
-  if(!frozen&&g.status==='playing')stepClownStageBall(g,dt);
+  // Old balloon-balance physics is retired from this encounter.
   if (
     frozen ||
     g.status !== 'playing' ||

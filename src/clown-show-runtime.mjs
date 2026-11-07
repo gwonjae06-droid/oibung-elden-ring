@@ -23,7 +23,8 @@ function finish(g){const c=g.clown;c.last=c.name;Object.assign(c,{state:'idle',n
 export function stepShowClown(g,dt,input={}){
  if(g.status!=='playing'||!Number.isFinite(dt)||dt<=0)return;
  const c=g.clown,wasFrozen=g.hitstop>0,wasStunned=c.stunT>0,time=g.time,wasIdle=c.state==='idle',h=Math.min(dt,1/30);let forced=false;
- if(wasIdle&&!wasFrozen&&!wasStunned&&g.boss.state!=='transition'&&c.wait<=h&&!(c.hug>2.2&&c.shoveCd<=0)){const opening=nextSignatureOpening(g);if(opening)forced=beginSignature(g,opening);}
+ if(wasIdle&&!wasFrozen&&!wasStunned&&g.boss.state!=='transition'&&c.wait<=h&&!(c.hug>2.2&&c.shoveCd<=0)){const opening=null; // Retired photo-ball signature; never force it in new fights.
+  if(opening)forced=beginSignature(g,opening);}
  if(c.state==='pattern'&&!c.showKey)c.showKey=keyFor(g);
  c.showPrevious={x:g.player.x,z:g.player.z};if(c.showKey&&c.state==='pattern')c.state='show';originalStep(g,dt,input);
  if(g.status!=='playing'||g.boss.state==='transition'||['transition','defeated'].includes(c.state)){c.showKey=null;c.showPrevious=null;c.stageKey=null;return;}
