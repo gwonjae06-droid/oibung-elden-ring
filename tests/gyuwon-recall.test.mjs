@@ -6,13 +6,20 @@ import {gyuwonHorizonShot,poseGyuwonHorizonCamera} from '../src/gyuwon-horizon-c
 import {createGyuwonGame,startGyuwonPattern} from '../src/gyuwon-combat.mjs';
 import {createGyuwonRecallMaps,RECALL_MAP_NAMES} from '../src/gyuwon-recall-maps.mjs';
 const waveGame=()=>{const g=createGyuwonGame();g.boss.phase=3;startGyuwonPattern(g,'tsunami');return g;};
-test('horizon shot points towards incoming sea and releases well before contact, without mutating combat',()=>{
- const g=waveGame(),h=g.gyuwon.hazards[0];h.age=.6;const before=JSON.stringify(g),camera=new THREE.PerspectiveCamera(62,1,.1,1000),target=new THREE.Vector3(0,3,0);camera.position.set(0,16,38);
- const shot=poseGyuwonHorizonCamera(camera,target,g);assert.ok(shot.active);assert.ok(target.z<-100);assert.ok(camera.position.x>100);assert.equal(JSON.stringify(g),before);
- assert.ok(shot.finish<h.warn);h.age=shot.finish;assert.equal(gyuwonHorizonShot(g).active,false);h.age=4;assert.equal(gyuwonHorizonShot(g).active,false);g.status='won';assert.equal(gyuwonHorizonShot(g).active,false);
-});
-test('other patterns receive no camera override and reduced motion retains a gentle reveal',()=>{
- const g=waveGame();g.gyuwon.hazards[0].age=.6;assert.ok(gyuwonHorizonShot(g,{reduced:true}).weight>0);assert.ok(gyuwonHorizonShot(g,{reduced:true}).weight<gyuwonHorizonShot(g).weight);startGyuwonPattern(g,'sword');assert.equal(gyuwonHorizonShot(g).active,false);
+test('the recalled blood tsunami is seen through the church without taking over the player camera',()=>{
+ const g=waveGame(),h=g.gyuwon.hazards[0];h.age=.6;
+ const before=JSON.stringify(g),camera=new THREE.PerspectiveCamera(62,1,.1,1000);
+ const target=new THREE.Vector3(0,3,0);camera.position.set(0,16,38);
+ const position=camera.position.clone(),aim=target.clone(),fov=camera.fov;
+ const shot=poseGyuwonHorizonCamera(camera,target,g);
+ assert.equal(shot.active,false);
+ assert.equal(shot.incoming,true);
+ assert.deepEqual(camera.position.toArray(),position.toArray());
+ assert.deepEqual(target.toArray(),aim.toArray());
+ assert.equal(camera.fov,fov);
+ assert.equal(JSON.stringify(g),before);
+ h.age=4;assert.equal(gyuwonHorizonShot(g).active,false);
+ startGyuwonPattern(g,'sword');assert.equal(gyuwonHorizonShot(g).incoming,false);
 });
 test('actual boss maps are built once, keep source geometry, switch exclusively and dispose',()=>{
  const previous=globalThis.document;
