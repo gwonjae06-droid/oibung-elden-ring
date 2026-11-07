@@ -1,75 +1,59 @@
 import {createBloodGame} from '../src/blood-combat.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshProfile,newRun,newFlameRun,latestUnlockedStage,consumeFlameSkip,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY,BOSSES} from '../src/journey-state.mjs';
+import {freshProfile,newRun,newTravelRun,canTravelTo,latestUnlockedStage,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY,BOSSES} from '../src/journey-state.mjs';
 import {buyForgeTier,forgedEvolutions} from '../src/purification-forge.mjs';
 import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
 import {createDicePlayerGame} from '../src/dice-player.mjs';
 
-test('flame shortcut targets the highest consecutively unlocked playable boss',()=>{
- const p=freshProfile();p.flames=5;
- assert.equal(latestUnlockedStage(p),0);assert.equal(newFlameRun(p),null);
+test('only consecutively unlocked boss destinations are free and repeatable',()=>{
+ const p=freshProfile();assert.equal(latestUnlockedStage(p),0);assert.equal(canTravelTo(p,0),true);
+ assert.equal(newTravelRun(p,'sword',0).startStage,0);assert.equal(newTravelRun(p,'sword',1),null);
  for(let count=1;count<=BOSSES.length;count++){
   p.defeated=BOSSES.slice(0,count);
-  const stage=Math.min(count,BOSSES.length-1),r=newFlameRun(p,'cards');
-  assert.equal(latestUnlockedStage(p),stage);assert.equal(r.stage,stage);assert.equal(r.startStage,stage);
-  assert.equal(p.flames,5,'reserving must not spend');assert.deepEqual(r.splits,[]);
+  const stage=Math.min(count,BOSSES.length-1);
+  assert.equal(latestUnlockedStage(p),stage);
+  for(let target=0;target<=stage;target++){
+   const r=newTravelRun(p,'cards',target);
+   assert.equal(r.stage,target);assert.equal(r.startStage,target);
+   assert.equal(r.weapon,'cards');assert.deepEqual(r.splits,[]);
+  }
+  assert.equal(p.flames,0,'travel costs no purification flames');
  }
- p.defeated=['clown','dice','blood','gyuwon'];assert.equal(newFlameRun(p),null);
- p.defeated=['kwon','blood'];assert.equal(newFlameRun(p).stage,1);
- p.flames=0;assert.equal(newFlameRun(p),null);
+ p.defeated=['clown','dice','blood','gyuwon'];
+ assert.equal(latestUnlockedStage(p),0);assert.equal(newTravelRun(p,'bow',2),null);
+ p.defeated=['kwon','blood'];assert.equal(latestUnlockedStage(p),1);
+ for(const stage of [-1,2,5,1.2,'1',null,NaN]){
+  assert.equal(newTravelRun(p,'bow',stage),null,'invalid destination '+stage);
+ }
+ assert.equal(newTravelRun(p,'missing',0),null);
 });
-test('flame selection can target any unlocked boss but cannot skip a locked gate',()=>{
- const p=freshProfile();p.flames=4;p.defeated=['kwon','clown','dice'];
- for(const stage of [1,2,3]){
-  const run=newFlameRun(p,'bow',stage);
-  assert.equal(run.stage,stage);assert.equal(run.startStage,stage);
-  assert.equal(run.skipFlamePending,true);
-  assert.equal(p.flames,4);
- }
- for(const stage of [-1,0,4,1.2,'2',null,NaN]){
-  assert.equal(newFlameRun(p,'bow',stage),null,'invalid destination '+stage);
- }
- const chosen=newFlameRun(p,'cards',1);
- assert.equal(consumeFlameSkip(p,chosen),true);
- assert.equal(p.flames,3,'a chosen earlier boss costs exactly one flame');
- assert.equal(consumeFlameSkip(p,chosen),false);
- const stale=newFlameRun(p,'sword',3);
- p.defeated=['kwon'];
- assert.equal(consumeFlameSkip(p,stale),false,'recheck unlocks before charging');
- assert.equal(p.flames,3);
- assert.equal(newFlameRun(p,'sword',2),null);
- assert.equal(newFlameRun(p,'sword',1)?.stage,1);
-});
-
-test('a shortcut pays once, validates the gate again, and remains session-only',()=>{
- const p=freshProfile();p.flames=2;p.defeated=['kwon','clown'];const r=newFlameRun(p);
- assert.equal(consumeFlameSkip(p,{...r,stage:3,startStage:3}),false);
- assert.equal(consumeFlameSkip(p,{...r,secret:true}),false);
- assert.equal(consumeFlameSkip(p,newRun()),false);
- assert.equal(consumeFlameSkip(p,r),true);assert.equal(p.flames,1);
- assert.equal(consumeFlameSkip(p,r),false);assert.equal(p.flames,1);
+test('travel does not spend flames, and saved journeys never resume active runs',()=>{
+ const p=freshProfile();p.flames=2;p.defeated=['kwon','clown'];
+ const r=newTravelRun(p,'hammer',2);assert.equal(r.stage,2);assert.equal(r.startStage,2);
+ const another=newTravelRun(p,'hammer',1);assert.equal(another.stage,1);
+ assert.equal(p.flames,2);assert.deepEqual(p.defeated,['kwon','clown']);
  const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
  p.run=r;saveProfile(storage,p);const loaded=loadProfile(storage);
- assert.equal(loaded.run,null);assert.equal(loaded.flames,1);assert.equal(latestUnlockedStage(loaded),2);
+ assert.equal(loaded.run,null);assert.equal(loaded.flames,2);assert.equal(latestUnlockedStage(loaded),2);
 });
-test('skipped victories record actual time and never count as a full campaign clear',()=>{
- const p=freshProfile();p.flames=3;p.defeated=['kwon'];p.run=newFlameRun(p,'hammer');consumeFlameSkip(p,p.run);
+test('selected-boss journeys only reward actual kills and use a separate completion record',()=>{
+ const p=freshProfile();p.defeated=['kwon'];p.run=newTravelRun(p,'hammer',1);
  assert.equal(finishAttempt(p,{won:true,time:20}),'flame');advanceJourney(p.run);
  assert.equal(finishAttempt(p,{won:true,time:30}),'flame');advanceJourney(p.run);
- assert.equal(finishAttempt(p,{won:true,time:40}),'flame');advanceJourney(p.run);assert.equal(finishAttempt(p,{won:true,time:50}),'complete');
- assert.equal(p.clears,0);assert.equal(p.flames,6);assert.equal(p.records[0].time,140);assert.equal(p.records[0].startStage,1);
+ assert.equal(finishAttempt(p,{won:true,time:40}),'flame');advanceJourney(p.run);
+ assert.equal(finishAttempt(p,{won:true,time:50}),'complete');
+ assert.equal(p.clears,0);assert.equal(p.flames,4);assert.equal(p.records[0].time,140);assert.equal(p.records[0].startStage,1);
  assert.deepEqual(p.memories.map(m=>m.id),['clown','dice','blood','gyuwon']);
  const loaded=loadProfile({getItem:()=>JSON.stringify(p)});
  assert.equal(loaded.records[0].startStage,1);assert.equal(loaded.clears,0);
  const isolated=loadProfile({getItem:()=>JSON.stringify({...p,defeated:[],memories:[]})});
- assert.equal(latestUnlockedStage(isolated),0,'a skip record must not fabricate skipped kills');
+ assert.equal(latestUnlockedStage(isolated),0,'a travel record must not invent skipped kills');
  const invalid=loadProfile({getItem:()=>JSON.stringify({...p,defeated:[],memories:[],records:[{...p.records[0],startStage:99}]})});
- assert.equal(invalid.records.length,0);assert.equal(latestUnlockedStage(invalid),0,'invalid skip metadata cannot become a full clear');
+ assert.equal(invalid.records.length,0);assert.equal(latestUnlockedStage(invalid),0);
 });
-
 test('five victories each award a flame and one run completion with persistent records',()=>{
  const p=freshProfile();p.run=newRun();
  assert.equal(finishAttempt(p,{won:true,time:32}),'flame');
