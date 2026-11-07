@@ -137,8 +137,13 @@ export const ORDER = {
 // projectile or an actual gap-closing combo, not a stationary melee swing.
 // The adaptive shuffle bag still deals every legal opening once per cycle.
 export const KWON_RANGE_PRESSURE=Object.freeze({
+ // Stay close enough to land the visible sword, not 6-8m away.
  farDistance:12,
- chaseSpeed:Object.freeze({1:9.7,2:9.5}),
+ engageDistance:5.4,
+ spacing:3.6,
+ sideSpeed:1.25,
+ chaseSpeed:Object.freeze({1:13.2,2:13.6}),
+ approachSpeed:Object.freeze({1:11.6,2:12.2}),
  chaseWait:.78,
  openings:Object.freeze({
   1:Object.freeze(['spiderPrison','rush','hunt','leap','siege','skyJudge','feint']),
@@ -384,6 +389,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       from: null,
       zone: null,
       turnTarget: 0,
+      pendingOpening: null,
     },
     stats: {hits: 0, dodges: 0, damage: 0},
   };
@@ -490,6 +496,7 @@ export function startPattern(g, name, {closeDefense=false} = {}) {
   // combos. It now returns through the next windup instead of snapping.
   b.motionFrom = b.state === 'recovery' && b.recovery <= .2 ? b.pattern : null;
   b.state = 'windup';
+  b.pendingOpening = null;
   b.pattern = name;
   b.t = 0;
   b.hit = false;
@@ -695,6 +702,24 @@ function hurtPlayer(g, damage,cut=true) {
     emit(g, 'death');
   }
 }
+// Pure melee is initiated only in genuine striking range; dash or visible
+// ranged attacks can begin farther away when they have real reach.
+const KWON_REACH_MOVES=new Set(['rush','leap','wave','spiderPrison','graveSword','livingSword','lastStance']);
+function canCastKwonMove(name,range){
+ return range<=KWON_RANGE_PRESSURE.engageDistance||
+  range>KWON_RANGE_PRESSURE.farDistance&&KWON_REACH_MOVES.has(name);
+}
+function pursueKwon(g,dt,range){
+ const b=g.boss,phase=b.phase===2?2:1,far=range>KWON_RANGE_PRESSURE.farDistance;
+ const turnRate=far?4.6:3.6;
+ b.yaw+=clamp(angleDelta(b.yaw,toward(b,g.player)),-dt*turnRate,dt*turnRate);
+ b.aim=b.yaw;
+ stepBossAutonomy(g.bossAutonomy,b,g.player,dt,{
+  speed:far?KWON_RANGE_PRESSURE.chaseSpeed[phase]:KWON_RANGE_PRESSURE.approachSpeed[phase],
+  sideSpeed:KWON_RANGE_PRESSURE.sideSpeed,spacing:KWON_RANGE_PRESSURE.spacing,
+  arena:24,phase,farDistance:KWON_RANGE_PRESSURE.farDistance
+ });
+}
 function moveBoss(b, v, dt, side = 0) {
   const y = b.aim ?? b.yaw;
   b.x += (Math.sin(y) * v + Math.cos(y) * side) * dt;
@@ -826,18 +851,20 @@ export function step(g, dt, input = {}) {
       b.lastOpening='close-'+counter;
       startPattern(g,counter,{closeDefense:true});
     }else{
-      const gap=dist(p,b),far=gap>KWON_RANGE_PRESSURE.farDistance;
-      // Turn and pursue between attacks, instead of dealing proximity damage.
-      const turnRate=far?4.0:2.7;
-      b.yaw += clamp(angleDelta(b.yaw, toward(b,p)), -dt*turnRate, dt*turnRate);
-      b.aim=b.yaw;
-      stepBossAutonomy(g.bossAutonomy,b,p,dt,{
-        speed:far?KWON_RANGE_PRESSURE.chaseSpeed[b.phase===2?2:1]:b.phase===2?6.5:6.8,
-        sideSpeed:b.phase===2?3.5:2.9,spacing:b.phase===2?6:6.8,
-        arena:24,phase:b.phase,farDistance:KWON_RANGE_PRESSURE.farDistance
-      });
+      // Closing the distance takes priority over medium-range melee.
+      pursueKwon(g,dt,dist(p,b));
       b.wait-=dt;
-      if(b.wait<=0)beginSequence(g,chooseOpening(g));
+      const after=dist(p,b);
+      if(b.wait<=0&&(after<=KWON_RANGE_PRESSURE.engageDistance||
+        after>KWON_RANGE_PRESSURE.farDistance)){
+       const opening=b.pendingOpening||chooseOpening(g);
+       if(after<=KWON_RANGE_PRESSURE.engageDistance||
+          after>KWON_RANGE_PRESSURE.farDistance&&
+          KWON_RANGE_PRESSURE.openings[b.phase===2?2:1].includes(opening)){
+        b.pendingOpening=null;
+        beginSequence(g,opening);
+       }else b.pendingOpening=opening;
+      }
     }
   } else if (b.state === 'windup') {
     if (b.pattern === 'rush' && b.t < 0.18)
@@ -948,7 +975,16 @@ export function step(g, dt, input = {}) {
       emit(g, b.punishable ? 'opening' : 'combo-gap');
     }
   } else if (b.state === 'recovery' && b.t >= b.recovery) {
-    if (b.queue.length) startPattern(g, b.queue.shift());
+    if (b.queue.length) {
+      const gap=dist(p,b),next=b.queue[0];
+      if(canCastKwonMove(next,gap))startPattern(g,b.queue.shift());
+      else {
+        // Keep the existing sword follow-through while stepping close enough
+        // to deliver the next blow. No instant hit or skipped windup.
+        b.t=b.recovery;
+        pursueKwon(g,dt,gap);
+      }
+    }
     else {
       b.state = 'idle';
       b.t = 0;
