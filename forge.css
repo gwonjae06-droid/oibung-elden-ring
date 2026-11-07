@@ -136,3 +136,17 @@ body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journ
  #journey .j-forge-detail .j-forge-branch{padding:13px}
  #journey .j-forge-detail .j-forge-branch-heading p{font-size:12px}
 }
+
+
+/* Forge text must wrap inside its upgrade columns instead of clipping controls. */
+#journey .j-forge-detail,#journey .j-forge-trees,#journey .j-forge-branch,
+#journey .j-forge-node-copy,#journey .j-forge-weapon-info{min-width:0}
+#journey .j-forge-branch h2,#journey .j-forge-node-copy strong,
+#journey .j-forge-node-copy small,#journey .j-forge-bottom p{overflow-wrap:anywhere}
+#journey .j-forge-bottom button{max-width:100%;white-space:normal}
+@media(max-width:420px){
+ #journey .j-forge-detail .j-stat-rows{grid-template-columns:minmax(0,1fr)}
+ #journey .j-forge-heading h1{font-size:clamp(25px,7vw,32px);letter-spacing:.09em}
+ #journey .j-forge-resources{gap:8px}
+ #journey .j-forge-detail .j-forge-node-copy strong{font-size:12px}
+}

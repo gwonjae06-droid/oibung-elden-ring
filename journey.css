@@ -231,3 +231,38 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey .j-select-actions{padding:6px 10px}
  #journey .j-select-actions button.j-begin{min-height:42px}
 }
+
+
+/* Guard narrow selection screens, fixed launch actions and small-height viewports. */
+#journey .j-shell{min-width:0;max-width:100%;padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+#journey .j-top{min-width:0;gap:8px;flex-wrap:wrap}
+#journey .j-panel,#journey .j-select-layout,#journey .j-select-left,#journey .j-select-right,
+#journey .j-boss-target,#journey .j-weapon button{min-width:0}
+#journey .j-boss-target,#journey .j-weapon button,#journey .j-stat-label{overflow-wrap:anywhere}
+#journey .j-select-actions{max-width:calc(100% - 16px)}
+#journey .j-selected-route{min-width:0;overflow-wrap:anywhere}
+@media(max-width:720px){
+ #journey .j-select-layout{grid-template-columns:minmax(0,1fr)}
+ #journey .j-select .j-weapon{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-select{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+}
+@media(max-width:640px){
+ #journey .j-select-actions{width:calc(100% - 16px);gap:8px;padding:8px 10px}
+ #journey .j-selected-route{flex:1;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ #journey .j-select-actions button.j-begin{flex:none;min-width:min(150px,40vw);min-height:44px;padding:8px 10px;text-align:center;white-space:normal;overflow-wrap:anywhere}
+ #journey .j-select .j-boss-targets{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+ #journey[data-screen='home'] .j-title{font-size:clamp(38px,12vw,54px);letter-spacing:.13em}
+ #journey .j-title{max-width:100%;overflow-wrap:anywhere}
+ #journey .j-stat-rows{grid-template-columns:minmax(0,1fr)}
+ #journey .j-selected-route{font-size:10px}
+}
+@media(max-height:470px) and (orientation:landscape){
+ #journey .j-shell{padding-top:10px;padding-bottom:10px}
+ #journey .j-main{min-height:0;padding:10px 0;align-items:safe center}
+ #journey[data-screen='home'] .j-main{min-height:0;padding:14px 0 18px}
+ #journey[data-screen='home'] .j-title{font-size:clamp(40px,8vh,56px);letter-spacing:.12em}
+ #journey[data-screen='home'] .j-menu{margin:10px auto;gap:4px}
+ #journey .j-select{padding-bottom:calc(105px + env(safe-area-inset-bottom))}
+}
