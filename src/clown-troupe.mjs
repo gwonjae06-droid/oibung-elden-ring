@@ -238,7 +238,8 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   const acrobatRush=m.role==='acrobat'&&m.cast>0&&m.cast<.85&&m.cast>.28;
   const silent=t.hush&&c.time<t.hush.start+.74;
   const unison=t.faceSync&&c.time>=t.faceSync.start&&c.time<t.faceSync.start+.72;
-  let dx=safe.x-m.x,dz=safe.z-m.z;
+  const safe=away(acrobatRush&&m.target?m.target:around);
+   let dx=safe.x-m.x,dz=safe.z-m.z;
   // A weak separation force stops living cast members from intersecting
   // one another or the ringmaster's torso. It is movement-only, never damage.
   for(const other of t.members){if(other===m||other.down)continue;
@@ -265,7 +266,8 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   if(locked||authored||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
   if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
   castAttack(g,m,zone,emit);
-  m.cooldown=3.8+i*.27;t.globalCooldown=stage===3?1.2:stage===2?1.75:2.6;
+  m.cooldown=m.legacy?Math.max(m.cooldown,6.4+i*.25):3.8+i*.27;
+  t.globalCooldown=m.legacy?2.9:stage===3?1.2:stage===2?1.75:2.6;
  }
  // Delete only after the exit animation has had time to finish.
  t.members=t.members.filter(m=>!m.down||m.death<1.8);
