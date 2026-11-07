@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {runThreeStartup} from './runtime/three-startup.mjs';
 import {clownFaceCanvas} from './clown-head.mjs';
+import {clownPhase2Beat} from './clown-phase2-score.mjs';
 import {CLOWN_FACE} from './clown-face.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
@@ -216,7 +217,8 @@ export function createClownActor({coarse=false}={}){
   if(!g?.boss||!g?.clown)return;
   const b=g.boss,c=g.clown,v=c.vis||{},q=clownBeastPose(g),p=ringmasterPerformance(g),
    perf=ringmasterGesture(g),contact=clownContactFrame(g,p,q),time=(c.time||0)+(b.state==='transition'?b.t:0),
-   step=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
+   step=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0)),
+   transform=clownPhase2Beat(g);
   if(previousGame!==g||time<lastTime){springs.reset();gait.reset();previousYaw=null;for(const a of arms){a.smoothed=null;a.previous=null;}previousGame=g;}
   lastTime=time;root.position.set(b.x,0,b.z);
   const desiredYaw=p.facingYaw??c.yaw??b.yaw??0,
@@ -236,22 +238,23 @@ export function createClownActor({coarse=false}={}){
   const roll=clamp((v.tilt||0)*.11+(foot.roll||0),-.15,.15);
   // Independent inertial channels soften shoulders and costume while every
   // attack collider remains attached to the authoritative simulation pose.
-  const weightPitch=springs.step('spine-pitch',clamp(contact.pitch+bow,-.3,1.10),step,14),
+  const weightPitch=springs.step('spine-pitch',clamp(contact.pitch+bow+transform.chestArch,-.3,1.10),step,14),
    weightTwist=springs.step('spine-twist',clamp((p.twist||0)*.32,-.32,.32),step,13),
    weightRoll=springs.step('spine-roll',roll,step,12);
   body.rotation.set(weightPitch,weightTwist,weightRoll);
   // The centre of mass leads the costumed action; follow-through is delayed.
   const breath=Math.sin(time*(phase?1.7:1.15))*.015;
   chest.scale.y=1+breath+Math.min(.08,(p.glove-1)*.08);
-  head.rotation.y=springs.step('head-yaw',clamp((v.tilt||0)*.32+Math.sin(time*.46)*.045,-.45,.45),step,14);
+  head.rotation.y=springs.step('head-yaw',clamp((v.tilt||0)*.32+Math.sin(time*.46)*.045+
+    transform.headTurn,-.62,.62),step,14);
   head.rotation.x=springs.step('head-pitch',-q.headCounter*.88+Math.sin(time*.88)*.022,step,15);
   head.rotation.z=springs.step('head-roll',clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17),step,12);
-  head.scale.setScalar(p.headScale);
+  head.scale.setScalar(p.headScale*(1+.08*transform.fracture*transform.alive));
   // His original photographed smile is the neutral facial identity. The
   // separate sculptural jaw only tears open during authored horror attacks.
   jaw.visible=!portrait.visible||(c.state==='pattern'&&
    /directorCackle|unhingedClap|facePeelHunt|mouthOfTheAudience/.test(c.name||'')&&
-   c.pt>.78);
+   c.pt>.78||transform.fracture>.35&&transform.command<.9);
   jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09+
     (perf.act?.mode==='cackle'?.36+.10*Math.max(0,perf.act.beat):0),0,.72),step,20);
   hat.rotation.x=springs.step('hat-tilt',perf.act?.mode==='drum'?.07*perf.act.beat:
@@ -295,7 +298,16 @@ export function createClownActor({coarse=false}={}){
     const paw=clownBeastPaw(q,s,foot.activity);
     target=target.map((x,i)=>x*(1-q.entry)+paw[i]*q.entry);
    }
-   if(entrance){const spread=Math.sin(Math.PI*cut);target=[s*(1.5+spread*.85),2.4+spread*.9,1.1+spread*.7];}
+   if(entrance){
+     // The director first bows, is dragged upright by his own strings, then
+     // tears the chorus faces from their owners with both gloved hands.
+     const spread=transform.armSpread;
+     if(transform.command>.12)
+      target=[s*(2.0+spread*.62),3.55+.15*Math.sin(time*2+s),1.25+spread*.58];
+     else if(transform.bind>.12)
+      target=[s*(1.18+spread*.37),3.16+spread*.27,1.27+transform.bind*.43];
+     else target=[s*(1.5+spread*.85),2.4+spread*.9,1.1+spread*.7];
+    }
    const frameRate=1-Math.exp(-step*18);
    if(!a.smoothed)a.smoothed=target;else a.smoothed=a.smoothed.map((x,i)=>x+(target[i]-x)*frameRate);
    if(phase&&q.active){

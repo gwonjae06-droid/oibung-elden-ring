@@ -34,7 +34,12 @@ export function bossFoleySpec(ev,g){
   case 'dice-possessed':return cue(f.coinSecond,.17,.75,.12,.5);
   default:return null;
  }}
- if(g.clown){const selected=clownEnsembleRecording(ev);
+ if(g.clown){
+  if(type==='clown-phase2-overture')return cue(dir+'bell.mp3',.21,1.16,.23,1.8,.79);
+  if(type==='clown-phase2-string-tension')return cue(dir+'bodycreak.mp3',.26,1.38,.24,1.25,.88);
+  if(type==='clown-phase2-mask-break')return cue(dir+'maskcrack.mp3',.34,1.08,.22,1.25,.86);
+  if(type==='clown-phase2-reveal')return cue(dir+'nightmaretransition.mp3',.31,1.75,.33,1.25,.95);
+  const selected=clownEnsembleRecording(ev);
   if(selected)return selected;
   const f=BOSS_FOLEY_FILES.clown;switch(type){
   case 'clown-phase3':case 'clown-horror':return clownNightmareRecording(ev);

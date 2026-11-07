@@ -25,6 +25,8 @@ import {act,skillView,WEAPONS,clamp} from './combat.mjs';
 import {buildPlayer,posePlayer,swayCape} from './models.mjs';
 import {createClownActor} from './clown-ringmaster-actor.mjs';
 import {createLegacyEchoView} from './clown-legacy-echo-view.mjs';
+import {createClownPhase2Performance} from './clown-phase2-performance.mjs';
+import {clownPhase2Beat} from './clown-phase2-score.mjs';
 import {createRingmasterMask} from './clown-ringmaster-mask.mjs';
 import {createCircusTroupeView} from './clown-troupe-view.mjs';
 import {clownBeastPose} from './clown-beast-pose.mjs';
@@ -70,6 +72,8 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const circus=createClownCircusStage(scene,{coarse,reduced});startup.own('Clown radiant circus',()=>circus.dispose());
  const nightmare=createClownNightmareTheatre(scene,{coarse,reduced});startup.own('Clown impossible theatre',()=>nightmare.dispose());
  const livingWorld=createClownLivingWorld(scene,{coarse,reduced,keyLight:sun,ambientLight:hemisphere});startup.own('Clown living world',()=>livingWorld.dispose());
+ const coronation=createClownPhase2Performance(scene,{coarse,reduced});
+ startup.own('Clown act-two coronation',()=>coronation.dispose());
   const atmosphere=createBossAtmosphere(scene,{profile:'clown',coarse,reduced});startup.own('Clown silent atmosphere',()=>atmosphere.dispose());
  const actor=createClownActor({coarse});startup.own('Clown original face',()=>actor.disposePortrait?.());scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);
  const troupeView=createCircusTroupeView(scene,{coarse,reduced,
@@ -110,7 +114,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const aim=new THREE.Vector3(),camPos=new THREE.Vector3(),camTarget=new THREE.Vector3(),screen=new THREE.Vector3(),keys=new Set(),stick={x:0,z:0};
  function notice(_text){/* In-fight instructions and pattern names are forbidden. */}
  function floatText(text,x,y,z,player=false){screen.set(x,y,z).project(camera);if(Math.abs(screen.z)>1)return;const el=document.createElement('span');el.className='damage-number'+(player?' player':'');el.textContent=text;el.style.left=(screen.x*.5+.5)*canvas.clientWidth+'px';el.style.top=(-screen.y*.5+.5)*canvas.clientHeight+'px';$('damage-layer').appendChild(el);eventScope.setTimeout(()=>el.remove(),850);}
- function reset(replayIntro=false){legacyEchoes.clear();recordedFoley.stop();nightmare.reset();livingWorld.reset();shutterLeft=0;shutterFlash.style.opacity='0';introGate.arm();playerProjectiles.clear();atmosphere.reset();contactFx.reset();circus.reset();traitView.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();playerWeaponSfx.clear();winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});configure(g);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearBombs();clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,8,21);aim.set(0,CLOWN_CAMERA.target,5);freeLook.release();lock=true;yaw=Math.PI;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;canvas.focus();if(replayIntro)introGate.begin();}
+ function reset(replayIntro=false){coronation.reset();legacyEchoes.clear();recordedFoley.stop();nightmare.reset();livingWorld.reset();shutterLeft=0;shutterFlash.style.opacity='0';introGate.arm();playerProjectiles.clear();atmosphere.reset();contactFx.reset();circus.reset();traitView.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();playerWeaponSfx.clear();winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});configure(g);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearBombs();clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,8,21);aim.set(0,CLOWN_CAMERA.target,5);freeLook.release();lock=true;yaw=Math.PI;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;canvas.focus();if(replayIntro)introGate.begin();}
  let dragPointer=null;
  const freeLook=createFreeLookCamera({canvas,coarse,enabled:()=>ready&&!introGate.blocked&&!paused&&!closed&&g.status==='playing'&&!lock,
   getAngles:()=>({yaw,pitch}),setAngles:next=>{yaw=next.yaw;pitch=next.pitch;},minPitch:.08,maxPitch:1.18});
@@ -144,7 +148,8 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   ['Clown audio',()=>{recordedFoley.dispose();playerWeaponSfx.dispose();audio.setEnabled(false);skillAudio.setEnabled(false);}],
   ...contexts.map((context,i)=>['Clown audio context '+i,()=>context.close?.()]),
   ['Clown transient meshes',()=>{clearMap(zones);clearBombs();clearMap(shots);headPool.dispose();}],
-  ['Living circus troupe',()=>troupeView.dispose()],['Original mini ringmasters',()=>legacyEchoes.dispose()],['Clown radiant circus',()=>circus.dispose()],['Clown living world',()=>livingWorld.dispose()],['Clown scene',()=>disposeScene(scene)],
+  ['Living circus troupe',()=>troupeView.dispose()],['Original mini ringmasters',()=>legacyEchoes.dispose()],
+  ['Clown act-two coronation',()=>coronation.dispose()],['Clown radiant circus',()=>circus.dispose()],['Clown living world',()=>livingWorld.dispose()],['Clown scene',()=>disposeScene(scene)],
   ['Clown particles',()=>{confettiGeo.dispose();smokeGeo.dispose();bloodGeo.dispose();starGeo.dispose();for(const m of mats)m.dispose();}],
   ['Clown renderer',()=>renderer.dispose()],
   ['Clown dialog',()=>{d.close();d.remove();}],
@@ -161,18 +166,20 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
    }for(const[id,m]of zones)if(!live.has(id)){releaseZone(m);zones.delete(id);}
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:headPool.acquire();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph&&o.group.visible)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){releaseBombVisual(o);bombs.delete(id);}
   playerProjectiles.update(g);
-  nightmare.update(g,dt);livingWorld.update(g,dt);circus.update(g,dt);const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent='';
+  nightmare.update(g,dt);livingWorld.update(g,dt);circus.update(g,dt);
+  coronation.update(g,dt);const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent='';
   // The huge-ball transformation is retired: do not pull camera away
    // from the new grounded human-scale horror performance.
-   const big=(b.state==='transition'?.55:0)*CLOWN_SIZE,alpha=1-Math.exp(-5*dt);
+   const phase2=clownPhase2Beat(g),big=(b.state==='transition'?.40:0)*CLOWN_SIZE,
+    alpha=1-Math.exp(-(phase2.active?3.7:5)*dt);
    if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(b.x-p.x,b.z-p.z)-yaw),Math.cos(Math.atan2(b.x-p.x,b.z-p.z)-yaw))*Math.min(1,dt*7);
    const frame=matchedBossCamera('clown',{
     player:p,boss:b,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
     headHeight:clownBeastPose(g).active?2.8:4.5,
-    extraDistance:big // Maintain the transformation/inflation reveal.
+    extraDistance:big+phase2.cameraDistance // Dolly closer for the crowned director, never spin the stage.
    });
-   camPos.set(frame.position.x,frame.position.y+big*.2,frame.position.z);
-   camTarget.set(frame.focus.x,frame.focus.y+big*.2,frame.focus.z);camera.position.lerp(camPos,alpha);aim.lerp(camTarget,alpha);if(!reduced&&dt>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}camera.lookAt(aim);impact.camera(camera);screen.set(b.x,clownBeastPose(g).active?2.9:4.8,b.z).project(camera);$('reticle').hidden=!lock||Math.abs(screen.z)>1||g.status!=='playing';$('reticle').style.left=((screen.x*.5+.5)*canvas.clientWidth-6)+'px';$('reticle').style.top=((-screen.y*.5+.5)*canvas.clientHeight-6)+'px';
+   camPos.set(frame.position.x,frame.position.y+big*.2+phase2.cameraLift,frame.position.z);
+   camTarget.set(frame.focus.x,frame.focus.y+big*.2+phase2.cameraLift,frame.focus.z);camera.position.lerp(camPos,alpha);aim.lerp(camTarget,alpha);if(!reduced&&dt>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}camera.lookAt(aim);impact.camera(camera);screen.set(b.x,clownBeastPose(g).active?2.9:4.8,b.z).project(camera);$('reticle').hidden=!lock||Math.abs(screen.z)>1||g.status!=='playing';$('reticle').style.left=((screen.x*.5+.5)*canvas.clientWidth-6)+'px';$('reticle').style.top=((-screen.y*.5+.5)*canvas.clientHeight-6)+'px';
  }
  function events(){for(const e of g.events){nightmare.event(e);livingWorld.event(e);atmosphere.event(e,g);circus.event(e,g);contactFx.event(e,g);if(e.type==='victory')playBossCue('die');if(e.type==='clown-shutter')shutterLeft=.19;recoverySfx.event(e);damageFeedback.hit(e);impact.event(e,g);playerWeaponSfx.event(e,g);if(['heal-start','healed','skill-heal','death'].includes(e.type))playerWeaponSfx.clear();fx.event(e,g);if(e.type==='boss-hit'){burst(g.boss.x,1.8,g.boss.z,true);floatText(String(e.amount),g.boss.x,3,g.boss.z);g.clown.flash=.12;shake=e.big?.2:.06;}else if(e.type==='player-hit'){burst(g.player.x,1.2,g.player.z,true);floatText('-'+e.amount,g.player.x,2.6,g.player.z,true);shake=.2;$('hit-flash').classList.add('visible');eventScope.setTimeout(()=>$('hit-flash')?.classList.remove('visible'),140);}else if(e.type==='clown-blast')burst(e.x,.8,e.z);else if(e.type==='clown-troupe-hit')burst(e.x,1.2,e.z,false);
    const recorded=bossFoleySpec(e,g);
