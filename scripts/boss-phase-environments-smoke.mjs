@@ -32,7 +32,7 @@ try{
     const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
     renderer.setPixelRatio(1);renderer.setSize(1280,720,false);renderer.toneMapping=THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure=1.28;
-    let stage,game;
+    let stage,game,thirdView,thirdData;
     if(boss==='clown'){
      const m=await import('./src/clown-radiant-circus.mjs'),g=await import('./src/clown-combat.mjs');
      stage=m.createClownCircusStage(scene);game=g.createClownGame();
@@ -44,6 +44,9 @@ try{
     }else{
      const m=await import('./src/sanctuary.mjs'),g=await import('./src/combat.mjs');
      stage=m.buildSanctuary(THREE,scene);game=g.createGame();
+     const third=await import('./src/kwon-third-phase-view.mjs');
+     thirdData=await import('./src/kwon-third-phase.mjs');
+     thirdView=third.createKwonThirdPhaseView(scene);
      camera.position.set(0,19,35);camera.lookAt(0,9,-36);
     }
     function render(phase){
@@ -58,12 +61,16 @@ try{
      }else{
       game.boss.phase=phase;
       for(let i=0;i<120;i++){game.time+=.033;stage.update(game,.033);}
+      game.kwonFractures=phase===3?
+       thirdData.makeKwonFractures({...game.boss,x:0,z:0,yaw:0},'heavenSplit',600)
+        .map(q=>({...q,age:1.1})): [];
+      thirdView.update(game);
      }
      renderer.render(scene,camera);
      return {phase,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles};
     }
     window.__bossScenicCI={render,dispose(){
-      renderer.dispose();canvas.remove();
+      thirdView?.dispose();renderer.dispose();canvas.remove();
       if(stage.dispose)stage.dispose();
     }};
     return {boss,first:render(1)};
@@ -75,6 +82,12 @@ try{
    assert.ok(final.drawCalls>0);
    assert.deepEqual(errors,[],'browser errors in '+boss);
    await page.screenshot({path:'artifacts/boss-phase-environments/'+boss+'-transformed.png'});
+   if(boss==='kwon'){
+    const third=await page.evaluate(()=>window.__bossScenicCI.render(3));
+    assert.ok(third.drawCalls>final.drawCalls,'third phase must draw actual 3D stone/sky wound geometry');
+    await page.screenshot({path:'artifacts/boss-phase-environments/kwon-phase-three.png'});
+    console.log('KWON PHASE THREE WEBGL',JSON.stringify(third));
+   }
    console.log('BOSS ENVIRONMENT SMOKE',JSON.stringify({boss,phase1:sceneInfo.first,transformed:final,errors}));
    await page.evaluate(()=>window.__bossScenicCI.dispose());
   }finally{await page.close();}

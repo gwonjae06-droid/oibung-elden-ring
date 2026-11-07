@@ -3,10 +3,10 @@
 const sat=n=>Math.max(0,Math.min(1,Number.isFinite(n)?n:0));
 export function livingBladePulse(b,m={}){
  if(!b||b.state==='dead')return 0;
- const base=b.phase===2?.34:.11;
+ const base=b.phase===3?.63:b.phase===2?.34:.11;
  const strike=sat(m.strike),brace=sat(m.brace),follow=sat(m.follow);
  return Math.min(1,base+.25*brace+.5*strike+.16*follow+
-  ((b.pattern==='livingSword'||b.pattern==='lastStance')?.16:0));
+  ((b.pattern==='livingSword'||b.pattern==='lastStance'||b.pattern==='heavenSplit')?.16:0));
 }
 export function createKwonLivingBlade(T,swordGroup,{length=8.55,coarse=false}={}){
  const root=new T.Group();root.name='kwon-living-jaw-blade-rig';

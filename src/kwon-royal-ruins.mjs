@@ -85,16 +85,16 @@ export function createKwonRoyalRuins(T,parent,{coarse=false,reduced=false}={}){
   const h=Number.isFinite(dt)?Math.max(0,Math.min(.05,dt)):0;
   if(lastGame!==g||(g.time||0)<time){reset();lastGame=g;}
   time=Number.isFinite(g.time)?g.time:time+h;
-  const next=g.boss?.phase===2?2:1;
+  const next=g.boss?.phase===3?3:g.boss?.phase===2?2:1;
   if(next!==phase){phase=next;resetAt=time;}
-  const target=phase===2?1:0;
+  const target=phase===3?1.22:phase===2?1:0;
   morph+=(target-morph)*(1-Math.exp(-h*1.8));
   if(Math.abs(target-morph)<.001)morph=target;
   const k=smooth(morph),silenced=g.status==='won';
   crimson.opacity=k*(silenced?.1:.71);
-  steel.emissive.setHex(0xb51b39);steel.emissiveIntensity=k*(silenced?.03:.58);
+  steel.emissive.setHex(phase===3?0x8d1c50:0xb51b39);steel.emissiveIntensity=k*(silenced?.03:phase===3?.83:.58);
   throne.rotation.z=(silenced?0:k*.052)+(reduced?0:Math.sin(time*.8)*k*.025);
-  if(!reduced&&(phase===2||morph>.001))matrices(k,time);
+  if(!reduced&&(phase>=2||morph>.001))matrices(k,time);
   else if(morph>.01)matrices(k,0);
   return {phase,redSeal:k};
  }

@@ -9,6 +9,7 @@ import {collectKwonMouthParts,createKwonNeckRig} from './kwon-neck-rig.mjs';
 import {installKwonKnight} from './kwon-knight-regalia.mjs';
 import {createKwonLivingBlade} from './kwon-living-blade.mjs';
 import {createKwonTargetView} from './kwon-target-view.mjs';
+import {kwonThirdTransition,kwonThirdSwordDrive} from './kwon-third-phase.mjs';
 export function createBossStance(B){
  const S=BOSS_SCALE,headRig=new THREE.Group();headRig.position.set(B.HEAD.x,B.HEAD.y,B.HEAD.z);headRig.name='detachable-royal-head';
  const atHead=B.model.children.filter(c=>c.geometry?.type==='SphereGeometry'&&Math.abs(c.position.y-B.HEAD.y)<.001&&Math.abs(c.position.z-B.HEAD.z)<.001);if(!atHead.length)throw new Error('Boss head mesh missing');const mouth=collectKwonMouthParts(THREE,B.model.children);B.model.add(headRig);
@@ -31,17 +32,31 @@ export function createBossStance(B){
   update(b){
   targetView.update(b);
   const now=performance.now(),dt=lastFrame===null?0:(now-lastFrame)/1000;lastFrame=now;
-  const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),c=cinematicPose(b),m=bossMotion(b);
+  const death=collapse.step(b,dt,document.hidden),q=bodyPose(b),
+   c=cinematicPose(b),m=bossMotion(b),drive=kwonThirdSwordDrive(b);
   // Keep the blade, damage markers, foot IK and head detach on the exact
   // authored timeline. Only the torso's secondary mass eases between phases.
   const soft=softMotion.step({lean:m.lean,sink:m.sink,sway:m.sway},document.hidden?0:dt,
    {owner:b,rate:m.strike>.25?28:12}),display={...m,...soft};
+  // In the final act the blade leads, then the chest, waist and supporting
+  // feet catch up. This is a bounded secondary rotation (never a teleport).
+  display.lean=(display.lean||0)-.16*drive.pull;
+  display.sink=(display.sink||0)-.10*drive.weight;
+  display.sway=(display.sway||0)+.07*drive.lead;
   const weights=kwonStanceWeights(q.standing,c.reach,c.detach,Boolean(death));
   const stamp=[b.phase,b.state,b.pattern,b.t,b.wait,b.x,b.z,b.yaw,b.stun],frozen=Boolean(lastLegClock&&stamp.every((v,i)=>Object.is(v,lastLegClock[i])));lastLegClock=stamp;const gaitPhase=advanceKwonGaitClock(legClock,B.legs[0]?.pending?.phase,frozen);
-  pivot.rotation.x=q.angle;pivot.position.y=(1.5+q.lift+display.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+display.sway);torso.update(b,display,dt);neck.update(b,display,dt,frozen);jawBlade.update(b,m);
+  pivot.rotation.x=q.angle-.10*drive.pull;pivot.position.y=(1.5+q.lift+display.sink)*S;B.model.position.y=death?death.sink:0;B.model.scale.setScalar(1);B.model.rotation.set(0,0,(death?death.roll:0)+display.sway);torso.update(b,display,dt);neck.update(b,display,dt,frozen);jawBlade.update(b,m);
   const shouldDetach=c.detach>0;if(shouldDetach&&!detached){headRig.parent?.remove(headRig);B.swordGroup.add(headRig);detached=true;}else if(!shouldDetach&&detached){B.swordGroup.remove(headRig);neck.joint.add(headRig);detached=false;}
   if(detached){headRig.scale.setScalar(S);headRig.position.set(0,-S,-.5*S);headRig.rotation.set(-Math.PI/2,0,0);}else{headRig.scale.setScalar(1);headRig.rotation.set(0,0,0);headRig.position.set(...neck.headOffset);}
-  cinema.style.display=b.state==='transition'?'block':'none';if(b.state==='transition')caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?'내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';
+  cinema.style.display=b.state==='transition'?'block':'none';
+  if(b.state==='transition'){
+   if(b.phase===3){
+    const cut=kwonThirdTransition(b.t);
+    caption.textContent=b.t<1.8?'검이 먼저 몸을 일으켰다':b.t<3.7?
+      '내가 검을 잡은 적이 있었던가.':cut.skyScar>.1?'검이 된 왕':'';
+   }else caption.textContent=b.t<1.8?'부서진 검의 계승자':b.t<2.9?
+    '내게 검을 쥘 손이 없었다면…':b.t<3.8?'내 머리로라도 베겠다.':'검의 현현';
+  }
   const head=detached?bodyPoint(b,B.HEAD):neck.point();
   for(const L of B.legs){
    const side=L.plan.side,front=L.plan.k===0,rear=L.plan.k===3,weight=rear?weights.rear:front?weights.front:0,shoulder=front?torso.point({x:side*1.4,y:2.6,z:1.1},'chest'):null,region=front?'chest':L.plan.k===1?'waist':'abdomen';

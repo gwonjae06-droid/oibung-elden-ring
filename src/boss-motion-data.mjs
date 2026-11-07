@@ -3,6 +3,12 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ease=t=>{t=clamp(Number.isFinite(t)?t:0,0,1);return t*t*(3-2*t);};
 const ZERO={lean:0,sink:0,sway:0,brace:0,strike:0,follow:0};
 export const MOTION_STYLE={
+ puppetLunge:[{lean:-.24,sink:-.42,sway:-.12},{lean:.18,sink:-.16,sway:.14}],
+ skyRend:[{lean:-.30,sink:-.38,sway:-.07},{lean:.24,sink:-.23,sway:.08}],
+ earthRend:[{lean:-.26,sink:-.24,sway:-.16},{lean:.25,sink:-.42,sway:.16}],
+ falseGap:[{lean:.22,sink:-.55,sway:.13},{lean:-.13,sink:-.15,sway:-.17}],
+ reverseGrip:[{lean:.17,sink:-.27,sway:-.20},{lean:-.20,sink:-.18,sway:.22}],
+ heavenSplit:[{lean:-.34,sink:-.56,sway:-.05},{lean:.27,sink:-.30,sway:.09}],
  spiderPrison:[{lean:-.18,sink:-.43,sway:-.06},{lean:.17,sink:-.12,sway:.10}],
  graveSword:[{lean:-.27,sink:.22,sway:-.03},{lean:.22,sink:-.49,sway:.06}],
  livingSword:[{lean:-.19,sink:-.16,sway:.16},{lean:.21,sink:-.06,sway:-.12}],
@@ -31,7 +37,7 @@ export function bossMotion(b){
  if(b.stun>0)return {lean:-.05,sink:-.1,sway:Math.sin(t*40)*.05};
  const s=MOTION_STYLE[b.pattern];
  if(!s||!PATTERNS[b.pattern]||!['windup','active','recovery'].includes(b.state))return {...ZERO};
- const cfg=patternConfig(b),power=b.phase===2?1.2:1;
+ const cfg=patternConfig(b),power=b.phase>=2?1.2:1;
  let m;
  if(b.state==='windup')m=mix(MOTION_STYLE[b.motionFrom]?.[1]||ZERO,s[0],ease(t/cfg.wind));
  else if(b.state==='active')m=mix(s[0],s[1],ease(t/cfg.active));
