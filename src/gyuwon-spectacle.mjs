@@ -20,6 +20,12 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  const swordMetal=new THREE.MeshStandardMaterial({color:0xd5b9a5,metalness:.77,
   roughness:.34,emissive:0x49212a,emissiveIntensity:.43});
  const wavePool=createGyuwonMemoryWave({coarse});root.add(wavePool.group);
+ const warmupBlade=new THREE.Mesh(bladeGeometry,swordMetal);
+ warmupBlade.name='gyuwon-memory-prewarmed-blade';
+ warmupBlade.visible=false;root.add(warmupBlade);
+ const warmupOrb=new THREE.Mesh(sphere,gold);
+ warmupOrb.name='gyuwon-memory-prewarmed-orb';
+ warmupOrb.visible=false;root.add(warmupOrb);
  for(const name of ['sword','circus','gamble','tsunami','chalk']){const g=new THREE.Group();g.name='gold-memory-'+name;root.add(g);groups.set(name,g);
 
  }
@@ -102,9 +108,29 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
  },clear,
   prewarm(renderer,camera,scene){
    if(!renderer?.compile||!scene)return;
-   const old=wavePool.group.visible,oldRoot=root.visible;
-   try{root.visible=true;wavePool.group.visible=true;renderer.compile(scene,camera);}
-   finally{wavePool.group.visible=old;root.visible=oldRoot;}
+   const oldWave=wavePool.group.visible,oldRoot=root.visible,
+    oldBlade=warmupBlade.visible,oldOrb=warmupOrb.visible,
+    oldGroups=[...groups.values()].map(group=>[group,group.visible]);
+   const canRender=typeof renderer.setRenderTarget==='function'&&
+    typeof renderer.getRenderTarget==='function'&&typeof renderer.render==='function';
+   const prior=canRender?renderer.getRenderTarget():null;
+   const buffer=canRender?new THREE.WebGLRenderTarget(16,16):null;
+   try{
+    root.visible=true;
+    for(const [id,group]of groups){
+     for(const candidate of groups.values())candidate.visible=candidate===group;
+     wavePool.group.visible=id==='tsunami';
+     warmupBlade.visible=id==='sword';
+     warmupOrb.visible=id==='circus'||id==='gamble';
+     renderer.compile(scene,camera);
+     if(buffer){renderer.setRenderTarget(buffer);renderer.render(scene,camera);}
+    }
+   }finally{
+    if(buffer){renderer.setRenderTarget(prior);buffer.dispose();}
+    for(const [group,visible]of oldGroups)group.visible=visible;
+    root.visible=oldRoot;wavePool.group.visible=oldWave;
+    warmupBlade.visible=oldBlade;warmupOrb.visible=oldOrb;
+   }
   },
   stats:()=>({liveAttackGroups:attacks.size,waveVertices:wavePool.stats().vertices,
    waveGeometryBuilds:1}),
