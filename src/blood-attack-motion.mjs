@@ -1,4 +1,5 @@
 import {BLOOD_PATTERNS} from './blood-data.mjs';
+import {BLOOD_WHIP} from './blood-whip.mjs';
 import {poseAlpha} from './boss-animation-continuity.mjs';
 import {smooth} from './blood-transformation.mjs';
 
@@ -155,6 +156,27 @@ export function bloodAttackMotion(game,{markers=null}={}){
  pose.cape=profile.cape*(loaded*.25+thrust*.54+aftermath*.96)+hit*.13;
  return pose;
 }
+// The warning is embodied by a real right-arm cock and release, not text
+// or a free-floating attack that starts before the caster moves.
+function layerBloodWhip(pose,whip){
+ if(!whip)return pose;
+ const charge=clamp(whip.age/BLOOD_WHIP.warning);
+ const strike=clamp((whip.age-BLOOD_WHIP.warning)/BLOOD_WHIP.extension);
+ const releasing=whip.age>=BLOOD_WHIP.warning;
+ const intensity=releasing?1-.45*strike:charge;
+ pose.style='blood-whip';pose.stage=releasing?'release':'windup';
+ pose.weight=Math.max(pose.weight,.28+.72*intensity);
+ pose.anticipation=Math.max(pose.anticipation,releasing?0:charge);
+ pose.release=Math.max(pose.release,releasing?1-strike*.4:0);
+ pose.body.twist+=-.31*intensity;
+ pose.body.lean+=releasing?.18*(1-strike):-.16*charge;
+ pose.arms[1].raise+=1.48*intensity;
+ pose.arms[1].open+=.56*intensity;
+ pose.arms[1].elbow-=.51*intensity;
+ pose.arms[0].raise+=.19*intensity;
+ pose.head.yaw+=.11*intensity;pose.cape+=.22*intensity;
+ return pose;
+}
 const blendNumber=(from,to,alpha)=>from+(to-from)*alpha;
 const blendObject=(from,to,alpha)=>Object.fromEntries(Object.keys(to).map(key=>[key,blendNumber(from?.[key]??0,to[key],alpha)]));
 /**
@@ -182,7 +204,7 @@ export function createBloodMotionDirector(){
   }else if(b?.state==='transition'){
    pattern=null;markers=null;lastPatternTime=null;
   }
-  const next=bloodAttackMotion(g,{markers});
+  const next=layerBloodWhip(bloodAttackMotion(g,{markers}),s?.whip);
   if(!previous){previous=next;return next;}
   if(validDt===0)return previous;
   // Quicker on strikes, slower in follow-through and recovery. No overshoot
