@@ -4,7 +4,7 @@ import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance,ringmasterGesture} from './clown-ringmaster-pose.mjs';
 import {createClownGait} from './clown-gait.mjs';
-import {solveClownArm} from './clown-arm-rig.mjs';
+import {solveFixedLimb,smoothYaw,stageFootTarget} from './clown-performance-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 // All old photographic head, balance-ball, cartoon sausage limbs and ghost
 // mount are deliberately excluded from this replacement actor.
@@ -13,16 +13,16 @@ export function createClownActor({coarse=false}={}){
  return runThreeStartup(THREE,(T)=>{
  const root=new T.Group();root.name='seulwoo-ringmaster-rebuilt';
  const body=new T.Group();body.name='seulwoo-grounded-physical-rig';root.add(body);
- const velvet=new T.MeshPhysicalMaterial({color:0x32111e,roughness:.92,sheen:.85,sheenColor:0x723040,side:T.DoubleSide});
- const crimson=new T.MeshPhysicalMaterial({color:0x7d2433,roughness:.85,sheen:.56,sheenColor:0xe77480,side:T.DoubleSide});
+ const velvet=new T.MeshPhysicalMaterial({color:0x32111e,roughness:.94,sheen:.58,sheenColor:0x723040,side:T.DoubleSide});
+ const crimson=new T.MeshPhysicalMaterial({color:0x7d2433,roughness:.90,sheen:.43,sheenColor:0x9f4752,side:T.DoubleSide});
  const lining=new T.MeshStandardMaterial({color:0x15131e,roughness:.96,side:T.DoubleSide});
- const bone=new T.MeshPhysicalMaterial({color:0xddd1b9,roughness:.7,sheen:.12});
- const chalk=new T.MeshPhysicalMaterial({color:0xe8d9c4,roughness:.8});
- const metal=new T.MeshStandardMaterial({color:0xb38c54,roughness:.33,metalness:.76});
- const leather=new T.MeshStandardMaterial({color:0x151014,roughness:.82});
+ const bone=new T.MeshPhysicalMaterial({color:0xbeb3a3,roughness:.78,sheen:.08});
+ const chalk=new T.MeshPhysicalMaterial({color:0xdbcfbe,roughness:.87,clearcoat:.12,clearcoatRoughness:.88});
+ const metal=new T.MeshStandardMaterial({color:0xa5875b,roughness:.43,metalness:.76});
+ const leather=new T.MeshStandardMaterial({color:0x171116,roughness:.88});
  const black=new T.MeshStandardMaterial({color:0x100f16,roughness:.36,metalness:.13});
  const voidMat=new T.MeshStandardMaterial({color:0x0c090f,roughness:.85});
- const eyeMat=new T.MeshStandardMaterial({color:0xffdfb4,roughness:.2,emissive:0x4c1a0e,emissiveIntensity:.7});
+ const eyeMat=new T.MeshPhysicalMaterial({color:0xe7c6a5,roughness:.12,metalness:0,clearcoat:.8,clearcoatRoughness:.08,emissive:0x3a160e,emissiveIntensity:.45});
  const blood=new T.MeshStandardMaterial({color:0x702336,roughness:.78});
  const sphere=new T.SphereGeometry(1,coarse?14:32,coarse?10:22);
  const cylinder=new T.CylinderGeometry(1,1,1,coarse?10:20,1);
@@ -66,6 +66,13 @@ export function createClownActor({coarse=false}={}){
   blob(body,metal,'engraved-epaulette',[side*.85,3.65,0],[.40,.15,.55]);
  }
  for(let i=0;i<4;i++)blob(body,metal,'aged-brass-coat-button',[.17,2.05+i*.37,.67],[.065,.065,.042]);
+  // Narrow layered stitch seams read as fabric under raking stage light.
+  // They use real mesh depth rather than a flat coloured decal.
+  for(const s of[-1,1])for(let i=0;i<7;i++){
+   const h=1.66+i*.29,r=.74+(i>3?-.05:0);
+   const stitch=blob(body,i%3===0?metal:lining,'hand-stitched-velvet-coat-seam',
+    [s*r,h,.23],[.013,.032,.023]);stitch.rotation.z=s*.22;
+  }
  makeCurve(body,[[-.46,3.78,.12],[0,3.96,.10],[.46,3.78,.12]],.09,bone,'frayed-stage-collar');
  // Authentic head proportions with its own brow, nose, jaw, mask and hair.
  const neck=blob(body,bone,'long-exposed-neck',[0,4.18,0],[.20,.53,.22]);
@@ -134,14 +141,20 @@ export function createClownActor({coarse=false}={}){
  }
  const gait=createClownGait(),springs=createSpringBank();
  const down=new T.Vector3(),wristWorld=new T.Vector3();
- let previousGame=null,lastTime=-1,previousTurn=0;
+ let previousGame=null,lastTime=-1,previousYaw=null;
  function update(g,dt=1/60){
   if(!g?.boss||!g?.clown)return;
   const b=g.boss,c=g.clown,v=c.vis||{},q=clownBeastPose(g),p=ringmasterPerformance(g),
    perf=ringmasterGesture(g),contact=clownContactFrame(g,p,q),time=(c.time||0)+(b.state==='transition'?b.t:0),
    step=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
-  if(previousGame!==g||time<lastTime){springs.reset();gait.reset();for(const a of arms){a.smoothed=null;a.previous=null;}previousGame=g;}
-  lastTime=time;root.position.set(b.x,0,b.z);root.rotation.y=p.facingYaw??c.yaw??b.yaw??0;
+  if(previousGame!==g||time<lastTime){springs.reset();gait.reset();previousYaw=null;for(const a of arms){a.smoothed=null;a.previous=null;}previousGame=g;}
+  lastTime=time;root.position.set(b.x,0,b.z);
+  const desiredYaw=p.facingYaw??c.yaw??b.yaw??0,
+   combatFacing=c.state==='pattern'||b.state==='transition';
+  // Limit decorative turning in neutral. In attacks the mesh tracks the
+  // same authored collision yaw promptly, never visually aiming elsewhere.
+  previousYaw=previousYaw===null?desiredYaw:smoothYaw(previousYaw,desiredYaw,step,combatFacing?22:9);
+  root.rotation.y=previousYaw;
   const phase=b.phase===2,entrance=b.state==='transition',cut=entrance?clamp((b.t||0)/5.2,0,1):1,
    bow=entrance?Math.sin(Math.PI*Math.min(1,cut*1.3))*.30:0;
   // One compact grounding frame: neither the performer nor a shoe floats
@@ -151,15 +164,20 @@ export function createClownActor({coarse=false}={}){
   body.position.set(0,Math.max(0,contactHeight+(v.jump||0)*1.1),0);
   body.scale.set(p.bodyX,p.bodyY,p.bodyZ);
   const roll=clamp((v.tilt||0)*.11+(foot.roll||0),-.15,.15);
-  body.rotation.set(clamp(contact.pitch+bow,-.3,1.10),clamp((p.twist||0)*.32,-.32,.32),roll);
+  // Independent inertial channels soften shoulders and costume while every
+  // attack collider remains attached to the authoritative simulation pose.
+  const weightPitch=springs.step('spine-pitch',clamp(contact.pitch+bow,-.3,1.10),step,14),
+   weightTwist=springs.step('spine-twist',clamp((p.twist||0)*.32,-.32,.32),step,13),
+   weightRoll=springs.step('spine-roll',roll,step,12);
+  body.rotation.set(weightPitch,weightTwist,weightRoll);
   // The centre of mass leads the costumed action; follow-through is delayed.
   const breath=Math.sin(time*(phase?1.7:1.15))*.015;
   chest.scale.y=1+breath+Math.min(.08,(p.glove-1)*.08);
-  head.rotation.y=clamp((v.tilt||0)*.32+Math.sin(time*.46)*.045,-.45,.45);
-  head.rotation.x=-q.headCounter*.88+Math.sin(time*.88)*.022;
-  head.rotation.z=clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17);
+  head.rotation.y=springs.step('head-yaw',clamp((v.tilt||0)*.32+Math.sin(time*.46)*.045,-.45,.45),step,14);
+  head.rotation.x=springs.step('head-pitch',-q.headCounter*.88+Math.sin(time*.88)*.022,step,15);
+  head.rotation.z=springs.step('head-roll',clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17),step,12);
   head.scale.setScalar(p.headScale);
-  jaw.rotation.x=clamp((perf.director*.25)+(phase?.13:.05)+Math.max(0,perf.offBeat)*.09,0,.5);
+  jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09,0,.5),step,20);
   hat.rotation.z=Math.sin(time*.6)*.024;
   for(const tail of tails){
    const target=-.10+(phase?-.08:0)+Math.sin(time*2.2+tail.side+tail.i)*.08+(foot.activity||0)*.27;
@@ -184,30 +202,37 @@ export function createClownActor({coarse=false}={}){
     body.localToWorld(down);
     if(down.y<.38){down.y=.38;body.worldToLocal(down);a.smoothed=down.toArray();}
    }
-   const rig=solveClownArm(shoulder,a.smoothed,s,a.previous);
-   a.previous=rig.elbow;link(a.upper,rig.shoulder,rig.elbow);link(a.lower,rig.elbow,rig.hand);
-   a.elbow.position.set(...rig.elbow);a.cuff.position.set(...rig.hand);
-   a.hand.position.set(...rig.hand);
+   const rig=solveFixedLimb(shoulder,a.smoothed,{
+    upper:1.38,lower:1.32,pole:[s*.9,-.18,.35],previous:a.previous});
+   a.previous=rig.joint;link(a.upper,rig.start,rig.joint);link(a.lower,rig.joint,rig.end);
+   a.elbow.position.set(...rig.joint);a.cuff.position.set(...rig.end);
+   a.hand.position.set(...rig.end);
    for(let i=0;i<a.fingers.length;i++){
     const x=(i-1.5)*.105;
-    link(a.fingers[i],[rig.hand[0]+x,rig.hand[1]-.2,rig.hand[2]+.10],
-      [rig.hand[0]+x*1.09,rig.hand[1]-.49,rig.hand[2]+.14]);
+    const grasp=.12+Math.max(0,perf.director)*.28;
+    link(a.fingers[i],[rig.end[0]+x,rig.end[1]-.20,rig.end[2]+.10],
+     [rig.end[0]+x*1.09,rig.end[1]-.49+grasp,rig.end[2]+.14+grasp*.4]);
    }
   }
   for(const l of legs){
    const info=foot.legs[l.side<0?0:1],hip=[l.side*.50,1.32-(v.crouch||0)*.12,0];
-   let sole=info.foot,hinge=info.knee;
-   // Contact is checked in world coordinates including every parent rotation.
-   body.updateWorldMatrix(true,false);wristWorld.set(...sole);body.localToWorld(wristWorld);
-   if(!entrance&&(v.jump||0)<.01&&p.lift<.22&&info.planted){
-    // The rigid shoe ellipsoid is 0.29 local units tall. Exact foot-sole
-    // ground contact is imposed in world space AFTER body pitch and scale.
-    wristWorld.y=.29*1.25*p.bodyY;body.worldToLocal(wristWorld);sole=wristWorld.toArray();
-    hinge=info.knee.map((x,i)=>x+(sole[i]-info.foot[i])*.5);
-   }
-   link(l.thigh,hip,hinge);link(l.shin,hinge,sole);l.knee.position.set(...hinge);
-   l.shoe.position.set(...sole);l.shoe.rotation.x=info.anklePitch-contact.pitch;
-   l.shoe.rotation.z=clamp(-roll*.8,-.15,.15);
+   const stepWanted=info.foot.slice();
+   // Leg IK starts from a physically planted shoe target. The transform
+   // accounts for phase pitch, breathing scale and the boss root scale.
+   body.updateWorldMatrix(true,false);
+   const plant=!entrance&&(v.jump||0)<.01&&p.lift<.22&&info.planted,
+    grounded=stageFootTarget(stepWanted,
+      q=>body.localToWorld(new T.Vector3(...q)).toArray(),
+      q=>body.worldToLocal(new T.Vector3(...q)).toArray(),
+      {floor:0,soleRadius:.29,worldScale:1.25*p.bodyY,plant});
+   const rig=solveFixedLimb(hip,grounded,{
+    upper:.92,lower:.92,pole:[l.side*.45,.08,.56]});
+   link(l.thigh,rig.start,rig.joint);
+   link(l.shin,rig.joint,rig.end);
+   l.knee.position.set(...rig.joint);
+   l.shoe.position.set(...rig.end);
+   l.shoe.rotation.x=info.anklePitch-weightPitch;
+   l.shoe.rotation.z=clamp(-weightRoll*.8,-.15,.15);
   }
   const held=perf.director>0.03||g.status==='playing'&&c.state==='idle';
   baton.visible=batonTip.visible=held;
