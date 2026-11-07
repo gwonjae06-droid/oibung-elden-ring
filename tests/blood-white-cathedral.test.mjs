@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createWhiteCathedral,WHITE_CATHEDRAL_LAYOUT as L} from '../src/blood-white-cathedral.mjs';
 import {buildBloodView} from '../src/blood-view.mjs';
+import {BLOOD_RULES} from '../src/blood-data.mjs';
 import {createBloodGame} from '../src/blood-combat.mjs';
 import {bloodTransformation} from '../src/blood-transformation.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
@@ -31,7 +32,7 @@ test('sacred white cathedral includes architectural depth and reference-inspired
  assert.ok(get(scene,'cathedral-stained-glass-panes').instanceColor,'stained glass needs varied colours');
  assert.ok(chapel.glassMaterial.transparent);
  assert.equal(chapel.glassMaterial.depthWrite,false);
- assert.equal(L.combatRadius,28);
+ assert.equal(L.combatRadius,BLOOD_RULES.radius);
  chapel.dispose();assert.equal(named(scene,'blood-white-cathedral').length,0);
  assert.deepEqual(disposeScene(scene).errors,[]);
 });

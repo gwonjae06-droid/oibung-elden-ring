@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import {bloodVolumetricWaveGeometry} from './blood-volumetric-wave.mjs';
 import {BLOOD_EPIC_CUTS,bloodEpicShotState} from './blood-epic-script.mjs';
+import {createBloodHorizonDisaster} from './blood-tsunami-view.mjs';
 
 // Deterministic, presentation-only giant attack sequence. World geometry is
 // authored once; the attacking hitboxes remain blood-combat's real hazards.
-// Neither skipped camera framing nor reduced motion alters gameplay clocks.
+// Camera framing never changes gameplay clocks; the cutscene cannot be skipped.
 const clamp=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
 export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={}){
@@ -43,19 +44,14 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
   opacity:.58,depthWrite:false});
  const foam=new THREE.LineSegments(foamGeo,foamMat);foam.name='blood-distant-tsunami-crest-foam';
  waveRoot.add(foam);
+ const disaster=createBloodHorizonDisaster(scene,waveRoot,{coarse,reduced,
+  crestGeo,undertowGeo,crestMaterial:bloodMaterial,undertowMaterial});
  waveRoot.visible=false;
  const shotCamera=new THREE.Vector3(),shotTarget=new THREE.Vector3();
- let disposed=false,skippedKey=null;
- const state=game=>bloodEpicShotState(game,{reduced,skipKey:skippedKey});
+ let disposed=false;
+ const state=game=>bloodEpicShotState(game,{reduced});
  const isFraming=game=>state(game).blocking;
- function skip(game){
-  if(!isFraming(game))return false;
-  skippedKey=state(game).key;
-  return true;
- }
- function reset(){
-  skippedKey=null;waveRoot.visible=false;
- }
+ function reset(){waveRoot.visible=false;disaster.reset();}
  function update(game){
   if(disposed)return;
   const s=game?.blood,b=game?.boss,def=BLOOD_EPIC_CUTS[s?.pattern];
@@ -64,6 +60,17 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
   if(!visible){waveRoot.visible=false;return;}
   const firstHit=Math.min(...s.hazards.map(h=>h.warn));
   const t=Math.max(0,s.t||0);
+  if(s.pattern==='requiem'){
+   const front=disaster.update(game);
+   if(!front){waveRoot.visible=false;return;}
+   crest.visible=undertow.visible=foam.visible=false;
+   waveRoot.position.set(front.x,.09,front.z);
+   waveRoot.rotation.set(0,front.yaw,0);
+   bloodMaterial.opacity=.96;
+   waveRoot.visible=true;
+   return;
+  }
+  disaster.reset();crest.visible=undertow.visible=foam.visible=true;
   if(t>=firstHit-.08){waveRoot.visible=false;return;}
   // Place the first hint hundreds of metres out. It then comes closer as
   // the true hazard windup advances, remaining non-damaging until the real
@@ -116,10 +123,10 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
  }
  function dispose(){
   if(disposed)return;disposed=true;reset();
-  waveRoot.parent?.remove(waveRoot);
+  disaster.dispose();waveRoot.parent?.remove(waveRoot);
   for(const geo of [crestGeo,undertowGeo,foamGeo])geo.dispose();
   for(const mat of [bloodMaterial,undertowMaterial,foamMat])mat.dispose();
  }
- return {state,isFraming,skip,reset,update,pose,dispose,waveRoot,
-  stats:()=>({meshCount:3,decorativeOnly:true,damageSources:0,skippedKey})};
+ return {state,isFraming,reset,update,pose,dispose,waveRoot,
+   stats:()=>({meshCount:3,tsunami:disaster.stats(),decorativeOnly:true,damageSources:0})};
 }

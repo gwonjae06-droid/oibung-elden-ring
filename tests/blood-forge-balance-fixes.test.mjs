@@ -76,7 +76,7 @@ test('moving Blood wave only hits when its visible crest reaches a distant targe
  const h=g.blood.hazards[0];
  h.age=h.warn+.2;
  assert.equal(hazardContains(h,g.player),false,'the old 10m-long leading hitbox cannot reach early');
- const field=bloodFloorField(g);assert.equal(field.hazards.length,1);
+ const field=bloodFloorField(g);assert.ok(field.hazards.length>=1,'moving crest remains visible alongside the new secondary blood beat');
  const foot=bloodHazardFootprint(h);assert.equal(foot.x,field.hazards[0].x);
  assert.equal(foot.halfLength,field.hazards[0].halfLength);
  h.age=h.warn+.46;assert.equal(hazardContains(h,g.player),true,'actual wave reached its target');

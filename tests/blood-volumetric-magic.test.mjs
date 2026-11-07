@@ -237,7 +237,7 @@ test('one GPU-rendered liquid sheet shows contrasting deep danger and bright saf
   assert.equal(floor.material.isShaderMaterial,true);
   assert.equal(floor.material.depthWrite,false);
   assert.equal(floor.material.uniforms.uSafe.value,1);
-  assert.equal(floor.material.uniforms.uCount.value,1);
+  assert.equal(floor.material.uniforms.uCount.value,g.blood.hazards.length);
   assert.equal(floor.material.uniforms.uFootA.value[0].w,2,'ring is not displayed as a full disk');
   assert.match(floor.material.fragmentShader,/darkBlood/);
   assert.match(floor.material.fragmentShader,/safeBlood/);
@@ -256,9 +256,8 @@ test('the blood explosion does not visually grow from a tiny harmless puddle aft
   startBloodPattern(g,'burst');
   const h=g.blood.hazards[0];h.age=h.warn+.002;g.time=h.age;view.update(g,.016);
   const groups=[];scene.traverse(o=>{if(o.userData?.spellForm==='implosion')groups.push(o);});
-  assert.equal(groups.length,1);
-  const blood=groups[0].children[0];
-  assert.ok(blood.scale.x>=h.r*.94,'explosion volume must cover the first damaging frame');
+  assert.ok(groups.length>=1);
+  assert.ok(groups.some(group=>group.children[0]?.scale.x>=h.r*.94),'explosion volume must cover the first damaging frame');
  }finally{view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);}
 });
 

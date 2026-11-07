@@ -39,7 +39,7 @@ test('actual player-model factory releases every authored material when geometry
 
 test('main arena rolls back its renderer when initial scene construction fails',()=>{
   const error=Error('main scene'),log=[];
-  const context={qualityPixelRatio,reducedMotion,runBattleStartup,document:{getElementById:()=>({})},window:{devicePixelRatio:1},matchMedia:()=>({matches:false}),
+  const context={qualityPixelRatio,reducedMotion,runBattleStartup,createKwonDangerVeil:()=>({dispose(){}}),document:{getElementById:()=>({}),body:{}},window:{devicePixelRatio:1},matchMedia:()=>({matches:false}),
     THREE:{WebGLRenderer:class{constructor(){this.shadowMap={};}setPixelRatio(){}dispose(){log.push('renderer');}},Scene:class{constructor(){throw error;}},PCFSoftShadowMap:1}};
   const source=readFileSync(new URL('../src/arena.mjs',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export const arenaRuntime','const arenaRuntime');
   assert.throws(()=>vm.runInNewContext(source,context),e=>e===error);assert.deepEqual(log,['renderer']);

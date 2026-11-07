@@ -45,25 +45,25 @@ test('first see a small distant tsunami, return to the arena before the actual w
  assert.equal(bloodEpicKey(g),initialKey);
  assert.ok(g.blood.hazards.every(h=>h.age===0),'presentation must not advance actual attacks');
  g.blood.t=Math.min(...g.blood.hazards.map(h=>h.warn));
- fx.update(g);assert.equal(fx.waveRoot.visible,false,'the true hitbox waves take over at impact');
+ fx.update(g);assert.equal(fx.waveRoot.visible,true,'the real tsunami must remain visible throughout the actual moving hitbox');
  assert.equal(fx.stats().damageSources,0);
  fx.dispose();fx.dispose();
  assert.deepEqual(disposeScene(scene).errors,[]);
 });
 
-test('skip restores control immediately but does NOT skip the telegraph or collisions',()=>{
+test('epic cutscene cannot be skipped and keeps combat unchanged',()=>{
  const g=start('requiem'),fx=createBloodEpicCinematics(new THREE.Scene());
  g.blood.t=.9;
  const snapshot=JSON.stringify(g);
  assert.ok(fx.isFraming(g));
- assert.equal(fx.skip(g),true);
- assert.equal(fx.isFraming(g),false);
- assert.equal(fx.skip(g),false);
- assert.equal(JSON.stringify(g),snapshot,'skip must never mutate simulation');
+ assert.equal(typeof fx.skip,'undefined');
+ assert.equal(fx.isFraming(g),true);
+ assert.equal(JSON.stringify(g),snapshot,'presentation must never mutate simulation');
  assert.ok(g.blood.hazards.every(h=>h.warn>3));
  g.blood.t=3.1;
  assert.equal(fx.state(g).active,false);
- assert.equal(g.blood.hazards.length,4);
+ assert.equal(g.blood.hazards.filter(h=>h.tsunami&&h.shape==='lane').length,4);
+ assert.ok(g.blood.hazards.every(h=>h.tsunami),'both overtopping crests use the same safe corridor');
  fx.reset();assert.ok(fx.isFraming({...g,blood:{...g.blood,t:.6}}));
  fx.dispose();
 });

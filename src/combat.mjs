@@ -471,10 +471,11 @@ function poseParams(pattern, stand, carry, cut) {
   }
   return {ly, ey, lp, ep, back};
 }
+const SWORD_POSE_ALIASES=Object.freeze({spiderPrison:'stomp',graveSword:'slam',livingSword:'wave',lastStance:'whirl'});
 function endPose(b) {
   const stand = cinematicPose(b).standing,
     P = poseParams(
-      b.pattern,
+      SWORD_POSE_ALIASES[b.pattern]||b.pattern,
       stand,
       mix(0.25, -0.6, stand),
       mix(0.25, 0.72, stand),
@@ -555,7 +556,7 @@ export function swordPose(b) {
     stand = q.standing,
     carry = mix(0.25, -0.6, stand),
     cut = mix(0.25, 0.72, stand),
-    {ly, ey, lp, ep, back} = poseParams(({spiderPrison:'stomp',graveSword:'slam',livingSword:'wave',lastStance:'whirl'})[b.pattern]||b.pattern, stand, carry, cut),
+    {ly, ey, lp, ep, back} = poseParams(SWORD_POSE_ALIASES[b.pattern]||b.pattern, stand, carry, cut),
     from = b.from || {yaw: 0, pitch: carry, offset: 0};
   let yaw = 0,
     pitch = carry,

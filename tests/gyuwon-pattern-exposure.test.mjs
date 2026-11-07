@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createGyuwonGame,chooseGyuwonPattern,startGyuwonPattern,stepGyuwon} from '../src/gyuwon-combat.mjs';
 import {gyuwonPool,GYUWON_PATTERNS} from '../src/gyuwon-data.mjs';
 const sort=a=>[...a].sort();
-test('all 15 patterns remain in the phase-specific shuffled casting decks',()=>{
+test('all 20 patterns remain in mutually exclusive phase-specific shuffled casting decks',()=>{
  for(const seed of [4,48,125]){
   const g=createGyuwonGame('sword',{seed});
   for(const phase of [1,2,3])for(const space of phase===2?['white','dark']:['white']){

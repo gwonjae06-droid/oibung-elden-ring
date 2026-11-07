@@ -16,6 +16,7 @@ import {createCathedralFx} from './blood-cathedral-fx.mjs';
 import {createWhiteCathedral} from './blood-white-cathedral.mjs';
 import {createBloodApocalypseSky} from './blood-apocalypse-sky.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
+import {bloodTsunamiApproach} from './blood-tsunami.mjs';
 import {bloodStage} from './blood-stage.mjs';
 import {collectSceneResources} from './runtime/scene-resources.mjs';
 import {createPlayerProjectileView} from './player-projectile-view.mjs';
@@ -109,6 +110,18 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
     particles.burst(side*32.4,4.2,z,{count:5,power:7,lift:.15,gravity:.6,direction:{x:side*9,z:0}});
    }
   }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
-  shake(camera){if(!reduced&&shake>0){camera.position.y+=Math.sin(visualTime*71)*shake;camera.position.x+=Math.sin(visualTime*53)*shake*.35;}},
+  shake(camera){if(!reduced){
+    // Tremor begins as a distant rumble and peaks only when the same wall
+    // that owns the real damage footprint reaches the viewer. Never jitter
+    // the simulation or aim, and keep amplitude small enough to dodge.
+    const approaching=bloodTsunamiApproach(focusGame);
+    const amplitude=Math.max(shake,approaching.intensity*.28);
+    if(amplitude>.001){
+     camera.position.y+=Math.sin(visualTime*24)*amplitude*.58+
+       Math.sin(visualTime*43)*amplitude*.19;
+     camera.position.x+=Math.sin(visualTime*29)*amplitude*.34;
+     camera.position.z+=Math.sin(visualTime*19)*amplitude*.13;
+    }
+   }},
   dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }

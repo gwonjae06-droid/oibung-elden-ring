@@ -5,12 +5,12 @@ const TAU=Math.PI*2;
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const cross=(a,t,v)=>a<v&&t>=v;
 const yawTo=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
-const bound=p=>{const d=Math.hypot(p.x,p.z),m=d>20?20/d:1;return {x:p.x*m,z:p.z*m};};
+const bound=p=>{const d=Math.hypot(p.x,p.z),m=d>24?24/d:1;return {x:p.x*m,z:p.z*m};};
 export const HORROR_DEFINITIONS=Object.freeze([
- ['echoApplause','반 박자 늦은 박수',5.7,1.3,[1,2],1],
- ['wrongTwin','누가 진짜 광대일까요',5.5,1.5,[1,2],1],
- ['livingShadow','그림자가 먼저 웃는다',5.4,1.55,[1,2],1],
- ['hatchingBalloons','풍선은 터지지 않고 태어난다',6.2,1.55,[1,2],1],
+ ['echoApplause','반 박자 늦은 박수',5.7,1.3,[1],1],
+ ['wrongTwin','누가 진짜 광대일까요',5.5,1.5,[1],1],
+ ['livingShadow','그림자가 먼저 웃는다',5.4,1.55,[1],1],
+ ['hatchingBalloons','풍선은 터지지 않고 태어난다',6.2,1.55,[1],1],
  ['porcelainRain','관객의 얼굴이 떨어진다',6.3,1.7,[2],2],
  ['foldedCrawl','접힌 몸으로 기어오는 것',5.5,1.65,[2],2],
  ['emptyAudience','아무도 없는 객석의 박수',6.1,1.65,[2],2],
@@ -203,25 +203,27 @@ function stageRupture(g,c,a,t,api){
 // Attacks are physically authored: moving boss, visible cues and real hits.
 function feralSkitter(g,c,a,t,api){
  tell(api,g,c,'feral-skitter');c.vis.crouch=.94;c.vis.shake=.25+Math.abs(Math.sin(t*19))*.23;
- c.vis.neck=.12+Math.sin(t*12)*.07;c.vis.tilt=Math.sin(t*9)*.4;
+ c.vis.neck=.38+Math.sin(t*12)*.18;c.vis.tilt=Math.sin(t*9)*.58;
+ c.vis.glove=.75+.25*Math.abs(Math.sin(t*16));
+ if(cross(a,t,.17))api.emit(g,'clown-horror',{cue:'claw-scrape',x:g.boss.x,z:g.boss.z});
  api.dashPart(g,c,a,t,.38,'beast-skitter-one');
  api.dashPart(g,c,a,t,2.36,'beast-skitter-two');
 }
 function reverseCrawl(g,c,a,t,api){
- tell(api,g,c,'reverse-crawl');c.vis.crouch=1;c.vis.neck=.4;
- c.vis.tilt=.28+Math.sin(t*5)*.25;c.vis.shake=.14+Math.abs(Math.sin(t*8))*.13;
- api.crawlPart(g,c,a,t,.45,'beast-crawl-first',{reach:8,travel:1.55,damage:26});
- api.crawlPart(g,c,a,t,3.1,'beast-crawl-second',{reach:7,travel:1.15,damage:27});
+ tell(api,g,c,'reverse-crawl');c.vis.crouch=1;c.vis.neck=.82;
+ c.vis.tilt=.35+Math.sin(t*5)*.50;c.vis.shake=.20+Math.abs(Math.sin(t*8))*.19;
+ api.crawlPart(g,c,a,t,.45,'beast-crawl-first',{reach:9,travel:1.55,damage:26,angleOffset:.72});
+ api.crawlPart(g,c,a,t,3.1,'beast-crawl-second',{reach:8,travel:1.15,damage:27,angleOffset:-.82});
 }
 function facePeelHunt(g,c,a,t,api){
- tell(api,g,c,'face-peel');c.vis.crouch=.85;c.vis.neck=.48;
+ tell(api,g,c,'face-peel');c.vis.crouch=.85;c.vis.neck=.89;
  c.vis.shake=.18+Math.abs(Math.sin(t*13))*.16;c.vis.tilt=Math.sin(t*4)*.4;
  if(cross(a,t,.35)){
   const q=bound(g.player),z=circle(api,g,q,3.1,1.45,25,'stolenFace');
   api.bomb(g,{kind:'head',...q,r:3.1,fly:.8,warn:1.45,zone:z.id});
   api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});
  }
- api.crawlPart(g,c,a,t,1.75,'face-side-hunt',{reach:11,travel:1.2,damage:29});
+ api.crawlPart(g,c,a,t,1.75,'face-side-hunt',{reach:11,travel:1.2,damage:29,angleOffset:c.seq%2?.75:-.75});
 }
 function ceilingPounce(g,c,a,t,api){
  tell(api,g,c,'ceiling-pounce');c.vis.crouch=t<1.35?1:.95;c.vis.neck=.55;
@@ -229,16 +231,16 @@ function ceilingPounce(g,c,a,t,api){
  c.vis.jump=t>1.35&&t<2.15?2.2*Math.sin(Math.PI*(t-1.35)/.8):0;
  c.vis.shake=.15+.12*Math.abs(Math.sin(t*17));
  if(cross(a,t,.38)){
-  const q=bound(g.player);circle(api,g,q,5.1,1.3,37,'ceilingPounce');
+  const q=bound(g.player);circle(api,g,q,5.1,2.0,37,'ceilingPounce');
   api.emit(g,'clown-horror',{cue:'ceiling-pounce',x:q.x,z:q.z});
  }
- api.dashPart(g,c,a,t,.36,'beast-ceiling-pounce');
+ api.dashPart(g,c,a,t,1.35,'beast-ceiling-pounce');
  if(cross(a,t,2.5))api.emit(g,'clown-horror',{cue:'landing',x:g.boss.x,z:g.boss.z});
 }
 function unhingedClap(g,c,a,t,api){
  tell(api,g,c,'unhinged-clap');c.vis.crouch=.9;c.vis.neck=.72;
  c.vis.glove=.65+.35*Math.abs(Math.sin(t*8));
- c.vis.tilt=.43*Math.sin(t*6);c.vis.shake=.27;
+ c.vis.tilt=.60*Math.sin(t*6);c.vis.shake=.33;c.vis.crouch=.94;
  const look=api.once(c,'unhinged-look',()=>yawTo(g.boss,g.player));
  for(let i=0;i<3;i++)if(cross(a,t,.55+i*1.23)){
   api.cone(g,look+[0,.85,-.85][i],1.08,19,.43,29+i*3,'clap');

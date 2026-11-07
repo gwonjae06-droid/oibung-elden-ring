@@ -9,6 +9,11 @@ export const GYUWON_MOTION_STYLE=Object.freeze({
  line:[-.18,0,.18,1.0],mark:[.25,-.2,-.35,.65],repeat:[-.28,.15,.10,1.2],
  choice:[-.12,.32,-.23,.9],contradiction:[.13,-.4,.18,1.0],timetable:[-.32,.13,.10,.8],blank:[-.4,0,-.35,.45],
  negate:[.33,-.25,.24,1.1],reverse:[-.26,.48,.37,1.1],stop:[.25,0,-.2,.85],
+ // Every phase-two special must have a matching visible body windup.
+ verdict:[-.28,.18,-.36,1.28],mirror:[.24,-.38,.20,1.22],
+ axiom:[-.42,.32,-.19,1.40],paradox:[.34,-.52,.30,1.34],erasure:[-.50,-.25,-.40,1.48],
+ verdict:[.41,-.33,-.28,1.3],mirror:[-.25,.62,.22,1.2],axiom:[-.51,-.27,.41,1.5],
+ paradox:[.37,.58,-.35,1.4],erasure:[-.44,-.47,.38,1.25],
  sword:[.45,-.5,-.42,1.4],circus:[-.38,.7,.4,1.3],gamble:[.35,-.66,-.15,1.5],
  tsunami:[-.52,.2,.5,1.5],chalk:[-.25,.52,-.5,1.25]
 });

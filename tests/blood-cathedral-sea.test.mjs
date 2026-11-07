@@ -14,9 +14,9 @@ const near=(v,w,p=.01)=>Math.abs(v-w)<p;
 test('animated blood sea fills the cathedral rectangle but leaves the entire gameplay disk dry',()=>{
  const scene=new THREE.Scene(),sea=createCathedralBloodSea(scene,{radius:BLOOD_RULES.radius});
  const s=sea.stats(),surface=named(scene,'cathedral-blood-sea-surface');
- assert.ok(surface?.isMesh);assert.equal(s.radius,28);
+ assert.ok(surface?.isMesh);assert.equal(s.radius,BLOOD_RULES.radius);
  assert.equal(s.isDecorative,true);assert.equal(s.damageSources,0);
- assert.ok(s.innerRadius>28.4&&s.innerRadius<28.9);
+ assert.ok(s.innerRadius>BLOOD_RULES.radius+.4&&s.innerRadius<BLOOD_RULES.radius+.9);
  assert.ok(s.halfWidth<42,'sea must not run through cathedral masonry');
  assert.ok(s.halfLength<48,'sea must not run through sanctuary end-wall');
  assert.ok(s.ripples>=20&&s.reflections>=14);
@@ -29,7 +29,7 @@ test('animated blood sea fills the cathedral rectangle but leaves the entire gam
  for(let i=0;i<pos.count;i++){
   const x=pos.getX(i),z=pos.getZ(i),r=Math.hypot(x,z);
   minRadius=Math.min(minRadius,r);
-  assert.ok(r>=28.38,'sea vertex encroaches on combat radius: '+r);
+  assert.ok(r>=BLOOD_RULES.radius+.38,'sea vertex encroaches on combat radius: '+r);
   assert.ok(Math.abs(x)<=CATHEDRAL_BLOOD_SEA.halfWidth+.001);
   assert.ok(Math.abs(z)<=CATHEDRAL_BLOOD_SEA.halfLength+.001);
  }
@@ -38,7 +38,7 @@ test('animated blood sea fills the cathedral rectangle but leaves the entire gam
   const a=index.getX(i),b=index.getX(i+1),c=index.getX(i+2);
   const x=(pos.getX(a)+pos.getX(b)+pos.getX(c))/3;
   const z=(pos.getZ(a)+pos.getZ(b)+pos.getZ(c))/3;
-  assert.ok(Math.hypot(x,z)>28,'sea triangle would render across playable ground');
+  assert.ok(Math.hypot(x,z)>BLOOD_RULES.radius,'sea triangle would render across playable ground');
  }
  assert.ok(near(surface.position.y,CATHEDRAL_BLOOD_SEA.surfaceHeight));
  assert.equal(named(scene,'cathedral-crimson-blood-sea'),sea.root);

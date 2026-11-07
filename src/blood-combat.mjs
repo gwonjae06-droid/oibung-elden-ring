@@ -1,6 +1,8 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
+import {bloodTsunamiFlanks} from './blood-tsunami.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
+import {addBloodRiteAccent} from './blood-rite-escalation.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
@@ -79,10 +81,10 @@ export function severHeartNode(g,amount,point){
 }
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
- const point=(x,z)=>{const d=Math.hypot(x,z),n=d>23?23/d:1;return {x:x*n,z:z*n};};
+ const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
  if(id==='wave')lane(aim,1.2);
  if(id==='fountain')for(let i=0;i<5;i++){const q=point(p.x+Math.cos(aim)*(i-2)*6,p.z-Math.sin(aim)*(i-2)*6);circle(q.x,q.z,1.2+i*.45,4);}
  if(id==='burst')circle(b.x,b.z,1.6,14,{damage:38,life:.5});
@@ -117,19 +119,10 @@ export function startBloodPattern(g,id){
  if(id==='pulse')for(let i=0;i<3;i++)hazard(g,'ring',{r:2,width:1.1,grow:18,warn:1.1+i*.75,life:1.7,damage:22});
  if(id==='pursuit'){lane(aim,1.4,{width:5,length:14,life:.75,damage:32,vx:Math.sin(aim)*28,vz:Math.cos(aim)*28});circle(p.x,p.z,3,6.5,{damage:28});}
  if(id==='tide')for(let i=0;i<4;i++)lane(i*Math.PI/2,1.4+i*.7,{x:0,z:0,length:13,width:5,life:1.3,damage:32});
- // Sea-wide requiem: three enormous, individually telegraphed travelling
- // crests followed by an expanding undertow. Each visible blood wall shares
- // the exact authoritative hazard dimensions, warning and contact time.
- if(id==='requiem'){
-  for(let i=0;i<3;i++){
-   const yaw=aim+(i-1)*.62,forwardX=Math.sin(yaw),forwardZ=Math.cos(yaw);
-   const q=point(b.x-forwardX*13,b.z-forwardZ*13);
-   lane(yaw,1.8+i*1.08,{x:q.x,z:q.z,length:13.5,width:5.2,
-    vx:forwardX*16,vz:forwardZ*16,life:1.25,damage:35});
-  }
-  hazard(g,'ring',{x:b.x,z:b.z,r:5,width:1.5,grow:14,
-   warn:5.52,life:1.2,damage:31});
- }
+ // Two immense blood walls cross the entire arena, cut around the caster.
+ // Four lane hazards share the same fixed safety corridor as their 3D crests.
+ if(id==='requiem')for(const flank of bloodTsunamiFlanks({x:b.x,z:b.z,yaw:aim}))
+  hazard(g,'lane',flank);
  if(id==='judgement')for(let i=0;i<3;i++)hazard(g,'cone',{yaw:aim+[-.8,.8,0][i],arc:.5,r:23,warn:1.5+i*1.2,life:.55,damage:32});
  if(id==='ritual'){for(let beat=0;beat<2;beat++)for(let i=0;i<4;i++)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/2+beat*Math.PI/4,arc:.45,innerR:5.5,r:26,warn:2+beat*1.65,life:.65,damage:30});hazard(g,'ring',{x:0,z:0,r:2,width:1.1,grow:18,warn:4.9,life:1.4,damage:26});}
  // Three wing scythes are visible in the existing animated wing rig;
@@ -173,10 +166,17 @@ export function startBloodPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
  }
+ // Bind the encounter state before passing the two-argument hazard spawner.
+ addBloodRiteAccent(g,id,(shape,opts)=>hazard(g,shape,opts));
  // The camera completes its reveal and returns well before the first actual
  // collision. This adjusts the authoritative attack clock, not just visuals.
  const lead=BLOOD_EPIC_CUTS[id]?.lead||0;
  if(lead)for(const h of s.hazards)h.warn+=lead;
+ if(id==='requiem')s.tsunami={yaw:aim,origin:{x:b.x,z:b.z},
+  rows:[0,1].map(row=>{
+   const h=s.hazards.find(x=>x.tsunami&&x.row===row);
+   return {warn:h.warn,life:h.life};
+  })};
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }

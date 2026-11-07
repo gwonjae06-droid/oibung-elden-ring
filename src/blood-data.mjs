@@ -1,6 +1,6 @@
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
-export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:28,hp:6400,transition:4.6});
+export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:32,hp:6400,transition:4.6});
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
 const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wave:{name:'피의 파도',phase:1,duration:3.8,recover:2.2},
@@ -29,7 +29,7 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  rosary:{name:'붉은 묵주의 행렬',phase:2,duration:5.7,recover:2.75},
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
- requiem:{name:'해일의 장송',phase:2,duration:7.4,recover:3.8},
+ requiem:{name:'해일의 장송',phase:2,duration:10.65,recover:3.8},
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(

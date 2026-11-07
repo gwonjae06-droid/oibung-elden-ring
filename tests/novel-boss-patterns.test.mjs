@@ -19,7 +19,7 @@ test('Kwon signatures have real windups, colliding attacks and recovery',()=>{
 });
 
 test('Clown signatures are assigned to the appropriate phases and have precast & punish time',()=>{
-  const expected={puppetFuneral:[1,2],laughContagion:[1,2],stageCapsize:[2],lastMagic:[2]};
+  const expected={puppetFuneral:[1],laughContagion:[1],stageCapsize:[2],lastMagic:[2]};
   for(const [name,phases] of Object.entries(expected)){
     const p=CLOWN[name];
     assert.deepEqual(p.phases,phases);

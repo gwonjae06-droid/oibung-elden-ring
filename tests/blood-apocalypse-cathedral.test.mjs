@@ -46,7 +46,7 @@ test('endless ocean and fallen stained glass emerge from the sacred nave',()=>{
  assert.equal(chapel.stats().bloodSea.horizonRadius,700);
  assert.equal(chapel.stats().bloodSea.damageSources,0);
  assert.equal(named(scene,'cathedral-battle-floor'),floor);
- assert.equal(BLOOD_RULES.radius,28);
+ assert.ok(BLOOD_RULES.radius>=28,'the safe sanctuary must not shrink as the arena expands');
  chapel.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
 

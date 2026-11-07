@@ -22,8 +22,8 @@ import {
   waveCrosses,
   rollPosition,
 } from './clown-pressure.mjs';
-export const ARENA = 23,
-  BALL_LIMIT = 19.5,
+export const ARENA = 27,
+  BALL_LIMIT = 23.25,
   BODY_R = 3.3,
   CLOWN_HP = PRESSURE.hp,
   FLY = 0.9,
@@ -230,7 +230,7 @@ function bomb(g, o) {
 }
 function target(g) {
   const p = {x: g.player.x, z: g.player.z};
-  confine(p, 22);
+  confine(p, ARENA-1);
   return p;
 }
 function bombAt(
@@ -305,24 +305,24 @@ function rosette(g, p, r, warn, n = 10, damage = 25, gap = 0) {
   }
 }
 const definitions = [
-  ['laughBomb', '웃음 폭탄', 5.1, 1.4, [1, 2]],
-  ['dash', '곡예 돌진', 4.5, 1.1, [1, 2]],
-  ['juggle', '저글링 낙하', 4.5, 1.2, [1, 2]],
-  ['clap', '풍선 박수', 3.4, 1.1, [1, 2]],
-  ['bounce', '공 튀기기', 3.6, 1.1, [1, 2]],
+  ['laughBomb', '웃음 폭탄', 5.1, 1.4, [1]],
+  ['dash', '곡예 돌진', 4.5, 1.1, [1]],
+  ['juggle', '저글링 낙하', 4.5, 1.2, [1]],
+  ['clap', '풍선 박수', 3.4, 1.1, [1]],
+  ['bounce', '공 튀기기', 3.6, 1.1, [1]],
   ['shove', '관객 밀어내기', 1.6, 1, [1, 2]],
   ['tripleBomb', '삼중 웃음 폭탄', 6.65, 2.1, [2]],
   ['rollingSmile', '굴러오는 미소', 3.8, 1.5, [2]],
   ['inverseBow', '거꾸로 된 인사', 3.8, 1.1, [2]],
   ['lastClap', '마지막 박수', 5.35, 1.7, [2]],
-  ['confettiCurtain', '색종이 커튼', 4.6, 1.2, [1, 2]],
-  ['hornFan', '나팔 부채꼴', 4.1, 1.1, [1, 2]],
-  ['drumMarch', '행진 북 연타', 4.8, 1.2, [1, 2]],
-  ['balloonBouquet', '풍선 꽃다발', 5, 1.2, [1, 2]],
-  ['carousel', '회전목마', 5.6, 1.2, [1, 2]],
+  ['confettiCurtain', '색종이 커튼', 4.6, 1.2, [1]],
+  ['hornFan', '나팔 부채꼴', 4.1, 1.1, [1]],
+  ['drumMarch', '행진 북 연타', 4.8, 1.2, [1]],
+  ['balloonBouquet', '풍선 꽃다발', 5, 1.2, [1]],
+  ['carousel', '회전목마', 5.6, 1.2, [1]],
   ['curtainCall', '커튼콜', 7.2, 1.5, [2]],
-  ['spotlightSweep', '스포트라이트 쇼', 4.4, 1.2, [1, 2]],
-  ['fireHoop', '불의 고리', 4.3, 1.2, [1, 2]],
+  ['spotlightSweep', '스포트라이트 쇼', 4.4, 1.2, [1]],
+  ['fireHoop', '불의 고리', 4.3, 1.2, [1]],
   ['humanCannon', '인간 대포', 5, 1.4, [2]],
   // Ball-centred patterns: the phase-two clown rides a huge ball, so these use it as the weapon.
   ['ballRain', '공 폭우', 4.8, 1.3, [2]],
@@ -331,12 +331,12 @@ const definitions = [
   ['ballCannon', '공 대포', 5.4, 1.5, [2]],
   // Each new routine is a staged performance: pose -> environmental warning
   // -> delayed impact -> clean recovery. No extra high-poly stage props.
-  ['mirrorStage', '거울 무대 · 뒤집힌 조명', 4.7, 1.25, [1, 2]],
-  ['trapdoorWaltz', '함정 무도회', 5.2, 1.5, [1, 2]],
+  ['mirrorStage', '거울 무대 · 뒤집힌 조명', 4.7, 1.25, [1]],
+  ['trapdoorWaltz', '함정 무도회', 5.2, 1.5, [1]],
   ['grandEncore', '세 번의 앙코르', 6.1, 1.6, [2]],
   ['invertedApplause', '거꾸로 박수', 6, 1.45, [2]],
-  ['puppetFuneral', '꼭두각시의 장례식', 5.8, 1.65, [1,2]],
-  ['laughContagion', '웃음의 전염', 5.4, 1.4, [1,2]],
+  ['puppetFuneral', '꼭두각시의 장례식', 5.8, 1.65, [1]],
+  ['laughContagion', '웃음의 전염', 5.4, 1.4, [1]],
   ['stageCapsize', '무대 전복', 5.6, 1.7, [2]],
   ['lastMagic', '마지막 마술', 6.4, 1.9, [2]],
   ...HORROR_DEFINITIONS.map(([key,name,dur,recover,phases])=>[key,name,dur,recover,phases]),
@@ -608,8 +608,8 @@ const RUN = {
         for (let i = 0; i < 5; i++) {
           if (i === gap) continue;
           const q = {
-            x: clamp(p.x + (i - 2) * 4.5, -19, 19),
-            z: clamp(p.z + (row - 1) * 4, -19, 19),
+            x: clamp(p.x + (i - 2) * 4.5, -23, 23),
+            z: clamp(p.z + (row - 1) * 4, -23, 23),
           };
           if (Math.hypot(q.x, q.z) < 22)
             zone(g, {
@@ -668,7 +668,7 @@ const RUN = {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2,
           q = {x: p.x + Math.sin(a) * 4.8, z: p.z + Math.cos(a) * 4.8};
-        confine(q, 21);
+        confine(q, ARENA-2);
         bombAt(g, q, 2.1, 26, 0.9, 'ball', 0.6 + i * 0.28);
       }
       emit(g, 'clown-balloon');
@@ -855,7 +855,7 @@ const RUN = {
     c.vis.glove=t<3.6?.6+.3*Math.sin(t*3):0;
     if(cross(a,t,1.05))bombAt(g,p,4.1,31,1.2,'head',.6);
     for(let i=0;i<4;i++)if(cross(a,t,2.15+i*.42)){
-      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,21);
+      const theta=i*Math.PI/2,q={x:p.x+Math.sin(theta)*5.5,z:p.z+Math.cos(theta)*5.5};confine(q,ARENA-2);
       zone(g,{shape:'circle',...q,r:2.9,warn:1,damage:24,blast:true,sound:'curtainCall'});
     }
     if(cross(a,t,4.6))emit(g,'clown-inflate');
@@ -873,9 +873,9 @@ const RUN = {
     }
     if(cross(a,t,1.5)){
       const side=c.seq%2?1:-1,aim=toward(b,g.player);
-      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-18,18),
-        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-18,18)};
-      confine(q,21);c.f.echo=q;
+      const q={x:clamp(g.player.x+Math.cos(aim)*5.2*side,-22,22),
+        z:clamp(g.player.z-Math.sin(aim)*5.2*side,-22,22)};
+      confine(q,ARENA-2);c.f.echo=q;
       zone(g,{shape:'circle',...q,r:5.6,warn:1.05,damage:30,blast:true,major:true,sound:'spotlightSweep'});
       emit(g,'clown-stomp');
     }
@@ -893,7 +893,7 @@ const RUN = {
         const p=target(g),yaw=toward(b,p);
         const stride=phase?4.5:3.4,side=i%2?1:-1;
         const q={x:p.x+Math.cos(yaw)*stride*side,z:p.z-Math.sin(yaw)*stride*side};
-        confine(q,21);
+        confine(q,ARENA-2);
         zone(g,{shape:'circle',...q,r:5.4,warn:1.05,damage:phase?32:28,
           blast:true,major:true,sound:'bounce'});
         emit(g,'clown-stomp');
@@ -910,7 +910,7 @@ const RUN = {
     c.vis.tilt=Math.sin(t*4)*.22;
     for(let i=0;i<3;i++)if(cross(a,t,.8+i*.9)){
       const p=target(g),ang=c.yaw+(i-1)*.65,q={x:p.x+Math.sin(ang)*3,z:p.z+Math.cos(ang)*3};
-      confine(q,21);bombAt(g,q,3.1,27,.8,'ball',.2);
+      confine(q,ARENA-2);bombAt(g,q,3.1,27,.8,'ball',.2);
     }
     if(cross(a,t,3.5)){
       const p=target(g);rosette(g,p,7.2,1.0,8,23,c.seq%8);
@@ -939,7 +939,7 @@ const RUN = {
           ang = c.seq * 1.7 + i * 2.4,
           r = i % 2 ? 5.5 : 0,
           q = {x: p.x + Math.sin(ang) * r, z: p.z + Math.cos(ang) * r};
-        confine(q, 21);
+        confine(q, ARENA-2);
         bombAt(g, q, 2.2, 24, 0.85, 'ball', 0.35);
       }
   },
@@ -1031,10 +1031,10 @@ const RUN = {
   },
 };
 // A real moving body, using the same swept trajectory as the warning lane.
-function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage=26}={}){
+function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage=26,angleOffset=0}={}){
  if(t<start)return;
  const b=g.boss,lane=once(c,key,()=>{
-  const yaw=toward(b,g.player),len=fitLen(b,yaw,reach);c.yaw=yaw;
+  const yaw=toward(b,g.player)+angleOffset,len=fitLen(b,yaw,reach);c.yaw=yaw;
   zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*1.8,warn:anticipation,visual:true});
   emit(g,'clown-horror',{cue:'reverse-crawl',x:b.x,z:b.z});
   return {x:b.x,z:b.z,yaw,len,hit:false,done:false};
@@ -1316,11 +1316,7 @@ export function stepClown(g, dt, input = {}) {
 export function clownView(g) {
   const c = g.clown,
     b = g.boss;
-  let action = '공연이 시작됩니다.';
-  if (b.state === 'transition') action = '웃음이 멈추었습니다…';
-  else if (c.stunT > 0) action = '기절! 지금이 기회입니다';
-  else if (c.punish) action = '빈틈 — 지금 반격하세요';
-  else if (c.state === 'pattern') action = PATTERNS[c.name].name;
+  let action = ''; // Only motion, sound and physical effects reveal the attack.
   return {
     name: '광대 오슬우',
     sub: c.horrorStage===3?'3막 · 무대의 악몽':b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',

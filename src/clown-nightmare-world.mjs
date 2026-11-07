@@ -17,11 +17,11 @@ export function nightmareWorldState(game){
  const c=game?.clown||{},b=game?.boss||{},stage=clamp(c.horrorStage||1,1,3);
  const pattern=c.state==='pattern'?c.name:null, t=Number.isFinite(c.time)?c.time:0;
  let mode='carnival';
- if(pattern==='wrongTwin'||pattern==='mirrorStage')mode='mirror';
+ if(['wrongTwin','mirrorStage','facePeelHunt'].includes(pattern))mode='mirror';
  else if(pattern==='emptyAudience'||pattern==='echoApplause'||pattern==='offbeatClap')mode='audience';
- else if(pattern==='curtainNightmare'||pattern==='stageCapsize'||pattern==='stageRupture')mode='inversion';
- else if(pattern==='foldedCrawl'||pattern==='hatchingBalloons'||pattern==='mouthOfTheAudience'||pattern==='stolenFace')mode='flesh';
- else if(pattern==='livingShadow'||pattern==='clockOfTeeth')mode='void';
+ else if(['curtainNightmare','stageCapsize','stageRupture','ceilingPounce'].includes(pattern))mode='inversion';
+ else if(['foldedCrawl','hatchingBalloons','stolenFace','feralSkitter','reverseCrawl'].includes(pattern))mode='flesh';
+ else if(['livingShadow','clockOfTeeth','mouthOfTheAudience','unhingedClap'].includes(pattern))mode='void';
  else if(stage>=2){
   // Rotate scenery even between special attacks so the venue feels alive.
   const deck=stage===3?['void','flesh','mirror','inversion','audience']:['mirror','audience','inversion'];
@@ -88,14 +88,14 @@ export function createClownLivingWorld(scene,{coarse=false,reduced=false,keyLigh
  const floor=group('unchanging-collision-floor-illusion');
  const lines=[];
  for(let i=0;i<(coarse?3:5);i++){
-  const m=add(floor,new THREE.RingGeometry(24.2+i*1.05,24.25+i*1.05,64).rotateX(-Math.PI/2),rim,'outer-theatre-seam');
+  const m=add(floor,new THREE.RingGeometry(28.2+i*1.05,28.25+i*1.05,64).rotateX(-Math.PI/2),rim,'outer-theatre-seam');
   m.position.y=.028+i*.002;lines.push(m);
  }
  let clock=0,pulse=0,disposed=false,mode='carnival',weight=0,stage=1;
  function event(e){
   if(disposed||!e)return;
   if(e.type==='clown-phase3')pulse=1.4;
-  else if(e.type==='clown-horror'&&['curtain','teeth','shadow','porcelain','face','stage-break'].includes(e.cue))
+  else if(e.type==='clown-horror'&&['curtain','teeth','shadow','porcelain','face','stage-break','claw-scrape','reverse-crawl','ceiling-pounce','landing','unhinged-clap','teeth-end'].includes(e.cue))
    pulse=Math.min(1,pulse+.55);
  }
  function reset(){

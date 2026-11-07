@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {createCircusOcclusion} from './circus-occlusion.mjs';
 export function buildCircusStage(root,{mobile=false,reduced=false}={}){
- const group=new THREE.Group();group.name='circus-velvet-stage';group.userData.decorativeOnly=true;root.add(group);
+ const group=new THREE.Group();group.name='circus-velvet-stage';group.userData.decorativeOnly=true;root.add(group);group.scale.set(27/23,1,27/23);
  const canvas=document.createElement('canvas');canvas.width=canvas.height=mobile?256:512;const c=canvas.getContext('2d'),s=canvas.width;
  c.fillStyle='#29232f';c.fillRect(0,0,s,s);
  for(let i=0;i<16;i++){const a=i*Math.PI/8;c.beginPath();c.moveTo(s/2,s/2);c.arc(s/2,s/2,s*.71,a,a+Math.PI/8);c.closePath();c.fillStyle=i%2?'#352934':'#302735';c.fill();}

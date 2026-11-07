@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {bloodTransformation} from './blood-transformation.mjs';
+import {bloodTsunamiApproach} from './blood-tsunami.mjs';
+import {createBloodInstancedRain} from './blood-storm-rain.mjs';
 
 // The storm is decorative: it has no colliders, damage, RNG consumption or
 // timers independent of combat time. It can be replayed after a retry/skip.
@@ -19,7 +21,7 @@ export function bloodStormEnvelope(game,transformation=bloodTransformation(game)
 export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='blood-apocalypse-horizon-and-storm';scene.add(root);
  root.userData.decorativeOnly=true;
- const uniforms={uTime:{value:0},uReveal:{value:0},uFlash:{value:0}};
+ const uniforms={uTime:{value:0},uReveal:{value:0},uFlash:{value:0},uDetail:{value:coarse||reduced?0:1}};
  // Huge inside-out gradient sphere, with drifting, layered hematite clouds.
  // No textures, raymarching, extra framebuffers or per-frame geometries.
  const skyMat=new THREE.ShaderMaterial({
@@ -32,14 +34,14 @@ export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
   ].join('\n'),
   fragmentShader:[
    'precision highp float;',
-   'uniform float uTime,uReveal,uFlash;',
+   'uniform float uTime,uReveal,uFlash,uDetail;',
    'varying vec3 vDirection;',
    'void main(){',
    'vec3 d=normalize(vDirection);',
    'float horizon=smoothstep(-.12,.63,d.y);',
    'float n=sin(d.x*24.+d.z*16.+uTime*.028)*.33;',
    'n+=sin(d.x*46.-d.z*25.-uTime*.016)*.19;',
-   'n+=sin(d.x*76.+d.z*58.+uTime*.009)*.12;',
+   'n+=uDetail*sin(d.x*76.+d.z*58.+uTime*.009)*.12;',
    'n+=sin(d.x*13.-d.z*33.+sin(d.x*18.)*.8)*.36;',
    'float clouds=smoothstep(.01,.66,n+.26+smoothstep(.04,.58,d.y)*.2);',
    'float folds=.5+.5*sin(d.x*91.+d.z*52.+uTime*.024+n*2.7);',
@@ -51,7 +53,7 @@ export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
    'gl_FragColor=vec4(sky,1.0);}'
   ].join('\n')
  });
- const dome=new THREE.Mesh(new THREE.SphereGeometry(760,coarse?24:40,coarse?14:22),skyMat);
+ const dome=new THREE.Mesh(new THREE.SphereGeometry(760,coarse?20:32,coarse?12:18),skyMat);
  dome.name='blood-crimson-sky-beyond-horizon';dome.renderOrder=-100;dome.frustumCulled=false;root.add(dome);
  // A few distant forks strike only during the irregular double-flash.
  const boltPositions=[];
@@ -70,18 +72,11 @@ export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
  const boltMaterial=new THREE.LineBasicMaterial({color:0xffd7db,transparent:true,opacity:0,depthWrite:false});
  const lightning=new THREE.LineSegments(boltGeometry,boltMaterial);
  lightning.name='blood-distant-branching-lightning';lightning.frustumCulled=false;root.add(lightning);
- // One dynamic line batch: narrow crimson rain streaks cross the entire view.
- const count=coarse?140:reduced?170:520,dropVertices=new Float32Array(count*6);
- const rainGeometry=new THREE.BufferGeometry();
- rainGeometry.setAttribute('position',new THREE.BufferAttribute(dropVertices,3));
- rainGeometry.setDrawRange(0,count*2);
- const rainMaterial=new THREE.LineBasicMaterial({
-  color:0xc6334b,transparent:true,opacity:coarse?.38:.54,
-  depthWrite:false,depthTest:true,blending:THREE.NormalBlending
- });
- const rain=new THREE.LineSegments(rainGeometry,rainMaterial);
- rain.name='blood-perpetual-rain';rain.frustumCulled=false;root.add(rain);
- let disposed=false,lastTick=-Infinity;
+ // A single GPU-instanced cross-section ribbon batch falls continuously;
+ // only the time and storm-alpha uniforms change each frame.
+ const rainFx=createBloodInstancedRain(root,{coarse,reduced});
+ const rain=rainFx.mesh;
+ let disposed=false;
  function update(game,c=bloodTransformation(game)){
   if(disposed)return;
   const e=bloodStormEnvelope(game,c),t=Math.max(0,game?.time||0);
@@ -92,29 +87,16 @@ export function createBloodApocalypseSky(scene,{coarse=false,reduced=false}={}){
   uniforms.uReveal.value=e.reveal;uniforms.uFlash.value=e.flash;
   lightning.visible=e.flash>.06;
   boltMaterial.opacity=Math.min(.95,e.flash*.9);
-  rain.visible=e.rain>.12;
-  rainMaterial.opacity=(coarse?.38:.54)*e.rain*(1+e.flash*.28);
-  if(!rain.visible||t-lastTick<1/(reduced?12:28))return e;
-  lastTick=t;
-  for(let i=0;i<count;i++){
-   const h=hash(i*7+5),x=(hash(i*3+17)*2-1)*57,
-    z=(hash(i*5+19)*2-1)*57;
-   const speed=13+hash(i*11+31)*15,travel=reduced?0:t*speed;
-   const y=2+((h*53-travel)%53+53)%53;
-   const o=i*6,skew=.45+hash(i*17+3)*.6,length=.9+hash(i*29+9)*1.7;
-   dropVertices[o]=x;dropVertices[o+1]=y;dropVertices[o+2]=z;
-   dropVertices[o+3]=x-skew;dropVertices[o+4]=y-length;dropVertices[o+5]=z-.22;
-  }
-  rainGeometry.attributes.position.needsUpdate=true;
-  return e;
+  rainFx.update(t,(coarse?.38:.54)*e.rain*(1+e.flash*.28+bloodTsunamiApproach(game).intensity*.24));
+  return e;;
  }
  function dispose(){
   if(disposed)return;disposed=true;root.parent?.remove(root);
-  for(const item of [dome,lightning,rain]){item.geometry.dispose();item.material.dispose();}
+  rainFx.dispose();for(const item of [dome,lightning]){item.geometry.dispose();item.material.dispose();}
  }
  root.visible=false;
  return {root,update,dispose,stats:()=>({
-  rainStreaks:count,lightningSegments:boltPositions.length/6,
+  ...rainFx.stats(),lightningSegments:boltPositions.length/6,
   hasSky:true,decorativeOnly:true,damageSources:0
  })};
 }

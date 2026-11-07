@@ -38,7 +38,11 @@ function createBloodFloor(parent){
  const material=new THREE.ShaderMaterial({uniforms,transparent:true,depthTest:true,
   depthWrite:false,side:THREE.DoubleSide,
   vertexShader:"varying vec2 vPos;\nvoid main(){vPos=position.xz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
-  fragmentShader:"precision highp float;\nvarying vec2 vPos;\nuniform float uTime,uSafe;\nuniform int uCount;\nuniform vec4 uFootA[12],uFootB[12],uFootC[12];\nfloat sdf(vec2 p,vec4 a,vec4 b,vec4 c){\n vec2 d=p-a.xy;float r=length(d);\n if(a.w<1.5)return r-a.z;\n if(a.w<2.5)return abs(r-a.z)-b.x;\n if(a.w<3.5){float si=sin(b.z),co=cos(b.z);\n  return max(abs(d.x*co-d.y*si)-b.x,abs(d.x*si+d.y*co)-b.y);\n }\n float ang=atan(d.x,d.y)-b.z;\n return max(max(r-a.z,b.w-r),(abs(atan(sin(ang),cos(ang)))-c.x)*max(.1,r));\n}\nvoid main(){\n float arena=1.0-smoothstep(26.65,27.02,length(vPos));\n if(arena<=0.0)discard;\n float danger=0.0,rim=0.0;\n for(int i=0;i<12;i++){\n  if(i>=uCount)break;\n  float d=sdf(vPos,uFootA[i],uFootB[i],uFootC[i]);\n  danger=max(danger,(1.0-smoothstep(-.24,.24,d))*uFootC[i].y);\n  rim=max(rim,(1.0-smoothstep(0.0,.40,abs(d)))*uFootC[i].y);\n }\n if(danger<.005&&uSafe<.5)discard;\n float flow=sin(vPos.x*1.26+vPos.y*.44-uTime*.7+.34*sin(vPos.y*.8+uTime*.2));\n float swirl=sin(length(vPos)*.6-uTime*.4+flow*.3);\n float sheen=.5+.5*sin(vPos.y*.36-vPos.x*.23+uTime*.33);\n vec3 safeBlood=vec3(.83,.21,.25)*(.9+.09*sheen);\n vec3 darkBlood=vec3(.115,.008,.033)*(.94+.16*swirl);\n vec3 color=mix(safeBlood,darkBlood,smoothstep(.07,.77,danger));\n color+=vec3(.16,.024,.029)*rim*.52;\n float base=uSafe>.5?.35:0.0;\n float opacity=base+(1.0-base)*danger*.90;\n gl_FragColor=vec4(color,min(.93,opacity*arena));\n}"});
+  fragmentShader:"precision highp float;\nvarying vec2 vPos;\nuniform float uTime,uSafe;\nuniform int uCount;\nuniform vec4 uFootA[12],uFootB[12],uFootC[12];\nfloat sdf(vec2 p,vec4 a,vec4 b,vec4 c){\n vec2 d=p-a.xy;float r=length(d);\n if(a.w<1.5)return r-a.z;\n if(a.w<2.5)return abs(r-a.z)-b.x;\n if(a.w<3.5){float si=sin(b.z),co=cos(b.z);\n  return max(abs(d.x*co-d.y*si)-b.x,abs(d.x*si+d.y*co)-b.y);\n }\n float ang=atan(d.x,d.y)-b.z;\n return max(max(r-a.z,b.w-r),(abs(atan(sin(ang),cos(ang)))-c.x)*max(.1,r));\n}\nvoid main(){\n float arena=1.0-smoothstep(26.65,27.02,length(vPos));\n if(arena<=0.0)discard;\n float danger=0.0,rim=0.0;\n for(int i=0;i<12;i++){\n  if(i>=uCount)break;\n  float d=sdf(vPos,uFootA[i],uFootB[i],uFootC[i]);\n  danger=max(danger,(1.0-smoothstep(-.24,.24,d))*uFootC[i].y);\n  rim=max(rim,(1.0-smoothstep(0.0,.40,abs(d)))*uFootC[i].y);\n }\n if(danger<.005&&uSafe<.5)discard;\n float drift=sin(vPos.x*.17-vPos.y*.29+uTime*.25);\n float flow=sin(vPos.x*1.26+vPos.y*.44-uTime*.7+.34*sin(vPos.y*.8+uTime*.2));\n float swirl=sin(length(vPos)*.6-uTime*.4+flow*.3);\n float folds=sin(vPos.y*.66+vPos.x*.19-uTime*.63+drift*.7);\n float sheen=.5+.5*sin(vPos.y*.36-vPos.x*.23+uTime*.33+folds*.22);\n vec3 safeBlood=vec3(.83,.21,.25)*(.87+.12*sheen+.045*folds);\n vec3 darkBlood=vec3(.115,.008,.033)*(.94+.12*swirl+.08*folds);\n vec3 color=mix(safeBlood,darkBlood,smoothstep(.07,.77,danger));\n color+=vec3(.16,.024,.029)*rim*.52;\n float base=uSafe>.5?.35:0.0;\n float opacity=base+(1.0-base)*danger*.90;\n gl_FragColor=vec4(color,min(.93,opacity*arena));\n}"});
+ // Match the projected liquid hazard mask to the same 32-unit circle used by
+ // combat. The previous 27-unit shader cutoff hid warnings near the new rim.
+ material.fragmentShader=material.fragmentShader.replace('26.65,27.02',
+  (BLOOD_RULES.radius-.35).toFixed(2)+','+(BLOOD_RULES.radius+.02).toFixed(2));
  const geometry=new THREE.PlaneGeometry(BLOOD_RULES.radius*2,BLOOD_RULES.radius*2).rotateX(-Math.PI/2);
  const mesh=new THREE.Mesh(geometry,material);
  mesh.name='blood-hazard-dark-and-safe-liquid';mesh.position.y=.10;
@@ -110,9 +114,9 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     const main=parts[0],under=parts[1];
     main.position.set(0,.08,v.crestForward*.24);
     main.rotation.set(0,0,v.wobble);
-    main.scale.set(v.width*.54,v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
+    main.scale.set((pattern==='requiem'?h.width+.55:v.width*.54),v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
     under.position.set(0,.08,-1.3-v.phase*.65);
-    under.scale.set(v.width*.58,Math.max(1.3,v.height*.53),5.3);
+    under.scale.set((pattern==='requiem'?h.width+.55:v.width*.58),Math.max(1.3,v.height*.53),5.3);
     if(pattern==='wave'){
      parts[2].position.set(0,.12,-1.7);
      parts[2].scale.set(v.width*.48,.38,Math.max(2.4,h.length*.58));

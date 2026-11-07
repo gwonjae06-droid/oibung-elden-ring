@@ -13,16 +13,16 @@ import {giantHandGesture,giantHeadImpactPulse,giantThrowTimeline,giantThrowGestu
 import {diceEnvironmentCue} from './environmental-telegraphs.mjs';
 const sat=v=>Math.max(0,Math.min(1,v)),lerp=(a,b,t)=>a+(b-a)*t,ease=v=>{const t=sat(v);return t*t*(3-2*t);};
 // Geometry is decorative; all damage and warning bounds come from the simulation above.
-export function buildDiceGiant(scene){
+export function buildDiceGiant(scene,{coarse=false}={}){
  const root=new T.Group();root.name='sungwon-usurped-patron';scene.add(root);
  const suit=new T.MeshStandardMaterial({color:0x191522,roughness:.75}),skin=new T.MeshStandardMaterial({color:0x8e7466,roughness:.7}),ivory=new T.MeshStandardMaterial({color:0xdfd3b3,roughness:.8}),gold=new T.MeshStandardMaterial({color:0xc6a256,metalness:.7,roughness:.36});
  const shirt=new T.MeshStandardMaterial({color:0xf1ead8,roughness:.6}),satin=new T.MeshStandardMaterial({color:0x0d0a12,roughness:.3,metalness:.15,side:T.DoubleSide}),tie=new T.MeshStandardMaterial({color:0x7a1a2a,roughness:.4});
  const sphere=new T.SphereGeometry(1,24,16),cylinder=new T.CylinderGeometry(1,1,1,24),armGeo=new T.CylinderGeometry(.82,1,1,24),neckGeo=new T.CylinderGeometry(1,1.12,1,24),box=new T.BoxGeometry(1,1,1);
  const mesh=(geo,mat,parent,scale)=>{const o=new T.Mesh(geo,mat);o.scale.set(...scale);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
- const body=new T.Group();root.add(body);body.add(buildGentlemanTorso(T,{suit,satin,shirt,tie,gold,ivory}).group);
+ const body=new T.Group();root.add(body);body.add(buildGentlemanTorso(T,{suit,satin,shirt,tie,gold,ivory},{coarse}).group);
  const neck=mesh(neckGeo,skin,root,[6,10,6]),oldHead=mesh(sphere,skin,root,[10,12,9]);
  const hands=[0,1].map(i=>{
-  const model=buildGentlemanHand(T,{suit,skin,shirt,gold},i?1:-1),group=model.group;root.add(group);
+  const model=buildGentlemanHand(T,{suit,skin,shirt,gold},i?1:-1,{coarse}),group=model.group;root.add(group);
   const upper=mesh(armGeo,suit.clone(),root,[5,1,5]),forearm=mesh(armGeo,suit.clone(),root,[4,1,4]),joint=mesh(sphere,suit.clone(),root,[5.3,5.3,5.3]);
   for(const bone of [upper,forearm,joint]){bone.material.transparent=true;bone.material.depthWrite=false;}
   for(const part of [group,upper,forearm,joint])part.name='sungwon-hand-'+i+'-'+(part===group?'palm':part===upper?'upper':part===forearm?'forearm':'elbow');

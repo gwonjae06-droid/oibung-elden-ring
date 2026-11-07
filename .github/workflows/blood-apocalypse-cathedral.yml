@@ -24,15 +24,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Validate phase transition, endless sea, storm and patterns
         run: >-
           node --test
           tests/blood-apocalypse-cathedral.test.mjs
+          tests/blood-storm-fluid-optimization.test.mjs
+          tests/blood-volumetric-magic.test.mjs
+          tests/blood-render.test.mjs
+          tests/blood-fluid.test.mjs
           tests/blood-epic-cinematics.test.mjs
+          tests/blood-tsunami-disaster.test.mjs
           tests/blood-white-cathedral.test.mjs
           tests/blood-cathedral-sea.test.mjs
           tests/blood-attack-animation.test.mjs
           tests/blood-stage.test.mjs
           tests/blood.test.mjs
           tests/boss-signature-patterns.test.mjs
+      - name: Smoke-test the actual cathedral WebGL shaders and mobile viewport
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/blood-ocean-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-cathedral-smoke.mjs
+      - name: Upload storm visual captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blood-sea-storm-frames
+          path: artifacts/blood-cathedral/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -18,11 +18,11 @@ export const bloodEpicKey=game=>{
  return b?.state==='pattern'&&s&&BLOOD_EPIC_CUTS[s.pattern]?
   b.phase+':'+s.pattern+':'+(s.hazards?.[0]?.id??'missing'):null;
 };
-export function bloodEpicShotState(game,{reduced=false,skipKey=null}={}){
+export function bloodEpicShotState(game,{reduced=false}={}){
  const key=bloodEpicKey(game),s=game?.blood,def=key?BLOOD_EPIC_CUTS[s.pattern]:null;
  if(!def||game.status!=='playing')return {key:null,active:false,blocking:false,weight:0,firstHit:Infinity};
  const t=Math.max(0,s.t||0),firstHit=Math.min(...(s.hazards||[]).map(h=>h.warn));
- const blocking=!reduced&&skipKey!==key&&t<def.finish;
+ const blocking=!reduced&&t<def.finish;
  const weight=blocking?smooth(.03,.28,t)*(1-smooth(def.hold,def.finish,t)):0;
  return {key,pattern:s.pattern,title:def.title,type:def.type,t,firstHit,
   finish:def.finish,blocking,active:blocking&&weight>.001,weight,
