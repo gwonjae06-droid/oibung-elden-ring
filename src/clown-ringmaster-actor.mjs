@@ -196,6 +196,11 @@ export function createClownActor({coarse=false}={}){
   legs.push({side,thigh,shin,knee,shoe});
  }
  const baton=rod(body,metal,'antique-conductor-baton',.04,.04);
+ const razor=rod(body,metal,'real-director-razor-edged-baton',.086,.016);razor.visible=false;
+ const wireGeo=new T.BufferGeometry(),wirePoints=new Float32Array(15);
+ wireGeo.setAttribute('position',new T.BufferAttribute(wirePoints,3));
+ const livingLash=new T.Line(wireGeo,new T.LineBasicMaterial({color:0x9f8c90,transparent:true,opacity:.72}));
+ livingLash.name='directors-own-living-marionette-weapon';livingLash.visible=false;body.add(livingLash);
  const batonTip=blob(body,metal,'baton-gilded-tip',[0,0,0],[.14,.14,.14]);
  // Thin real ornamental strings belong to the coat, not the attack collider.
  const threads=[];
@@ -241,7 +246,8 @@ export function createClownActor({coarse=false}={}){
   head.rotation.x=springs.step('head-pitch',-q.headCounter*.88+Math.sin(time*.88)*.022,step,15);
   head.rotation.z=springs.step('head-roll',clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17),step,12);
   head.scale.setScalar(p.headScale);
-  jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09,0,.5),step,20);
+  jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09+
+    (perf.act?.mode==='cackle'?.36+.10*Math.max(0,perf.act.beat):0),0,.72),step,20);
   hat.rotation.x=springs.step('hat-tilt',perf.act?.mode==='drum'?.07*perf.act.beat:
     perf.act?.mode==='mirror'?.14*perf.act.weight:0,step,10);
   hat.rotation.z=Math.sin(time*.6)*.024;
@@ -270,6 +276,12 @@ export function createClownActor({coarse=false}={}){
     else if(mode==='hush')special=[s*1.40,2.34,.66];
     else if(mode==='cannon')special=[s*1.32,2.32,1.84];
     else if(mode==='curtain')special=[s*2.18,2.88,1.28];
+    else if(mode==='baton')special=[s*(1.17+.27*Math.abs(beat)),s>0?3.72+.28*beat:2.21,1.08+.37*beat];
+    else if(mode==='veil')special=[s*1.49,2.26+.27*beat,1.15];
+    else if(mode==='cackle')special=[s*1.96,3.52+.16*beat,.43];
+    else if(mode==='lash')special=[s*1.62,3.24+.36*beat,2.18];
+    else if(mode==='hunt')special=[s*1.05,2.08,2.07];
+    else if(mode==='verdict')special=[s*2.16,3.21+.22*beat,1.54];
     target=target.map((x,i)=>x*(1-weight)+special[i]*weight);
    }
    if(fight&&!gesture&&(!perf.act||perf.act.weight<.01)){target=[s*(1.16+.27*(p.arms-1)),2.25+(p.glove-1)*.3,1.0+(p.glove-1)*.5];}
@@ -325,8 +337,23 @@ export function createClownActor({coarse=false}={}){
    const tip=[hand.x+.42,hand.y+.2+perf.director*.35,hand.z+.35];
    link(baton,[hand.x,hand.y,hand.z],tip);baton.scale.y*=1.8;
    batonTip.position.set(...tip);
+   const direct=['baton','veil','verdict'].includes(perf.act?.mode);
+   razor.visible=direct;
+   if(direct)link(razor,tip,[tip[0]+.24,tip[1]+.15+perf.act.beat*.17,tip[2]+1.48]);
   }
-  for(const t of threads)t.visible=phase||perf.puppets||perf.director>.2;
+  if(!held)razor.visible=false;
+  livingLash.visible=perf.act?.mode==='lash'&&perf.act.weight>.04;
+  if(livingLash.visible){
+   const hand=arms[1].hand.position;
+   for(let i=0;i<5;i++){
+    const u=i/4,offset=Math.sin(u*Math.PI*2.3+time*5)*.22;
+    wirePoints[i*3]=hand.x+(i===0?0:.1*u)+offset*u;
+    wirePoints[i*3+1]=hand.y+Math.sin(u*Math.PI)*.16-u*.58;
+    wirePoints[i*3+2]=hand.z+u*7.6;
+   }
+   wireGeo.attributes.position.needsUpdate=true;
+  }
+  for(const t of threads)t.visible=phase||perf.puppets||perf.director>.2||livingLash.visible;
   eyeMat.emissiveIntensity=phase?1.9:1.1;
   velvet.color.setHex(phase?0x200e17:0x32111e);
   crimson.color.setHex(phase?0x591425:0x7d2433);

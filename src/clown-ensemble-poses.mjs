@@ -4,6 +4,13 @@
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 const smooth=x=>{const a=clamp(x);return a*a*(3-2*a)};
 const DANCE=Object.freeze([
+ ['baton',/directorBatonRake/i],
+ ['veil',/directorVelvetStep/i],
+ ['cackle',/directorCackle/i],
+ ['lash',/directorStringLash/i],
+ ['hoop',/directorInfernalRing/i],
+ ['hunt',/directorStalkingRush/i],
+ ['verdict',/directorFinalVerdict/i],
  ['finale',/allCast|grandFinale|requiem|finale/i],
  ['juggle',/juggle|relay|knife/i],
  ['hush',/synchronizedHush/i],
@@ -26,11 +33,11 @@ export function circusPerformanceMode(key){
 export function ringmasterActMotion(key,elapsed=0,active=false){
  const mode=active?circusPerformanceMode(key):null;
  const t=Math.max(0,Number.isFinite(elapsed)?elapsed:0);
- const intro=smooth(t/.50),exit=1-smooth((t-7.7)/.75),weight=mode?intro*exit:0;
+ const intro=smooth(t/.50),exit=1-smooth((t-(mode==='verdict'?7.1:mode==='lash'||mode==='hoop'?5.25:4.35))/.75),weight=mode?intro*exit:0;
  const beat=Math.sin(t*(mode==='drum'?8.6:mode==='sing'||mode==='finale'?5.3:3.8));
  return {mode,weight,beat,
-  left:weight*(mode==='drum'?.80:mode==='mirror'?.67:mode==='curtain'?.95:.5),
-  right:weight*(mode==='juggle'||mode==='cannon'?1:mode==='sing'||mode==='finale'?.94:.68)};
+  left:weight*(mode==='drum'?.80:mode==='mirror'?.67:mode==='curtain'?.95:['cackle','verdict','lash'].includes(mode)?1:.5),
+  right:weight*(['juggle','cannon','baton','verdict','lash'].includes(mode)?1:mode==='sing'||mode==='finale'?.94:.68)};
 }
 export function troupeBeatMotion(member,time=0){
  const routine=member?.routine;
