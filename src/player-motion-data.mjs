@@ -13,6 +13,24 @@ export function samplePlayerMotion(g,phase=0,speed=0,context={}){
   if(weapon==='hammer'){p.pivotX=-.48;p.armR=-.22;p.elbowR=.44;p.armL=-.24;p.handY=.46;}
   if(weapon==='bow'){p.pivotX=0;p.pivotZ=0;p.armL=-.30;p.elbowL=.35;p.armR=-.15;}
  if(weapon==='cards'){p.pivotX=-.12;p.pivotZ=.14;p.armR=-.32;p.elbowR=.35;}
+ if(!a&&g.player.ranged?.remaining>0&&g.boss.state!=='transition'){
+  // Reloading is a real vulnerable animation, not a free extra projectile.
+  // Keep normal footwork available, and let the following attack take over.
+  const magazine=g.player.ranged,phase=1-magazine.remaining/magazine.reloadDuration;
+  const draw=Math.sin(Math.PI*Math.max(0,Math.min(1,phase)));
+  p.lean=-.08*draw;p.twist=(weapon==='cards'?-.22:.09)*draw;
+  if(weapon==='bow'){
+   p.armL=-.70-.28*draw;p.armR=-.65-.48*draw;
+   p.elbowL=.44;p.elbowR=.55;p.grip=.65*draw;p.pull=.10*draw;
+   p.pivotX=-.12*draw;
+  }else{
+   p.armL=-.52-.32*draw;p.armR=-.38-.60*draw;
+   p.elbowL=.50;p.elbowR=.68;
+   p.pivotY=.28*Math.sin(phase*Math.PI*4)*draw;
+   p.handY=.50+.14*draw;
+  }
+  return p;
+ }
  if(!a||g.boss.state==='transition')return p;
  p.locomotion=false;
  if(a.kind==='charging'){
