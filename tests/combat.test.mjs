@@ -62,6 +62,9 @@ test('physical ranged shots register near the visible torso rim in both phases',
 
 test('sword swing in empty air must not damage Kwon outside visible blade reach',()=>{
  const g=createGame('sword',{register:false});g.boss.wait=99;
+ // Freeze the target when measuring static reach. Autonomous Kwon may now
+ // legitimately run into a swung blade before its active frames expire.
+ g.boss.stun=1;
  g.player.z=2.8;g.player.yaw=Math.PI;
  const hp=g.boss.hp;assert.ok(act(g,'light'));tick(g,.6);
  assert.equal(g.boss.hp,hp,'the boss cannot lose HP merely because it is roughly in range');
