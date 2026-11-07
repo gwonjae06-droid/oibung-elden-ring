@@ -34,11 +34,11 @@ export function smoothYaw(current,target,dt,frequency=12){
  const angle=Math.atan2(Math.sin(target-current),Math.cos(target-current));
  return current+angle*(1-Math.exp(-clamp(dt,0,.05)*Math.max(.1,frequency)));
 }
-export function stageFootTarget(localFoot,localToWorld,worldToLocal,{floor=0,soleRadius=.29,worldScale=1}={}){
+export function stageFootTarget(localFoot,localToWorld,worldToLocal,{floor=0,soleRadius=.29,worldScale=1,plant=false}={}){
  // Caller supplies genuine THREE local/world transforms. Make contact
  // against the *underside* of the volume, not the mesh centre.
  const point=localToWorld([...localFoot]);
- point[1]=Math.max(floor+soleRadius*worldScale,point[1]);
+ point[1]=plant?floor+soleRadius*worldScale:Math.max(floor+soleRadius*worldScale,point[1]);
  return worldToLocal(point);
 }
 export function circusFootPhasing(stride,activity,side){
