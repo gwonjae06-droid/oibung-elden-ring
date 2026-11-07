@@ -12,6 +12,7 @@ export const GYUWON_MOTION_STYLE=Object.freeze({
  // The five phase-two verdict gestures are unique: one pose definition per attack.
  verdict:[.41,-.33,-.28,1.3],mirror:[-.25,.62,.22,1.2],axiom:[-.51,-.27,.41,1.5],
  paradox:[.37,.58,-.35,1.4],erasure:[-.44,-.47,.38,1.25],
+ counterproof:[.27,-.62,.36,1.37],
  sword:[.45,-.5,-.42,1.4],circus:[-.38,.7,.4,1.3],gamble:[.35,-.66,-.15,1.5],
  tsunami:[-.52,.2,.5,1.5],chalk:[-.25,.52,-.5,1.25]
 });
