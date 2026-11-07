@@ -48,9 +48,9 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
   // A continuous, non-colliding floor makes metaphysical spaces legible.
   floor.visible=!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
-  spectacle.update(g,dt,deathElapsed);recall.update(g);philosophy.update(g,dt);
+  spectacle.update(g,dt,deathElapsed);recall.update(g,dt);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   hazardFx.update(g);
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }

@@ -6,13 +6,20 @@ import {gyuwonHorizonShot,poseGyuwonHorizonCamera} from '../src/gyuwon-horizon-c
 import {createGyuwonGame,startGyuwonPattern} from '../src/gyuwon-combat.mjs';
 import {createGyuwonRecallMaps,RECALL_MAP_NAMES} from '../src/gyuwon-recall-maps.mjs';
 const waveGame=()=>{const g=createGyuwonGame();g.boss.phase=3;startGyuwonPattern(g,'tsunami');return g;};
-test('horizon shot points towards incoming sea and releases well before contact, without mutating combat',()=>{
- const g=waveGame(),h=g.gyuwon.hazards[0];h.age=.6;const before=JSON.stringify(g),camera=new THREE.PerspectiveCamera(62,1,.1,1000),target=new THREE.Vector3(0,3,0);camera.position.set(0,16,38);
- const shot=poseGyuwonHorizonCamera(camera,target,g);assert.ok(shot.active);assert.ok(target.z<-100);assert.ok(camera.position.x>100);assert.equal(JSON.stringify(g),before);
- assert.ok(shot.finish<h.warn);h.age=shot.finish;assert.equal(gyuwonHorizonShot(g).active,false);h.age=4;assert.equal(gyuwonHorizonShot(g).active,false);g.status='won';assert.equal(gyuwonHorizonShot(g).active,false);
-});
-test('other patterns receive no camera override and reduced motion retains a gentle reveal',()=>{
- const g=waveGame();g.gyuwon.hazards[0].age=.6;assert.ok(gyuwonHorizonShot(g,{reduced:true}).weight>0);assert.ok(gyuwonHorizonShot(g,{reduced:true}).weight<gyuwonHorizonShot(g).weight);startGyuwonPattern(g,'sword');assert.equal(gyuwonHorizonShot(g).active,false);
+test('the recalled blood tsunami is seen through the church without taking over the player camera',()=>{
+ const g=waveGame(),h=g.gyuwon.hazards[0];h.age=.6;
+ const before=JSON.stringify(g),camera=new THREE.PerspectiveCamera(62,1,.1,1000);
+ const target=new THREE.Vector3(0,3,0);camera.position.set(0,16,38);
+ const position=camera.position.clone(),aim=target.clone(),fov=camera.fov;
+ const shot=poseGyuwonHorizonCamera(camera,target,g);
+ assert.equal(shot.active,false);
+ assert.equal(shot.incoming,true);
+ assert.deepEqual(camera.position.toArray(),position.toArray());
+ assert.deepEqual(target.toArray(),aim.toArray());
+ assert.equal(camera.fov,fov);
+ assert.equal(JSON.stringify(g),before);
+ h.age=4;assert.equal(gyuwonHorizonShot(g).active,false);
+ startGyuwonPattern(g,'sword');assert.equal(gyuwonHorizonShot(g).incoming,false);
 });
 test('actual boss maps are built once, keep source geometry, switch exclusively and dispose',()=>{
  const previous=globalThis.document;
@@ -22,8 +29,28 @@ test('actual boss maps are built once, keep source geometry, switch exclusively 
  const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);let maps;
  try{
   maps=createGyuwonRecallMaps(scene,{coarse:true,reduced:true});assert.equal(maps.stats().builds,4);
+  let compiled=0,uploaded=0;
+  const renderer={compile(){compiled++;assert.equal(maps.root.children.filter(o=>o.visible).length,1);},
+   initTexture(){uploaded++;}};
+  const camera=new THREE.PerspectiveCamera(58,1,.1,1000);
+  maps.prewarm(renderer,camera);
+  assert.equal(compiled,4,'all four map shaders compile before combat, not during map swaps');
+  assert.equal(maps.stats().compiled,4);assert.equal(maps.stats().prewarmed,true);
+  maps.prewarm(renderer,camera);assert.equal(compiled,4,'warmup is idempotent');
+  assert.equal(maps.root.children.filter(o=>o.visible).length,0);
   const g=waveGame();for(let pass=0;pass<3;pass++)for(const id of Object.keys(RECALL_MAP_NAMES)){g.gyuwon.stageMemory=id;maps.update(g);assert.equal(maps.stats().originalRoot,RECALL_MAP_NAMES[id]);assert.equal(maps.root.children.filter(o=>o.visible).length,1);assert.equal(maps.stats().builds,4);if(id==='circus'){let batches=0;maps.root.getObjectByName('clown-circus').traverse(o=>{if(o.isInstancedMesh&&o.count>10)batches++;});assert.ok(batches>=2,'original circus crowd remains instanced');}assert.equal(scene.background.getHex(),0xffffff);}
-  g.boss.phase=2;maps.update(g);assert.equal(maps.root.children.filter(o=>o.visible).length,0);g.boss.phase=3;g.status='won';maps.update(g);assert.equal(maps.stats().active,null);
+  g.gyuwon.stageMemory='tsunami';maps.update(g,.8);
+  const ghost=scene.getObjectByName('cathedral-side-wall-masonry');
+  const floor=scene.getObjectByName('cathedral-battle-floor');
+  assert.ok(ghost.material.alphaHash,'cathedral walls use a stable dithered transparency shader');
+  assert.ok(ghost.material.opacity<.5,'incoming wave can be seen through church stone');
+  assert.equal(floor.material.opacity,1,'combat floor must remain solid and visible');
+  assert.equal(floor.material.alphaHash,false,'floor shader is untouched');
+  g.gyuwon.hazards=[];maps.update(g,1);
+  assert.ok(ghost.material.opacity>.98,'the church becomes solid again after the wave');
+  g.boss.phase=2;maps.update(g);assert.equal(maps.root.children.filter(o=>o.visible).length,0);
+  g.boss.phase=3;g.status='won';maps.update(g);assert.equal(maps.stats().active,null);
+  assert.equal(maps.stats().builds,4,'no new map allocations during memory rotation');
  }finally{maps?.dispose();globalThis.document=previous;}
  assert.equal(scene.getObjectByName('gyuwon-real-boss-maps'),undefined);
 });

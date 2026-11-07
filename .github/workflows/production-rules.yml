@@ -26,7 +26,7 @@ jobs:
         run: npm install --no-save --no-package-lock three@0.180.0
       - name: Check syntax
         run: |
-          for f in src/arena.mjs src/clown-battle.mjs src/clown-actor.mjs src/dice-ui.mjs src/dice-giant-model.mjs src/blood-battle.mjs src/blood-epic-cinematics.mjs src/gyuwon-battle.mjs src/gyuwon-actor.mjs src/gyuwon-spectacle.mjs src/runtime/performance-audit.mjs tests/boss-rules.test.mjs; do node --check "$f"; done
+          for f in src/arena.mjs src/clown-battle.mjs src/clown-actor.mjs src/dice-ui.mjs src/dice-giant-model.mjs src/blood-battle.mjs src/blood-epic-cinematics.mjs src/gyuwon-battle.mjs src/gyuwon-actor.mjs src/gyuwon-spectacle.mjs src/gyuwon-memory-wave.mjs src/gyuwon-recall-maps.mjs src/gyuwon-horizon-camera.mjs src/runtime/performance-audit.mjs tests/boss-rules.test.mjs; do node --check "$f"; done
       - name: Verify cinematic motion sculpture and performance rules
         run: |
           node --test \
@@ -39,4 +39,6 @@ jobs:
             tests/casino-giant-detail-lod.test.mjs \
             tests/gyuwon-performance-readability.test.mjs \
             tests/clown-sculpture-rules.test.mjs \
-            tests/gyuwon-spectacle-resource.test.mjs
+            tests/gyuwon-spectacle-resource.test.mjs \
+            tests/gyuwon-recall.test.mjs \
+            tests/gyuwon-memory-performance.test.mjs
