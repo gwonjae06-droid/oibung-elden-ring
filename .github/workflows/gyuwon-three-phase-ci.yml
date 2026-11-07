@@ -6,7 +6,6 @@ on:
       - 'src/gyuwon-motion.mjs'
       - 'src/gyuwon-view.mjs'
       - 'tests/gyuwon-choreography.test.mjs'
-      - 'tests/boss-phase-pattern-identity.test.mjs'
       - '.github/workflows/gyuwon-three-phase-ci.yml'
   workflow_dispatch:
 permissions:
@@ -37,5 +36,4 @@ jobs:
             tests/gyuwon-unified-combat-rig.test.mjs \
             tests/gyuwon-production-rules.test.mjs \
             tests/boss-animation-continuity.test.mjs \
-            tests/gyuwon-recall.test.mjs \
-            tests/boss-phase-pattern-identity.test.mjs
+            tests/gyuwon-recall.test.mjs

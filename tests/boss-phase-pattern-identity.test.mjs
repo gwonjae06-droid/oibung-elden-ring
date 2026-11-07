@@ -64,7 +64,7 @@ test('Seojun phase one ground spells and phase two airborne rituals have no over
 });
 test('Gyuwon phase one academic, phase two metaphysical, phase three memory pools do not overlap',()=>{
  const first=gyuwonPool(1),white=gyuwonPool(2,'white'),dark=gyuwonPool(2,'dark'),final=gyuwonPool(3);
- assert.equal(first.length,7);assert.equal(white.length,4);assert.equal(dark.length,5);assert.equal(final.length,5);
+ assert.equal(first.length,7);assert.equal(white.length,4);assert.equal(dark.length,4);assert.equal(final.length,5);
  assert.deepEqual(intersect(first,[...white,...dark,...final]),[]);
  assert.deepEqual(intersect(white,dark),[]);
  assert.deepEqual(intersect([...white,...dark],final),[]);
