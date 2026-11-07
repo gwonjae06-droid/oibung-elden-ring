@@ -153,7 +153,7 @@ export function startGyuwonPattern(g,id,{replay=null}={}){
   for(let i=0;i<s.roll+3;i++){const a=i*(s.memoryVariant===1?1.7:2.4)+s.memoryVariant*.45;hazard(g,'circle',{x:i===0?p.x:Math.sin(a)*16,z:i===0?p.z:Math.cos(a)*16,r:3.3,warn:1.3+i*.4,visual:'dice',damage:30});}
   for(let i=0;i<6;i++)if(i!==s.roll%6)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/3,arc:.36,r:26,warn:4.8,life:.5,damage:28,visual:'roulette'});
  }
- if(id==='tsunami')hazard(g,'wave',{x:0,z:-180,gap:Math.max(-13,Math.min(13,p.x*.5+(s.memoryVariant-1)*3)),opening:3.2,depth:2.2,speed:60,warn:2,life:6,damage:65,visual:'wave'});
+ if(id==='tsunami')hazard(g,'wave',{x:0,z:-180,gap:Math.max(-13,Math.min(13,p.x*.5+(s.memoryVariant-1)*1.4)),opening:3.2,depth:2.2,speed:60,warn:2,life:6,damage:65,visual:'wave'});
  if(id==='chalk'){
   for(let i=0;i<4;i++)lane((i-1.5)*(s.memoryVariant===1?8.5:7),0,s.memoryVariant===2?.12:0,1.2+i*.55,{visual:'formula'});
   lane(p.x,p.z,.78,3.5,{length:26,visual:'cross'});lane(p.x,p.z,-.78,4,{length:26,visual:'cross'});
