@@ -150,3 +150,6 @@ body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journ
  #journey .j-forge-resources{gap:8px}
  #journey .j-forge-detail .j-forge-node-copy strong{font-size:12px}
 }
+
+/* Prevent ornamental kiln/glow pixels from creating a horizontal scroll surface. */
+#journey .j-forge{overflow-x:clip}
