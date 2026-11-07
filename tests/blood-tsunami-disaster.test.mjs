@@ -6,6 +6,7 @@ import {BLOOD_PATTERNS,bloodPool,hazardPosition,hazardContains,bloodHazardFootpr
 import {createBloodGame,startBloodPattern,stepBlood} from '../src/blood-combat.mjs';
 import {bloodFloorField} from '../src/blood-spell-fx.mjs';
 import {createBloodEpicCinematics} from '../src/blood-epic-cinematics.mjs';
+import {buildBloodView} from '../src/blood-view.mjs';
 import {disposeScene} from '../src/runtime/scene-resources.mjs';
 
 const make=()=>{
@@ -97,27 +98,43 @@ test('actual battle never damages the refuge, but damages the approaching latera
  assert.ok(g.player.hp<hp,'the true approaching wall must inflict damage outside the hole');
 });
 
-test('rendered 30-metre wave has the same two side flanks and glowing safe opening',()=>{
+test('rendered 30-metre wave retains its physical gap filled with gently flowing pale-pink blood',()=>{
  const g=make(),scene=new THREE.Scene(),fx=createBloodEpicCinematics(scene,{coarse:true});
  const root=scene.getObjectByName('blood-tsunami-horizon-disaster');
  const crest=scene.getObjectByName('blood-tsunami-split-thirty-metre-crest');
  const under=scene.getObjectByName('blood-tsunami-massive-rolling-undertow');
- const refuge=scene.getObjectByName('blood-tsunami-boss-refuge-on-the-floor');
- assert.ok(root&&crest?.isInstancedMesh&&under?.isInstancedMesh&&refuge);
- assert.ok(scene.getObjectByName('blood-tsunami-visible-refuge-aperture-0'));
+ const pink=scene.getObjectByName('blood-tsunami-safe-pink-liquid-0-0');
+ assert.ok(root&&crest?.isInstancedMesh&&under?.isInstancedMesh&&pink);
+ assert.equal(scene.getObjectByName('blood-tsunami-boss-refuge-on-the-floor'),undefined,
+  'do not paint the safety corridor on the arena floor');
+ assert.equal(scene.getObjectByName('blood-tsunami-visible-refuge-aperture-0'),undefined,
+  'the safe opening should be filled with fluid, not outlined as a HUD indicator');
+ assert.equal(pink.material.isShaderMaterial,true);
+ assert.equal(pink.material.transparent,true);
+ assert.equal(pink.material.depthWrite,false);
+ assert.match(pink.material.vertexShader,/p.z\+=/,'the pink liquid must billow in the current');
+ assert.match(pink.material.fragmentShader,/blush/);
+ assert.ok(fx.stats().tsunami.safeFill.geometryVertices<800);
+ assert.equal(fx.stats().tsunami.safeFill.floorMarker,false);
+ assert.equal(fx.stats().tsunami.safeFill.surfaceCount,4);
+ assert.equal(fx.stats().tsunami.safeFill.safeHalfWidth,BLOOD_TSUNAMI.safeHalfWidth);
  assert.equal(fx.stats().tsunami.damageSources,0);
  g.blood.t=.3;fx.update(g);
  assert.equal(fx.waveRoot.visible,true);
  assert.equal(root.visible,true);
  assert.equal(crest.count,4);
- assert.ok(refuge.visible);
- assert.equal(refuge.position.x,g.blood.origin.x);
+ assert.equal(pink.visible,true);
+ assert.equal(pink.parent,root);
+ assert.equal(pink.material.uniforms.uSafeTime.value,g.time);
+ const extent=new THREE.Box3().setFromBufferAttribute(pink.geometry.getAttribute('position'));
+ assert.ok(Math.abs((extent.max.x-extent.min.x)-BLOOD_TSUNAMI.safeHalfWidth*2)<1e-5);
  const far=fx.waveRoot.position.clone();
  g.blood.t=g.blood.hazards[0].warn+.2;fx.update(g);
  assert.ok(fx.waveRoot.position.distanceTo(new THREE.Vector3(g.boss.x,0,g.boss.z))<
   far.distanceTo(new THREE.Vector3(g.boss.x,0,g.boss.z)));
  g.blood.t=g.blood.hazards[0].warn+3.8;fx.update(g);
  assert.equal(root.visible,true,'the visual remains during the damaging passage');
+ assert.equal(pink.visible,true,'pale-pink safe fluid follows the live wave');
  const snapshot=JSON.stringify(g);fx.update(g);
  assert.equal(JSON.stringify(g),snapshot,'rendering must not move the boss, player or hazards');
  fx.dispose();fx.dispose();
@@ -137,4 +154,20 @@ test('the sanctuary is reflected in the shader danger union and survives reduced
  assert.ok(rain.cappedSpray<=12);
  assert.ok(rain.flanks===4);
  fx.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
+});
+
+test('only the tsunami hides the old red/bright safety projection on the ground',()=>{
+ const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true,reduced:true});
+ const floor=scene.getObjectByName('blood-hazard-dark-and-safe-liquid');
+ assert.ok(floor,'the normal blood-floor renderer must still exist for other attacks');
+ const game=make(),original=JSON.stringify(game.blood.hazards);
+ view.update(game,.016);
+ assert.equal(floor.visible,false,'no safety strip or projected attack region beneath the tsunami');
+ assert.equal(JSON.stringify(game.blood.hazards),original,'graphics must not affect collision');
+ const other=createBloodGame('sword',{seed:94});
+ other.boss.phase=2;
+ assert.ok(startBloodPattern(other,'ritual'));
+ view.update(other,.016);
+ assert.equal(floor.visible,true,'the existing ritual safety rendering must remain intact');
+ view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });
