@@ -43,7 +43,10 @@ try{
     // During the cinematic the original Kwon chooser must remain inaccessible.
     assert.equal(await page.locator('#menu').evaluate(el=>getComputedStyle(el).display),'none');
     await page.waitForFunction(()=>{
-     const j=document.querySelector('#journey');return j?.dataset.screen==='battle'&&!j.open;
+     // The dialog's dataset remains 'loading' after it is closed for battle;
+     // player HUD activation and the closed dialog are the actual battle state.
+     const j=document.querySelector('#journey'),hud=document.getElementById('player-hud');
+     return Boolean(j&&!j.open&&hud&&!hud.hidden);
     },null,{timeout:75000});
     await page.keyboard.press('Escape');
     await page.waitForFunction(()=>document.getElementById('pause-screen')?.hidden===false,null,{timeout:15000});

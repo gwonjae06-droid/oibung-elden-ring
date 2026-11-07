@@ -68,6 +68,23 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   emissiveIntensity:.65,transparent:true,opacity:0,depthWrite:false,
   side:THREE.DoubleSide});
  const omen=new THREE.Mesh(skyGeo,omenMat);transition.add(omen);root.add(transition);
+ // The possessed sword creates a short, physical-looking tear through the
+ // owner during the non-damaging transformation.
+ const severGroup=new THREE.Group();severGroup.name='kwon-blade-severs-master';transition.add(severGroup);
+ const severGeo=new THREE.BufferGeometry(),cutVerts=[];
+ for(let i=0;i<=18;i++){const u=i/18,x=-2.7+5.4*u,y=2.45+u*.7+Math.sin(u*19)*.08;
+  cutVerts.push(x,y,-.28,x,y+.035+Math.sin(u*17)*.08,.14);}
+ const cutIndices=[];for(let i=0;i<18;i++){const j=i*2;cutIndices.push(j,j+1,j+2,j+1,j+3,j+2);}
+ severGeo.setAttribute('position',new THREE.Float32BufferAttribute(cutVerts,3));
+ severGeo.setIndex(cutIndices);severGeo.computeVertexNormals();
+ const severMat=new THREE.MeshPhysicalMaterial({color:0x241b25,roughness:.38,
+  metalness:.28,emissive:0x763a43,emissiveIntensity:.36,
+  side:THREE.DoubleSide,transparent:true,opacity:0,depthWrite:false});
+ const sever=new THREE.Mesh(severGeo,severMat);sever.name='kwon-betrayal-wound-rift';severGroup.add(sever);
+ const shards=[];
+ for(let i=0;i<12;i++){const chip=new THREE.Mesh(chipGeo,stoneMat);
+  chip.name='kwon-severed-stone-fragment';chip.scale.setScalar(.23+(i%4)*.11);
+  severGroup.add(chip);shards.push(chip);}
  transition.visible=false;
  let lastGame=null,disposed=false;
  function reset(){
@@ -146,13 +163,25 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
    omen.position.set(0,.2,4.8);
    omenMat.opacity=t.skyScar*.74;
    omen.scale.set(1+.3*t.skyScar,.65+.35*t.skyScar,1);
+   severGroup.visible=b.t>1.77&&b.t<3.18;
+   if(severGroup.visible){
+    const force=t.betrayalSwing*1.5+t.impact*.5;
+    severMat.opacity=Math.max(0,Math.min(.85,force));
+    sever.scale.set(1+.14*force,1+.12*force,1);
+    for(let i=0;i<shards.length;i++){
+     const a=i*2.399963,flight=Math.max(0,b.t-2.05),r=.4+flight*(1+i%3)*1.8;
+     shards[i].position.set(Math.sin(a)*r,2.25+Math.cos(a)*.55+
+      Math.sin(flight*Math.PI)*1.1-flight*flight*3,Math.cos(a)*r*.6);
+     shards[i].rotation.set(flight*(i+3),flight*(i+1),0);shards[i].visible=flight>0;
+    }
+   }
   }
  }
  function dispose(){
   if(disposed)return;disposed=true;reset();scene.remove(root);
   for(const o of pool){o.voidMat.dispose();o.edgeMat.dispose();}
-  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo,moonLeftGeo,moonRightGeo,chipGeo])g.dispose();
-  for(const m of [crackMat,stoneMat,omenMat,moonStone,lunarDust])m.dispose();
+  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo,moonLeftGeo,moonRightGeo,chipGeo,severGeo])g.dispose();
+  for(const m of [crackMat,stoneMat,omenMat,moonStone,lunarDust,severMat])m.dispose();
  }
  return {root,update,reset,dispose,stats:()=>({pool:POOLS,crackInstances:POOLS*SEGMENTS,
   live:pool.filter(o=>o.id!==null).length,moonPieces:14})};
