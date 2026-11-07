@@ -18,6 +18,9 @@ const PREVIEW_COLOR=0xe6e1d4,INK_COLOR=0x4b3a6e,INK_GLOW=0x8a63d6;
 // Erased wrong answers: after a wrong-answer note is struck, a pale trace lingers and flickers
 // where it was, hinting that the question will be asked again. Never a live threat: flat and dim.
 const GHOST_COLOR=0xb8b2a6,GHOST_LIFE=3;
+// The cleave slides the tsunami's safe corridor. Teal fractures rise along the TARGET corridor's two
+// edges (the real safe half-width, opening-.55) before the slide begins, so the player can read where to go.
+const CORRIDOR_COLOR=0x5fb7b0,CORRIDOR_HALF=2.65,CORRIDOR_LENGTH=30;
 export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprint(h);
 
 // Every triangle is an upright, irregular fragment. Its base touches the floor
@@ -67,12 +70,13 @@ function fragments(h,f,coarse=false){
 }
 export function createGyuwonHazardFx(stage,{coarse=false}={}){
  const root=new THREE.Group();root.name='gyuwon-physical-rupture-cues';stage.add(root);
- const states=new Map(),ghosts=new Map();let disposed=false,owner=null,lastCasts=0;
+ const states=new Map(),ghosts=new Map(),corridors=new Map();let disposed=false,owner=null,lastCasts=0;
  function release(s){
   root.remove(s.mesh);s.mesh.geometry.dispose();s.mesh.material.dispose();
  }
  function clearGhosts(){for(const s of ghosts.values())release(s);ghosts.clear();}
- function clear(){for(const s of states.values())release(s);states.clear();clearGhosts();}
+ function clearCorridors(){for(const s of corridors.values())release(s);corridors.clear();}
+ function clear(){for(const s of states.values())release(s);states.clear();clearGhosts();clearCorridors();}
  function make(h,f,pattern){
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
@@ -87,15 +91,42 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   mesh.userData.visualOnly=true;root.add(mesh);
   return {mesh,r:f.r,pattern};
  }
+ function makeCorridor(h){
+  const f={kind:3,halfWidth:CORRIDOR_HALF,halfLength:CORRIDOR_LENGTH,x:h.gapTarget,z:0,yaw:0};
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
+  geo.computeVertexNormals();
+  const material=new THREE.MeshPhysicalMaterial({
+   color:CORRIDOR_COLOR,roughness:.6,metalness:.1,emissive:CORRIDOR_COLOR,emissiveIntensity:.12,
+   side:THREE.DoubleSide,transparent:true,opacity:.1,depthWrite:false
+  });
+  const mesh=new THREE.Mesh(geo,material);mesh.name='gyuwon-tsunami-corridor-cue';
+  mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=false;
+  mesh.userData.visualOnly=true;root.add(mesh);
+  return {mesh};
+ }
  function update(g){
   if(disposed)return;
   const active=g?.status==='playing',s=g?.gyuwon,b=g?.boss;
-  if(owner!==g){owner=g;lastCasts=0;clearGhosts();}
+  if(owner!==g){owner=g;lastCasts=0;clearGhosts();clearCorridors();}
   // A new cast takes over from any lingering trace; leaving phase one or ending also clears them.
   if(!active||!s||!b||b.phase!==1||s.casts!==lastCasts){clearGhosts();lastCasts=s?.casts||0;}
-  const live=new Set();
+  const live=new Set(),liveCorridors=new Set();
   if(active&&s&&b?.state==='pattern')for(const h of s.hazards||[]){
-   if(h.shape==='wave')continue; // The actual tsunami surface is rendered by the memory stage.
+   if(h.shape==='wave'){
+    // The actual tsunami surface is rendered by the memory stage; only its corridor cue is drawn here.
+    if(h.gapTarget!==undefined){
+     liveCorridors.add(h.id);
+     let c=corridors.get(h.id);
+     if(!c){c=makeCorridor(h);corridors.set(h.id,c);}
+     const lead=smooth(clamp(h.age/Math.max(.01,h.shiftAt))),fade=1-clamp((h.age-5.9)/.6);
+     c.mesh.position.set(h.gapTarget,.005,0);
+     c.mesh.scale.y=.35+.65*lead;
+     c.mesh.material.opacity=(.10+.32*lead)*fade;
+     c.mesh.material.emissiveIntensity=.12+.20*lead;
+    }
+    continue;
+   }
    const f=gyuwonHazardFootprint(h);if(!f)continue;
    live.add(h.id);
    let state=states.get(h.id);
@@ -138,6 +169,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
     mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
    }
   }
+  for(const [id,c] of corridors)if(!liveCorridors.has(id)){release(c);corridors.delete(id);}
   for(const [id,state]of states)if(!live.has(id)){
    states.delete(id);
    if(active&&b?.phase===1&&state.pattern==='mark'){state.t0=g.time;ghosts.set(id,state);}
