@@ -17,6 +17,7 @@ on:
       - 'spider-combat.html'
       - 'tests/responsive-ui-layout.test.mjs'
       - 'scripts/ui-responsive-smoke.mjs'
+      - 'scripts/weapon-stat-esc-smoke.mjs'
       - '.github/workflows/responsive-ui-smoke.yml'
   workflow_dispatch:
 concurrency:
@@ -43,6 +44,7 @@ jobs:
           sleep 2
           node scripts/ui-responsive-smoke.mjs
           node scripts/ui-boss-clones-smoke.mjs
+          node scripts/weapon-stat-esc-smoke.mjs
       - name: Save layouts for visual review
         if: always()
         uses: actions/upload-artifact@v4

@@ -37,7 +37,7 @@ test('view-specific clipping IDs do not collide between SVG variants or cutscene
 });
 test('browser receives cache-busted CSS and new mural module instead of stale page assets',()=>{
  const html=read('spider-combat.html'),journey=read('src/journey.mjs');
- assert.match(html,/journey\.css\?art=blood-boss-v1&v=home-crimson-fill-20261107/);
+ assert.match(html,/journey\.css\?art=blood-boss-v1&v=stat-marker-esc-fix-20261107/);
  assert.match(html,/src\/journey\.mjs\?v=home-crimson-fill-20261107/);
  assert.match(journey,/journey-art\.mjs\?art=home-crimson-fill-20261107/);
 });
