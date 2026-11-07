@@ -5,7 +5,7 @@ import {BLOOD_WHIP,bloodWhipExtension,bloodWhipPath} from './blood-whip.mjs';
 // simulation capsule, unlike a decorative full-screen attack warning.
 const up=new THREE.Vector3(0,1,0);
 const clamp=x=>Math.max(0,Math.min(1,x));
-export function createBloodWhipView(root,{coarse=false,reduced=false}={}){
+export function createBloodWhipView(root,{coarse=false,reduced=false,hand=null}={}){
  const geometry=new THREE.CylinderGeometry(.34,.52,1,coarse?5:8);
  const material=new THREE.MeshStandardMaterial({
   color:0x600919,emissive:0x700820,emissiveIntensity:.72,
@@ -25,15 +25,23 @@ export function createBloodWhipView(root,{coarse=false,reduced=false}={}){
  });
  const omen=new THREE.Mesh(omenGeometry,omenMaterial);omen.name='blood-whip-locked-aim-liquid-omen';
  omen.position.y=.09;group.add(omen);
- const start=new THREE.Vector3(),end=new THREE.Vector3(),direction=new THREE.Vector3(),mid=new THREE.Vector3();
- function sample(w,t){
+ const start=new THREE.Vector3(),end=new THREE.Vector3(),direction=new THREE.Vector3(),mid=new THREE.Vector3(),handWorld=new THREE.Vector3();
+ function sample(w,t,out){
   const p=bloodWhipPath(w,t),curve=Math.sin(t*Math.PI);
-  return new THREE.Vector3(p.x,4.7*(1-t)+.9*t+curve*(reduced?.5:1.7),p.z);
+  // Blend the opening coil into the actual animated casting wrist without
+  // moving the floor-level locked impact footprint.
+  const anchor=hand?Math.max(0,1-t/.24):0;
+  return out.set(
+   p.x+anchor*(handWorld.x-w.x),
+   (4.7*(1-t)+.9*t+curve*(reduced?.5:1.7))*(1-anchor)+handWorld.y*anchor,
+   p.z+anchor*(handWorld.z-w.z)
+  );
  }
  function update(g){
   const w=g?.status==='playing'?g?.blood?.whip:null;
   group.visible=!!w;
   if(!w){for(const m of segments)m.visible=false;tip.visible=omen.visible=false;return;}
+  if(hand)hand.getWorldPosition(handWorld);else handWorld.set(w.x,4.7,w.z);
   const warning=w.age<BLOOD_WHIP.warning;
   const charge=clamp(w.age/BLOOD_WHIP.warning);
   const extension=warning?.07+.12*charge:bloodWhipExtension(w);
@@ -49,14 +57,14 @@ export function createBloodWhipView(root,{coarse=false,reduced=false}={}){
    const mesh=segments[i];mesh.visible=i<used;
    if(!mesh.visible)continue;
    const t0=(i/used)*length,t1=((i+1)/used)*length;
-   start.copy(sample(w,t0));end.copy(sample(w,t1));
+   sample(w,t0,start);sample(w,t1,end);
    direction.copy(end).sub(start);const distance=direction.length();
    mid.copy(start).addScaledVector(direction,.5);
    mesh.position.copy(mid);
    mesh.quaternion.setFromUnitVectors(up,direction.normalize());
    mesh.scale.set(1+Math.sin(t1*Math.PI)*.24,Math.max(.01,distance),1);
   }
-  tip.visible=true;tip.position.copy(sample(w,length));
+  tip.visible=true;sample(w,length,end);tip.position.copy(end);
   tip.scale.setScalar(warning?.55+.45*charge:1.3);
   material.emissiveIntensity=warning?.45+charge*.38:1.35;
  }
