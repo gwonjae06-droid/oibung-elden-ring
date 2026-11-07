@@ -48,6 +48,12 @@ function createBloodFloor(parent){
  mesh.name='blood-hazard-dark-and-safe-liquid';mesh.position.y=.10;
  mesh.visible=false;mesh.renderOrder=3;mesh.frustumCulled=false;parent.add(mesh);
  function update(g,time){
+  // The tsunami's pale-pink safe area belongs IN the 3D wave opening, never
+  // on the ground. Hide both the safety fill and the projected hazard lanes
+  // for this one disaster; other blood spells retain their existing floor FX.
+  if(g?.blood?.pattern==='requiem'){
+   mesh.visible=false;uniforms.uCount.value=0;return;
+  }
   const field=bloodFloorField(g);mesh.visible=Boolean(field);
   if(!field){uniforms.uCount.value=0;return;}
   uniforms.uCount.value=field.hazards.length;uniforms.uTime.value=time;
@@ -117,7 +123,10 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     main.scale.set((pattern==='requiem'?h.width+.55:v.width*.54),v.height*(pattern==='requiem'?1.7:1),(pattern==='tide'||pattern==='requiem'?3.65:2.95));
     under.position.set(0,.08,-1.3-v.phase*.65);
     under.scale.set((pattern==='requiem'?h.width+.55:v.width*.58),Math.max(1.3,v.height*.53),5.3);
-    if(pattern==='wave'){
+    if(pattern==='requiem'){
+     // Do not draw the old ring on the ground beneath the split tsunami.
+     parts[2].visible=false;
+    }else if(pattern==='wave'){
      parts[2].position.set(0,.12,-1.7);
      parts[2].scale.set(v.width*.48,.38,Math.max(2.4,h.length*.58));
     }else if(pattern==='cross'||pattern==='bloodScissors'){

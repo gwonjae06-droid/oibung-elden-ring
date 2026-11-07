@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {BLOOD_TSUNAMI,bloodTsunamiWave,bloodTsunamiApproach} from './blood-tsunami.mjs';
+import {createBloodTsunamiSafeFill} from './blood-tsunami-safe-blood.mjs';
 
 const clamp=v=>Math.max(0,Math.min(1,Number.isFinite(v)?v:0));
 const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
@@ -7,9 +8,9 @@ const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
 /**
  * Persistent, non-collidable presentation of the SAME four flanks that
  * damageBlood evaluates. The water wall travels from the skyline across the
- * arena. The boss's central gap has open air all the way to the ground; the
- * boss is standing at the mouth of the gap. A blood-red hint marks its lane.
- * Two instanced batches, two aperture rims and one batched spray: no per-wave
+ * arena. The real gap remains safe, but translucent rose-pink blood flows
+ * through the aperture itself (never projected onto the combat floor).
+ * Two instanced batches, four shared membrane skins and one batched spray: no per-wave
  * geometry creation, no physics or unpredictable random particle emissions.
  */
 export function createBloodHorizonDisaster(scene,waveRoot,{
@@ -23,24 +24,7 @@ export function createBloodHorizonDisaster(scene,waveRoot,{
  const undertow=new THREE.InstancedMesh(undertowGeo,undertowMaterial,4);
  undertow.name='blood-tsunami-massive-rolling-undertow';
  undertow.frustumCulled=false;undertow.castShadow=false;root.add(undertow);
- const ringGeo=new THREE.TorusGeometry(1,.082,coarse?5:8,coarse?24:48);
- const ringMat=new THREE.MeshBasicMaterial({
-  color:0xf09ba2,transparent:true,opacity:.62,depthWrite:false
- });
- const portals=[0,1].map(row=>{
-  const m=new THREE.Mesh(ringGeo,ringMat);
-  m.name='blood-tsunami-visible-refuge-aperture-'+row;
-  m.position.y=8.7;
-  m.scale.set(BLOOD_TSUNAMI.safeHalfWidth,8.7,1);
-  root.add(m);return m;
- });
- const pathMat=new THREE.MeshBasicMaterial({
-  color:0xe86f7a,transparent:true,opacity:.17,depthWrite:false,side:THREE.DoubleSide
- });
- const corridor=new THREE.Mesh(
-  new THREE.PlaneGeometry(BLOOD_TSUNAMI.safeHalfWidth*2,56).rotateX(-Math.PI/2),pathMat);
- corridor.name='blood-tsunami-boss-refuge-on-the-floor';corridor.renderOrder=2;
- corridor.position.y=.115;corridor.visible=false;scene.add(corridor);
+ const safeFill=createBloodTsunamiSafeFill(root,{coarse,reduced});
  const mistCount=coarse?10:reduced?8:36;
  const mistGeo=new THREE.IcosahedronGeometry(.32,0);
  const mistMat=new THREE.MeshBasicMaterial({color:0xd45a68,transparent:true,opacity:.55,depthWrite:false});
@@ -63,15 +47,14 @@ export function createBloodHorizonDisaster(scene,waveRoot,{
  crestMaterial.onBeforeCompile=fluid;
  undertowMaterial.onBeforeCompile=fluid;
  let disposed=false;
- function reset(){root.visible=false;corridor.visible=false;spray.count=0;}
+ function reset(){root.visible=false;safeFill.reset();spray.count=0;}
  function update(game){
   if(disposed)return null;
   const front=bloodTsunamiWave(game,0);
-  if(!front?.visible){reset();return null;}
+  const follower=bloodTsunamiWave(game,1);
+  if(!front?.visible&&!follower?.visible){reset();return null;}
   root.visible=true;
-  const s=game.blood,b=game.boss;
-  corridor.visible=true;corridor.position.set(s.origin?.x??b.x,.115,s.origin?.z??b.z);
-  corridor.rotation.y=front.yaw;pathMat.opacity=.11+.07*(.5+.5*Math.sin(front.time*2.6));
+  const s=game.blood;
   const hazards=s.hazards.filter(h=>h.tsunami).slice(0,4);
   const intensity=bloodTsunamiApproach(game).intensity;
   for(let i=0;i<hazards.length;i++){
@@ -91,11 +74,13 @@ export function createBloodHorizonDisaster(scene,waveRoot,{
   crest.count=undertow.count=hazards.length;
   crest.instanceMatrix.needsUpdate=true;undertow.instanceMatrix.needsUpdate=true;
   for(let row=0;row<2;row++){
-   const wave=bloodTsunamiWave(game,row);
-   portals[row].visible=Boolean(wave?.visible);
-   if(wave)portals[row].position.z=(wave.x-front.x)*front.forwardX+
-     (wave.z-front.z)*front.forwardZ;
+   const wave=row===0?front:follower;
+   const offset=wave?(wave.x-front.x)*front.forwardX+(wave.z-front.z)*front.forwardZ:0;
+   const approaching=wave?smooth((BLOOD_TSUNAMI.horizonDistance-
+    Math.max(0,wave.distance))/390):0;
+   safeFill.setRow(row,offset,Boolean(wave?.visible),approaching);
   }
+  safeFill.update(game.time||0,intensity);
   liquidTime.value=game.time||0;liquidEnergy.value=.6+intensity*.8;
   spray.count=intensity>.15?mistCount:0;
   if(spray.count){
@@ -114,12 +99,12 @@ export function createBloodHorizonDisaster(scene,waveRoot,{
  }
  function dispose(){
   if(disposed)return;disposed=true;reset();
-  root.parent?.remove(root);corridor.parent?.remove(corridor);
-  for(const geo of [ringGeo,corridor.geometry,mistGeo])geo.dispose();
-  for(const mat of [ringMat,pathMat,mistMat])mat.dispose();
+  safeFill.dispose();root.parent?.remove(root);
+  mistGeo.dispose();mistMat.dispose();
  }
- return {root,corridor,update,reset,dispose,stats:()=>({
+ return {root,safeFill,update,reset,dispose,stats:()=>({
   flanks:4,crestDrawCalls:1,undertowDrawCalls:1,refugeHalfWidth:BLOOD_TSUNAMI.safeHalfWidth,
+  safeFill:safeFill.stats(),floorMarker:false,
   cappedSpray:mistCount,decorativeOnly:true,damageSources:0
  })};
 }
