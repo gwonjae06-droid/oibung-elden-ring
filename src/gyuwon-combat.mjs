@@ -12,7 +12,7 @@ export function createGyuwonGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  return {bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:'sword'}};
+  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:'sword'}};
 }
 export function actGyuwon(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
@@ -109,6 +109,8 @@ export function startGyuwonPattern(g,id){
   hazard(g,'ring',{x:0,z:0,r:3,width:.8,grow:9,warn:4.5,life:1.8,visual:'chalk-ring'});
  }
  if(!['repeat','reverse','stop'].includes(id))s.memory=s.hazards.map(({shape,x,z,yaw,width,length,r,arc,grow})=>({shape,x,z,yaw,width,length,r,arc,grow}));
+ // Animation uses this stable damage timeline after one-shot hazards have expired.
+ s.motionBeats=[...new Set(s.hazards.map(h=>h.warn).filter(Number.isFinite))].sort((a,b)=>a-b);
  emit(g,'gyuwon-warning',{pattern:id});return true;
 }
 // Separate, persistent decks ensure every white/dark-space pattern can play.
@@ -119,7 +121,6 @@ export function chooseGyuwonPattern(g){
   pool,{avoid:s.pattern});
 }
 function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.t=0;s.index=0;s.space='white';s.spaceTime=0;s.stageTime=0;s.stageIndex=0;s.stageMemory='sword';s.hazards.length=0;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
-export function skipGyuwonTransition(g){if(g.boss.state!=='transition')return false;g.gyuwon.t=R.transition;return true;}
 function hurt(g,h){
  const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
