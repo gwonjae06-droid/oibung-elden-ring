@@ -37,7 +37,9 @@ test('actual automatic combat reaches all eleven attacks per phase and never los
 });
 
 test('recovery takes finite locked footsteps, then leaves a stationary melee counter window even when the player runs away',()=>{
- const g=createBloodGame('hammer',{seed:2});g.player.hp=g.player.maxHp=1e9;startBloodPattern(g,'wave');advance(g,BLOOD_PATTERNS.wave.duration+.02);
+ const g=createBloodGame('hammer',{seed:2});g.player.hp=g.player.maxHp=1e9;
+ // Inspect recovery footwork without the independent ranged blood-whip pause.
+ g.blood.whipCooldown=Infinity;startBloodPattern(g,'wave');advance(g,BLOOD_PATTERNS.wave.duration+.02);
  assert.equal(g.boss.state,'recovery');assert.ok(g.blood.walk.steps>0);const start={x:g.boss.x,z:g.boss.z};
  while(g.blood.recover>BLOOD_COUNTER_WINDOW)advance(g,.01,{x:1});const planted={x:g.boss.x,z:g.boss.z};
  assert.ok(Math.hypot(planted.x-start.x,planted.z-start.z)<1.8);assert.ok(Math.hypot(planted.x-start.x,planted.z-start.z)>.5);

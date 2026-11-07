@@ -11,5 +11,6 @@ test('actual live clown uses articulated asymmetrical PBR ringmaster, not photog
  assert.match(actor,/antique-conductor-baton/);
  assert.match(scene,/clown-ringmaster-actor.mjs/);
  assert.match(scene,/createCircusTroupeView/);
- assert.doesNotMatch(scene,/createClownActor\(\{coarse\}\).*createClownHead/s);
+ assert.doesNotMatch(scene,/\bcreateClownHead\s*\(/,'a retired photo-head constructor must not become an active mesh');
+ assert.match(scene,/const actor=createClownActor\(\{coarse\}\)/,'the live actor must be the sculpted ringmaster');
 });

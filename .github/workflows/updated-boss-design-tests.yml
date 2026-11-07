@@ -1,0 +1,45 @@
+name: Updated boss design regression checks
+on:
+  pull_request:
+    paths:
+      - 'tests/boss-signature-patterns.test.mjs'
+      - 'tests/novel-boss-patterns.test.mjs'
+      - 'tests/purification-forge.test.mjs'
+      - 'tests/boss-pattern-shuffle.test.mjs'
+      - 'tests/hard-story-balance.test.mjs'
+      - 'tests/new-boss-patterns.test.mjs'
+      - 'tests/clown-sculpture-rules.test.mjs'
+      - 'tests/blood-siphon.test.mjs'
+      - 'tests/blood-footwork-patterns.test.mjs'
+      - 'tests/all-boss-physical-hitboxes.test.mjs'
+      - '.github/workflows/updated-boss-design-tests.yml'
+  workflow_dispatch:
+concurrency:
+  group: updated-boss-tests-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three.js test dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Verify current boss designs against updated legacy regressions
+        run: |
+          node --test \
+            tests/boss-signature-patterns.test.mjs \
+            tests/novel-boss-patterns.test.mjs \
+            tests/purification-forge.test.mjs \
+            tests/boss-pattern-shuffle.test.mjs \
+            tests/hard-story-balance.test.mjs \
+            tests/new-boss-patterns.test.mjs \
+            tests/clown-sculpture-rules.test.mjs \
+            tests/blood-siphon.test.mjs \
+            tests/blood-footwork-patterns.test.mjs \
+            tests/all-boss-physical-hitboxes.test.mjs
