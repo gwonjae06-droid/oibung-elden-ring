@@ -160,3 +160,74 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey .j-boss-targets{grid-template-columns:repeat(5,minmax(0,1fr))}
  #journey .j-stat-rows{row-gap:7px}
 }
+
+/* Compact boss/weapon selection with an always-visible, accessible departure bar. */
+#journey .j-select{width:min(1080px,100%);padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+#journey .j-select-heading{display:flex;align-items:baseline;gap:15px;flex-wrap:wrap;margin:0 0 9px}
+#journey .j-select-heading h1{font-size:clamp(26px,3vw,38px);margin:4px 0}
+#journey .j-select-heading p{margin:0;max-width:570px;font-size:12px;line-height:1.5}
+#journey .j-select-layout{display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);gap:17px;align-items:start}
+#journey .j-select-left,#journey .j-select-right{min-width:0}
+#journey .j-select .j-boss-chooser{margin:0;padding:12px}
+#journey .j-select .j-boss-chooser-head{margin-bottom:8px}
+#journey .j-select .j-boss-chooser h2{font-size:16px}
+#journey .j-select .j-boss-chooser-head p{font-size:11px;line-height:1.45}
+#journey .j-select .j-boss-targets{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#journey .j-select button.j-boss-target{padding:8px 10px;min-height:59px}
+#journey .j-select .j-boss-target b{font-size:12px}
+#journey .j-select .j-boss-target small{font-size:10px}
+#journey .j-select .j-boss-note{font-size:11px;margin-top:8px}
+#journey .j-select .j-select-subtitle{margin:13px 0 0;font-size:16px}
+#journey .j-select .j-weapon{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:9px 0 0}
+#journey .j-select .j-weapon button{padding:9px 7px;min-height:74px}
+#journey .j-select .j-weapon strong{font-size:10px;margin-bottom:4px;float:none}
+#journey .j-select .j-weapon b{font-size:16px}
+#journey .j-select .j-weapon small{font-size:10px;line-height:1.4}
+#journey .j-select .j-stat-chart{margin:0;padding:14px}
+#journey .j-select-actions{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(920px,calc(100% - 32px));padding:11px 16px;border:1px solid #c5a16b87;border-radius:10px;background:#11171cf5;box-shadow:0 12px 38px #000c,0 0 0 1px #080b10}
+#journey .j-selected-route{color:#f0d9a9;font:600 13px/1.4 'Noto Serif KR',serif;overflow-wrap:anywhere}
+#journey .j-select-actions button.j-begin{min-width:175px;min-height:48px;color:#fdf3da;background:linear-gradient(120deg,#725127,#986c34);border:1px solid #d6b579;font-weight:700}
+#journey .j-stat-average{position:absolute;top:-2px;bottom:-2px;width:2px;transform:translateX(-50%);background:#f4f1df;opacity:.8;pointer-events:none;box-shadow:0 0 2px #000}
+#journey .j-stat-legend{display:inline-block;width:3px;height:12px;vertical-align:-2px;background:#f4f1df;margin:0 3px}
+#journey .j-stat-basics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
+#journey .j-stat-basics>span{border:1px solid #a58b5a48;border-radius:5px;padding:7px 5px;text-align:center;color:#aaa59b;font:10px/1.5 system-ui}
+#journey .j-stat-basics strong{display:block;color:#f1d7a6;font-size:13px}
+#journey .j-stat-upgrades{margin-top:12px;padding:11px;background:#b9955044;border-left:3px solid #e4bd81;border-radius:3px}
+#journey .j-stat-upgrades>strong{color:#eed5a7;font:600 13px system-ui}
+#journey .j-stat-upgrades p{margin:5px 0;font-size:12px;line-height:1.5}
+#journey .j-stat-upgrades small{color:#ada79f;font:10px/1.5 system-ui}
+#journey .j-record-cards{display:none}
+#journey .j-record-card{min-width:0;padding:15px;border:1px solid #987e535f;border-radius:8px;background:linear-gradient(140deg,#161b22e8,#211d18db)}
+#journey .j-record-card h2{margin:0;color:#ebd2a3;font:600 15px/1.55 'Noto Serif KR',serif}
+#journey .j-record-card p{font-size:12px;margin:3px 0 12px;color:#aeb6a8}
+#journey .j-record-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 8px;margin:0}
+#journey .j-record-card dt{font:11px system-ui;color:#a9a297}
+#journey .j-record-card dd{margin:3px 0 0;color:#f1ddba;font:600 14px system-ui;overflow-wrap:anywhere}
+@media(max-width:1000px){
+ #journey .j-records .j-table{display:none}
+ #journey .j-record-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+}
+@media(max-width:920px){
+ #journey .j-select-layout{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:10px}
+ #journey .j-select .j-weapon{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-select .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #journey .j-select .j-stat-label{flex-wrap:wrap;gap:3px;font-size:11px}
+}
+@media(max-width:650px) and (orientation:portrait){
+ #journey .j-select-layout{grid-template-columns:minmax(0,1fr)}
+ #journey .j-select .j-weapon{grid-template-columns:repeat(4,minmax(0,1fr))}
+ #journey .j-select .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-record-cards{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-height:520px) and (orientation:landscape){
+ #journey .j-select-heading p{display:none}
+ #journey .j-select .j-boss-chooser{padding:8px}
+ #journey .j-select button.j-boss-target{min-height:47px;padding:5px 8px}
+ #journey .j-select .j-weapon button{min-height:54px;padding:5px}
+ #journey .j-select .j-weapon small{display:none}
+ #journey .j-select .j-stat-chart{padding:10px}
+ #journey .j-select .j-stat-rows{row-gap:7px}
+ #journey .j-select .j-stat-basics{margin-top:8px}
+ #journey .j-select-actions{padding:6px 10px}
+ #journey .j-select-actions button.j-begin{min-height:42px}
+}
