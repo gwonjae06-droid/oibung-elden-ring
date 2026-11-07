@@ -3,7 +3,7 @@ import {poseAlpha,createPoseContinuity} from './boss-animation-continuity.mjs';
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const ease=x=>{const t=sat(x);return t*t*(3-2*t);};
 const pulse=(x,w)=>Math.exp(-Math.pow(x/Math.max(.05,w),2));
-const NEUTRAL=Object.freeze({lean:0,twist:0,headPitch:0,headYaw:0,leftArm:-.5,rightArm:0,book:-.6});
+const NEUTRAL=Object.freeze({lean:0,twist:0,headPitch:0,headYaw:0,leftArm:-.5,rightArm:0,leftElbow:-.16,rightElbow:-.16,leftWrist:.04,rightWrist:0,weightShift:0,book:-.6});
 // All 15 patterns have distinctive silhouettes. Timings read actual live hazard warnings.
 export const GYUWON_MOTION_STYLE=Object.freeze({
  line:[-.18,0,.18,1.0],mark:[.25,-.2,-.35,.65],repeat:[-.28,.15,.10,1.2],
@@ -20,7 +20,8 @@ export function gyuwonRawMotion(g){
  if(b.state==='transition'){
   const r=ease((s.t||0)/2.8);
   return {lean:-.18*r,twist:.15*r,headPitch:-.25*r,headYaw:0,
-   leftArm:-.5-1.25*r,rightArm:-.7*r,book:-.6+.25*r};
+   leftArm:-.5-1.25*r,rightArm:-.7*r,leftElbow:-.16-.45*r,rightElbow:-.16-.33*r,
+   leftWrist:.04+.13*r,rightWrist:.08*r,weightShift:.14*r,book:-.6+.25*r};
  }
  const spec=GYUWON_PATTERNS[s.pattern],style=GYUWON_MOTION_STYLE[s.pattern];
  if(!spec||!style)return {...NEUTRAL};
@@ -30,7 +31,10 @@ export function gyuwonRawMotion(g){
   const [lean,twist,head,force]=style;
   return {lean:lean*settling,twist:twist*settling,headPitch:head*settling,
    headYaw:-twist*settling*.15,leftArm:-.5-force*settling*.3,
-   rightArm:-force*settling*.25,book:-.6+force*settling*.1};
+   rightArm:-force*settling*.25,leftElbow:-.16-force*settling*.12,
+   rightElbow:-.16-force*settling*.20,leftWrist:.04+twist*settling*.1,
+   rightWrist:twist*settling*.16,weightShift:twist*settling*.15,
+   book:-.6+force*settling*.1};
  }
  if(b.state!=='pattern')return {...NEUTRAL};
  // Live hazards are removed after impact. Keep their original timing for the entire pose.
@@ -47,6 +51,11 @@ export function gyuwonRawMotion(g){
   headPitch:head*(prep*.48+power*.70),headYaw:-twist*(prep*.15+power*.12),
   leftArm:-.5-force*(prep*.42+power*(alt?.48:.85)),
   rightArm:-force*(prep*.50+power*(alt?.95:.62)),
+  leftElbow:-.16-force*(prep*.28+strike*(alt?.24:.42)+after*.16),
+  rightElbow:-.16-force*(prep*.34+strike*(alt?.52:.29)+after*.22),
+  leftWrist:.04+twist*(prep*.14+strike*.24),
+  rightWrist:twist*(prep*.22+strike*.3),
+  weightShift:twist*(prep*.11+power*.24),
   book:-.6+force*(prep*.18+strike*.28)};
 }
 export function createGyuwonMotionDirector(){
