@@ -195,6 +195,78 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   tongues.frustumCulled=false;tongues.renderOrder=5;group.add(tongues);
   return {group,ring,core,tongues};
  }
+ // A brief, low-drawcall sculptural "second life" for the actual dead cast.
+ // These marionettes are scenery: no physics collider, HP or autonomous AI.
+ function createRepriseGhost(snapshot){
+  const group=new THREE.Group();group.name='dead-performer-lifted-on-strings';
+  group.userData.decorativeOnly=true;root.add(group);
+  const body=new THREE.Group();group.add(body);
+  const cloth=snapshot.role==='acrobat'?mat.cyan:snapshot.role==='firekeeper'?mat.crimson:mat.velvet;
+  oval(body,cloth,'creased-corpse-costume',0,1.36,0,.52,.77,.32);
+  const face=oval(body,mat.ivory,'fractured-dead-performer-face',0,2.32,.18,.40,.50,.26);
+  face.rotation.z=.15;
+  for(const side of [-1,1]){
+   oval(body,mat.black,'motionless-corpse-eye-socket',side*.18,2.46,.40,.115,.14,.035);
+   const tear=oval(body,mat.crimson,'marionette-death-mask-crack',side*.2,2.14,.41,.017,.24,.02);
+   tear.rotation.z=side*.25;
+  }
+  const arms=[],legs=[],wires=[];
+  for(const side of [-1,1]){
+   const upper=tube(body,cloth,'reanimated-corpse-upper-arm',0,0,0,.15,1),
+     lower=tube(body,mat.ivory,'reanimated-corpse-glove',0,0,0,.13,1),
+     thigh=tube(body,mat.black,'reanimated-corpse-thigh',0,0,0,.18,1),
+     shin=tube(body,cloth,'reanimated-corpse-shin',0,0,0,.145,1);
+   arms.push({side,upper,lower});legs.push({side,thigh,shin});
+   wires.push(tube(group,mat.gilt,'visible-strings-lifting-dead-performer',0,0,0,.012,1));
+  }
+  const neckWire=tube(group,mat.gilt,'face-controlled-by-ceiling-wire',0,0,0,.015,1);
+  return {group,body,arms,legs,wires,neckWire};
+ }
+ const easing=n=>{const a=Math.max(0,Math.min(1,n));return a*a*(3-2*a)};
+ function updateRepriseGhosts(g){
+  const troupe=g?.clown?.troupe,reprise=troupe?.reprise,
+   t=g?.clown?.time||0,seen=new Set();
+  if(reprise&&t>=reprise.start&&t<reprise.end){
+   const elapsed=t-reprise.start,total=reprise.end-reprise.start;
+   const rise=easing((elapsed-.22)/1.18),drop=1-easing((elapsed-(total-1.0))/.9);
+   for(const corpse of reprise.bodies){
+    const key=reprise.start+'-'+corpse.id;
+    seen.add(key);
+    let v=puppetGhosts.get(key);
+    if(!v){v=createRepriseGhost(corpse);puppetGhosts.set(key,v);}
+    const pulse=rise*drop,
+      snap=Math.sin(Math.max(0,elapsed-1.0)*4.8+corpse.order*.42),
+      jerk=Math.pow(Math.abs(snap),9);
+    v.group.position.set(corpse.x,-.08*(1-rise),corpse.z);
+    v.group.rotation.y=corpse.yaw||0;
+    v.group.visible=drop>.001;
+    v.group.scale.setScalar(Math.max(.025,.76+.17*drop));
+    // The corpse starts folded face-down. The taut strings haul the ribcage
+    // upward in delayed, jointed steps, then cut loose at the show's end.
+    v.body.rotation.set(1.14*(1-rise)-.08*pulse*jerk,0,.12*(1-rise)+
+      .08*pulse*Math.sin(elapsed*3.1));
+    v.body.position.y=-.25*(1-rise)+.16*pulse*jerk;
+    for(let i=0;i<2;i++){
+     const side=i?1:-1,arm=v.arms[i],leg=v.legs[i],
+      shoulder=[side*.51,1.89,0],
+      elbow=[side*.90,1.32+rise*.22,.13],
+      wrist=[side*(1.07+.23*jerk),1.88+.52*pulse*jerk,.53];
+     bone(arm.upper,shoulder,elbow);
+     bone(arm.lower,elbow,wrist);
+     const hip=[side*.3,.91,0],knee=[side*.36,.47,.26],
+      ankle=[side*.34,.17,.27];
+     bone(leg.thigh,hip,knee);bone(leg.shin,knee,ankle);
+     bone(v.wires[i],[side*.52,6.0,.08],[
+      side*(1.07+.23*jerk),1.88+.52*pulse*jerk,.53]);
+    }
+    bone(v.neckWire,[0,6.45,0],[0,2.84,.2]);
+   }
+  }
+  for(const [key,v] of puppetGhosts)if(!seen.has(key)){
+   root.remove(v.group);puppetGhosts.delete(key);
+   // All puppet props use the shared sphere and cylinder geometries.
+  }
+ }
  function update(g,dt=1/60){
   const troupe=g?.clown?.troupe,alive=troupe?.members||[],seen=new Set(),time=g?.time||0,
    uncanny=circusUncannyFrame(g),h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
@@ -317,10 +389,11 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   for(const [id,v] of hoops)if(!hoopSet.has(id)){
    root.remove(v.group);disposeScene(v.group);hoops.delete(id);
   }
+  updateRepriseGhosts(g);
   theatreCues.update(g,h);
  }
  function dispose(){for(const v of live.values())v.group.traverse(o=>{if(o.geometry&&o.geometry!==geo&&o.geometry!==cylinder)o.geometry.dispose();});
-  live.clear();hoops.clear();theatreCues.dispose();root.parent?.remove(root);disposeScene(root);
+  live.clear();hoops.clear();puppetGhosts.clear();theatreCues.dispose();root.parent?.remove(root);disposeScene(root);
   geo.dispose();cylinder.dispose();for(const x of Object.values(mat))x.dispose();}
- return {root,update,dispose,stats:()=>({performers:live.size,hoops:hoops.size,airCues:theatreCues.stats().active})};
+ return {root,update,dispose,stats:()=>({performers:live.size,ghostPuppets:puppetGhosts.size,hoops:hoops.size,airCues:theatreCues.stats().active})};
 }
