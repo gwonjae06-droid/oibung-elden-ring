@@ -18,6 +18,10 @@ on:
       - 'tests/responsive-ui-layout.test.mjs'
       - 'scripts/ui-responsive-smoke.mjs'
       - 'scripts/weapon-stat-esc-smoke.mjs'
+      - 'src/weapon-stat-chart.mjs'
+      - 'src/journey.mjs'
+      - 'src/forge-view.mjs'
+      - 'tests/weapon-stat-chart.test.mjs'
       - '.github/workflows/responsive-ui-smoke.yml'
   workflow_dispatch:
 concurrency:
@@ -37,7 +41,7 @@ jobs:
       - name: Install browser smoke dependencies
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Check responsive stylesheet and cache invariants
-        run: node --test tests/responsive-ui-layout.test.mjs tests/ui-home-action.test.mjs tests/ui-polish.test.mjs tests/mobile-landscape.test.mjs
+        run: node --test tests/responsive-ui-layout.test.mjs tests/ui-home-action.test.mjs tests/ui-polish.test.mjs tests/mobile-landscape.test.mjs tests/weapon-stat-chart.test.mjs tests/home-mural-seams.test.mjs
       - name: Browser responsive screenshots and bounds checks
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/odenring-ui-http.log 2>&1 &

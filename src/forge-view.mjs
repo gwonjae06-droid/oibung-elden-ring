@@ -1,5 +1,5 @@
 import {EVOLUTIONS} from './weapon-evolution.mjs';
-import {weaponStatChart} from './weapon-stat-chart.mjs';
+import {weaponStatChart} from './weapon-stat-chart.mjs?radar-v1-20261107';
 import {flameBalance,forgeTier,investedFlames,FORGE_MAX_TIER} from './purification-forge.mjs';
 
 export const FORGE_WEAPON_NAMES=Object.freeze({sword:'검',hammer:'망치',bow:'활',cards:'카드'});

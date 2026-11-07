@@ -140,14 +140,26 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey .j-stat-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:13px}
 #journey .j-stat-heading h2{margin:0;font:600 18px 'Noto Serif KR',serif;color:#e9d09c}
 #journey .j-stat-heading span{font:10px system-ui;color:#897c6d;letter-spacing:.16em}
-#journey .j-stat-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px;row-gap:12px}
-#journey .j-stat-row{min-width:0}
-#journey .j-stat-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:5px;font:12px system-ui;color:#c6c4bc}
-#journey .j-stat-label strong{color:#f0d6a4;font:600 11px system-ui;text-align:right}
-/* Every average marker must be positioned against its OWN 8px bar, not the whole page. */
-#journey .j-stat-track{position:relative;isolation:isolate;height:8px;overflow:hidden;border-radius:5px;background:#55575a73;box-shadow:inset 0 1px 2px #0009}
-#journey .j-stat-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#82653b,#e2b974 75%,#f5db9d);box-shadow:0 0 10px #dca85c55}
-#journey .j-stat-note{margin:15px 0 0;font:11px/1.6 system-ui;color:#aaa494}
+/* Geometric six-axis SVG, no absolute-positioned white average markers. */
+#journey .j-stat-radar-frame{min-width:0;max-width:100%;border:1px solid #9a795230;border-radius:8px;background:radial-gradient(ellipse at center,#b8953d16,#10151b00 72%);padding:2px 8px 10px}
+#journey .j-stat-radar{display:block;width:min(100%,360px);height:auto;margin:0 auto;overflow:visible}
+#journey .j-radar-ring{fill:none;stroke:#977e5970;stroke-width:.85}
+#journey .j-radar-ray{stroke:#977e5950;stroke-width:.8}
+#journey .j-radar-average{fill:#c5c9ce;fill-opacity:.06;stroke:#c7ccd2;stroke-opacity:.75;stroke-width:1.5;stroke-dasharray:4 4;stroke-linejoin:round}
+#journey .j-radar-current{fill:#d4ab67;fill-opacity:.23;stroke:#f0d199;stroke-width:2.1;stroke-linejoin:round}
+#journey .j-radar-node{fill:#f5d9a2}
+#journey .j-radar-label{font:12px system-ui,sans-serif;fill:#c9c0ac}
+#journey .j-radar-key{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin:0 auto;font:11px/1.4 system-ui;color:#b9b4a9}
+#journey .j-radar-key span{display:inline-flex;align-items:center;gap:7px}
+#journey .j-radar-key span:before{content:"";display:inline-block;width:18px;height:3px;border-radius:2px;background:#dfbd82}
+#journey .j-radar-key-average:before{background:transparent!important;border-top:2px dashed #b8bec3;height:0!important;border-radius:0!important}
+#journey .j-stat-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:8px;margin:12px 0 0}
+#journey .j-stat-fact{min-width:0;display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:1px solid #bda16d28;padding:0 0 5px}
+#journey .j-stat-fact dt{font:11px/1.4 system-ui;color:#bbb8ae;overflow-wrap:anywhere}
+#journey .j-stat-fact dd{margin:0;text-align:right;font:600 12px/1.4 system-ui;color:#f1d6a4;overflow-wrap:anywhere}
+#journey .j-stat-recovery{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;padding:8px 12px;border:1px solid #967e5255;border-radius:6px;background:#aa874618;font:12px system-ui;color:#c8c1b4}
+#journey .j-stat-recovery strong{color:#f0d5a1;font:600 13px system-ui}
+#journey .j-stat-note{margin:12px 0 0;font:11px/1.5 system-ui;color:#aaa494}
 #journey[data-screen='home'] .j-main{padding:22px 0 14px;align-items:safe center}
 @media(max-width:650px){
  #journey .j-boss-targets{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -155,12 +167,12 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey button.j-boss-target{min-height:67px;padding:9px}
  #journey .j-select .j-weapon{grid-template-columns:repeat(2,minmax(0,1fr))}
  #journey .j-select .j-weapon button{min-height:96px}
- #journey .j-stat-rows{grid-template-columns:1fr;row-gap:10px}
+ #journey .j-stat-facts{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:8px}
  #journey[data-screen='home'] .j-main{padding:48px 0;align-items:safe center}
 }
 @media(max-height:600px) and (min-width:700px){
  #journey .j-boss-targets{grid-template-columns:repeat(5,minmax(0,1fr))}
- #journey .j-stat-rows{row-gap:7px}
+ #journey .j-stat-facts{row-gap:6px}
 }
 
 /* Compact boss/weapon selection with an always-visible, accessible departure bar. */
@@ -189,8 +201,7 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey .j-select-actions{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(920px,calc(100% - 32px));padding:11px 16px;border:1px solid #c5a16b87;border-radius:10px;background:#11171cf5;box-shadow:0 12px 38px #000c,0 0 0 1px #080b10}
 #journey .j-selected-route{color:#f0d9a9;font:600 13px/1.4 'Noto Serif KR',serif;overflow-wrap:anywhere}
 #journey .j-select-actions button.j-begin{min-width:175px;min-height:48px;color:#fdf3da;background:linear-gradient(120deg,#725127,#986c34);border:1px solid #d6b579;font-weight:700}
-#journey .j-stat-average{position:absolute;top:0;bottom:0;width:2px;max-height:100%;transform:translateX(-50%);background:#f4f1df;opacity:.8;pointer-events:none;box-shadow:0 0 2px #000}
-#journey .j-stat-legend{display:inline-block;width:3px;height:12px;vertical-align:-2px;background:#f4f1df;margin:0 3px}
+/* Average is an SVG polygon, never a positioned line. */
 #journey .j-stat-basics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
 #journey .j-stat-basics>span{border:1px solid #a58b5a48;border-radius:5px;padding:7px 5px;text-align:center;color:#aaa59b;font:10px/1.5 system-ui}
 #journey .j-stat-basics strong{display:block;color:#f1d7a6;font-size:13px}
@@ -212,13 +223,12 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 @media(max-width:920px){
  #journey .j-select-layout{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:10px}
  #journey .j-select .j-weapon{grid-template-columns:repeat(2,minmax(0,1fr))}
- #journey .j-select .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
- #journey .j-select .j-stat-label{flex-wrap:wrap;gap:3px;font-size:11px}
+ #journey .j-select .j-stat-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 }
 @media(max-width:650px) and (orientation:portrait){
  #journey .j-select-layout{grid-template-columns:minmax(0,1fr)}
  #journey .j-select .j-weapon{grid-template-columns:repeat(4,minmax(0,1fr))}
- #journey .j-select .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-select .j-stat-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
  #journey .j-record-cards{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-height:520px) and (orientation:landscape){
@@ -228,7 +238,7 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey .j-select .j-weapon button{min-height:54px;padding:5px}
  #journey .j-select .j-weapon small{display:none}
  #journey .j-select .j-stat-chart{padding:10px}
- #journey .j-select .j-stat-rows{row-gap:7px}
+ #journey .j-select .j-stat-facts{row-gap:6px}
  #journey .j-select .j-stat-basics{margin-top:8px}
  #journey .j-select-actions{padding:6px 10px}
  #journey .j-select-actions button.j-begin{min-height:42px}
@@ -258,7 +268,7 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 @media(max-width:420px){
  #journey[data-screen='home'] .j-title{font-size:clamp(38px,12vw,54px);letter-spacing:.13em}
  #journey .j-title{max-width:100%;overflow-wrap:anywhere}
- #journey .j-stat-rows{grid-template-columns:minmax(0,1fr)}
+ #journey .j-stat-facts{grid-template-columns:minmax(0,1fr)}
  #journey .j-selected-route{font-size:10px}
 }
 @media(max-height:470px) and (orientation:landscape){
@@ -301,3 +311,10 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey .j-temple svg{overflow:hidden;backface-visibility:hidden}
 #journey .j-temple .j-stone-wall{pointer-events:none}
 #journey .j-relief-sheen{display:none!important}
+
+/* Keep labels and exact numbers legible on short mobile landscape screens. */
+@media(max-height:420px) and (orientation:landscape){
+ #journey .j-select .j-stat-radar{width:min(100%,260px)}
+ #journey .j-select .j-stat-radar-frame{padding:0 5px 6px}
+ #journey .j-select .j-stat-fact{padding-bottom:3px}
+}
