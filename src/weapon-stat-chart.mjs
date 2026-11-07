@@ -53,6 +53,6 @@ export function weaponStatChart(id,{profile=null}={}){
    '<div class="j-stat-track" role="meter" aria-label="'+row.label+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+row.percent+'" aria-valuetext="'+row.text+'"><span class="j-stat-fill" style="width:'+row.percent+'%"></span>'+
    '<i class="j-stat-average" aria-hidden="true" style="left:'+row.averagePercent+'%"></i></div></div>'
   ).join('')+'</div>'+
-  basic+'<p class="j-stat-note"><i class="j-stat-legend" aria-hidden="true"></i> 표시선은 네 무기 평균 · 막대는 무기별 상대 성능입니다. 기본 공격의 수치는 각인 효과와 별도입니다.</p>'+
+  basic+'<p class="j-stat-note"><i class="j-stat-legend" aria-hidden="true"></i> 표시선은 네 무기 평균 · 막대는 네 무기 간 상대 비교이며 실제 수치를 함께 보여줍니다. 기본 공격의 수치는 각인 효과와 별도입니다.</p>'+
   upgrades+'</section>';
 }
