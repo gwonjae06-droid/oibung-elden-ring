@@ -15,6 +15,9 @@ const COLOR=Object.freeze({
 });
 // White space only RECORDS a proof (calm chalk); the dark space REALIZES it (ink fracture).
 const PREVIEW_COLOR=0xe6e1d4,INK_COLOR=0x4b3a6e,INK_GLOW=0x8a63d6;
+// Erased wrong answers: after a wrong-answer note is struck, a pale trace lingers and flickers
+// where it was, hinting that the question will be asked again. Never a live threat: flat and dim.
+const GHOST_COLOR=0xb8b2a6,GHOST_LIFE=3;
 export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprint(h);
 
 // Every triangle is an upright, irregular fragment. Its base touches the floor
@@ -64,11 +67,12 @@ function fragments(h,f,coarse=false){
 }
 export function createGyuwonHazardFx(stage,{coarse=false}={}){
  const root=new THREE.Group();root.name='gyuwon-physical-rupture-cues';stage.add(root);
- const states=new Map();let disposed=false;
+ const states=new Map(),ghosts=new Map();let disposed=false,owner=null,lastCasts=0;
  function release(s){
   root.remove(s.mesh);s.mesh.geometry.dispose();s.mesh.material.dispose();
  }
- function clear(){for(const s of states.values())release(s);states.clear();}
+ function clearGhosts(){for(const s of ghosts.values())release(s);ghosts.clear();}
+ function clear(){for(const s of states.values())release(s);states.clear();clearGhosts();}
  function make(h,f,pattern){
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
@@ -86,6 +90,9 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
  function update(g){
   if(disposed)return;
   const active=g?.status==='playing',s=g?.gyuwon,b=g?.boss;
+  if(owner!==g){owner=g;lastCasts=0;clearGhosts();}
+  // A new cast takes over from any lingering trace; leaving phase one or ending also clears them.
+  if(!active||!s||!b||b.phase!==1||s.casts!==lastCasts){clearGhosts();lastCasts=s?.casts||0;}
   const live=new Set();
   if(active&&s&&b?.state==='pattern')for(const h of s.hazards||[]){
    if(h.shape==='wave')continue; // The actual tsunami surface is rendered by the memory stage.
@@ -131,8 +138,20 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
     mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
    }
   }
-  for(const [id,state]of states)if(!live.has(id)){release(state);states.delete(id);}
+  for(const [id,state]of states)if(!live.has(id)){
+   states.delete(id);
+   if(active&&b?.phase===1&&state.pattern==='mark'){state.t0=g.time;ghosts.set(id,state);}
+   else release(state);
+  }
+  for(const [id,state]of ghosts){
+   const age=g.time-state.t0;
+   if(!(age>=0&&age<GHOST_LIFE)){release(state);ghosts.delete(id);continue;}
+   const mat=state.mesh.material,fade=1-age/GHOST_LIFE,flick=.65+.35*Math.max(0,Math.sin(age*7+id));
+   state.mesh.scale.y=.28;
+   mat.opacity=.22*fade*flick;mat.emissiveIntensity=.04;
+   mat.color.setHex(GHOST_COLOR);mat.emissive.setHex(GHOST_COLOR);
+  }
  }
  function dispose(){if(disposed)return;disposed=true;clear();root.parent?.remove(root);}
- return {root,update,clear,dispose,stats:()=>({liveHazards:states.size,damageSources:0,drawCalls:states.size})};
+ return {root,update,clear,dispose,stats:()=>({liveHazards:states.size,ghostTraces:ghosts.size,damageSources:0,drawCalls:states.size})};
 }

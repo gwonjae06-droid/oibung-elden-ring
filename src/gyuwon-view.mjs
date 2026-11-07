@@ -24,8 +24,11 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const edge=new THREE.Mesh(new THREE.RingGeometry(R.radius-.06,R.radius+.06,96),new THREE.MeshBasicMaterial({color:0x9bb6ca,transparent:true,opacity:.45,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=.025;stage.add(edge);
  // One instance per repeated desk part keeps distant furniture inexpensive.
  const positions=[],span=coarse?180:240,pitch=coarse?18:12;for(let x=-span;x<=span;x+=pitch)for(let z=-span;z<=span;z+=pitch)if(Math.hypot(x,z)>R.radius+12)positions.push([x,z]);
+ // Nearest desks first, so lowering the instance count recedes the room from the far edge inward.
+ positions.sort((a,b)=>Math.hypot(a[0],a[1])-Math.hypot(b[0],b[1]));
  const matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();
- function repeatedPart(dx,y,dz,w,h,d,color){const mesh=new THREE.InstancedMesh(boxGeo,mat(color),positions.length);mesh.name='gyuwon-endless-desks';positions.forEach(([x,z],i)=>{position.set(x+dx,y,z+dz);scale.set(w,h,d);matrix.compose(position,rotation,scale);mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=false;stage.add(mesh);}
+ const deskMeshes=[];
+ function repeatedPart(dx,y,dz,w,h,d,color){const mesh=new THREE.InstancedMesh(boxGeo,mat(color),positions.length);mesh.name='gyuwon-endless-desks';positions.forEach(([x,z],i)=>{position.set(x+dx,y,z+dz);scale.set(w,h,d);matrix.compose(position,rotation,scale);mesh.setMatrixAt(i,matrix);});mesh.instanceMatrix.needsUpdate=true;mesh.receiveShadow=false;stage.add(mesh);deskMeshes.push(mesh);}
  repeatedPart(0,1.6,0,2.5,.18,2,0x8d877e);repeatedPart(0,.8,0,.2,1.6,.2,0x68798b);
  repeatedPart(0,1.76,0,1.1,.1,.8,0xc5d0d7);repeatedPart(0,.7,1.6,1.6,.16,1.4,0x586575);
  // Sparse stars are above the horizon, leaving the floor warnings uncluttered.
@@ -38,6 +41,18 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const hazardFx=createGyuwonHazardFx(stage,{coarse});
  const shadowHand=createGyuwonShadowHand(stage,{coarse});
  const absorbFx=createGyuwonAbsorbFx(stage,{coarse,reduced});
+ // Ending: the exam hall returns for a moment, recedes desk by desk, and only the small
+ // student who began it all is left standing. Purely visual; plays inside the existing 8s ending.
+ const student=new THREE.Group();student.name='gyuwon-first-student';
+ const headGeo=new THREE.SphereGeometry(.2,16,12);
+ const head=new THREE.Mesh(headGeo,mat(0xe2c3a6));head.position.set(0,1.72,0);head.castShadow=true;student.add(head);
+ const hair=new THREE.Mesh(headGeo,mat(0x2a2623));hair.position.set(0,1.78,-.03);hair.scale.set(1.06,.8,1.06);student.add(hair);
+ box(student,0,1.14,0,.46,.78,.28,0xcfd6dc);
+ box(student,-.12,.36,0,.14,.72,.16,0x39434f);box(student,.12,.36,0,.14,.72,.16,0x39434f);
+ box(student,-.3,1.1,.08,.12,.6,.14,0xcfd6dc);box(student,.3,1.1,.08,.12,.6,.14,0xcfd6dc);
+ box(student,0,1.02,.26,.42,.07,.3,0x6c7f95);
+ student.visible=false;student.scale.setScalar(.001);stage.add(student);
+ const easeUnit=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
  const studyTint=new THREE.Color(0x111b28),whiteTint=new THREE.Color(0xffffff),voidTint=new THREE.Color(0x010105);
  const studyFloor=new THREE.Color(0x354252),whiteFloor=new THREE.Color(0xe9e7e4),darkFloor=new THREE.Color(0x090810);
  let deathElapsed=0;
@@ -49,7 +64,11 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   sky.visible=grid.visible=starfield.visible=!voidSpace;edge.visible=!won;
   edge.material.color.setHex(b.phase===3?0x92734d:b.phase===2?(white?0x7a697a:0x8c839a):0x9bb6ca);
   edge.material.opacity=b.phase===3?.25:b.phase===2?.20:.45;
-  for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
+  // Normal play: desks exist only in phase one. Victory: they rebuild outward, then recede inward.
+  const deskFrac=won?easeUnit((deathElapsed-.4)/2.4)*(1-easeUnit((deathElapsed-4.2)/3)):1;
+  for(const m of deskMeshes){m.count=Math.round(positions.length*deskFrac);m.visible=won?m.count>0:!voidSpace;}
+  const hello=won?easeUnit((deathElapsed-5.8)/1.4):0;
+  student.visible=hello>0;if(hello>0){student.scale.setScalar(hello);student.position.set(b.x,0,b.z);}
   // Keep transitions legible, without a white-screen flash or per-frame allocation.
    const blend=dt>0?1-Math.exp(-Math.min(.05,dt)*4.4):1;
    scene.background.lerp(white?whiteTint:voidSpace?voidTint:studyTint,blend);
@@ -61,5 +80,5 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   hazardFx.update(g);shadowHand.update(g);absorbFx.update(g);
  }
- return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();shadowHand.dispose();absorbFx.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
