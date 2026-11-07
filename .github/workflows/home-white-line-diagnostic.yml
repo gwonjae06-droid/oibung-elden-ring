@@ -6,6 +6,8 @@ on:
       - 'src/journey-art.mjs'
       - 'spider-combat.html'
       - 'scripts/home-white-line-diagnostic.mjs'
+      - 'scripts/home-white-line-regression.mjs'
+      - 'tests/home-mural-seams.test.mjs'
       - '.github/workflows/home-white-line-diagnostic.yml'
   workflow_dispatch:
 permissions:
@@ -21,8 +23,19 @@ jobs:
           node-version: '22'
       - name: Install browser and PNG inspection
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0 pngjs@7.0.0
+      - name: Check mural source and no duplicate layer rules
+        run: node --test tests/home-mural-seams.test.mjs
       - name: Diagnose desktop and mobile home screen
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/home-ui-http.log 2>&1 &
           sleep 2
           node scripts/home-white-line-diagnostic.mjs
+          node scripts/home-white-line-regression.mjs
+      - name: Keep home screens for comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odenring-home-mural
+          path: artifacts/home-mural/
+          retention-days: 7
+          if-no-files-found: ignore

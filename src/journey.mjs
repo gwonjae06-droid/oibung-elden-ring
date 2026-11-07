@@ -6,11 +6,11 @@ import {flameBalance,buyForgeTier,refundForgeWeapon,investedFlames,grantForgeDev
 import {forgeScreen,flameRewardScreen,flameCounter} from './forge-view.mjs';
 import {playRewardPull} from './reward-pull.mjs';
 import {CHAPTER_MEMORIES} from './chapter-story.mjs';
-import {playJourneyTransition} from './journey-transition.mjs';
+import {playJourneyTransition} from './journey-transition.mjs?art=home-seam-v2-20261107';
 import {readBattleSession} from './battle-session.mjs';
 import {BOSSES,BOSS_NAMES,TRIAL_NAME,newRun,newTravelRun,latestUnlockedStage,canTravelTo,loadProfile,saveProfile,finishAttempt,advanceJourney,configureJourney} from './journey-state.mjs';
 import {BOSS_REGISTRY} from './boss-registry.mjs';
-import {JOURNEY_ART} from './journey-art.mjs?art=dice-giant-v3-crashfix';
+import {JOURNEY_ART} from './journey-art.mjs?art=home-seam-v2-20261107';
 import {createMenuTheme} from './menu-theme.mjs';
 import {AUDIO_CHANNELS,readAudioVolume,writeAudioVolume} from './audio-preferences.mjs';
 import {MOBILE_LANDSCAPE_GATE_HTML} from './mobile-landscape.mjs';

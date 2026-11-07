@@ -18,7 +18,7 @@ body[data-motion='reduced'] .j-seal{animation:none}
 @media(prefers-reduced-motion:reduce){.j-seal{animation:none}}
 /* Sanctuary mural: the five seals surround, rather than sit behind, the title. */
 #journey .j-temple:after{background:radial-gradient(ellipse at center,transparent 22%,#060b0e55 95%)}
-#journey .j-temple svg{width:100%;margin:0;opacity:1}
+#journey .j-temple svg{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:1;vertical-align:top;overflow:hidden;object-fit:fill}
 #journey[data-screen='home'] .j-main{justify-content:center;text-align:center;padding:70px 0 20px}
 #journey[data-screen='home'] .j-copy{max-width:440px}
 #journey[data-screen='home'] .j-title{font-size:clamp(62px,6vw,86px);letter-spacing:14px}
@@ -40,7 +40,7 @@ body[data-motion='reduced'] .j-rune{animation:none}
 .jt-half{position:absolute;inset:0;will-change:transform}.jt-left{clip-path:polygon(0 0,52% 0,48% 100%,0 100%)}.jt-right{clip-path:polygon(52% 0,100% 0,100% 100%,48% 100%)}
 .jt-slash{position:absolute;left:50%;top:-20%;height:140%;width:3px;background:#fff8dd;box-shadow:0 0 18px 8px #d5eaff88,0 0 60px 20px #eaf5ff55;transform:rotate(8deg);pointer-events:none}
 .jt-title{position:absolute;inset:auto 10% 15%;text-align:center;font:600 clamp(26px,5vw,60px) 'Noto Serif KR',serif;letter-spacing:8px;text-shadow:0 3px 24px #000;pointer-events:none}.jt-ending{height:100%;display:grid;place-items:center;font-size:clamp(40px,9vw,120px);color:#e2c888;text-shadow:0 0 40px #e2c88888}
-@media(max-width:650px){#journey[data-screen='home'] .j-main{min-height:650px;padding-top:110px;padding-bottom:110px}#journey[data-screen='home'] .j-copy{max-width:300px}#journey .j-temple svg{width:100%;height:100%;margin:0;overflow:visible}#journey .j-temple svg{object-fit:contain}#journey[data-screen='home'] .j-temple{opacity:.65}#journey[data-screen='home'] .j-prose{font-size:11px}#journey[data-screen='home'] .j-title{font-size:62px}#journey .j-temple{min-height:820px}}
+@media(max-width:650px){#journey[data-screen='home'] .j-main{min-height:650px;padding-top:110px;padding-bottom:110px}#journey[data-screen='home'] .j-copy{max-width:300px}#journey .j-temple svg{width:100%;height:100%;margin:0;overflow:hidden}#journey .j-temple svg{object-fit:fill}#journey[data-screen='home'] .j-temple{opacity:.65}#journey[data-screen='home'] .j-prose{font-size:11px}#journey[data-screen='home'] .j-title{font-size:62px}#journey .j-temple{min-height:820px}}
 @media(prefers-reduced-motion:reduce){.j-rune{animation:none}}
 #journey .j-wall-tall{display:none}
 @media(max-width:650px){#journey .j-wall-wide{display:none}#journey .j-wall-tall{display:block}#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,135px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,285px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,285px) scale(.55)}#journey .j-wall-tall [data-emblem='blood']{transform:translate(620px,850px) scale(.55)}#journey .j-wall-tall [data-emblem='dice']{transform:translate(980px,850px) scale(.55)}}
@@ -50,7 +50,7 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey[data-defeated~='kwon'] [data-emblem='spider'] .j-rune,#journey[data-defeated~='clown'] [data-emblem='clown'] .j-rune,#journey[data-defeated~='dice'] [data-emblem='dice'] .j-rune{filter:drop-shadow(0 0 12px #ffdc80);stroke:#ffe9ae}
 @keyframes seal-fire{to{opacity:.65;transform:translateY(-2px)}}@media(prefers-reduced-motion:reduce){.j-votive{animation:none!important}}body[data-motion='reduced'] .j-votive{animation:none!important}@media(max-width:650px){#journey .j-evolutions{grid-template-columns:1fr}}
 /* Photographic limestone reliefs; the victory fire is inside the engraved paths. */
-.j-photographic{background:#090c0d url('./assets/art/temple-wall-v1.jpg') center/cover}
+.j-photographic{background:#090c0d}
 #journey .j-photographic:after{background:radial-gradient(ellipse at center,#04080918 20%,#03060955 100%)}
 .j-photographic .j-stone-wall{filter:brightness(.82)}
 .j-photographic .j-relief image{filter:brightness(.78) saturate(.7)}
@@ -62,8 +62,8 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey[data-screen='home'] .j-primary{background:linear-gradient(110deg,#77613eeb,#b8995fe8);color:#fff0cd;border-color:#c5ab78;box-shadow:inset 0 1px #edd29944,0 3px 16px #0008}
 @media(max-width:650px){#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,120px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,280px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,280px) scale(.55)}}
 /* Emission is extracted from the artwork's real warm inlay pixels, so it follows its carving. */
-.j-photographic .j-relief .groove-inlay{filter:url(#stone-hot-inlay)}
-.j-photographic .mural-grooves{animation:inlay-ignite 2.8s ease-out both}
+.j-photographic .j-relief .groove-inlay{filter:none;opacity:.26;mix-blend-mode:screen}
+.j-photographic .mural-grooves{animation:none;clip-path:none}
 @keyframes inlay-ignite{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0)}}
 @media(prefers-reduced-motion:reduce){.j-photographic .mural-grooves{animation:none;clip-path:none}}body[data-motion='reduced'] .j-photographic .mural-grooves{animation:none;clip-path:none}
 /* Slow ritual motion: stone stays fixed while the light and air move around it. */
@@ -72,7 +72,7 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey[data-screen='home'] .j-haze{display:block;position:absolute;inset:-12%;background:radial-gradient(ellipse at 18% 85%,#b7c6c016,transparent 52%),radial-gradient(ellipse at 85% 20%,#e8d6ac0c,transparent 46%);animation:temple-haze 24s ease-in-out infinite alternate}
 #journey[data-screen='home'] .j-embers{opacity:.4;animation:temple-dust 29s linear infinite}
 #journey[data-screen='home'] .j-ash{display:block;position:absolute;inset:-20%;opacity:.35;background-image:radial-gradient(circle,#e6d8ae66 .8px,transparent 2px),radial-gradient(circle,#d6c39755 1.2px,transparent 3px);background-size:311px 227px,421px 337px;background-position:51px 83px,137px 19px;animation:temple-ash 38s linear infinite}
-#journey[data-screen='home'] .j-relief-sheen{display:block;animation:temple-carving-light 17s ease-in-out infinite;animation-delay:var(--seal-delay,0s)}
+/* Removed the SVG sweep rectangle which could appear as a moving white stripe. */
 #journey[data-screen='home'] .groove-inlay{animation:temple-fire 3.7s ease-in-out infinite;animation-delay:var(--seal-delay,0s)}
 #journey[data-screen='home'] .j-copy>*{animation:temple-reveal .95s cubic-bezier(.2,.7,.3,1) both}
 #journey[data-screen='home'] .j-copy>.j-title{animation:temple-reveal 1.1s .12s both,temple-title-glow 7s 1.3s ease-in-out infinite alternate}
@@ -291,3 +291,11 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey[data-defeated~='gyuwon'] [data-emblem='mirror'] .groove-inlay{
  opacity:.9;filter:brightness(1.35) drop-shadow(0 0 16px #ffd77a);
 }
+
+/* Home mural: a single cropped SVG photographic layer. The CSS background
+   is just dark fallback; there is no second misaligned wallpaper underneath. */
+#journey .j-photographic{background-color:#090c0d;background-image:none}
+#journey .j-temple{isolation:isolate}
+#journey .j-temple svg{overflow:hidden;backface-visibility:hidden}
+#journey .j-temple .j-stone-wall{pointer-events:none}
+#journey .j-relief-sheen{display:none!important}
