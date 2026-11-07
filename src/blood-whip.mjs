@@ -1,7 +1,7 @@
 // Interstitial range pressure for the blood monarch. Never replaces a
 // full pattern or hijacks the camera; all contact shares this fixed cable.
 export const BLOOD_WHIP=Object.freeze({
- minRange:13.5,maxRange:28,warning:.94,extension:.34,linger:.15,
+ minRange:13.5,maxRange:38,warning:.94,extension:.34,linger:.15,
  width:1.25,cooldown:5.4,phaseOneDamage:17,phaseTwoDamage:23
 });
 export const bloodWhipDuration=BLOOD_WHIP.warning+BLOOD_WHIP.extension+BLOOD_WHIP.linger;
