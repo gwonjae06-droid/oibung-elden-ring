@@ -62,7 +62,7 @@ export function createGyuwonMemoryWave({coarse=false}={}){
  for(const side of [-1,1]){
   const edge=[];for(let j=0;j<=10;j++){
    const y=.4+j*.55;
-   edge.push(new THREE.Vector3(side*(half+1.05),y,Math.sin(y/95*Math.PI)*14+
+   edge.push(new THREE.Vector3(side*(half+.10),y,Math.sin(y/95*Math.PI)*14+
     Math.sin(side*half*.045+y*.12)*1.45+1.6));
   }
   tube(edge,.22);
