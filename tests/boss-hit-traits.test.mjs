@@ -8,11 +8,12 @@ import {createDiceGame,stepDice,DICE_PATTERNS} from '../src/dice-combat.mjs';
 import {createBloodGame,startBloodPattern,stepBlood} from '../src/blood-combat.mjs';
 import {applyBossHitTrait,tickBossHitTraits,playerIncapacitated,clearBossHitTraits} from '../src/boss-hit-traits.mjs';
 import {tickPlayerResources} from '../src/player-tick.mjs';
+import {playerIncomingDamage} from '../src/weapon-stats.mjs';
 import {activeBossTrait,createBossHitTraitView,TRAIT_SYMBOLS} from '../src/boss-hit-trait-view.mjs';
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-6,`${a} != ${b}`);
 const advance=(g,seconds,fn=step,input={})=>{for(let left=seconds;left>1e-9;){const h=Math.min(left,.005);fn(g,h,input);left-=h;}};
 test('a real Kwon blade projectile applies two seconds of bleed without recursive hit events',()=>{
- const g=createGame('sword',{register:false}),p=g.player;g.bossShots.push({x:p.x,z:p.z,yaw:0,speed:0,life:1,damage:10});step(g,.01);assert.equal(p.hp,p.maxHp-10);assert.equal(p.traits.bleed,2);g.hitstop=0;g.boss.stun=10;advance(g,2);near(p.hp,p.maxHp-14);assert.equal(p.traits.bleed,0);assert.equal(g.events.filter(e=>e.type==='player-hit').length,1);
+ const g=createGame('sword',{register:false}),p=g.player;g.bossShots.push({x:p.x,z:p.z,yaw:0,speed:0,life:1,damage:10});step(g,.01);near(p.hp,p.maxHp-playerIncomingDamage(g,10));assert.equal(p.traits.bleed,2);g.hitstop=0;g.boss.stun=10;advance(g,2);near(p.hp,p.maxHp-playerIncomingDamage(g,10)-playerIncomingDamage(g,4,{dot:true}));assert.equal(p.traits.bleed,0);assert.equal(g.events.filter(e=>e.type==='player-hit').length,1);
 });
 test('bleed refreshes without stacking, boosts stamina by twenty percent, then stops',()=>{
  const g=createGame('sword',{register:false});g.player.stamina=0;applyBossHitTrait(g,10);tickPlayerResources(g,.5);near(g.player.stamina,18);tickBossHitTraits(g,.5);applyBossHitTrait(g,10);assert.equal(g.player.traits.bleed,2);const hp=g.player.hp;tickBossHitTraits(g,3);assert.ok(hp-g.player.hp>3.5&&hp-g.player.hp<=4,'bleed damage remains bounded');g.player.stamina=0;tickPlayerResources(g,.5);near(g.player.stamina,15);
@@ -60,7 +61,7 @@ test('low-health ordinary charge may kill but never bypasses explicit roll prote
 });
 test('Blood heals from accepted damage only, caps at max health and does not drain during roll protection',()=>{
  const hit=(roll=false)=>{const g=createBloodGame();g.boss.hp=4000;g.player.x=0;g.player.z=-5;startBloodPattern(g,'burst');if(roll)g.player.invuln=10;advance(g,g.blood.hazards[0].warn+.3,stepBlood);return g;};
- const g=hit();assert.equal(g.player.hp,82);near(g.boss.hp,4009.5);assert.ok(g.player.traits.drain>0);const missed=hit(true);assert.equal(missed.boss.hp,4000);assert.equal(missed.player.traits,undefined);
+ const g=hit();const actual=playerIncomingDamage(g,38);near(g.player.hp,g.player.maxHp-actual);near(g.boss.hp,4000+actual*.25);assert.ok(g.player.traits.drain>0);const missed=hit(true);assert.equal(missed.boss.hp,4000);assert.equal(missed.player.traits,undefined);
  g.boss.hp=g.boss.maxHp-1;applyBossHitTrait(g,20,{boss:'blood'});assert.equal(g.boss.hp,g.boss.maxHp);
 });
 test('drain is proportional to actual health lost, while terminal state cannot heal or retain icons',()=>{
