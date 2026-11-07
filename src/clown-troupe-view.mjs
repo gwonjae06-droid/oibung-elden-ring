@@ -93,10 +93,58 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    const wing=add(body,new THREE.ConeGeometry(.62,1.4,coarse?8:15,1,true),mat.crimson,'false-ringmaster-short-coat',0,.63,-.35);
    wing.rotation.x=-.18;
   }
+  // Real stage instruments remain attached to the skinned performer, not a
+  // free-floating attack visual. Hide them outside the authored show pose.
+  const props={};
+  if(role==='acrobat'){
+   const drum=new THREE.Group();drum.name='antique-circus-drum-and-sticks';body.add(drum);
+   const barrel=add(drum,new THREE.CylinderGeometry(.55,.55,.42,coarse?10:22),mat.crimson,'real-drum-barrel',0,1.10,.6);
+   barrel.rotation.x=Math.PI/2;
+   add(drum,new THREE.TorusGeometry(.55,.05,6,coarse?16:32),mat.gilt,'aged-drum-rim',0,1.10,.85);
+   for(const side of[-1,1]){const stick=add(drum,new THREE.CylinderGeometry(.025,.03,.8,6),mat.gilt,
+     'beating-drumstick',side*.3,1.85,.45);stick.rotation.x=.6;}
+   drum.visible=false;props.drum=drum;
+   const blades=[];
+   for(let i=0;i<3;i++){
+    const blade=add(body,new THREE.ConeGeometry(.09,.62,coarse?5:9),mat.gilt,'juggled-metal-knife');
+    blade.visible=false;blades.push(blade);
+   }
+   props.blades=blades;
+   const trapeze=new THREE.Group();trapeze.name='high-wire-trapeze-bar-and-ropes';body.add(trapeze);
+   for(const side of[-1,1])add(trapeze,new THREE.CylinderGeometry(.025,.025,2.5,6),mat.gilt,
+     'trapeze-rigged-rope',side*.78,3.0,.15);
+   const bar=add(trapeze,new THREE.CylinderGeometry(.055,.055,1.55,8),mat.gilt,
+     'trapeze-handheld-bar',0,1.75,.15);bar.rotation.z=Math.PI/2;
+   trapeze.visible=false;props.trapeze=trapeze;
+  }
+  if(role==='mimic'){
+   const cannon=new THREE.Group();cannon.name='forged-circus-cannon';body.add(cannon);
+   const gun=add(cannon,new THREE.CylinderGeometry(.35,.5,1.42,coarse?12:24),mat.gilt,
+     'iron-cannon-barrel',0,1.09,1.15);gun.rotation.x=Math.PI/2;
+   add(cannon,new THREE.TorusGeometry(.4,.06,8,coarse?20:40),mat.black,
+    'cannon-muzzle-lip',0,1.09,1.88);
+   cannon.visible=false;props.cannon=cannon;
+  }
+  if(role==='chorister'){
+   const candles=new THREE.Group();candles.name='choir-real-candle-pair';body.add(candles);
+   for(const side of[-1,1]){
+    add(candles,new THREE.CylinderGeometry(.075,.085,.6,7),mat.ivory,
+      'melted-choir-candle',side*.66,1.36,.58);
+    add(candles,new THREE.ConeGeometry(.12,.36,coarse?5:9),mat.ember,
+      'flickering-candle-flame',side*.66,1.86,.58);
+   }
+   candles.visible=false;props.candles=candles;
+  }
+  if(role==='firekeeper'){
+   const hoop=new THREE.Group();hoop.name='raised-ringmasters-fire-hoop';body.add(hoop);
+   add(hoop,new THREE.TorusGeometry(.94,.09,8,coarse?20:42),mat.gilt,
+      'antique-iron-fire-hoop',0,2.2,.65);
+   hoop.visible=false;props.hoop=hoop;
+  }
   // Newly summoned performers receive the same prefiltered PBR maps and
   // physically based environment shading as the boss, once at entrance.
   if(typeof onActorCreated==='function')onActorCreated(group);
-  return {group,body,head,jaw,mask,shoulders,legs,fire,strings,skirt,springs,yaw:null,role};
+  return {group,body,head,jaw,mask,shoulders,legs,fire,strings,skirt,springs,props,yaw:null,role};
  }
  function createHoop(z){
   const group=new THREE.Group();group.name='real-infernal-hoop-performance-cue';root.add(group);
@@ -190,6 +238,26 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    for(const f of v.fire)f.scale.y=1+(reduced?0:Math.sin(time*8+m.id)*.10);
    if(m.flash>0)v.mask.material=mat.ember;else v.mask.material=mat.ivory;
    for(const s of v.strings)s.rotation.z=Math.sin(time*3+m.id)*.03;
+   const pose=routine.pose;
+   if(v.props.drum){
+    v.props.drum.visible=pose==='drum';
+    v.props.drum.rotation.x=.03*routine.beat*routine.weight;
+   }
+   for(let i=0;i<(v.props.blades?.length||0);i++){
+    const blade=v.props.blades[i];blade.visible=pose==='juggle';
+    if(blade.visible){const angle=time*5+i*2*Math.PI/3;
+     blade.position.set(Math.sin(angle)*.75,2.7+Math.cos(angle)*.55,.8);
+     blade.rotation.set(time*6+i,time*4+i,Math.sin(angle));
+    }
+   }
+   if(v.props.trapeze){v.props.trapeze.visible=pose==='vault';
+    v.props.trapeze.rotation.x=Math.sin(time*2.8)*.14*routine.weight;}
+   if(v.props.cannon){v.props.cannon.visible=pose==='cannon';
+    v.props.cannon.rotation.x=Math.sin(time*3.7)*.06*routine.weight;}
+   if(v.props.candles){v.props.candles.visible=pose==='sing';
+    v.props.candles.rotation.z=Math.sin(time*2.4)*.04*routine.weight;}
+   if(v.props.hoop){v.props.hoop.visible=pose==='hoop';
+    v.props.hoop.rotation.z=Math.sin(time*2.5)*.11*routine.weight;}
   }
   for(const [id,v] of live)if(!seen.has(id)){root.remove(v.group); // Shared mesh geometry/material survive; private parts are reclaimed.
    v.group.traverse(o=>{if(o.geometry&&o.geometry!==geo&&o.geometry!==cylinder)o.geometry.dispose();});
