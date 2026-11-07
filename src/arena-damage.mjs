@@ -1,3 +1,4 @@
+import {KWON_THREE} from './kwon-third-phase.mjs';
 const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
@@ -15,12 +16,19 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'defeated'});
   emit(g,'victory');return damage;
  }
- if(b.phase===1&&b.hp<=b.maxHp*.5){
-  Object.assign(b,{phase:2,state:'transition',t:0,queue:[],poise:0,stun:0,punishable:false});
+ // Clown still has its original two-phase transformation. Kwon gains
+ // distinct 100-66.7%, 66.7-33.3%, 33.3-0% phases.
+ const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?.5:KWON_THREE.first)?2:
+  !g.clown&&b.phase===2&&b.hp<=b.maxHp*KWON_THREE.second?3:null;
+ if(nextPhase!==null){
+  Object.assign(b,{phase:nextPhase,state:'transition',t:0,queue:[],poise:0,
+   stun:0,punishable:false,from:null,motionFrom:null,riftFired:false,
+   pendingOpening:null,closeCooldown:0,hug:0});
   g.projectiles=[];g.bossShots=[];g.player.action=null;
+  if(Array.isArray(g.kwonFractures))g.kwonFractures.length=0;
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'transition',name:null,f:{},punish:false,noSeparate:false});
-  emit(g,'phase');
- }else if(!developer&&b.poise>=(b.phase===2?280:180)&&!['transition','stagger'].includes(b.state)){
+  emit(g,'phase',{phase:nextPhase});
+ }else if(!developer&&b.poise>=(b.phase>=2?280:180)&&!['transition','stagger'].includes(b.state)){
   Object.assign(b,{poise:0,state:'stagger',t:0,queue:[],punishable:false});emit(g,'stagger');
  }
  return damage;
