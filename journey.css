@@ -53,16 +53,17 @@ body[data-motion='reduced'] .j-rune{animation:none}
 .j-photographic{background:#090c0d}
 #journey .j-photographic:after{background:radial-gradient(ellipse at center,#04080918 20%,#03060955 100%)}
 .j-photographic .j-stone-wall{filter:brightness(.82)}
-.j-photographic .j-relief image{filter:brightness(.78) saturate(.7)}
+.j-photographic .j-relief .j-relief-photo{filter:brightness(.78) saturate(.7)}
 .j-photographic .mural-grooves{opacity:0;fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-#journey[data-defeated~='kwon'] [data-boss='kwon'] .mural-grooves,#journey[data-defeated~='clown'] [data-boss='clown'] .mural-grooves,#journey[data-defeated~='dice'] [data-boss='dice'] .mural-grooves,#journey[data-defeated~='blood'] [data-boss='blood'] .mural-grooves,#journey[data-defeated~='mirror'] [data-boss='mirror'] .mural-grooves{opacity:1}
+#journey[data-defeated~='kwon'] [data-boss='kwon'] .mural-grooves,#journey[data-defeated~='clown'] [data-boss='clown'] .mural-grooves,#journey[data-defeated~='dice'] [data-boss='dice'] .mural-grooves,#journey[data-defeated~='blood'] [data-boss='blood'] .mural-grooves,#journey[data-defeated~='gyuwon'] [data-boss='mirror'] .mural-grooves{opacity:1;animation:inlay-ignite 2.8s ease-out both}
 #journey[data-screen='home'] .j-copy{background:radial-gradient(ellipse,#080b0ec9,transparent 73%);text-shadow:0 2px 8px #000}
 #journey[data-screen='home'] .j-title{color:#ede0bf;text-shadow:0 2px 2px #000,0 -1px 0 #f3e5bb55,0 0 24px #000;letter-spacing:16px}
 #journey .j-top{border-bottom-color:transparent}#journey .j-footer{border-top-color:#b19b6833}
 #journey[data-screen='home'] .j-primary{background:linear-gradient(110deg,#77613eeb,#b8995fe8);color:#fff0cd;border-color:#c5ab78;box-shadow:inset 0 1px #edd29944,0 3px 16px #0008}
 @media(max-width:650px){#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,120px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,280px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,280px) scale(.55)}}
-/* Emission is extracted from the artwork's real warm inlay pixels, so it follows its carving. */
-.j-photographic .j-relief .groove-inlay{filter:none;opacity:.26;mix-blend-mode:screen}
+/* Cleared boss reliefs gradually fill bottom-to-top with crimson extracted
+   from the original photo. No floating sparkles or full-width sweep rectangle. */
+.j-photographic .j-relief .groove-inlay{opacity:.94;mix-blend-mode:screen}
 .j-photographic .mural-grooves{animation:none;clip-path:none}
 @keyframes inlay-ignite{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0)}}
 @media(prefers-reduced-motion:reduce){.j-photographic .mural-grooves{animation:none;clip-path:none}}body[data-motion='reduced'] .j-photographic .mural-grooves{animation:none;clip-path:none}
@@ -73,7 +74,7 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey[data-screen='home'] .j-embers{opacity:.4;animation:temple-dust 29s linear infinite}
 #journey[data-screen='home'] .j-ash{display:block;position:absolute;inset:-20%;opacity:.35;background-image:radial-gradient(circle,#e6d8ae66 .8px,transparent 2px),radial-gradient(circle,#d6c39755 1.2px,transparent 3px);background-size:311px 227px,421px 337px;background-position:51px 83px,137px 19px;animation:temple-ash 38s linear infinite}
 /* Removed the SVG sweep rectangle which could appear as a moving white stripe. */
-#journey[data-screen='home'] .groove-inlay{animation:temple-fire 3.7s ease-in-out infinite;animation-delay:var(--seal-delay,0s)}
+#journey[data-screen='home'] .groove-inlay{animation:none}
 #journey[data-screen='home'] .j-copy>*{animation:temple-reveal .95s cubic-bezier(.2,.7,.3,1) both}
 #journey[data-screen='home'] .j-copy>.j-title{animation:temple-reveal 1.1s .12s both,temple-title-glow 7s 1.3s ease-in-out infinite alternate}
 #journey[data-screen='home'] .j-subtitle{animation-delay:.24s}#journey[data-screen='home'] .j-prose{animation-delay:.38s}#journey[data-screen='home'] .j-menu{animation-delay:.52s}#journey[data-screen='home'] .j-links{animation-delay:.66s}#journey[data-screen='home'] .j-route{animation-delay:.8s}#journey[data-screen='home'] .j-status{animation-delay:.9s}
@@ -286,10 +287,10 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
    progression reward, NOT an authored ending choice. gyuwon is the save ID. */
 #journey[data-defeated~='gyuwon'] [data-emblem='mirror'] .mural-grooves,
 #journey[data-defeated~='gyuwon'] [data-boss='mirror'] .mural-grooves{
- opacity:1;filter:drop-shadow(0 0 5px #ffe9a6) drop-shadow(0 0 20px #f5c46b);
+ opacity:1;animation:inlay-ignite 2.8s ease-out both;
 }
 #journey[data-defeated~='gyuwon'] [data-emblem='mirror'] .groove-inlay{
- opacity:.9;filter:brightness(1.35) drop-shadow(0 0 16px #ffd77a);
+ opacity:.94;mix-blend-mode:screen;
 }
 
 /* Home mural: a single cropped SVG photographic layer. The CSS background

@@ -7,6 +7,7 @@ on:
       - 'spider-combat.html'
       - 'scripts/home-white-line-diagnostic.mjs'
       - 'scripts/home-white-line-regression.mjs'
+      - 'scripts/home-victory-crimson-smoke.mjs'
       - 'tests/home-mural-seams.test.mjs'
       - '.github/workflows/home-white-line-diagnostic.yml'
   workflow_dispatch:
@@ -31,6 +32,7 @@ jobs:
           sleep 2
           node scripts/home-white-line-diagnostic.mjs
           node scripts/home-white-line-regression.mjs
+          node scripts/home-victory-crimson-smoke.mjs
       - name: Keep home screens for comparison
         if: always()
         uses: actions/upload-artifact@v4
