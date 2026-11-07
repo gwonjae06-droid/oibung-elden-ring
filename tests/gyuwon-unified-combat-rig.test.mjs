@@ -47,6 +47,9 @@ test('all weapons now count accurate landing damage and hit rewards through shar
   assert.ok(g.boss.hp<g.boss.maxHp,weapon+' should hit authored torso');
   assert.ok(g.stats.hits>=1,weapon+' should count hits');
   assert.ok(g.stats.damage>0,weapon+' should count dealt damage');
+  const landed=g.events.find(e=>e.type==='boss-hit'&&e.part);
+  assert.ok(landed&&Number.isFinite(landed.x)&&Number.isFinite(landed.y)&&Number.isFinite(landed.z),
+   weapon+' impact FX must follow the struck real body part');
  }
  const bonus=createGyuwonGame('bow');
  assert.equal(bonus.applyBonusDamage(12,0,{}),12);
