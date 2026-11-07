@@ -34,3 +34,19 @@ test('style creation failure settles without rejecting or blocking the remaining
   const styles=loadBattleStyles(root,doc,['base.css','skills.css']);links[0].onload();
   assert.equal(await styles.ready,false);styles.dispose();
 });
+
+test('shared HUD exposes real ranged counts and automatic reload remaining in every encounter',()=>{
+ const elements=new Map(),root={getElementById(id){
+  if(!elements.has(id)){const attrs=new Map();elements.set(id,{textContent:'',dataset:{},style:{},
+   parentElement:{getAttribute:k=>attrs.get(k),setAttribute:(k,v)=>attrs.set(k,v)}});}
+  return elements.get(id);
+ }};
+ const game={weapon:'bow',player:{hp:100,maxHp:100,stamina:80,potions:3,
+  ranged:{capacity:8,loaded:3,shotCost:1,reloadDuration:1.4,remaining:0,pending:false}},
+  boss:{hp:4822,maxHp:4822}},skill={ratio:0,name:'궁술',text:'준비',card:'',ready:false};
+ renderSharedHud(root,game,skill,{weaponName:'활',lockLabel:'록온'});
+ assert.equal(root.getElementById('weapon-label').textContent,'활 · 3 / 8');
+ game.player.ranged.loaded=0;game.player.ranged.remaining=.85;
+ renderSharedHud(root,game,skill,{weaponName:'활',lockLabel:'록온'});
+ assert.equal(root.getElementById('weapon-label').textContent,'활 · 장전 0.8초');
+});
