@@ -102,13 +102,3 @@
 body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journey .j-flame-icon,body[data-motion="reduced"] #journey .j-earned-rays,body[data-motion="reduced"] #journey .j-forge-halo{animation:none!important}
 
 
-/* The flame shortcut is chosen before starting a trial, never on death. */
-.j-skip-offer{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:18px auto;padding:16px 20px;max-width:680px;text-align:left;border:1px solid #a8874a55;background:linear-gradient(115deg,#231d13cc,#101817cc);border-radius:3px;color:#e5d7b8}
-.j-skip-offer strong{font-family:serif;font-size:18px;letter-spacing:.12em;color:#efd395}
-.j-skip-offer p{margin:6px 0;line-height:1.6;font-size:13px}
-.j-skip-offer small{color:#b7ae96;font-size:12px}
-.j-skip-offer .j-skip-toggle{flex-shrink:0;padding:11px 17px;border:1px solid #bb985c88;color:#f1d49c;background:#31271988;cursor:pointer}
-.j-skip-offer .j-skip-toggle:disabled{opacity:.45;cursor:default}
-.j-skip-selected{border-color:#f0c36a;background:linear-gradient(115deg,#6d461c77,#18211fcc);box-shadow:0 0 24px #e7a64318}
-.j-skip-selected .j-skip-toggle{background:#91642e66}
-@media(max-width:600px),(max-height:500px){.j-skip-offer{padding:10px 13px;gap:10px;margin:10px auto}.j-skip-offer strong{font-size:15px}.j-skip-offer p{font-size:12px;margin:3px 0}.j-skip-offer small{font-size:11px}.j-skip-offer .j-skip-toggle{padding:9px 12px}}
