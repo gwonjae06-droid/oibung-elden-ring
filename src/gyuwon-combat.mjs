@@ -157,7 +157,16 @@ export function startGyuwonPattern(g,id,{replay=null}={}){
   for(let i=0;i<s.roll+3;i++){const a=i*(s.memoryVariant===1?1.7:2.4)+s.memoryVariant*.45;hazard(g,'circle',{x:i===0?p.x:Math.sin(a)*16,z:i===0?p.z:Math.cos(a)*16,r:3.3,warn:1.3+i*.4,visual:'dice',damage:30});}
   for(let i=0;i<6;i++)if(i!==s.roll%6)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI/3,arc:.36,r:26,warn:4.8,life:.5,damage:28,visual:'roulette'});
  }
- if(id==='tsunami')hazard(g,'wave',{x:0,z:-180,gap:Math.max(-13,Math.min(13,p.x*.5+(s.memoryVariant-1)*1.4)),opening:3.2,depth:2.2,speed:60,warn:2,life:6,damage:65,visual:'wave'});
+ if(id==='tsunami'){
+  // Combined memory: Gyuwon recasts Kwon's cleave through the remembered tsunami. The cut lands on
+  // the corridor, then the corridor slides sideways toward a new gap (collision and mesh both read h.gap).
+  // The wave stays hazards[0]; the cleave lane is appended after it.
+  const gap0=Math.max(-13,Math.min(13,p.x*.5+(s.memoryVariant-1)*1.4));
+  const dir=gap0>1?-1:gap0<-1?1:(s.stageIndex%2?-1:1);
+  hazard(g,'wave',{x:0,z:-180,gap:gap0,opening:3.2,depth:2.2,speed:60,warn:2,life:6,damage:65,visual:'wave',
+   gapTarget:Math.max(-13,Math.min(13,gap0+dir*4)),shiftAt:2.55,shiftSpeed:5});
+  lane(gap0,0,0,2.2,{width:2.8,length:900,life:.35,damage:26,visual:'sword'});
+ }
  if(id==='chalk'){
   for(let i=0;i<4;i++)lane((i-1.5)*(s.memoryVariant===1?8.5:7),0,s.memoryVariant===2?.12:0,1.2+i*.55,{visual:'formula'});
   lane(p.x,p.z,.78,3.5,{length:26,visual:'cross'});lane(p.x,p.z,-.78,4,{length:26,visual:'cross'});
@@ -255,7 +264,10 @@ function tickBoss(g,dt){
   }return;
  }
  s.t+=dt;const spec=GYUWON_PATTERNS[s.pattern];s.elevation=0;
- for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;if(!h.preview)emit(g,'gyuwon-impact',{pattern:s.pattern});}if(!h.preview&&h.damage>0&&h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
+ for(const h of s.hazards){h.age+=dt;
+  // The remembered cleave slides the tsunami's corridor; collision and the mesh both read h.gap.
+  if(h.gapTarget!==undefined&&h.age>=h.shiftAt){const gd=h.gapTarget-h.gap;h.gap+=Math.sign(gd)*Math.min(Math.abs(gd),h.shiftSpeed*dt);}
+  if(!h.fired&&h.age>=h.warn){h.fired=true;if(!h.preview)emit(g,'gyuwon-impact',{pattern:s.pattern});}if(!h.preview&&h.damage>0&&h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
  if(s.t>=spec.duration){
   s.hazards.length=0;b.state='recovery';

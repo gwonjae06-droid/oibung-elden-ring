@@ -57,5 +57,20 @@ test('white rehearsals are invulnerable and dark memories replay only between at
  assert.ok(damageGyuwon(g,100)>0);
 });
 test('all giant memories have finite telegraphs and complete with a counterattack window',()=>{for(const id of MEMORY_ORDER){const g=createGyuwonGame();g.boss.phase=3;g.player.invuln=100;assert.ok(startGyuwonPattern(g,id));assert.ok(g.gyuwon.hazards.length);for(const h of g.gyuwon.hazards)assert.ok(Number.isFinite(h.warn)&&h.warn>=1);advance(g,GYUWON_PATTERNS[id].duration+.1);assert.equal(g.boss.state,'recovery',id);assert.equal(g.gyuwon.hazards.length,0);}});
-test('wave has a reachable opening and only harms players outside it as the volume crosses',()=>{const safe=createGyuwonGame();safe.boss.phase=3;safe.player.x=0;safe.player.z=0;startGyuwonPattern(safe,'tsunami');advance(safe,7.9);assert.equal(safe.player.hp,safe.player.maxHp);const hit=createGyuwonGame();hit.boss.phase=3;hit.player.x=10;hit.player.z=0;startGyuwonPattern(hit,'tsunami');advance(hit,7.9);assert.ok(hit.player.hp<hit.player.maxHp);});
+test('wave has a reachable opening and only harms players outside it as the volume crosses',()=>{
+ // The remembered cleave slides the corridor, so a player must follow it to stay inside.
+ const safe=createGyuwonGame();safe.boss.phase=3;safe.player.x=0;safe.player.z=0;startGyuwonPattern(safe,'tsunami');
+ const wave=safe.gyuwon.hazards[0];assert.equal(wave.shape,'wave');assert.ok(Math.abs(wave.gapTarget-wave.gap)>=3);
+ for(let i=0;i<Math.ceil(7.9*120);i++){const dx=wave.gapTarget-safe.player.x;stepGyuwon(safe,1/120,{x:Math.abs(dx)>.15?Math.sign(dx):0,z:0});}
+ assert.equal(safe.player.hp,safe.player.maxHp);
+ const hit=createGyuwonGame();hit.boss.phase=3;hit.player.x=10;hit.player.z=0;startGyuwonPattern(hit,'tsunami');advance(hit,7.9);assert.ok(hit.player.hp<hit.player.maxHp);
+});
+test('the remembered cleave shifts the wave corridor before the wave reaches the arena',()=>{
+ const g=createGyuwonGame();g.boss.phase=3;g.player.invuln=100;startGyuwonPattern(g,'tsunami');
+ const wave=g.gyuwon.hazards[0],start=wave.gap;
+ assert.ok(g.gyuwon.hazards.some(h=>h.visual==='sword'&&h.warn<wave.shiftAt),'the cleave is telegraphed before the corridor moves');
+ advance(g,2.5);assert.equal(wave.gap,start);
+ advance(g,1.1);assert.ok(Math.abs(wave.gap-wave.gapTarget)<1e-9);
+ assert.ok(wave.z+(wave.age-wave.warn)*wave.speed<-20,'the corridor finishes moving while the wave is still far from the arena');
+});
 test('memory stage changes accelerate at low health independently of active hazards',()=>{assert.ok(memoryInterval(.03)<memoryInterval(.25));const g=createGyuwonGame();g.boss.phase=3;g.boss.hp=g.boss.maxHp*.03;startGyuwonPattern(g,'tsunami');const wave=g.gyuwon.hazards[0];advance(g,1.1);assert.notEqual(g.gyuwon.stageMemory,'sword');assert.ok(g.gyuwon.hazards.includes(wave));});
