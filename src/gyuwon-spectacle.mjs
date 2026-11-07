@@ -65,7 +65,7 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   }
   attacks.set(h.id,g);return g;
  }
- const sharedGeometries=new Set([cube,sphere,cylinder,ring,spotlightGeo,bladeGeometry]),
+ const sharedGeometries=new Set([cube,sphere,cylinder,ring,bladeGeometry]),
   sharedMaterials=new Set([gold,dust,swordMetal]);
  function releaseAttack(id,group){
   if(group===wavePool.group){
