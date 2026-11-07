@@ -1,0 +1,48 @@
+name: Clown act-two legacy mini-boss and living troupe QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/clown-legacy-echo.mjs'
+      - 'src/clown-legacy-echo-view.mjs'
+      - 'src/clown-troupe.mjs'
+      - 'src/clown-troupe-view.mjs'
+      - 'src/clown-troupe-patterns.mjs'
+      - 'src/clown-combat.mjs'
+      - 'src/clown-phase2-score.mjs'
+      - 'src/clown-phase2-performance.mjs'
+      - 'src/clown-battle.mjs'
+      - 'src/clown-ringmaster-actor.mjs'
+      - 'tests/clown-act-two-revival.test.mjs'
+      - '.github/workflows/clown-act2-revival.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revival:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install existing Three dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Confirm live combat and cinematic syntax
+        run: |
+          for f in src/clown-legacy-echo.mjs src/clown-legacy-echo-view.mjs src/clown-troupe.mjs src/clown-troupe-view.mjs src/clown-troupe-patterns.mjs src/clown-combat.mjs src/clown-phase2-score.mjs src/clown-phase2-performance.mjs src/clown-battle.mjs src/clown-ringmaster-actor.mjs; do node --check "$f"; done
+      - name: Test source mini boss, rolling hitbox, six ensemble performances, old combat and director identity
+        run: >
+          node --test
+          tests/clown-act-two-revival.test.mjs
+          tests/clown-ringmaster-autonomy.test.mjs
+          tests/clown-ensemble-repertoire.test.mjs
+          tests/clown-encore-escalation.test.mjs
+          tests/clown-uncanny-circus.test.mjs
+          tests/clown-circus-rebuild.test.mjs
+          tests/clown-motion-realism.test.mjs
+          tests/clown-patterns.test.mjs
