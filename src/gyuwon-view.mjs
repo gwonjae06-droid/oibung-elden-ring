@@ -52,5 +52,5 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   hazardFx.update(g);
  }
- return {root,update,clear,prewarm:(renderer,camera)=>recall.prewarm(renderer,camera),event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
