@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {CIRCUS_ROLES} from './clown-troupe.mjs';
+import {solveFixedLimb,stageFootTarget,circusFootPhasing,smoothYaw} from './clown-performance-rig.mjs';
+import {createSpringBank} from './secondary-physics.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 // PBR geometry, articulating legs, role-specific apparatus, frame-independent
 // movement and real theatrical cues. The troupe exists in the combat state;
@@ -7,16 +9,20 @@ import {disposeScene} from './runtime/scene-resources.mjs';
 export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='seulwoo-living-circus-troupe';scene.add(root);
  const live=new Map(),hoops=new Map();
+ const direction=new THREE.Vector3(),from=new THREE.Vector3(),to=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+ function bone(mesh,a,b){from.set(...a);to.set(...b);direction.copy(to).sub(from);
+  mesh.position.copy(from).add(to).multiplyScalar(.5);mesh.scale.y=Math.max(.001,direction.length());
+  mesh.quaternion.setFromUnitVectors(up,direction.normalize());}
  const geo=new THREE.SphereGeometry(1,coarse?12:22,coarse?8:16),
   cylinder=new THREE.CylinderGeometry(1,1,1,coarse?8:15);
  const mat={
-  velvet:new THREE.MeshPhysicalMaterial({color:0x381621,roughness:.9,sheen:.65}),
-  crimson:new THREE.MeshStandardMaterial({color:0x8e273c,roughness:.8}),
-  ivory:new THREE.MeshPhysicalMaterial({color:0xd2c5b6,roughness:.72}),
+  velvet:new THREE.MeshPhysicalMaterial({color:0x381621,roughness:.94,sheen:.47,sheenColor:0x73384a}),
+  crimson:new THREE.MeshPhysicalMaterial({color:0x763044,roughness:.86,sheen:.36,sheenColor:0xa35d61}),
+  ivory:new THREE.MeshPhysicalMaterial({color:0xcbbfb2,roughness:.79,clearcoat:.14,clearcoatRoughness:.81}),
   black:new THREE.MeshStandardMaterial({color:0x100e16,roughness:.52}),
-  gilt:new THREE.MeshStandardMaterial({color:0x9b7852,metalness:.69,roughness:.35}),
+  gilt:new THREE.MeshStandardMaterial({color:0x8e7759,metalness:.73,roughness:.43}),
   cyan:new THREE.MeshStandardMaterial({color:0x70a9a4,roughness:.67,emissive:0x12362e}),
-  ember:new THREE.MeshStandardMaterial({color:0xe56b36,roughness:.59,emissive:0x7c2214,emissiveIntensity:.72})
+  ember:new THREE.MeshStandardMaterial({color:0xe18a51,roughness:.54,emissive:0x9d3118,emissiveIntensity:.78})
  };
  const add=(parent,g,m,name,x=0,y=0,z=0)=>{
   const o=new THREE.Mesh(g,m);o.name=name;o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o;
@@ -30,10 +36,15 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
   oval(body,clothes,'volumetric-theatre-costume',0,1.42,0,.56,.9,.36);
   const skirt=add(body,new THREE.ConeGeometry(.73,1.14,coarse?10:22,1,true),clothes,'ragged-velvet-coat-hem',0,.7,0);
   skirt.rotation.y=.21;
+  const springs=createSpringBank();
   for(const s of [-1,1]){
-   const leg=new THREE.Group();leg.position.set(s*.30,.75,0);body.add(leg);legs.push(leg);
-   tube(leg,mat.black,'articulated-trouser',0,-.28,0,.16,.66);
-   oval(leg,mat.black,'solid-stage-shoe',0,-.61,.18,.23,.15,.39);
+   // Each troupe member has real, fixed-length thigh, knee, calf and shoe.
+   // The old one-piece swinging trouser sent shoes through the stage.
+   const thigh=tube(body,mat.black,'articulated-troupe-thigh',0,0,0,.16,1);
+   const shin=tube(body,clothes,'articulated-troupe-shin',0,0,0,.14,1);
+   const knee=oval(body,clothes,'constrained-troupe-knee',0,0,0,.19,.21,.2);
+   const shoe=oval(body,mat.black,'solid-stage-shoe',0,0,0,.23,.15,.39);
+   legs.push({side:s,thigh,shin,knee,shoe});
    const arm=new THREE.Group();arm.position.set(s*.52,1.94,0);body.add(arm);shoulders.push(arm);
    tube(arm,clothes,'articulated-performer-arm',s*.10,-.33,0,.16,.79);
    oval(arm,mat.ivory,'separate-gloved-hand',s*.17,-.75,.09,.17,.19,.20);
@@ -62,7 +73,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
    for(const s of [-1,1]){
     const torch=add(body,new THREE.CylinderGeometry(.08,.12,1.2,10),mat.gilt,'burning-circus-torch',s*.79,1.62,.25);
     const flame=add(body,new THREE.ConeGeometry(.27,.9,coarse?8:16),mat.ember,'actual-visible-fire-cue',s*.79,2.62,.25);
-    fire.push(flame,torch);
+    fire.push(flame);
    }
   }
   if(role==='acrobat'){
@@ -77,7 +88,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
    const wing=add(body,new THREE.ConeGeometry(.62,1.4,coarse?8:15,1,true),mat.crimson,'false-ringmaster-short-coat',0,.63,-.35);
    wing.rotation.x=-.18;
   }
-  return {group,body,head,jaw,mask,shoulders,legs,fire,strings,role};
+  return {group,body,head,jaw,mask,shoulders,legs,fire,strings,skirt,springs,yaw:null,role};
  }
  function createHoop(z){
   const group=new THREE.Group();group.name='real-infernal-hoop-performance-cue';root.add(group);
@@ -97,21 +108,42 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
    // Curtains reveal newly summoned actors over several frames instead of
    // snapping fully formed NPCs into existence on top of the player.
    v.group.scale.setScalar(Math.min(1,Math.max(.025,m.age/.45))*(m.down?1-.25*Math.min(1,m.death):1));
-   v.group.rotation.y=m.yaw;
+   v.yaw=v.yaw===null?m.yaw:smoothYaw(v.yaw,m.yaw,h,m.cast>0?25:14);
+   v.group.rotation.y=v.yaw;
    v.group.visible=!m.down||m.death<1.45;
    const moving=Math.min(1,Math.hypot(m.vx,m.vz)/Math.max(1,CIRCUS_ROLES[m.role].speed));
-   v.body.position.y=m.down?-Math.min(1,m.death*2)*.35:sway+moving*.06;
-   v.body.rotation.set(m.down?Math.min(1.25,m.death*3):m.cast>0?-.11:0,0,
-    m.down?Math.min(.8,m.death*1.2):sway*.4);
+   v.body.position.y=v.springs.step('pelvis-rise',m.down?-Math.min(1,m.death*2)*.35:sway+moving*.035,h,14);
+   v.body.rotation.set(
+    v.springs.step('pitch',m.down?Math.min(1.2,m.death*3):m.cast>0?-.13:0,h,15),0,
+    v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):sway*.4,h,12));
+   v.skirt.rotation.x=v.springs.step('skirt',-.05+moving*.2+m.cast*.024,h,9);
    for(let i=0;i<2;i++){
-    const s=i?1:-1;
-    v.legs[i].rotation.x=m.down?0:Math.sin(m.step*2.6+s*Math.PI)*.5*moving;
-    v.shoulders[i].rotation.z=s*(m.cast>0?-.55:Math.sin(time*1.8+s)*.14);
-    v.shoulders[i].rotation.x=m.cast>0?-.65:Math.sin(m.step*2.6+s*Math.PI)*.16*moving;
+    const side=i?1:-1,L=v.legs[i],phase=circusFootPhasing(m.step*3.0,moving,side),
+      hip=[side*.30,.92,0];
+    // Do not rely on a long capsule as a fake leg. Plant the actual shoe
+    // after all parent transforms; swing toes leave the floor voluntarily.
+    v.body.updateWorldMatrix(true,false);
+    const target=stageFootTarget([side*.31,.16+phase.lift,phase.travel],
+      point=>v.body.localToWorld(new THREE.Vector3(...point)).toArray(),
+      point=>v.body.worldToLocal(new THREE.Vector3(...point)).toArray(),
+      {floor:0,soleRadius:.15,worldScale:v.group.scale.y,plant:phase.support&&!m.down});
+    const rig=solveFixedLimb(hip,target,{
+      upper:.53,lower:.51,pole:[side*.34,.03,.36]});
+    bone(L.thigh,rig.start,rig.joint);bone(L.shin,rig.joint,rig.end);
+    L.knee.position.set(...rig.joint);L.shoe.position.set(...rig.end);
+    // Keep the toe more horizontal on stage and tilt during the airborne step.
+    L.shoe.rotation.x=v.springs.step('toe-'+side,phase.lift>0?-.21*phase.lift/Math.max(.02,.23):0,h,16)-v.body.rotation.x;
+    const arm=v.shoulders[i];
+    arm.rotation.z=v.springs.step('arm-spread-'+side,
+      side*(m.cast>0?-.56:Math.sin(time*1.8+side)*.14),h,14);
+    arm.rotation.x=v.springs.step('arm-reach-'+side,
+      m.cast>0?-.65:Math.sin(m.step*3.0+side*Math.PI)*.16*moving,h,15);
    }
-   v.head.rotation.x=m.cast>0?-.17:Math.sin(time*.8+m.id)*.055;
-   v.jaw.scale.y=m.role==='chorister'&&m.cast>0?2.2:1;
-   for(const f of v.fire)f.scale.y=1+(reduced?0:Math.sin(time*8+m.id)*.12);
+   v.head.rotation.x=v.springs.step('mask-head',m.cast>0?-.17:Math.sin(time*.8+m.id)*.055,h,12);
+   // The mouth geometry's authored Y radius is .08, not 1. The old
+   // assignment inflated singers' mouths into a giant slab on every note.
+   v.jaw.scale.y=.08*(1+(m.role==='chorister'&&m.cast>0?1.4:0));
+   for(const f of v.fire)f.scale.y=1+(reduced?0:Math.sin(time*8+m.id)*.10);
    if(m.flash>0)v.mask.material=mat.ember;else v.mask.material=mat.ivory;
    for(const s of v.strings)s.rotation.z=Math.sin(time*3+m.id)*.03;
   }
