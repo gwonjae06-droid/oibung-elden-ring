@@ -13,6 +13,13 @@ const COLOR=Object.freeze({
  paradox:0x976d8a,erasure:0xb6ada9,counterproof:0x7a608d,
  sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2
 });
+// Each phase speaks its own material language, so the player knows where they are at a glance:
+// phase one is exam paper (flat standing pages), phase two is proof (slim crossed crystal blades),
+// phase three is remembered gold (three-sided ember spires). The same footprint, a different body.
+const LANG={};
+for(const id of ['line','mark','repeat','choice','contradiction','timetable','blank'])LANG[id]='page';
+for(const id of ['negate','reverse','stop','verdict','mirror','axiom','paradox','erasure','counterproof'])LANG[id]='crystal';
+for(const id of ['sword','circus','gamble','chalk'])LANG[id]='ember';
 // Every pattern has its own motion language. h: fragment height, jitter: tremble while charging
 // (stops at impact so the hit lands on the exact footprint), spin: ring/circle turn rate (rad/s),
 // pulse: glow beat while charging, snap: how hard the strike pops. Cosmetic only: footprint,
@@ -43,30 +50,64 @@ const STYLE=Object.freeze({
  chalk:{h:.90,jitter:.03,spin:0,pulse:5,snap:.5}
 });
 const STYLE_DEFAULT=Object.freeze({h:1,jitter:0,spin:0,pulse:5,snap:.5});
-const WHITE=new THREE.Color(0xffffff);
-// White space only RECORDS a proof (calm chalk); the dark space REALIZES it (ink fracture).
-const PREVIEW_COLOR=0xe6e1d4,INK_COLOR=0x4b3a6e,INK_GLOW=0x8a63d6;
+const WHITE=new THREE.Color(0xffffff),TMP=new THREE.Color(),GOLD=new THREE.Color(0xd09a2a);
+// Readability: phase three and the white half of phase two sit on a white backdrop, so pale tones
+// vanish. There the fragments are deepened (and phase three is pulled toward gold) instead of lightened.
+function tone(pattern,bright,phase){
+ TMP.setHex(COLOR[pattern]||0x9c9ca5);
+ if(phase===3)TMP.lerp(GOLD,.55);
+ if(bright)TMP.multiplyScalar(.6);
+ return TMP;
+}
+// White space RECORDS a proof as graphite pencil lines on white paper; the dark space REALIZES it as
+// bright violet ink fractures that glow against the black.
+const PREVIEW_COLOR=0xe6e1d4,GRAPHITE=0x5d6675,INK_COLOR=0x6a4fb0,INK_GLOW=0xb28cff;
 // Erased wrong answers: after a wrong-answer note is struck, a pale trace lingers and flickers
 // where it was, hinting that the question will be asked again. Never a live threat: flat and dim.
 const GHOST_COLOR=0xb8b2a6,GHOST_LIFE=3;
-// The cleave slides the tsunami's safe corridor. Teal fractures rise along the TARGET corridor's two
-// edges (the real safe half-width, opening-.55) before the slide begins, so the player can read where to go.
-const CORRIDOR_COLOR=0x5fb7b0,CORRIDOR_HALF=2.65,CORRIDOR_LENGTH=30;
+// The cleave slides the tsunami's safe corridor. Deep teal fractures rise along the TARGET corridor's
+// two edges (the real safe half-width, opening-.55) before the slide begins, so the player can read where to go.
+const CORRIDOR_COLOR=0x1f8f88,CORRIDOR_HALF=2.65,CORRIDOR_LENGTH=30;
 export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprint(h);
 
-// Every triangle is an upright, irregular fragment. Its base touches the floor
-// and its tip rises BEFORE the hit, like lifting stone, pages or broken glass.
-function fragments(h,f,coarse=false){
+// Every fragment is upright and irregular. Its base touches the floor and its tip rises BEFORE the
+// hit, like lifting stone, pages or broken glass. lang picks the body: page, crystal, ember or plain.
+function fragments(h,f,coarse=false,lang='plain'){
  const points=[];
  const add=(x,z,tx,tz,i,variation=0)=>{
   const len=(coarse?.36:.44)+(i%4)*.10;
   const height=.38+(i%7)*.14+variation;
   const off=(i%3-1)*.07;
-  points.push(
-   x-tx*len, .025, z-tz*len,
-   x+tx*len, .025, z+tz*len,
-   x+tx*off, height, z+tz*off
-  );
+  const y0=.025;
+  if(lang==='page'){
+   const w=len*1.1,hh=height*.95,lean=(i%5-2)*.06;
+   const ax=x-tx*w,az=z-tz*w,bx=x+tx*w,bz=z+tz*w;
+   const cx=ax-tz*lean,cz=az+tx*lean,dx=bx-tz*lean,dz=bz+tx*lean;
+   points.push(ax,y0,az, bx,y0,bz, dx,hh,dz, ax,y0,az, dx,hh,dz, cx,hh*.92,cz);
+  }else if(lang==='crystal'){
+   const l=len*.55,hh=height*1.5;
+   points.push(
+    x-tx*l,y0,z-tz*l, x+tx*l,y0,z+tz*l, x+tx*off,hh,z+tz*off,
+    x+tz*l,y0,z-tx*l, x-tz*l,y0,z+tx*l, x+tx*off,hh,z+tz*off
+   );
+  }else if(lang==='ember'){
+   const r=len*.8,ap=height*1.35;
+   const p0x=x+tx*r,p0z=z+tz*r;
+   const p1x=x-tx*r*.5-tz*r*.87,p1z=z-tz*r*.5+tx*r*.87;
+   const p2x=x-tx*r*.5+tz*r*.87,p2z=z-tz*r*.5-tx*r*.87;
+   const ax=x+off,az=z+off;
+   points.push(
+    p0x,y0,p0z, p1x,y0,p1z, ax,ap,az,
+    p1x,y0,p1z, p2x,y0,p2z, ax,ap,az,
+    p2x,y0,p2z, p0x,y0,p0z, ax,ap,az
+   );
+  }else{
+   points.push(
+    x-tx*len, y0, z-tz*len,
+    x+tx*len, y0, z+tz*len,
+    x+tx*off, height, z+tz*off
+   );
+  }
  };
  if(f.kind===1||f.kind===2){
   const rings=f.kind===2?[Math.max(.12,f.r-f.halfWidth),f.r+f.halfWidth]:[f.r];
@@ -109,8 +150,9 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
  function clearCorridors(){for(const s of corridors.values())release(s);corridors.clear();}
  function clear(){for(const s of states.values())release(s);states.clear();clearGhosts();clearCorridors();}
  function make(h,f,pattern){
+  const lang=LANG[pattern]||'plain';
   const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
+  geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse,lang),3));
   geo.computeVertexNormals();
   const material=new THREE.MeshPhysicalMaterial({
    color:COLOR[pattern]||0x9c9ca5,roughness:.62,metalness:.14,
@@ -120,12 +162,12 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   const mesh=new THREE.Mesh(geo,material);mesh.name='gyuwon-hazard-fractured-material';
   mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=false;
   mesh.userData.visualOnly=true;root.add(mesh);
-  return {mesh,r:f.r,pattern};
+  return {mesh,r:f.r,pattern,lang};
  }
  function makeCorridor(h){
   const f={kind:3,halfWidth:CORRIDOR_HALF,halfLength:CORRIDOR_LENGTH,x:h.gapTarget,z:0,yaw:0};
   const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
+  geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse,'crystal'),3));
   geo.computeVertexNormals();
   const material=new THREE.MeshPhysicalMaterial({
    color:CORRIDOR_COLOR,roughness:.6,metalness:.1,emissive:CORRIDOR_COLOR,emissiveIntensity:.12,
@@ -143,6 +185,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   // A new cast takes over from any lingering trace; leaving phase one or ending also clears them.
   if(!active||!s||!b||b.phase!==1||s.casts!==lastCasts){clearGhosts();lastCasts=s?.casts||0;}
   const live=new Set(),liveCorridors=new Set();
+  const bright=!!(active&&s&&b&&(b.phase===3||(b.phase===2&&s.space==='white')));
   if(active&&s&&b?.state==='pattern')for(const h of s.hazards||[]){
    if(h.shape==='wave'){
     // The actual tsunami surface is rendered by the memory stage; only its corridor cue is drawn here.
@@ -153,8 +196,8 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
      const lead=smooth(clamp(h.age/Math.max(.01,h.shiftAt))),fade=1-clamp((h.age-5.9)/.6);
      c.mesh.position.set(h.gapTarget,.005,0);
      c.mesh.scale.y=.35+.65*lead;
-     c.mesh.material.opacity=(.10+.32*lead)*fade;
-     c.mesh.material.emissiveIntensity=.12+.20*lead;
+     c.mesh.material.opacity=(.14+.42*lead)*fade;
+     c.mesh.material.emissiveIntensity=.16+.26*lead;
     }
     continue;
    }
@@ -165,7 +208,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    const mesh=state.mesh;
    // Expanding ring crests follow the same time-varying footprint as damage.
    if(f.kind===2&&Math.abs(f.r-state.r)>.09){
-    const values=fragments(h,f,coarse),attr=mesh.geometry.getAttribute('position');
+    const values=fragments(h,f,coarse,state.lang),attr=mesh.geometry.getAttribute('position');
     if(values.length===attr.array.length){
      attr.array.set(values);attr.needsUpdate=true;
      mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
@@ -183,26 +226,27 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    const beat=hit?0:.07*Math.sin(h.age*st.pulse*2)*strength;
    // Fragments rise visibly BEFORE impact, rather than appearing as a faint
    // near-flat decal. Preserve authored footprint, timing and draw-call count.
-   const mat=mesh.material;
+   const mat=mesh.material,gain=bright?1.6:1;
    if(h.preview){
-    // White space: a calm chalk record. It never reads as a live threat.
+    // White space: graphite pencil lines recording a proof on white paper. Never a live threat.
     mesh.scale.y=(.30+.55*strength)*(.55+.45*st.h);
-    mat.opacity=hit?.16+.14*flash:.20+.30*strength;
+    mat.opacity=Math.min(1,(hit?.16+.14*flash:.20+.30*strength)*(bright?1.5:1));
     mat.emissiveIntensity=.06+.10*strength+beat*.5;
-    mat.color.setHex(PREVIEW_COLOR);mat.emissive.setHex(PREVIEW_COLOR);
+    mat.color.setHex(bright?GRAPHITE:PREVIEW_COLOR);mat.emissive.setHex(bright?GRAPHITE:PREVIEW_COLOR);
    }else if(h.inkFinger){
-    // Dark space: the recorded proof becomes real. Ink fractures climb higher and flare on impact.
+    // Dark space: the recorded proof becomes real. Violet ink fractures climb higher and glow on impact.
     mesh.scale.y=(.55+1.0*strength+.45*flash)*(.7+.3*st.h);
     mat.opacity=Math.min(1,.40+.38*strength+.25*flash);
-    mat.emissiveIntensity=.18+.30*strength+.60*flash+beat;
+    mat.emissiveIntensity=.30+.34*strength+.60*flash+beat;
     mat.color.setHex(INK_COLOR);mat.emissive.setHex(INK_GLOW);
     mesh.position.y=.005+flash*.05;
    }else{
     mesh.scale.y=(.42+.82*strength)*st.h+(.18+.4*st.snap)*flash;
-    mat.opacity=Math.min(1,.32+.35*strength+(hit?.10*(1-impact):0));
-    mat.emissiveIntensity=.12+.13*strength+beat+.25*st.snap*flash;
-    mat.color.setHex(COLOR[s.pattern]||0x9c9ca5);mat.color.lerp(WHITE,.35*flash);
-    mat.emissive.setHex(COLOR[s.pattern]||0x9c9ca5);
+    mat.opacity=Math.min(1,(.32+.35*strength+(hit?.10*(1-impact):0))*(bright?1.25:1));
+    mat.emissiveIntensity=(.12+.13*strength+beat+.25*st.snap*flash)*gain;
+    tone(s.pattern,bright,b.phase);
+    mat.color.copy(TMP);mat.emissive.copy(TMP);
+    if(!bright)mat.color.lerp(WHITE,.35*flash);
    }
   }
   for(const [id,c] of corridors)if(!liveCorridors.has(id)){release(c);corridors.delete(id);}
