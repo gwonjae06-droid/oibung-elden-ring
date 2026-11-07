@@ -40,7 +40,7 @@ test('standing on a marked cell takes one hit when the cells burst',()=>{
  const g=ready(4,2,withPips(5));
  assert.ok(g.dice.pips.tiles.includes(60));
  advance(g,g.dice.pips.warn+.02);
- assert.equal(g.player.hp,120-P.pipDamage);
+ assert.equal(g.player.hp,120-P.pipDamageP2,'phase-two numbered floor cells deal phase-two damage');
  assert.equal(g.events.filter(e=>e.type==='dice-pip-burst').length,1);
  assert.equal(g.events.filter(e=>e.type==='player-hit'&&e.source==='dice-pip').length,1);
  assert.equal(g.events.filter(e=>e.type==='dice-impact'&&e.source==='dice-pip').length,5);
