@@ -630,9 +630,9 @@ export function swordPose(b) {
     if(b.phase===3){
       const c=kwonThirdTransition(b.t);
       // The sword drags the wrist first; the torso follows much later.
-      yaw=mix(-.35,-1.3,c.bladeWake);
-      pitch=mix(.1,-1.08,c.bladeWake)+.34*c.skyScar;
-      offset=mix(0,1.15,c.bodyPulled);
+      yaw=mix(mix(-.35,-1.3,c.bladeWake),0,c.skyScar);
+      pitch=mix(mix(.1,-1.08,c.bladeWake),carry,c.skyScar);
+      offset=mix(mix(0,1.15,c.bodyPulled),0,c.skyScar);
     }else{
       yaw=mix(0,-1.25,q.equip);pitch=mix(.15,-.6,q.equip);
     }
