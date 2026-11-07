@@ -19,6 +19,7 @@ const init=(seed=9)=>{
 test('the old Seulwoo enters AFTER phase transition as one or two small targetable minis, never a second boss',()=>{
  for(const seed of [8,9,12,13]){
   const g=createClownGame('sword',{register:false,seed});
+  const mainMaxHp=g.boss.maxHp;
   g.boss.phase=2;g.boss.state='transition';g.boss.t=1.8;
   g.clown.state='transition';g.clown.horrorStage=2;
   stepCircusTroupe(g,1/60,{zone(){},emit(){}});
@@ -34,7 +35,7 @@ test('the old Seulwoo enters AFTER phase transition as one or two small targetab
    assert.ok(Math.hypot(e.x-g.player.x,e.z-g.player.z)>4,'offscreen edge entrance, not immediate spawn hit');
    assert.ok(e.cooldown>2,'cannot instantly damage on appearance');
   }
-  assert.equal(g.boss.maxHp,g.boss.hp/.55);
+  assert.equal(g.boss.maxHp,mainMaxHp,'mini-boss HP never changes the director HP');
   const once=echoes.map(e=>e.id);
   setCircusAct(g,2);
   assert.deepEqual(g.clown.troupe.members.filter(m=>m.legacy).map(e=>e.id),once,'no repeated summon');

@@ -1177,6 +1177,9 @@ export function startClownPattern(g, name) {
 function finish(g) {
   const c = g.clown;
   c.last = c.name;
+  // A fully completed performance has a short, readable transition before
+  // any freely roaming member can start another attack. Motion continues.
+  if(c.troupe)c.troupe.globalCooldown=Math.max(c.troupe.globalCooldown,.28);
   Object.assign(c, {
     state: 'idle',
     name: null,
@@ -1212,7 +1215,7 @@ function tickClown(g, dt) {
     c.wait -= dt;
     // Finish any already-telegraphed small echo attack before beginning the
     // director's next show: never stack two unrelated surprise hits.
-    if(c.wait<=0&&c.horrorStage===2&&c.troupe?.members?.some(m=>m.legacyAttack&&!m.down))
+    if(c.wait<=0&&c.troupe?.members?.some(m=>m.cast>0&&!m.down))
       c.wait=.08;
     if (c.wait <= 0)
       startClownPattern(
