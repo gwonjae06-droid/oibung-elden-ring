@@ -10,7 +10,7 @@ const COLOR=Object.freeze({
  contradiction:0x7e899b,timetable:0x8d8fa0,blank:0xc1b6ab,
  negate:0x65748d,reverse:0x68607a,stop:0x7b7785,
  verdict:0xb19b82,mirror:0xa9c6c9,axiom:0x9297ab,
- paradox:0x976d8a,erasure:0xb6ada9,
+ paradox:0x976d8a,erasure:0xb6ada9,counterproof:0x7a608d,
  sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2
 });
 export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprint(h);
