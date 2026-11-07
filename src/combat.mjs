@@ -23,6 +23,8 @@ import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-r
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
+import {KWON_THIRD_PATTERNS,KWON_THIRD_COMBOS,KWON_THIRD_FAR,KWON_THIRD_CLOSE,
+ kwonThirdTransition,makeKwonFractures,advanceKwonFractures} from './kwon-third-phase.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -34,6 +36,7 @@ export const HUG_RANGE = 3.3;
 export const HUG_TIME = 1.5;
 export const WEAPONS = PLAYER_WEAPONS;
 export const PATTERNS = {
+  ...KWON_THIRD_PATTERNS,
   // Signature skills retain the same readable windup/active/recovery contract.
   spiderPrison: {name:'거미의 봉쇄',wind:1.25,active:.52,recover:1.7,damage:26},
   graveSword: {name:'검의 묘비',wind:1.42,active:.42,recover:1.65,damage:38},
@@ -112,6 +115,7 @@ export const ORDER = {
     'skyJudge',
     'spiderPrison',
   ],
+  3: Object.keys(KWON_THIRD_COMBOS),
   2: [
     'draw',
     'flurry',
@@ -142,16 +146,18 @@ export const KWON_RANGE_PRESSURE=Object.freeze({
  engageDistance:5.4,
  spacing:3.6,
  sideSpeed:1.25,
- chaseSpeed:Object.freeze({1:13.2,2:13.6}),
- approachSpeed:Object.freeze({1:11.6,2:12.2}),
+ chaseSpeed:Object.freeze({1:13.2,2:13.6,3:14.3}),
+ approachSpeed:Object.freeze({1:11.6,2:12.2,3:12.9}),
  chaseWait:.78,
  openings:Object.freeze({
   1:Object.freeze(['spiderPrison','rush','hunt','leap','siege','skyJudge','feint']),
   2:Object.freeze(['graveSword','livingSword','crescent','requiem','doubleMoon','lastStance',
-    'jawSnare','afterimage','widow','royalHunt','draw'])
- })
+    'jawSnare','afterimage','widow','royalHunt','draw']),
+   3:KWON_THIRD_FAR,
+  })
 });
 export const CLOSE = {
+  3:KWON_THIRD_CLOSE,
   1: ['shove', 'sweep', 'stomp', 'shove', 'backsweep', 'hunt', 'skewer', 'counterDancer', 'skyJudge'],
   2: [
     'breaker',
@@ -165,6 +171,7 @@ export const CLOSE = {
     'windParry',
   ],
 };
+export const PHASE_THREE=KWON_THIRD_COMBOS;
 export const SEQUENCES = {
   draw: ['retreat', 'rush', 'reverse'],
   flurry: ['cross', 'reverse', 'jab', 'jab', 'rise'],
@@ -233,7 +240,8 @@ export function segmentDistance(p, a, b) {
   return Math.hypot(p.x - a.x - x * t, p.z - a.z - z * t);
 }
 export function cinematicPose(b) {
-  const t = b.phase === 2 ? (b.state === 'transition' ? b.t : CINEMATIC) : 0;
+  // Possession keeps the head detached; it has its own cinematic beat.
+  const t=b.phase>=2?(b.phase===2&&b.state==='transition'?b.t:CINEMATIC):0;
   return {
     standing: ease(t / 1.8),
     reach: ease((t - 1.8) / 1.1),
@@ -281,6 +289,9 @@ export function bodyPoint(b, p) {
 }
 export function patternConfig(b) {
   const c = PATTERNS[b.pattern];
+  if(b.phase===3&&KWON_THIRD_PATTERNS[b.pattern])
+   return {...c,wind:kwonReadableWind(b.pattern,c.wind,3),
+    recover:Math.max(1.1,c.recover)};
   if (b.phase !== 2) return {...c,wind:kwonReadableWind(b.pattern,['slam','wave'].includes(b.pattern)?c.wind:c.wind*BOSS_TEMPO.windup,b.phase),recover:Math.max(b.pattern==='shove'?1.2:.8,c.recover*BOSS_TEMPO.recovery),damage: c.damage > 0 ? c.damage + 3 : 0};
   const wind = {
     rush: 0.38,
@@ -353,6 +364,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
     events: [],
     projectiles: [],
     bossShots: [],
+    kwonFractures: [],
     nextId: 0,
     patternShuffle: createPatternShuffle(seed),
     bossAutonomy: createBossAutonomy(seed??0x72a9c1),
@@ -369,7 +381,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       wait: 0.8,
       pattern: 'sweep',
       sequence: 0,
-      openingCounts: {1:0,2:0},
+      openingCounts: {1:0,2:0,3:0},
       attackId: 0,
       hit: false,
       poise: 0,
@@ -390,6 +402,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
       zone: null,
       turnTarget: 0,
       pendingOpening: null,
+      riftFired:false,
     },
     stats: {hits: 0, dodges: 0, damage: 0},
   };
@@ -469,6 +482,18 @@ function poseParams(pattern, stand, carry, cut) {
       ly = ey = -1.25;
       lp = ep = 0.15;
       break;
+    case 'puppetLunge':
+      ly=1.48;ey=-1.20;lp=-.72;ep=.80;back=1.05;break;
+    case 'skyRend':
+      ly=.24;ey=-.12;lp=-1.35;ep=1.06;back=.25;break;
+    case 'earthRend':
+      ly=1.22;ey=-1.12;lp=-1.10;ep=.82;back=.38;break;
+    case 'falseGap':
+      ly=-.38;ey=1.42;lp=.68;ep=-.68;back=.45;break;
+    case 'reverseGrip':
+      ly=-1.46;ey=1.48;lp=.65;ep=-.84;back=.70;break;
+    case 'heavenSplit':
+      ly=.12;ey=-.18;lp=1.24;ep=-1.40;back=.60;break;
     case 'wave':
       // Hold the blade above the head before a forceful vertical cut.
       lp = -1.4;
@@ -501,6 +526,7 @@ export function startPattern(g, name, {closeDefense=false} = {}) {
   b.t = 0;
   b.hit = false;
   b.waveFired = false;
+  b.riftFired = false;
   if(name==='wave')b.waveVariant=nextKwonWaveVariant(b.waveVariant);
   b.attackId++;
   b.punishable = false;
@@ -513,26 +539,26 @@ export function startPattern(g, name, {closeDefense=false} = {}) {
 }
 export function beginSequence(g, opening) {
   const b = g.boss,
-    map = b.phase === 1 ? PHASE_ONE : SEQUENCES;
+    map=b.phase===1?PHASE_ONE:b.phase===3?PHASE_THREE:SEQUENCES;
   if (!map[opening]) throw new Error('Opening not in phase');
   b.queue = map[opening].slice(1);
   b.lastOpening = opening;
   startPattern(g, map[opening][0]);
 }
 export function chooseOpening(g) {
- const b=g.boss,d=dist(b,g.player),phase=b.phase===2?2:1;
- const pool=Object.keys(phase===1?PHASE_ONE:SEQUENCES);
+ const b=g.boss,d=dist(b,g.player),phase=b.phase===3?3:b.phase===2?2:1;
+ const pool=Object.keys(phase===1?PHASE_ONE:phase===3?PHASE_THREE:SEQUENCES);
  // Healing is an explicit punish reaction: shuffle its two legal counters
  // separately. It cannot poison the ordinary attack deck.
  if(g.player.action?.kind==='heal'){
   b.sequence++;
   return drawPatternShuffle(g.patternShuffle,'kwon-healing-'+phase,
-   phase===1?['thrust','hunt']:['royalHunt','execution'],{avoid:b.lastOpening});
+   phase===1?['thrust','hunt']:phase===3?['puppetHunt','kingFinale']:['royalHunt','execution'],{avoid:b.lastOpening});
  }
  const distant=d>KWON_RANGE_PRESSURE.farDistance;
  let preferred=distant?KWON_RANGE_PRESSURE.openings[phase]
   :d<5?CLOSE[phase]:ORDER[phase];
- if(g.journeyBalance?.mode==='story'&&!distant){
+ if(g.journeyBalance?.mode==='story'&&!distant&&phase!==3){
   if(d<6)preferred=phase===1
    ?['hunt','skewer','counterDancer','skyJudge','backsweep']
    :['royalHunt','jawSnare','windParry','maelstrom','counter','trample'];
@@ -547,6 +573,7 @@ export function chooseOpening(g) {
  // gap-closing approach, never an unfair instant melee strike.
  b.openingCounts ||= {1:0,2:0};
  const signature=phase===1?['spiderPrison','skyJudge','counterDancer']
+  :phase===3?['heavenSplit','skyRend','kingFinale','puppetHunt']
   :['graveSword','livingSword','lastStance','doubleMoon'];
  const eligible=signature.filter(id=>pool.includes(id)&&
   (!distant||KWON_RANGE_PRESSURE.openings[phase].includes(id))&&
