@@ -23,7 +23,21 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright');
   for(const memory of ['white','dark','sword','circus','gamble','tsunami','horizon','chalk']){
    await page.evaluate(async memory=>{const {readBattleSession}=await import('/src/battle-session.mjs');const {startGyuwonPattern}=await import('/src/gyuwon-combat.mjs');const g=readBattleSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot).game;g.player.invuln=1000;g.boss.phase=['white','dark'].includes(memory)?2:3;g.boss.state='recovery';g.gyuwon.stun=1000;g.gyuwon.stageTime=.5;g.gyuwon.spaceTime=-1000;g.gyuwon.space=memory==='dark'?'dark':'white';g.gyuwon.stageMemory=memory==='horizon'?'tsunami':memory;startGyuwonPattern(g,['white','dark'].includes(memory)?'line':memory==='horizon'?'tsunami':memory);g.gyuwon.t=1;for(const h of g.gyuwon.hazards)h.age=memory==='tsunami'?4.6:memory==='horizon'?.6:.9;},memory);
    await page.waitForTimeout(700);await page.screenshot({path:path.join(root,'qa-output/gyuwon/'+memory+'.png')});
-   const recalled=await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');return readBattleSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot).diagnostics().view.recall;});if(['sword','circus','gamble','tsunami'].includes(memory)&&!recalled.originalRoot)throw Error('Original map missing: '+memory);
+   const snapshot=await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');
+    const session=readBattleSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot),d=session.diagnostics();
+    return {recall:d.view.recall,cam:d.camera,player:{x:session.game.player.x,z:session.game.player.z},
+      wave:d.view.stageFX?.waveGeometryBuilds||0,maxFrameMs:Math.round(Math.max(0,...d.frameMs))};
+   });
+   const recalled=snapshot.recall;
+   if(['sword','circus','gamble','tsunami'].includes(memory)&&!recalled.originalRoot)
+    throw Error('Original map missing: '+memory);
+   if(!recalled.prewarmed||recalled.compiled!==4||recalled.preRendered!==4)
+    throw Error('Memory GPU prewarm missing: '+JSON.stringify(recalled));
+   if(memory==='tsunami'&&recalled.cathedralOpacity>.65)
+    throw Error('Cathedral did not reveal the approaching tsunami');
+   if(memory==='horizon'&&Math.abs(snapshot.cam.x-snapshot.player.x)>55)
+    throw Error('Old horizon camera cut is still stealing player control');
+   console.log('GYUWON_MEMORY_QA',JSON.stringify({memory,...snapshot}));
   }
   await page.setViewportSize({width:844,height:390});await page.waitForFunction(()=>document.querySelector('#gyuwon-battle')?.getBoundingClientRect().height===innerHeight);await page.waitForTimeout(500);const layout=await page.evaluate(()=>{const r=document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot,b=r.getElementById('boss-hud').getBoundingClientRect();if(b.bottom>innerHeight+1||b.top<0)throw Error('Boss HUD clipped: '+JSON.stringify({rect:b.toJSON(),innerWidth,innerHeight,d:document.querySelector('#gyuwon-battle').getBoundingClientRect().toJSON(),host:document.querySelector('#gyuwon-battle').firstElementChild.getBoundingClientRect().toJSON(),shell:r.getElementById('arena').getBoundingClientRect().toJSON(),css:getComputedStyle(r.getElementById('arena')).cssText,style:r.getElementById('arena').getAttribute('style')}));return b.toJSON()});await page.screenshot({path:path.join(root,'qa-output/gyuwon/gyuwon-mobile-landscape.png')});
   await page.evaluate(async()=>{const {readBattleSession}=await import('/src/battle-session.mjs');const {damageGyuwon}=await import('/src/gyuwon-combat.mjs');const s=readBattleSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);s.game.boss.phase=3;damageGyuwon(s.game,999999);});
