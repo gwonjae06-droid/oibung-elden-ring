@@ -558,6 +558,10 @@ export function chooseOpening(g) {
  const distant=d>KWON_RANGE_PRESSURE.farDistance;
  let preferred=distant?KWON_RANGE_PRESSURE.openings[phase]
   :d<5?CLOSE[phase]:ORDER[phase];
+ // A committed incoming attack invites an authored false opening or
+ // reverse grip. This is selection-only; no perfect-read dodge or instant hit.
+ if(phase===3&&!distant&&d<6&&['attack','skill'].includes(g.player.action?.kind))
+  preferred=['falseGap','reverseGrip','puppetHunt'];
  if(g.journeyBalance?.mode==='story'&&!distant&&phase!==3){
   if(d<6)preferred=phase===1
    ?['hunt','skewer','counterDancer','skyJudge','backsweep']
