@@ -270,3 +270,14 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 
 /* Tall forge/record panels must begin at the scroll origin instead of being centered offscreen. */
 #journey .j-main{align-items:safe center}
+
+/* Route footer and long records on short landscape and narrow screens. */
+#journey .j-select-actions{box-sizing:border-box;min-width:0}
+#journey .j-select-actions>*{min-width:0}
+#journey .j-boss-targets,#journey .j-record-cards,#journey .j-record-card{min-width:0}
+@media(max-width:720px){#journey .j-record-cards{grid-template-columns:minmax(0,1fr)}}
+@media(max-height:360px) and (orientation:landscape){
+ #journey .j-select-actions{padding:5px 9px;gap:7px;bottom:calc(5px + env(safe-area-inset-bottom))}
+ #journey .j-select-actions button.j-begin{min-height:38px;padding-block:5px}
+ #journey .j-select{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+}
