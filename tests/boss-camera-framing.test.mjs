@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {KWON_CAMERA_REFERENCE,BOSS_CAMERA_SCALE,matchedBossCamera} from '../src/boss-camera-framing.mjs';
 const player={x:0,z:12},boss={x:0,z:0};
-test('Kwon's 58-degree 9.5m 0.4-pitch camera remains the combat baseline',()=>{
+test("Kwon's 58-degree 9.5m 0.4-pitch camera remains the combat baseline",()=>{
  const K=KWON_CAMERA_REFERENCE;
  assert.deepEqual([K.fov,K.distance,K.pitch],[58,9.5,.4]);
  const a=matchedBossCamera('gyuwon',{player,boss,yaw:Math.PI,pitch:.4,headHeight:1.6});

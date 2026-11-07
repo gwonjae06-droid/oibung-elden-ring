@@ -5,8 +5,8 @@ import {bloodPool} from '../src/blood-data.mjs';
 test('the blood boss casts its visually distinct rare rites early without losing the full deck',()=>{
  for(const seed of [1,9,68,1045]){
   const p1=createBloodPatternDeck(seed),p2=createBloodPatternDeck(seed);
-  const first=Array.from({length:13},()=>nextBloodPattern(p1,1));
-  const second=Array.from({length:13},()=>nextBloodPattern(p2,2));
+  const first=Array.from({length:bloodPool(1).length},()=>nextBloodPattern(p1,1));
+  const second=Array.from({length:bloodPool(2).length},()=>nextBloodPattern(p2,2));
   assert.deepEqual([...first].sort(),bloodPool(1).sort());
   assert.deepEqual([...second].sort(),bloodPool(2).sort());
   assert.ok(first.indexOf('bloodStatues')<6);

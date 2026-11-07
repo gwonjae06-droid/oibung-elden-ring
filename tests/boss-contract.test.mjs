@@ -12,7 +12,7 @@ test('every finished boss supplies everything the journey needs',()=>{
   const entry=BOSS_REGISTRY[id];
   assert.equal(typeof entry.name,'string',id);assert.ok(entry.name.length>0,id);
   assert.ok(!names.has(entry.name),'duplicate boss name '+entry.name);names.add(entry.name);
-  assert.ok(['evolution','advance','ending'].includes(entry.reward),id);
+  assert.equal(entry.reward,'flame',id+' grants a purification flame');
   assert.ok(entry.maxHp>0,id);
   assert.equal(typeof entry.hint,'function',id);assert.equal(typeof entry.hint({}),'string',id);
   if(entry.kind==='module'){assert.equal(typeof entry.load,'function',id);assert.equal(typeof entry.launch,'function',id);assert.ok(entry.dialogId,id);}

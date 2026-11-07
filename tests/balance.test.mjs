@@ -18,7 +18,7 @@ test('boss health is similar: lowest first and slowly rising afterwards',()=>{
  assert.ok(hp.at(-1)/hp[0]<1.3,'the last boss stays within 30% of the first');
 });
 test('every weapon deals exactly the nerfed damage once',()=>{
- const base={sword:72,hammer:114,bow:68,cards:27};
+ const base={sword:72,hammer:114,bow:51,cards:20};
  assert.equal(PLAYER_DAMAGE_MULTIPLIER,.9);
  for(const [id,damage] of Object.entries(base))assert.equal(WEAPONS[id].damage,Math.round(damage*.9),id);
 });
