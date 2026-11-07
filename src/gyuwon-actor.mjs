@@ -53,22 +53,55 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   sole.castShadow=false;
  }
  const bodyMaterials=[cloth,pants,skin,hair],originalColors=bodyMaterials.map(m=>m.color.clone()),goldColor=new THREE.Color(0xffd56d);
- const arms=[];
+ // Independent finger joints bend with the actual cast instead of remaining as static curves.
+ const arms=[],fingerChains=[];
  for(const side of [-1,1]){
   const arm=new THREE.Group();arm.position.set(side*.64,2.58,0);root.add(arm);arms.push(arm);
   const sleeve=mesh(arm,lathe([[.08,-1.09],[.16,-1.03],[.19,-.80],[.23,-.50],[.20,-.23],[.27,.03],[.23,.14],[0,.17]],minor),cloth,side*.035,-.10,0,'gyuwon-sculpted-sleeve');
   sleeve.scale.z=.91;
   mesh(arm,lathe([[.14,-.05],[.18,.0],[.16,.10],[.13,.14]],minor),shirt,side*.035,-1.14,0,'gyuwon-cuff');
   const palm=mesh(arm,new THREE.SphereGeometry(.17,minor,coarse?10:18),skin,side*.035,-1.22,0,'gyuwon-palm');
-  palm.scale.set(.85,1.13,.52);
+  palm.scale.set(.85,1.13,.56);
+  function articulatedDigit(x,y,z,lengths,index,thumb=false){
+   const digit=new THREE.Group();digit.position.set(x,y,z);
+   digit.rotation.z=thumb?side*.44:(index-1.5)*.08;
+   arm.add(digit);
+   let parent=digit;
+   const joints=[];
+   for(let j=0;j<lengths.length;j++){
+    const joint=new THREE.Group();
+    if(j>0)joint.position.y=-lengths[j-1];
+    parent.add(joint);joints.push(joint);
+    const length=lengths[j],radius=(thumb?.031:.022)*(1-j*.13);
+    mesh(joint,new THREE.CapsuleGeometry(radius,Math.max(.006,length-2*radius),
+      coarse?3:6,coarse?8:14),skin,0,-length/2,0,
+      thumb?'gyuwon-rigged-thumb':'gyuwon-articulated-finger');
+    parent=joint;
+   }
+   fingerChains.push({joints,side,index,thumb});
+  }
   for(let i=0;i<4;i++){
    const x=side*.035+(i-1.5)*.066;
-   mesh(arm,curve([[x,-1.31,0],[x+(i-1.5)*.008,-1.41,-.009],[x+(i-1.5)*.013,-1.48,-.015]],.024),skin,0,0,0,'gyuwon-articulated-finger');
+   articulatedDigit(x,-1.308,-.01,[.071,.067,.049],i);
   }
-  mesh(arm,curve([[side*.035+side*.11,-1.20,.02],[side*.035+side*.16,-1.28,.08],[side*.035+side*.12,-1.34,.12]],.03),skin,0,0,0,'gyuwon-thumb');
+  articulatedDigit(side*.17,-1.22,.04,[.095,.073],4,true);
  }
  const head=new THREE.Group();head.name='gyuwon-head';head.position.y=3.15;root.add(head);
- const face=mesh(head,new THREE.SphereGeometry(.5,detail,coarse?26:48),skin,0,0,0,'gyuwon-anatomical-face');
+ // One continuous sculpted face surface: temple, cheekbone, bridge and jaw.
+ const faceGeo=new THREE.SphereGeometry(.5,detail,coarse?26:48);
+ const facePos=faceGeo.getAttribute('position');
+ for(let i=0;i<facePos.count;i++){
+  const x=facePos.getX(i),y=facePos.getY(i),z=facePos.getZ(i);
+  const jawT=Math.max(0,Math.min(1,(-y+.025)/.5));
+  const templeT=Math.max(0,Math.min(1,(y-.11)/.4));
+  const cheek=.045*Math.exp(-Math.pow((Math.abs(x)-.23)/.16,2)-Math.pow((y+.065)/.19,2));
+  const bridge=.032*Math.exp(-Math.pow(x/.105,2)-Math.pow((y-.08)/.27,2));
+  const chin=.016*Math.exp(-Math.pow(x/.20,2)-Math.pow((y+.38)/.15,2));
+  facePos.setXYZ(i,x*(1-.22*jawT+.06*templeT),y,
+   z+(z>0?cheek+bridge+chin:0));
+ }
+ faceGeo.computeVertexNormals();
+ const face=mesh(head,faceGeo,skin,0,0,0,'gyuwon-anatomical-face');
  face.scale.set(.88,1.14,.91);
  const jaw=mesh(head,new THREE.SphereGeometry(.29,minor,coarse?12:24),skin,0,-.30,.13,'gyuwon-jaw');
  jaw.scale.set(1,.57,1.15);
@@ -118,6 +151,16 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   halo.visible=b.phase>1;halo.rotation.z=t*.3;
   arms[0].rotation.x=p.leftArm;arms[0].rotation.z=p.twist*.12;
   arms[1].rotation.x=p.rightArm;arms[1].rotation.z=-p.twist*.18;book.rotation.x=p.book;
+   // Joint curls follow the same attack movement and relax after each cast.
+   const effort=b.state==='pattern'?
+    Math.min(1,(Math.abs(p.leftArm+.5)+Math.abs(p.rightArm))*.40):0;
+   for(const finger of fingerChains){
+    const amount=finger.thumb?effort*.72:effort*(.9+finger.index*.045);
+    const [proximal,middle,tip]=finger.joints;
+    proximal.rotation.x=.06+amount*.42;
+    middle.rotation.x=.11+amount*.65;
+    if(tip)tip.rotation.x=.08+amount*.40;
+   }
   for(let i=0;i<legs.length;i++){
    const phase=t*8+(i?Math.PI:0),swing=Math.sin(phase)*p.steps;
    legs[i].rotation.x=swing*.12;
