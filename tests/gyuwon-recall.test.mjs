@@ -29,8 +29,28 @@ test('actual boss maps are built once, keep source geometry, switch exclusively 
  const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);let maps;
  try{
   maps=createGyuwonRecallMaps(scene,{coarse:true,reduced:true});assert.equal(maps.stats().builds,4);
+  let compiled=0,uploaded=0;
+  const renderer={compile(){compiled++;assert.equal(maps.root.children.filter(o=>o.visible).length,1);},
+   initTexture(){uploaded++;}};
+  const camera=new THREE.PerspectiveCamera(58,1,.1,1000);
+  maps.prewarm(renderer,camera);
+  assert.equal(compiled,4,'all four map shaders compile before combat, not during map swaps');
+  assert.equal(maps.stats().compiled,4);assert.equal(maps.stats().prewarmed,true);
+  maps.prewarm(renderer,camera);assert.equal(compiled,4,'warmup is idempotent');
+  assert.equal(maps.root.children.filter(o=>o.visible).length,0);
   const g=waveGame();for(let pass=0;pass<3;pass++)for(const id of Object.keys(RECALL_MAP_NAMES)){g.gyuwon.stageMemory=id;maps.update(g);assert.equal(maps.stats().originalRoot,RECALL_MAP_NAMES[id]);assert.equal(maps.root.children.filter(o=>o.visible).length,1);assert.equal(maps.stats().builds,4);if(id==='circus'){let batches=0;maps.root.getObjectByName('clown-circus').traverse(o=>{if(o.isInstancedMesh&&o.count>10)batches++;});assert.ok(batches>=2,'original circus crowd remains instanced');}assert.equal(scene.background.getHex(),0xffffff);}
-  g.boss.phase=2;maps.update(g);assert.equal(maps.root.children.filter(o=>o.visible).length,0);g.boss.phase=3;g.status='won';maps.update(g);assert.equal(maps.stats().active,null);
+  g.gyuwon.stageMemory='tsunami';maps.update(g,.8);
+  const ghost=scene.getObjectByName('cathedral-side-wall-masonry');
+  const floor=scene.getObjectByName('cathedral-battle-floor');
+  assert.ok(ghost.material.alphaHash,'cathedral walls use a stable dithered transparency shader');
+  assert.ok(ghost.material.opacity<.5,'incoming wave can be seen through church stone');
+  assert.equal(floor.material.opacity,1,'combat floor must remain solid and visible');
+  assert.equal(floor.material.alphaHash,false,'floor shader is untouched');
+  g.gyuwon.hazards=[];maps.update(g,1);
+  assert.ok(ghost.material.opacity>.98,'the church becomes solid again after the wave');
+  g.boss.phase=2;maps.update(g);assert.equal(maps.root.children.filter(o=>o.visible).length,0);
+  g.boss.phase=3;g.status='won';maps.update(g);assert.equal(maps.stats().active,null);
+  assert.equal(maps.stats().builds,4,'no new map allocations during memory rotation');
  }finally{maps?.dispose();globalThis.document=previous;}
  assert.equal(scene.getObjectByName('gyuwon-real-boss-maps'),undefined);
 });
