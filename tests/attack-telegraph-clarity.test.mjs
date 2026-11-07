@@ -16,7 +16,7 @@ function fixture(){
  const g={boss:{phase:2,x:0,z:0},player:{x:3,z:12}},c={f:{},vis:{},stageCounts:{runaway:1},seq:0},calls=[];
  const api={
   once(s,key,fn){if(!Object.hasOwn(s.f,key))s.f[key]=fn()??true;return s.f[key];},
-  head(){},emit(g,type,data){calls.push({type,...data});},
+  head(){},fitLen(){return 24;},emit(g,type,data){calls.push({type,...data});},
   zone(g,info){const q={id:calls.length,...info};calls.push({type:'zone',...q});return q;},
   bomb(g,info){calls.push({type:'bomb',...info});}
  };
