@@ -88,7 +88,7 @@ export function circusTroupeAlive(g){return g?.clown?.troupe?.members?.filter(m=
 export function beginCircusReprise(g,{duration=7.4}={}){
  const t=g?.clown?.troupe;if(!t)return null;
  const now=g.clown.time||0,p=g.player||g.boss;
- const recent=(t.fallen||[]).filter(m=>now-m.time<48).slice(0,3);
+ const recent=(t.fallen||[]).slice(0,3);
  const bodies=recent.map((m,i)=>({
   id:'fallen-'+m.id,role:m.role,x:m.x,z:m.z,yaw:m.yaw,realCorpse:true,order:i
  }));
