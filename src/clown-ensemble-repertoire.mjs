@@ -86,7 +86,7 @@ function maskedTrapdoor(g,c,a,t,api){
  curtain(g,c,api,'puppets','trapdoor');
  const anchor=api.once(c,'trap-anchor',()=>bound(g.player));
  const gap=(c.seq||0)%6;
- for(let i=0;i<6;i++)if(i!==gap&&cross(a,t,.25+i*.83)){
+ for(let i=0;i<6;i++)if(i!==gap&&cross(a,t,.25+i*.77)){
   beat(api,g,c,'trap'+i,t,{role:'puppeteer',roleIndex:i,pose:'strings',sound:'trapdoor',wind:1.30});
   const q=move(anchor,i*TAU/6,5.3);
   ring(api,g,q,2.28,1.30,21,'trapdoorRevue');
@@ -144,7 +144,7 @@ function maskedCannonade(g,c,a,t,api){
 function curtainOfLostVoices(g,c,a,t,api){
  curtain(g,c,api,'curtain','curtain');
  const p=api.once(c,'veil-anchor',()=>bound(g.player)),gap=c.seq%6;
- for(let i=0;i<6;i++)if(cross(a,t,.28+i*1.07)){
+ for(let i=0;i<6;i++)if(cross(a,t,.28+i*1.03)){
   const type=i%2?'chorister':'puppeteer';
   const actor=beat(api,g,c,'veil'+i,t,{role:type,roleIndex:i,pose:type==='chorister'?'sing':'strings',sound:'curtain',wind:1.52});
   const yaw=aim(actor,p)+(i-gap)*.1;
