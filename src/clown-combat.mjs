@@ -2,6 +2,7 @@ import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
 import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe} from './clown-troupe.mjs';
 import {REMASTERED_CIRCUS_RUN} from './clown-ensemble-repertoire.mjs';
+import {RINGMASTER_ATTACK_DEFINITIONS} from './clown-ringmaster-attacks.mjs';
 import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -1074,6 +1075,7 @@ export const LIVE_REPERTOIRE=Object.freeze([
  'curtainNightmare','audienceJudgement','funeralParade','facePeelHunt','stolenFace','brokenHorses',
  'unhingedClap','vanishingAct','marionetteDevour'
 ]);
+const DIRECTOR_SIGNATURES=new Set(RINGMASTER_ATTACK_DEFINITIONS.map(a=>a[0]));
 export function choosePattern(g) {
  const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
  // The close-contact shove stays a situational defensive reaction, not an
@@ -1115,26 +1117,43 @@ export function choosePattern(g) {
  // Reserve the first available post-transformation casts for unseen horrors.
  // Without this, the final-act attacks are legal at 25% HP but are rarely
  // selected before the player kills the boss. The full shuffle bag survives.
+ let premiered=false;
  if(phase===2&&stage===3){
   // Premiere the two authored climax attacks while there is still boss HP
   // to experience them; afterwards the original shuffle bag stays exhaustive.
   const debut=pool.filter(k=>['directorFinalVerdict','allCastRequiem','audienceJudgement'].includes(k)&&!(c.used?.[k]>0));
   const finale=pool.filter(k=>horrorMinStage(k)===3&&!(c.used?.[k]>0));
-  if(debut.length)preferred=debut;
+  if(debut.length){preferred=debut;premiered=true;}
   else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
   const debut=pool.filter(k=>['directorStringLash','directorStalkingRush','directorInfernalRing',
     'corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
-  if(debut.length)preferred=debut;
+  if(debut.length){preferred=debut;premiered=true;}
  }
  // The director premieres his own blows before his circus steals attention.
  if(phase===1&&stage===1&&c.seq<3){
   const direct=pool.filter(k=>['directorBatonRake','directorVelvetStep','directorCackle'].includes(k)&&!(c.used?.[k]>0));
-  if(direct.length)preferred=direct;
+  if(direct.length){preferred=direct;premiered=true;}
+ }
+ // Half the ordinary combat turns belong to the living ringmaster himself,
+ // not to whichever puppet happened to survive onstage. Both seeded shuffle
+ // bags remain exhaustive; neither family can be spammed in succession.
+ const director=pool.filter(k=>DIRECTOR_SIGNATURES.has(k));
+ const supporting=pool.filter(k=>!DIRECTOR_SIGNATURES.has(k));
+ let choices=pool,deck='clown-'+phase+'-act'+stage;
+ if(!premiered&&director.length&&supporting.length){
+  const lead=c.seq%2===0;
+  choices=lead?director:supporting;
+  deck+=lead?'-director':'-support';
+  if(lead){
+   const closeOptions=['directorBatonRake','directorStringLash','directorCackle'];
+   const farOptions=['directorVelvetStep','directorStalkingRush'];
+   const based=d>10?farOptions:d<7?closeOptions:[];
+   preferred=[...based.filter(k=>choices.includes(k)),...preferred.filter(k=>choices.includes(k))];
+  }else preferred=preferred.filter(k=>choices.includes(k));
  }
  c.seq++;
- return drawPatternShuffle(g.patternShuffle,'clown-'+phase+'-act'+stage,pool,
-  {preferred,avoid:c.last});
+ return drawPatternShuffle(g.patternShuffle,deck,choices,{preferred,avoid:c.last});
 }
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');
@@ -1181,10 +1200,10 @@ function tickClown(g, dt) {
     const committed=Boolean(p.action&&['attack','skill'].includes(p.action.kind)&&dist(b,p)<9);
     if(!committed){
       const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
-        spacing:b.phase===2?6.6:7.7,
+        spacing:b.phase===2?5.7:6.5,
         speed:PRESSURE.chase[b.phase===2?1:0],
         sideSpeed:b.phase===2?4.0:3.25,
-        arena:BALL_LIMIT,phase:b.phase,farDistance:11
+        arena:BALL_LIMIT,phase:b.phase,farDistance:10.5
       });
       c.odo+=Math.hypot(motion.dx,motion.dz);
     }

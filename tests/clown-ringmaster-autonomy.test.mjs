@@ -120,3 +120,21 @@ test('ringmaster attack arms and actual baton remain attached to his own body',(
  assert.ok(a.root.getObjectByName('directors-own-living-marionette-weapon'));
  disposeScene(a.root);
 });
+
+test('the ringmaster personally owns at least half the ordinary attack turns after his premieres',()=>{
+ for(const [phase,stage,premiereCount] of [[1,1,3],[2,2,8],[2,3,3]]){
+  const g=createClownGame('sword',{register:false,seed:123});
+  g.boss.phase=phase;g.clown.horrorStage=stage;
+  for(let i=0;i<premiereCount;i++){
+   const key=choosePattern(g);startClownPattern(g,key);g.clown.last=key;
+  }
+  const follow=[];
+  for(let i=0;i<18;i++){
+   const key=choosePattern(g);
+   assert.notEqual(key,g.clown.last,'no immediate duplicate '+phase+'-'+stage);
+   follow.push(key);startClownPattern(g,key);g.clown.last=key;
+  }
+  const direct=follow.filter(key=>RINGMASTER_ATTACK_RUN[key]).length;
+  assert.ok(direct>=9,'director should fight personally every other beat: '+phase+'-'+stage+' ('+direct+')');
+ }
+});
