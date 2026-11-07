@@ -1,16 +1,6 @@
 name: Odenring permanent production rules
 on:
-  push:
-    paths:
-      - 'src/**'
-      - 'spider-combat.html'
-      - 'tests/**'
-      - '.github/workflows/production-rules.yml'
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'spider-combat.html'
-      - 'tests/**'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

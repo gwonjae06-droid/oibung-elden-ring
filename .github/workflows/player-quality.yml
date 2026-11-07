@@ -1,8 +1,5 @@
 name: Player model and motion quality
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
