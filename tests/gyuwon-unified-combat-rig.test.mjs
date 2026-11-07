@@ -80,6 +80,20 @@ test('new dark-world counterproof has staggered readable cues and a walkable esc
  advance(safe,2,{x:1,z:0});
  assert.equal(safe.player.hp,safe.player.maxHp,'moving away is a fair answer at unified walk speed');
 });
+test('first-phase multiple-choice always has a safe sector within walking reach',()=>{
+ for(const start of [{x:25,z:0},{x:0,z:-25},{x:-17,z:18},{x:0,z:14}]){
+  const g=createGyuwonGame();
+  Object.assign(g.player,start);
+  startGyuwonPattern(g,'choice');
+  const cones=g.gyuwon.hazards.filter(h=>h.shape==='cone');
+  assert.equal(cones.length,4);
+  assert.ok(cones.every(h=>!hazardContains(h,start)),JSON.stringify(start)+' must start in a visible safe sector');
+  advance(g,2.8);
+  assert.equal(g.player.hp,g.player.maxHp,'the targeted follow-up must stay warned for long enough');
+  const note=g.gyuwon.hazards.find(h=>h.shape==='circle');
+  assert.ok(note&&note.warn>=2.9,'a distinct late note prevents a free stationary clear');
+ }
+});
 test('anatomical shoulder, elbow, wrist, neck and both knee chains stay connected',()=>{
  const scene=new THREE.Scene(),actor=createGyuwonActor(scene,{coarse:true}),g=createGyuwonGame();
  const root=actor.root,torso=root.getObjectByName('gyuwon-tailored-torso');
