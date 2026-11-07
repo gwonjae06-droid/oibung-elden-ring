@@ -1,8 +1,5 @@
 name: Blood wall splashes, body rivulets and merged droplets
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
