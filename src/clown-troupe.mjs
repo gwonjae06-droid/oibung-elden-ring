@@ -4,6 +4,8 @@
 const TAU=Math.PI*2;
 // Preconstructed once: no repeated collection allocation in the hot NPC loop.
 const CHOREOGRAPHED_SHOWS=new Set([
+ 'directorBatonRake','directorVelvetStep','directorCackle','directorStringLash',
+ 'directorInfernalRing','directorStalkingRush','directorFinalVerdict',
  'synchronizedHush','corpseMarionetteReprise','mouthlessLament',
  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',

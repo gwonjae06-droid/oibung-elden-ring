@@ -1063,6 +1063,8 @@ Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
 Object.assign(RUN,Object.fromEntries(Object.entries(REMASTERED_CIRCUS_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export const LIVE_REPERTOIRE=Object.freeze([
+ 'directorBatonRake','directorVelvetStep','directorCackle','directorStringLash',
+ 'directorInfernalRing','directorStalkingRush','directorFinalVerdict',
  'synchronizedHush','corpseMarionetteReprise','mouthlessLament',
  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
@@ -1085,7 +1087,8 @@ export function choosePattern(g) {
  const repertoire=new Set(LIVE_REPERTOIRE);
  const pool=Object.keys(PATTERNS).filter(k=>repertoire.has(k)&&k!=='shove'
   &&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
- const close=new Set(['synchronizedHush','drumMarch','knifeJugglerRelay','maskedTrapdoor','ringmasterDoubleAct','carousel','ballSpin',
+ const close=new Set(['directorBatonRake','directorCackle','directorStringLash',
+  'synchronizedHush','drumMarch','knifeJugglerRelay','maskedTrapdoor','ringmasterDoubleAct','carousel','ballSpin',
   'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
  let preferred=d<5.5?pool.filter(k=>close.has(k))
   :d>12?pool.filter(k=>!close.has(k)):[];
@@ -1097,7 +1100,7 @@ export function choosePattern(g) {
  // A crawl is an unsettling punctuation mark, not the boss's main gait.
  // The exhaustive shuffle bag still guarantees every authored move.
  if(phase===2&&stage>=2&&c.seq%6===3){
-  const beasts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&k!==c.last);
+  const beasts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&k!==c.last&&c.seq%12===3);
   if(beasts.length)preferred=[...beasts,...preferred];
  }
  if(g.journeyBalance?.mode==='story'){
@@ -1115,13 +1118,19 @@ export function choosePattern(g) {
  if(phase===2&&stage===3){
   // Premiere the two authored climax attacks while there is still boss HP
   // to experience them; afterwards the original shuffle bag stays exhaustive.
-  const debut=pool.filter(k=>['allCastRequiem','audienceJudgement'].includes(k)&&!(c.used?.[k]>0));
+  const debut=pool.filter(k=>['directorFinalVerdict','allCastRequiem','audienceJudgement'].includes(k)&&!(c.used?.[k]>0));
   const finale=pool.filter(k=>horrorMinStage(k)===3&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
   else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
-  const debut=pool.filter(k=>['corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
+  const debut=pool.filter(k=>['directorStringLash','directorStalkingRush','directorInfernalRing',
+    'corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
+ }
+ // The director premieres his own blows before his circus steals attention.
+ if(phase===1&&stage===1&&c.seq<3){
+  const direct=pool.filter(k=>['directorBatonRake','directorVelvetStep','directorCackle'].includes(k)&&!(c.used?.[k]>0));
+  if(direct.length)preferred=direct;
  }
  c.seq++;
  return drawPatternShuffle(g.patternShuffle,'clown-'+phase+'-act'+stage,pool,

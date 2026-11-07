@@ -1,6 +1,7 @@
 import {EXTRA_HORROR_DEFINITIONS,EXTRA_HORROR_RUN} from './clown-encore-attacks.mjs';
 import {TROUPE_DEFINITIONS,TROUPE_RUN} from './clown-troupe-patterns.mjs';
 import {ENSEMBLE_DEFINITIONS,ENSEMBLE_RUN} from './clown-ensemble-repertoire.mjs';
+import {RINGMASTER_ATTACK_DEFINITIONS,RINGMASTER_ATTACK_RUN} from './clown-ringmaster-attacks.mjs';
 // The nightmare programme uses the original zone/bomb engine. Every damaging
 // prop has an authored delay and a real floor spotlight; uncanny silhouettes,
 // harmless false performers, and environmental effects NEVER call hurt().
@@ -30,6 +31,7 @@ export const HORROR_DEFINITIONS=Object.freeze([
  ...EXTRA_HORROR_DEFINITIONS,
  ...TROUPE_DEFINITIONS,
  ...ENSEMBLE_DEFINITIONS,
+ ...RINGMASTER_ATTACK_DEFINITIONS,
 ]);
 export const HORROR_PATTERNS=Object.freeze(HORROR_DEFINITIONS.map(([key])=>key));
 export const horrorMinStage=key=>HORROR_DEFINITIONS.find(a=>a[0]===key)?.[5]??1;
@@ -269,5 +271,6 @@ export const HORROR_RUN=Object.freeze({
   feralSkitter,reverseCrawl,facePeelHunt,ceilingPounce,unhingedClap,
  ...EXTRA_HORROR_RUN,
  ...TROUPE_RUN,
- ...ENSEMBLE_RUN
+ ...ENSEMBLE_RUN,
+ ...RINGMASTER_ATTACK_RUN
 });

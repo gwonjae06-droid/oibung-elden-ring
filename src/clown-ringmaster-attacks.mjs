@@ -25,11 +25,11 @@ function circle(api,g,p,r=3.2,warn=1.35,damage=25,sound='directorWhisper'){
 }
 export const RINGMASTER_ATTACK_DEFINITIONS=Object.freeze([
  ['directorBatonRake','단장의 지휘봉 난도질',6.25,1.65,[1,2],1],
- ['directorVelvetStep','단장의 붉은 장막 춤',6.35,1.6,[1,2],1],
+ ['directorVelvetStep','단장의 붉은 장막 춤',6.8,1.6,[1,2],1],
  ['directorCackle','단장의 균열 웃음',6.35,1.65,[1,2],1],
  ['directorStringLash','단장의 살아 있는 인형줄',7.4,1.65,[2],2],
  ['directorInfernalRing','단장의 불의 심판',7.35,1.7,[2],2],
- ['directorStalkingRush','단장의 접힌 자세 추격',7.25,1.75,[2],2],
+ ['directorStalkingRush','단장의 접힌 자세 추격',7.55,1.75,[2],2],
  ['directorFinalVerdict','마지막 관객의 처형',9.45,2.0,[2],3]
 ]);
 // Standing baton wielder: his right hand comes back, then the *same*
