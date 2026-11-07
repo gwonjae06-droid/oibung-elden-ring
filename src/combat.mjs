@@ -518,9 +518,17 @@ function endPose(b) {
     );
   return {yaw: P.ey, pitch: P.ep, offset: P.back * 0.7};
 }
+// The greatsword's high pivot used to create an unreachable 1-5m pocket.
+// Retract the VISIBLE blade for a close strike; never add phantom radial damage.
+const KWON_CLOSE_SWORD_MOVES=new Set([
+ 'sweep','reverse','cross','thrust','jab','backsweep','whirl','rise',
+ 'rush','puppetLunge','falseGap','reverseGrip','skyRend','earthRend','heavenSplit'
+]);
 export function startPattern(g, name, {closeDefense=false} = {}) {
   if (!PATTERNS[name]) throw new Error('Unknown pattern');
   const b = g.boss;
+  // Close-range shape is committed as soon as the telegraph begins.
+  b.closeSwordCut=KWON_CLOSE_SWORD_MOVES.has(name)&&dist(b,g.player)<5.8;
   b.from = b.state === 'recovery' ? endPose(b) : null;
   // Keep the torso at the previous strike's follow-through during quick
   // combos. It now returns through the next windup instead of snapping.
@@ -592,6 +600,17 @@ export function chooseOpening(g) {
  b.openingCounts[phase]++;b.sequence++;
  // The balanced bag still casts every legal sequence once per cycle.
  return drawPatternShuffle(g.patternShuffle,'kwon-'+phase,pool,{preferred,avoid:b.lastOpening});
+}
+// Deterministic transform shared by renderer and weapon collision. Never
+// substitute an invisible circular attack when the enemy approaches the hilt.
+export function kwonCloseSwordShift(b){
+ if(!b?.closeSwordCut||!['windup','active','recovery'].includes(b.state))return {y:0,z:0,weight:0};
+ const cfg=patternConfig(b);
+ const w=b.state==='windup'?ease((b.t||0)/Math.max(.01,cfg.wind*.72)):
+  b.state==='active'?1:
+  1-ease((b.t||0)/Math.max(.2,Math.min(cfg.recover,.8)));
+ return {y:(b.phase===1?-1.48:b.phase===2?-3.43:-4.10)*w,
+  z:(b.phase===1?-2.42:b.phase===2?-1.46:-1.55)*w,weight:w};
 }
 export function swordPose(b) {
   const cfg = patternConfig(b),
@@ -668,11 +687,12 @@ export function swordPose(b) {
       yaw=mix(0,-1.25,q.equip);pitch=mix(.15,-.6,q.equip);
     }
   }
+  const close=kwonCloseSwordShift(b);
   if(b.phase===3){
-   return {...root,x:root.x,y:grip.y+.70+.14*Math.sin((b.t||0)*1.25),
-    z:grip.z+.15+offset,yaw,pitch,length:SWORD.length*KWON_POSSESSION.swordScale};
+   return {...root,x:root.x,y:grip.y+.70+.14*Math.sin((b.t||0)*1.25)+close.y,
+    z:grip.z+.15+offset+close.z,yaw,pitch,length:SWORD.length*KWON_POSSESSION.swordScale};
   }
-  return {...root, yaw, pitch, length: SWORD.length};
+  return {...root,y:root.y+close.y,z:root.z+close.z,yaw,pitch,length:SWORD.length};
 }
 export function swordSegment(b) {
   const p = swordPose(b),
