@@ -56,6 +56,19 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
  const trimMat=new THREE.MeshStandardMaterial({color:0xb88a41,metalness:.88,roughness:.29});
  const outerTrim=new THREE.Mesh(trimGeo,trimMat);outerTrim.name='sungwon-outer-ring-whirling-brass';
  outerTrim.rotation.x=-Math.PI/2;outerTrim.position.y=.24;perimeter.add(outerTrim);
+ // Asymmetric exterior casino fixtures make the revolution readable: a
+ // featureless torus could spin invisibly, defeating the entire spectacle.
+ // All the fixtures stay beyond the navigable table and have no hitboxes.
+ const fixtureGeo=new THREE.BoxGeometry(5.6,2.4,6.6);
+ const fixtureGold=new THREE.MeshStandardMaterial({color:0xa98242,metalness:.82,roughness:.32});
+ const fixtureRuby=new THREE.MeshStandardMaterial({color:0x571427,metalness:.27,roughness:.43});
+ for(let i=0;i<(coarse?10:14);i++){
+  const angle=i*Math.PI*2/(coarse?10:14),radius=85+(i%3)*2;
+  const fixture=new THREE.Mesh(fixtureGeo,i%3===0?fixtureRuby:fixtureGold);
+  fixture.name='sungwon-rotating-casino-outer-furniture-'+i;
+  fixture.position.set(Math.cos(angle)*radius,1.8+i%4*.35,Math.sin(angle)*radius);
+  fixture.rotation.y=-angle+.1*(i%4);fixture.castShadow=!coarse;perimeter.add(fixture);
+ }
  const tableRuin=buildDiceTableRuin(THREE,root,perimeter,{coarse,reduced});
  const lights=[];for(let i=0;i<(coarse?2:4);i++){const L=new THREE.PointLight(C.neon[i%2],coarse?3500:5000,220,2);L.position.set(i<2?-110:110,26,i%2?-110:110);L.userData.base=L.intensity;root.add(L);lights.push(L);}
  function updateNeon(g){const t=Number.isFinite(g.time)?g.time:0;ringMat.color.setScalar(.75+.25*Math.sin(t*2.2));lights.forEach((L,i)=>{L.color.setHex(g.dice.giant?(g.dice.giant.temperament==='feral'?0xc83732:0xe4b974):C.neon[i%2]);L.intensity=L.userData.base*(g.status==='won'?.16:1)*(1+.12*Math.sin(t*3.1+i*1.7));});}
