@@ -56,14 +56,14 @@ export function startGyuwonPattern(g,id){
   s.stageMemory=id;s.stageTime=0;emit(g,'memory-stage',{memory:id});
  }
  const lane=(x,z,yaw,warn,extra={})=>hazard(g,'lane',{x,z,yaw,warn,width:1.15,length:42,life:.3,damage:24,...extra});
- if(id==='line')for(let i=-1;i<=1;i++)lane(p.x+i*5,p.z,0,1.1+Math.abs(i)*.22);
- if(id==='mark')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*4,z:p.z,r:2.5,warn:1.1+i*.5,damage:22});
+ if(id==='line')for(let i=-1;i<=1;i++)lane(p.x+i*5,p.z,0,1.35+Math.abs(i)*.22);
+ if(id==='mark')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*4,z:p.z,r:2.5,warn:1.35+i*.5,damage:22});
  if(id==='repeat'){
  const traces=s.memory.length?s.memory:[{shape:'lane',x:p.x,z:p.z,yaw:aim,width:1.15,length:42,r:2}];
  for(const h of traces){hazard(g,h.shape,{...h,warn:1,age:0,hit:false,fired:false,damage:26,life:.3});hazard(g,h.shape,{...h,warn:g.boss.phase===2?1.85:2.25,age:0,hit:false,fired:false,damage:26,life:.3});}
  }
- if(id==='choice')for(let i=0;i<5;i++)if(i!==s.index%5)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI*2/5,arc:.5,r:26,warn:1.5+i*.15});
- if(id==='timetable')for(let i=0;i<4;i++)lane((i-1.5)*7,0,0,1.2+i*.6);
+ if(id==='choice')for(let i=0;i<5;i++)if(i!==s.index%5)hazard(g,'cone',{x:0,z:0,yaw:i*Math.PI*2/5,arc:.5,r:26,warn:1.95+i*.15});
+ if(id==='timetable')for(let i=0;i<4;i++)lane((i-1.5)*7,0,0,1.45+i*.6);
  if(id==='blank')hazard(g,'ring',{x:b.x,z:b.z,r:2,width:.6,grow:12,warn:1.4,life:2});
  if(id==='negate')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*5,z:p.z,r:3,warn:1.4+i*.4});
  if(id==='contradiction')for(let i=-1;i<=1;i+=2)lane(p.x,p.z,i*.65,1.5+(i+1)*.3);
@@ -105,6 +105,18 @@ export function startGyuwonPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:3,width:1,grow:6,
    warn:3.95,life:1.25,damage:30,visual:'erasure-ring'});
+ }
+ // A 2P dark-world counterexample: two committed diagonal proofs, then a
+ // clearly growing refutation ring. Standing on the original aim point is
+ // punished; moving diagonally keeps an open escape route at shared 4.7 speed.
+ if(id==='counterproof'){
+  const center={x:p.x,z:p.z};
+  lane(center.x,center.z,Math.PI*.25,1.75,
+   {width:1.45,length:27,life:.44,damage:27,visual:'counterproof-line'});
+  lane(center.x,center.z,-Math.PI*.25,2.72,
+   {width:1.45,length:27,life:.44,damage:27,visual:'counterproof-line'});
+  hazard(g,'ring',{x:center.x,z:center.z,r:2.6,width:1.05,grow:5.4,
+   warn:3.55,life:.86,damage:29,visual:'counterproof-ring'});
  }
  if(id==='sword'){lane(p.x,0,0,2,{width:2.8,length:900,life:.35,damage:36,visual:'sword'});lane(p.x,0,0,3.1,{width:2.8,length:900,damage:22});lane(0,p.z,Math.PI/2,4.4,{width:2.5,length:900,damage:30,visual:'sword'});}
  if(id==='circus'){
