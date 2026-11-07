@@ -155,7 +155,9 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   const ids=new Set();for(const q of c.bombs){ids.add(q.id);let o=bombs.get(q.id);if(!o){o=q.kind==='ball'?{group:new THREE.Mesh(new THREE.SphereGeometry(.45,14,10),new THREE.MeshStandardMaterial({color:0xe8c44d}))}:headPool.acquire();scene.add(o.group);bombs.set(q.id,o);}const v=bombPose(q,b.phase);o.group.visible=q.t<q.warn;o.group.position.set(v.x,v.y,v.z);o.group.rotation.z=v.spin;if(o.setMorph&&o.group.visible)o.setMorph({inflate:v.inflate,stretch:v.stretch,jaw:v.final,bulge:.2,wobble:.2},g.time);}for(const[id,o]of bombs)if(!ids.has(id)){releaseBombVisual(o);bombs.delete(id);}
   playerProjectiles.update(g);
   nightmare.update(g,dt);livingWorld.update(g,dt);circus.update(g,dt);const s=skillView(g),V=clownView(g);renderSharedHud(shadow,g,s,{weaponName:WEAPONS[weapon].name,lockLabel:lock?'록온 켜짐 · Q':'록온 꺼짐 · Q'});$('phase-label').textContent=V.sub;$('boss-action').textContent='';
-  const big=(b.state==='transition'?2:c.vis.pose==='inflate'?c.vis.k*2.4:0)*CLOWN_SIZE,alpha=1-Math.exp(-5*dt);
+  // The huge-ball transformation is retired: do not pull camera away
+   // from the new grounded human-scale horror performance.
+   const big=(b.state==='transition'?.55:0)*CLOWN_SIZE,alpha=1-Math.exp(-5*dt);
    if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(b.x-p.x,b.z-p.z)-yaw),Math.cos(Math.atan2(b.x-p.x,b.z-p.z)-yaw))*Math.min(1,dt*7);
    const frame=matchedBossCamera('clown',{
     player:p,boss:b,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
