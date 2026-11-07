@@ -1,6 +1,17 @@
 // A purely visual stage-light projection: the simulation remains the single
 // source of truth for every damaging zone. No attack timing/hitboxes are added.
 const safe=n=>Number.isFinite(n)?n:0;
+// Choreographed colours belong to the physical act, never an arbitrary UI
+// danger circle. Avoid losing the real hitbox silhouette in warm stage haze.
+export function clownCuePalette(z){
+ const s=String(z?.sound||z?.waveKind||'');
+ if(/choir|clap|choral|applause|chorus/i.test(s))return {color:0x91d6d5,rim:0xd5fff5};
+ if(/infernal|fire|hoop|cinder|flame/i.test(s))return {color:0xf4884b,rim:0xffce83};
+ if(/puppet|marionette|string|funeral/i.test(s))return {color:0xb8a4da,rim:0xe6d0ff};
+ if(/acrobat|stampede|dash/i.test(s))return {color:0xdc9a72,rim:0xffdbc0};
+ if(/mimic|false|twin|mirror/i.test(s))return {color:0xd49aaf,rim:0xffd9e4};
+ return {color:0xd9ae86,rim:0xffdfb0};
+}
 const cap=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 export function clownDangerSpotlightCue(z){
@@ -30,7 +41,8 @@ void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.
 const fragmentShader=`
 precision mediump float;
 varying vec2 vUv;
-uniform float uShape,uHalf,uAlpha;
+uniform float uShape,uHalf,uAlpha,uProgress;
+uniform vec3 uTint;
 void main(){
  vec2 p=vec2(2.0*vUv.x-1.0,1.0-2.0*vUv.y);
  float r=length(p);
@@ -43,9 +55,16 @@ void main(){
   mask*=1.0-smoothstep(max(.01,uHalf-.07),uHalf+.01,theta);
   mask*=smoothstep(-.03,.04,p.y);
  }
- float center=1.0-smoothstep(.06,.95,r);
- float alpha=uAlpha*mask*(.3+.7*center);
- gl_FragColor=vec4(vec3(1.,.81,.51),alpha);
+ // An actual theatre gobo: diffuse lamp pool, a legible physical edge
+ // and two inward-moving rings which show the remaining cast time.
+ float contour=uShape<.5?abs(r-.89):
+    uShape<1.5?abs(max(abs(p.x),abs(p.y))-.89):
+    abs(r-.89);
+ float rim=1.0-smoothstep(.012,.06,contour);
+ float ripple=1.0-smoothstep(.02,.075,abs(r-(.48+.39*uProgress)));
+ float glow=(.12+.17*(1.0-r))*mask+.46*rim+.18*ripple*mask;
+ float alpha=uAlpha*glow;
+ gl_FragColor=vec4(uTint,alpha);
 }
 `;
 export function createClownDangerSpotlight(THREE,scene,z,{reduced=false}={}){
@@ -53,12 +72,13 @@ export function createClownDangerSpotlight(THREE,scene,z,{reduced=false}={}){
  const layout=clownSpotlightLayout(z);
  const floorGeometry=new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2);
  const floorMat=new THREE.ShaderMaterial({uniforms:{
-  uShape:{value:layout.shape},uHalf:{value:layout.half},uAlpha:{value:0}},
+  uShape:{value:layout.shape},uHalf:{value:layout.half},uAlpha:{value:0},
+  uProgress:{value:0},uTint:{value:new THREE.Color(clownCuePalette(z).color)}},
   vertexShader,fragmentShader,transparent:true,depthWrite:false,
   side:THREE.DoubleSide,blending:THREE.AdditiveBlending});
  const floor=new THREE.Mesh(floorGeometry,floorMat);
  floor.name='clown-spotlit-danger-footprint';floor.renderOrder=3;group.add(floor);
- const rays=[],lightMat=new THREE.MeshBasicMaterial({color:0xffd9a0,
+ const rays=[],lightMat=new THREE.MeshBasicMaterial({color:clownCuePalette(z).rim,
   transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,
   blending:THREE.AdditiveBlending});
  const rayGeometry=new THREE.ConeGeometry(1,21,14,1,true).translate(0,10.5,0);
@@ -74,11 +94,14 @@ export function createClownDangerSpotlight(THREE,scene,z,{reduced=false}={}){
   floor.scale.set(geo.sx,1,geo.sz);
   floorMat.uniforms.uShape.value=geo.shape;
   floorMat.uniforms.uHalf.value=geo.half;
+  const palette=clownCuePalette(zone);
+  floorMat.uniforms.uTint.value.setHex(palette.color);lightMat.color.setHex(palette.rim);
   const charge=cap(safe(zone.age)/Math.max(.01,zone.warn),0,1);
+  floorMat.uniforms.uProgress.value=charge;
   // Allow time to react before the spotlight reaches full intensity.
-  const glow=(.48+.52*charge)*(reduced?.55:1);
-  floorMat.uniforms.uAlpha.value=.25*glow;
-  lightMat.opacity=.085*glow;
+  const glow=(.55+.45*charge)*(reduced?.72:1);
+  floorMat.uniforms.uAlpha.value=.70*glow;
+  lightMat.opacity=.10*glow;
   for(let i=0;i<rays.length;i++){
    const ray=rays[i],offset=(i+.5)/rays.length-.5;
    ray.position.set(0,-.04,geo.shape===1?offset*geo.sz*1.8:
