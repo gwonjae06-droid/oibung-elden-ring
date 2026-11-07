@@ -199,12 +199,15 @@ export function createClownActor({coarse=false}={}){
    let sole=info.foot,hinge=info.knee;
    // Contact is checked in world coordinates including every parent rotation.
    body.updateWorldMatrix(true,false);wristWorld.set(...sole);body.localToWorld(wristWorld);
-   if(!entrance&&(v.jump||0)<.01&&p.lift<.22&&wristWorld.y<.26){
-    wristWorld.y=.26;body.worldToLocal(wristWorld);sole=wristWorld.toArray();
+   if(!entrance&&(v.jump||0)<.01&&p.lift<.22&&info.planted){
+    // The rigid shoe ellipsoid is 0.29 local units tall. Exact foot-sole
+    // ground contact is imposed in world space AFTER body pitch and scale.
+    wristWorld.y=.29*1.25*p.bodyY;body.worldToLocal(wristWorld);sole=wristWorld.toArray();
     hinge=info.knee.map((x,i)=>x+(sole[i]-info.foot[i])*.5);
    }
    link(l.thigh,hip,hinge);link(l.shin,hinge,sole);l.knee.position.set(...hinge);
-   l.shoe.position.set(...sole);l.shoe.rotation.x=info.anklePitch; l.shoe.rotation.z=clamp(roll*.25,-.08,.08);
+   l.shoe.position.set(...sole);l.shoe.rotation.x=info.anklePitch-contact.pitch;
+   l.shoe.rotation.z=clamp(-roll*.8,-.15,.15);
   }
   const held=perf.director>0.03||g.status==='playing'&&c.state==='idle';
   baton.visible=batonTip.visible=held;

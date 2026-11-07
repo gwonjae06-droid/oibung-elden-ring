@@ -1058,6 +1058,12 @@ function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage
 const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart,crawlPart});
 Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
+export const LIVE_REPERTOIRE=Object.freeze([
+ 'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale',
+ 'wrongTwin','mirrorStage','puppetFuneral','fireHoop','echoApplause','laughContagion','emptyAudience',
+ 'curtainNightmare','audienceJudgement','funeralParade','facePeelHunt','stolenFace','brokenHorses',
+ 'unhingedClap','vanishingAct','marionetteDevour'
+]);
 export function choosePattern(g) {
  const c=g.clown,phase=g.boss.phase===2?2:1,d=dist(g.boss,g.player);
  // The close-contact shove stays a situational defensive reaction, not an
@@ -1068,15 +1074,7 @@ export function choosePattern(g) {
  const stage=g.clown.horrorStage||1;
  // The old giant-ball and photograph-shooting tricks stay testable only:
  // live performance uses a coherent ensemble-centered director's repertoire.
- const repertoire=new Set([
-  'ghostProcession','puppetOverture','infernalHoops',
-  'choirOfAshes','curtainStampede','midnightGrandFinale',
-  'wrongTwin','mirrorStage','puppetFuneral','fireHoop',
-  'echoApplause','laughContagion','emptyAudience',
-  'curtainNightmare','audienceJudgement','funeralParade',
-  'facePeelHunt','stolenFace','brokenHorses','unhingedClap',
-  'vanishingAct','marionetteDevour'
- ]);
+ const repertoire=new Set(LIVE_REPERTOIRE);
  const pool=Object.keys(PATTERNS).filter(k=>repertoire.has(k)&&k!=='shove'
   &&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
  const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',

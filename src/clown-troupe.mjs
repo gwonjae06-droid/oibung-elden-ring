@@ -129,8 +129,8 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   const around={x:target.x+Math.sin(wave)*desiredRadius,z:target.z+Math.cos(wave)*desiredRadius};
   const safe=away(around),dx=safe.x-m.x,dz=safe.z-m.z,len=Math.hypot(dx,dz),speed=m.cast>0?.24:s.speed;
   const accel=Math.min(1,8*h);
-  m.vx+=(len>1e-4?dx/len*speed:0-m.vx)*accel;
-  m.vz+=(len>1e-4?dz/len*speed:0-m.vz)*accel;
+  m.vx+=((len>1e-4?dx/len*speed:0)-m.vx)*accel;
+  m.vz+=((len>1e-4?dz/len*speed:0)-m.vz)*accel;
   // Apply friction to physical velocity, then stay inside the arena.
   m.vx*=Math.exp(-h*1.1);m.vz*=Math.exp(-h*1.1);
   const oldX=m.x,oldZ=m.z;
