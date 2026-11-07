@@ -16,9 +16,21 @@ test('freeze pauses an existing chain',()=>{const g=fixture();advance(g,.2);cons
 test('portrait finishes before chain starts; chain finishes before next portrait',()=>{const g=fixture();g.dice.nextFaceAttack='portrait';advance(g,.01);const w=g.dice.groundSpikes;assert.equal(w.kind,'portrait-barrage');w.stage='active';for(const c of w.cards)c.alive=false;advance(g,.01);assert.equal(g.dice.nextFaceAttack,'chain');advance(g,1.21);assert.equal(g.dice.groundSpikes.kind,'chain-sweep');advance(g,1.61);assert.equal(g.dice.groundSpikes,null);assert.equal(g.dice.nextFaceAttack,'portrait');advance(g,2.01);assert.equal(g.dice.groundSpikes.kind,'portrait-barrage');});
 test('photo bottom still cancels portrait',()=>{const g=fixture();g.dice.nextFaceAttack='portrait';advance(g,.01);g.dice.pose.rotation=photo;advance(g,.01);assert.equal(g.dice.groundSpikes,null);});
 test('boss kill cancels chain and slow immediately',()=>{const g=fixture();beginChainSweep(g);applyDiceSlow(g.player);damageDice(g,3000);assert.equal(g.status,'won');assert.equal(g.dice.groundSpikes,null);assert.equal(g.player.slow,null);});
-test('survivable phase-one crush preserves live chain and slow',()=>{const g=fixture();g.player.x=g.player.z=0;g.player.invuln=10;beginChainSweep(g);applyDiceSlow(g.player);Object.assign(g.dice,{state:'charge',t:0,from:{x:0,z:0},to:{x:0,z:0,index:0}});stepDice(g,.01);assert.equal(g.status,'playing');assert.equal(g.player.hp,76);assert.ok(g.player.traits.crush>0);assert.ok(g.dice.groundSpikes);assert.ok(g.player.slow);});
+test('real descending phase-one roll crush preserves a live chain and slow',()=>{
+ const g=fixture();
+ g.player.x=12;g.player.z=0;g.player.invuln=10;
+ beginChainSweep(g);applyDiceSlow(g.player);
+ Object.assign(g.dice,{
+  state:'rolling',t:.63,from:{x:0,z:0,index:60},
+  to:{x:12,z:0,index:61},base:[0,0,0,1],rollTime:.7
+ });
+ stepDice(g,.01);
+ assert.equal(g.status,'playing');assert.equal(g.player.hp,76);
+ assert.ok(g.player.traits.crush>0);
+ assert.ok(g.dice.groundSpikes);assert.ok(g.player.slow);
+});
 test('stomp death cancels chain and slow',()=>{const g=fixture();g.player.x=g.player.z=12;g.player.hp=10;beginChainSweep(g);applyDiceSlow(g.player);Object.assign(g.dice,{state:'jump',t:1.599,from:{x:0,z:0},to:{x:0,z:0,index:0}});stepDice(g,.01);assert.equal(g.status,'lost');assert.equal(g.dice.groundSpikes,null);assert.equal(g.player.slow,null);});
-test('portrait death cancels previous slow',()=>{const g=fixture();g.player.hp=10;applyDiceSlow(g.player);g.dice.groundSpikes={kind:'portrait-barrage',stage:'active',t:0,tempo:1,cards:[{x:20,z:10,dx:1,dz:0,delay:0,launched:true,alive:true,age:0}]};stepDice(g,.01);assert.equal(g.status,'lost');assert.equal(g.player.slow,null);});
+test('portrait death cancels previous slow',()=>{const g=fixture();g.player.hp=10;applyDiceSlow(g.player);g.dice.state='face-pattern';g.dice.facePattern='portrait';g.dice.groundSpikes={kind:'portrait-barrage',stage:'active',t:0,tempo:1,cards:[{x:20,z:10,dx:1,dz:0,delay:0,launched:true,alive:true,age:0}]};stepDice(g,.01);assert.equal(g.status,'lost');assert.equal(g.player.slow,null);});
 test('new game starts without inherited wave, slow or sequence',()=>{const g=fixture();beginChainSweep(g);applyDiceSlow(g.player);const n=createDiceGame();assert.equal(n.dice.groundSpikes,null);assert.equal(diceSlowFactor(n.player),1);assert.equal(n.dice.chainOrdinal,undefined);});
 test('player projectile array is not repurposed',()=>{const g=fixture(),p=g.projectiles=[{id:1}];advance(g,1.61);assert.equal(g.projectiles,p);assert.deepEqual(p,[{id:1}]);});
 test('chain renderer shares resources, handles missing time and hides at terminal status (Three double)',()=>{class V{set(...v){this.v=v;}}class Group{constructor(){this.children=[];this.position=new V();this.scale=new V();this.rotation={};}add(...m){this.children.push(...m);}}class Geo{rotateX(){return this;}}class Mat{constructor(p){Object.assign(this,p);}}class Mesh extends Group{constructor(g,m){super();this.geometry=g;this.material=m;}}const THREE={Group,PlaneGeometry:Geo,TorusGeometry:Geo,MeshBasicMaterial:Mat,MeshStandardMaterial:Mat,Mesh},root=new Group(),fx=buildChainSweepVisuals(THREE,root),g=fixture();beginChainSweep(g);delete g.time;fx.update(g);const display=root.children[0],links=display.children[1].children;assert.equal(display.visible,true);assert.equal(links.length,168);assert.equal(new Set(links.map(l=>l.geometry)).size,1);assert.equal(new Set(links.map(l=>l.material)).size,1);assert.ok(links.every(l=>l.position.v.every(Number.isFinite)));g.status='won';fx.update(g);assert.equal(display.visible,false);});
