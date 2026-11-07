@@ -102,3 +102,37 @@
 body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journey .j-flame-icon,body[data-motion="reduced"] #journey .j-earned-rays,body[data-motion="reduced"] #journey .j-forge-halo{animation:none!important}
 
 
+
+/* Selected weapon information stays beside the two upgrade branches on wide screens. */
+#journey .j-forge-detail{display:grid;grid-template-columns:minmax(315px,.39fr) minmax(0,.61fr);gap:17px;align-items:start}
+#journey .j-forge-weapon-info{min-width:0;position:sticky;top:12px}
+#journey .j-forge-detail .j-stat-chart{margin:0}
+#journey .j-forge-detail .j-stat-rows{grid-template-columns:1fr;row-gap:9px}
+#journey .j-forge-detail .j-forge-trees{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#journey .j-forge-detail .j-forge-branch{padding:14px 11px}
+#journey .j-forge-detail .j-forge-branch h2{font-size:18px;margin:8px 0}
+#journey .j-forge-detail .j-forge-branch-heading p{min-height:0;font-size:11px;line-height:1.6}
+#journey .j-forge-detail button.j-forge-node{min-height:69px;padding:9px;gap:7px}
+#journey .j-forge-detail .j-forge-node-glyph{width:30px;height:30px;font-size:19px}
+#journey .j-forge-detail .j-forge-node-copy strong{font-size:12px}
+#journey .j-forge-detail .j-forge-node-copy small{font-size:10px}
+#journey .j-refund-confirm{margin:14px 0;padding:14px 16px;border-radius:8px;border:1px solid #cf966eaa;background:#39241fef}
+#journey .j-refund-confirm p{margin:0 0 12px;color:#f0d6bc;font-size:13px;line-height:1.65}
+#journey .j-refund-confirm>div{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+#journey .j-refund-cancel,#journey .j-refund-accept{min-height:44px}
+#journey .j-refund-accept{border-color:#e4b28f;color:#fff3dc;background:#6a3427}
+@media(max-width:1040px){
+ #journey .j-forge-detail{grid-template-columns:minmax(0,1fr)}
+ #journey .j-forge-weapon-info{position:static}
+ #journey .j-forge-detail .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-forge-detail .j-forge-trees{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+ #journey .j-forge-detail .j-forge-trees{grid-template-columns:minmax(0,1fr)}
+ #journey .j-forge-detail .j-stat-rows{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-forge-heading h1{font-size:32px}
+ #journey .j-forge-heading{min-height:0}
+ #journey .j-forge-kiln{display:none}
+ #journey .j-forge-detail .j-forge-branch{padding:13px}
+ #journey .j-forge-detail .j-forge-branch-heading p{font-size:12px}
+}
