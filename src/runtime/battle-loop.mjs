@@ -4,9 +4,11 @@ import {createFrameLoop} from './frame-loop.mjs';
 export function createBattleLoop({request,cancel,update,now=()=>performance.now(),onError}={}) {
   let previous=null,disposed=false;
   const loop=createFrameLoop({request,cancel,onError,update:timestamp=>{
-    const dt=Math.min(.05,Math.max(0,(timestamp-previous)/1000));
+    const elapsed=Math.max(0,(timestamp-previous)/1000);
+    const dt=Math.min(.05,elapsed);
     previous=timestamp;
-    update(timestamp,dt);
+    // Keep stable gameplay physics, but give the quality governor actual frame time.
+    update(timestamp,dt,elapsed);
   }});
   return {
     start(){

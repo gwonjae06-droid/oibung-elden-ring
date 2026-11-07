@@ -95,7 +95,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
   installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&mode==='playing',listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
   hud.ready.then(ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Blood UI startup failed',error);close();});
   const samples=[];let frameAt=0;
-  function frame(now,dt){if(closed||!warmup.ready)return;if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
+  function frame(now,dt,realDt=dt){if(closed||!warmup.ready)return;if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
    // Keep the modal's containing block in sync with browser viewport resizes.
    if(d.style.width!==innerWidth+'px')d.style.width=innerWidth+'px';if(d.style.height!==innerHeight+'px')d.style.height=innerHeight+'px';
    const visualDt=ready&&!document.hidden&&mode!=='paused'?dt:0;
@@ -114,7 +114,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
    scene.fog.near=54+reveal*59;scene.fog.far=123+reveal*520;
    sun.intensity=2.25*(1+storm.flash*.6);
    chapel.root.rotation.x=chapel.root.rotation.z=0;impact.bossPose(chapel.root);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*4.7);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
-   quality.sample(dt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
+   quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
    if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const grand=g.boss.state==='pattern'&&['wave','eclipse','tide','requiem','cross','judgement','ritual','wingGenesis'].includes(g.blood.pattern);const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
   player:p,boss:g.boss,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
   headHeight:3+Math.max(0,g.blood.elevation||0)*.55,

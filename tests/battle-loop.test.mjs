@@ -6,7 +6,7 @@ function rig(update) {
   let now=0,id=0;
   const frames=new Map(),seen=[],errors=[];
   const loop=createBattleLoop({now:()=>now,request:fn=>{frames.set(++id,fn);return id;},
-    cancel:id=>frames.delete(id),update:(time,dt)=>{seen.push(dt);update?.(loop,time,dt);},
+    cancel:id=>frames.delete(id),update:(time,dt,realDt)=>{seen.push(dt);update?.(loop,time,dt,realDt);},
     onError:error=>errors.push(error)});
   const step=time=>{now=time;const [key,fn]=frames.entries().next().value;frames.delete(key);fn(time);};
   return {loop,frames,seen,errors,step,setNow:value=>now=value};
@@ -37,4 +37,12 @@ test('render exceptions stop scheduling and are reported once',()=>{
   const r=rig(()=>{throw Error('render');});r.loop.start();r.step(16);
   assert.equal(r.frames.size,0);assert.equal(r.loop.running,false);
   assert.equal(r.errors.length,1);r.loop.dispose();
+});
+
+test('render quality receives a genuine long hitch while physics remains capped',()=>{
+ const durations=[],r=rig((loop,time,dt,realDt)=>durations.push(realDt));
+ r.loop.start();r.step(300);r.step(600);
+ assert.deepEqual(r.seen,[.05,.05]);
+ assert.deepEqual(durations,[.3,.3]);
+ r.loop.dispose();
 });
