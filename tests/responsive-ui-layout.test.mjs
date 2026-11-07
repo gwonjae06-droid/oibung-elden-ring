@@ -21,6 +21,15 @@ test('cloned boss battle styles and boss health bar use narrow-safe dimensions',
  assert.match(css,/width:min\(320px,30vw\)!important/);
  assert.match(css,/#arena \.boss-hud #boss-value\{display:none!important\}/);
  assert.match(css,/text-overflow:ellipsis/);
- for(const name of ['blood-ui','gyuwon-ui','dice-ui'])assert.match(read('src/'+name+'.mjs'),/style\.css\?v=ui-layout-fix-20261107/);
- assert.match(html,/style\.css\?v=ui-layout-fix-20261107/);
+ for(const name of ['blood-ui','gyuwon-ui','dice-ui'])assert.match(read('src/'+name+'.mjs'),/style\.css\?v=ui-safe-layout-v2-20261107/);
+ assert.match(html,/style\.css\?v=ui-safe-layout-v2-20261107/);
+});
+
+test('visible combat overlays cover the home button and no duplicate dice exits are rendered',()=>{
+ const css=read('style.css'),session=read('src/battle-session.mjs'),hud=read('src/hud-layout.mjs');
+ assert.match(css,/#arena \.overlay\{z-index:80;/);
+ assert.match(session,/oibung:home/);
+ assert.match(hud,/home\.addEventListener\('keydown',keydown\)/);
+ assert.doesNotMatch(read('src/dice-ui.mjs'),/광대전 결과로/);
+ assert.match(read('spider-combat.html'),/gyuwon-ui\.mjs\?v=ui-safe-layout-v2-20261107/);
 });

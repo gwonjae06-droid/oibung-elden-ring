@@ -153,3 +153,14 @@ body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journ
 
 /* Prevent ornamental kiln/glow pixels from creating a horizontal scroll surface. */
 #journey .j-forge{overflow-x:clip}
+
+/* Keep forge node names and refund controls inside the responsive panel. */
+#journey .j-forge,#journey .j-forge-heading,#journey .j-forge-resources,
+#journey .j-forge-detail,#journey .j-forge-bottom{min-width:0;max-width:100%}
+#journey .j-forge-detail button,#journey .j-forge-resources>*{min-width:0;overflow-wrap:anywhere}
+#journey .j-forge-bottom{flex-wrap:wrap}
+@media(max-width:640px){
+ #journey .j-forge-bottom button{width:100%}
+ #journey .j-forge-tabs{gap:6px}
+ #journey button.j-forge-tab{padding:8px 5px}
+}

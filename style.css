@@ -164,3 +164,28 @@ body:has(>#arena){background:#050608;overflow:hidden}
  #arena .hud .meter{height:6px}
  #arena .top-actions button{min-height:34px;padding:3px 5px}
 }
+
+/* Battle UI collision guards: pause/menu/result must cover header actions. */
+#arena .overlay{z-index:80;min-width:0;max-width:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+#arena .brand{max-width:min(42vw,320px);min-width:0}
+#arena .brand>div{min-width:0;overflow:hidden}
+#arena .brand strong::after{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#arena .top-actions{min-width:0;max-width:54%;flex-wrap:nowrap}
+#arena .top-actions button{min-width:0;white-space:nowrap}
+#arena .menu-panel,#arena .small-panel{box-sizing:border-box;min-width:0;max-width:100%}
+@media(max-height:520px){
+ #arena .overlay{align-items:flex-start;padding-block:18px;scroll-padding-block:18px}
+ #arena .menu-panel,#arena .small-panel{margin-block:0 12px;padding:clamp(12px,3vh,20px)}
+}
+@media(pointer:coarse) and (orientation:landscape){
+ #arena .brand{max-width:36%}
+ #arena .top-actions{max-width:54%;gap:4px}
+ #arena .top-actions button{padding-inline:clamp(4px,1.1vw,9px);font-size:clamp(10px,1.25vw,12px)}
+ #arena .hud .skill-line,#arena .hud .flask-line{min-width:0;overflow-wrap:anywhere}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:340px){
+ #arena .brand svg{width:28px;height:28px}
+ #arena .brand{padding:3px 6px}
+ #arena .top-actions button{min-height:32px;padding-block:3px}
+ #arena .overlay{padding-inline:12px;padding-block:12px}
+}

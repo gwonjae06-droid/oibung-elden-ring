@@ -23,7 +23,20 @@ export function bindBattleSession(root, read) {
     },
   };
   sessions.set(root, session);
-  const disposeHud = installHudLayout(root);
+  const disposeHud = installHudLayout(root, () => {
+    const doc = root.ownerDocument || root;
+    if(root === doc){
+      const win=doc.defaultView;
+      if(win?.Event)win.dispatchEvent(new win.Event('oibung:home'));
+      return;
+    }
+    const current=sessions.get(root)?.read();
+    if(typeof current?.close === 'function')current.close();
+    else {
+      const win=doc.defaultView;
+      if(win?.Event)win.dispatchEvent(new win.Event('oibung:home'));
+    }
+  });
   // TEMP DEV: remove this installation and disposeDev call before release.
   const disposeDev = installDevBossDamage(root, () => sessions.get(root) === session ? session.read() : null);
   return () => {

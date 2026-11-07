@@ -72,7 +72,7 @@ function hideExtraHomeButtons(root){
  }
  return ()=>{for(const button of hidden)button.style.removeProperty('display');};
 }
-export function installHudLayout(root){
+export function installHudLayout(root,onHome=null){
  try{
   const doc=root.ownerDocument||root;
   if(!doc.createElement)return ()=>{};
@@ -81,6 +81,27 @@ export function installHudLayout(root){
   style.textContent=CSS;
   (root.head||root).appendChild(style);
   const restore=hideExtraHomeButtons(root);
-  return ()=>{restore();style.remove();};
+  // Use the active encounter's navigation; never leave a decorative dead home button.
+  const arena=root.getElementById?.('arena')||root.querySelector?.('#arena');
+  const home=arena?.querySelector?.('.brand');
+  const bindHome=typeof onHome==='function'&&home&&!home.onclick;
+  const oldRole=bindHome?home.getAttribute('role'):null;
+  const oldTab=bindHome?home.getAttribute('tabindex'):null;
+  const oldLabel=bindHome?home.getAttribute('aria-label'):null;
+  const trigger=()=>onHome?.();
+  const keydown=e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();e.stopPropagation();trigger();}};
+  if(bindHome){
+   home.setAttribute('role','button');home.setAttribute('tabindex','0');
+   home.setAttribute('aria-label','메인으로');
+   home.addEventListener('click',trigger);home.addEventListener('keydown',keydown);
+  }
+  return ()=>{
+   if(bindHome){
+    home.removeEventListener('click',trigger);home.removeEventListener('keydown',keydown);
+    for(const [key,value] of [['role',oldRole],['tabindex',oldTab],['aria-label',oldLabel]])
+     if(value===null)home.removeAttribute(key);else home.setAttribute(key,value);
+   }
+   restore();style.remove();
+  };
  }catch{return ()=>{};}
 }
