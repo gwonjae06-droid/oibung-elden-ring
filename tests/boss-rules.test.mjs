@@ -32,3 +32,17 @@ test('dice defeat results never reveal boss attack solutions or dodge instructio
  const dice=read('src/dice-battle.mjs');
  assert.doesNotMatch(dice,/손을 부수거나 머리 박기 후|다음 칸을 보고 옆으로 피한 뒤/);
 });
+
+test('the ninth permanent rule covers visible pre-hit telegraphs for ALL attack patterns and harmful effects',()=>{
+ const rules=read('AGENTS.md'),detail=read('docs/boss-design-rules.md');
+ const guide=read('docs/boss-attack-readability.md');
+ assert.match(rules,/반드시 지킬 9가지 규칙/);
+ assert.match(rules,/9\. \*\*모든 공격 패턴과 이펙트의 명확한 전조 의무화/);
+ assert.match(rules,/피해 판정이나 실제 충돌이 시작되기 전에/);
+ assert.match(rules,/폭발·파동·분열·낙하/);
+ assert.match(rules,/9개 항목을 모두 확인/);
+ assert.match(detail,/\*\*B4\*\*/);
+ assert.match(detail,/\*\*C4\*\*/);
+ assert.match(detail,/\*\*H3\*\*/);
+ assert.match(guide,/전 패턴·전 이펙트 선행 전조/);
+});
