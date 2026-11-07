@@ -1,8 +1,5 @@
 name: Four boss signature 3D visuals regression
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

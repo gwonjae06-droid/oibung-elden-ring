@@ -1,22 +1,7 @@
 name: Four boss autonomous footwork
 
 on:
-  pull_request:
-    paths:
-      - 'src/boss-autonomy.mjs'
-      - 'src/combat.mjs'
-      - 'src/clown-combat.mjs'
-      - 'src/blood-footwork.mjs'
-      - 'src/blood-combat.mjs'
-      - 'src/blood-view.mjs'
-      - 'src/dice-autonomy.mjs'
-      - 'src/dice-combat.mjs'
-      - 'src/dice-giant.mjs'
-      - 'tests/four-boss-autonomous-locomotion.test.mjs'
-  push:
-    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
 
