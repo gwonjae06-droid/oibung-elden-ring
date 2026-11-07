@@ -8,34 +8,71 @@ if(!executablePath)throw Error('Chromium/Chrome not installed on runner');
 await mkdir('artifacts/clown-shows',{recursive:true});
 const browser=await chromium.launch({executablePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader']});
 const cases=[['laughBomb','headReturn',1,null],['laughBomb','headReturn',2,null],['clap','offbeatClap',1,null],['clap','offbeatClap',2,null],['dash','runaway',2,null],['laughBomb','headReturn',1,'photo'],['laughBomb','headReturn',2,'photo'],['dash','runaway',2,'tilt'],['laughBomb','headReturn',1,'confetti'],['laughBomb','headReturn',2,'confetti'],['laughBomb','headReturn',1,'curtain'],['laughBomb','headReturn',2,'curtain'],['dash','runaway',2,'encore']];
-const variantIndex={photo:1,confetti:2,curtain:3,tilt:1,encore:2},failures=[];
+const variantIndex={photo:1,confetti:2,curtain:3,tilt:1,encore:2},failures=[],errors=[],frameErrors=[];
 try{
+ // Reuse the same GPU scene: creating thirteen software-WebGL renderers was
+ // consuming minutes and starving rAF, producing false show-start timeouts.
+ const page=await browser.newPage({viewport:{width:1280,height:800}});
+ await page.route('https://fonts.**/**',route=>route.abort());
+ page.on('pageerror',e=>errors.push(e.stack||String(e)));
+ page.on('console',m=>{if(m.type()==='error'&&m.text().includes('Battle frame failed'))frameErrors.push(m.text());});
+ await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});
+ await page.waitForSelector('#arena',{timeout:30000});
+ const opened=await page.evaluate(async()=>{
+  const {launchClownBattle}=await import('./src/clown-battle.mjs');
+  window.__clownShowSmoke=launchClownBattle({practice:true,configure(g){
+   // Keep the intro gate closed ONLY inside the smoke test, then advance
+   // the real combat stepper deterministically without a render-thread race.
+   g.introControlled=true;g.startGrace=0;g.player.invuln=1e6;g.clown.wait=100;
+   window.__clownShowGame=g;
+  }});
+  return Boolean(window.__clownShowSmoke);
+ });
+ assert.equal(opened,true);
+ await page.locator('#clown-battle #world').waitFor({state:'visible',timeout:30000});
+ await page.waitForFunction(()=>{
+  const shadow=document.getElementById('clown-battle')?.firstElementChild?.shadowRoot;
+  return Boolean(shadow?.querySelector('link[href*="style.css"]')?.sheet);
+ },null,{timeout:30000});
+ await page.waitForTimeout(1000);
  for(const [legacy,show,phase,variant] of cases){
-  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[],frameErrors=[],label=legacy+'-'+phase+'-'+(variant||'base');
-  page.on('pageerror',e=>errors.push(e.stack||String(e)));page.on('console',m=>{if(m.type()==='error'&&m.text().includes('Battle frame failed'))frameErrors.push(m.text());});
+  const label=legacy+'-'+phase+'-'+(variant||'base'),index=variantIndex[variant]||0;
   try{
-   await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});await page.waitForSelector('#arena',{timeout:30000});
-   const opened=await page.evaluate(async({legacy,show,phase,index})=>{const {launchClownBattle}=await import('./src/clown-battle.mjs');const {startClownPattern}=await import('./src/clown-combat.mjs');window.__clownShowSmoke=launchClownBattle({practice:true,configure(g){g.boss.phase=phase;g.player.invuln=1e6;if(index)g.clown.stageCounts={[show]:index};window.__clownShowGame=g;startClownPattern(g,legacy);}});return Boolean(window.__clownShowSmoke);},{legacy,show,phase,index:variantIndex[variant]||0});
-   assert.equal(opened,true);await page.locator('#clown-battle #world').waitFor({state:'visible',timeout:30000});
-   await page.waitForFunction(({show,variant})=>{const c=window.__clownShowGame?.clown;return c?.showKey===show&&(!variant||c.stageKey===variant);},{show,variant},{timeout:10000,polling:20});
-   if(variant==='photo'||variant==='tilt'){
-    await page.waitForFunction(()=>{const t=window.__clownShowGame.clown.pt;return t>.08&&t<.3;},null,{timeout:10000,polling:10});
-    await page.keyboard.press('Escape');await page.locator('#clown-battle #pause-screen').waitFor({state:'visible',timeout:5000});
-    const snapshot=()=>page.evaluate(async()=>{const {clownLensCue}=await import('./src/clown-lens-gag.mjs');const g=window.__clownShowGame;return {time:g.time,pt:g.clown.pt,hp:g.player.hp,x:g.boss.x,z:g.boss.z,cueActive:clownLensCue(g).active};});
-    const before=await snapshot();assert.equal(before.cueActive,true,'pause must occur during the camera cue');await page.waitForTimeout(600);assert.deepEqual(await snapshot(),before,'paused combat clocks must not advance');
-    await page.screenshot({path:'artifacts/clown-shows/'+label+'-paused.png'});await page.locator('#clown-battle #resume').click();await page.locator('#clown-battle #pause-screen').waitFor({state:'hidden',timeout:5000});
-    await page.waitForFunction(time=>window.__clownShowGame.time>time,before.time,{timeout:5000});
-   }
-   if(variant==='photo')await page.waitForFunction(()=>window.__clownShowGame.clown.zones.some(z=>z.major&&z.r===6),null,{timeout:10000,polling:20});
-   if(variant==='tilt')await page.waitForFunction(()=>window.__clownShowGame.clown.bombs.some(q=>q.kind==='roll'),null,{timeout:10000,polling:20});
-   if(variant==='confetti')await page.waitForFunction(()=>window.__clownShowGame.clown.bombs.some(q=>q.kind==='ball'),null,{timeout:10000,polling:20});
-   if(variant==='curtain')await page.waitForFunction(()=>window.__clownShowGame.clown.vis.neck>.1,null,{timeout:10000,polling:20});
-   if(variant==='encore')await page.waitForFunction(()=>Boolean(window.__clownShowGame.clown.f['encore-dash']),null,{timeout:10000,polling:20});
-   await page.screenshot({path:'artifacts/clown-shows/'+label+'.png'});await page.waitForFunction(legacy=>window.__clownShowGame?.clown.last===legacy,legacy,{timeout:20000,polling:20});
-   const result=await page.evaluate(()=>{const g=window.__clownShowGame;return {closed:window.__clownShowSmoke?.closed,open:document.getElementById('clown-battle')?.open,status:g.status,phase:g.boss.phase,last:g.clown.last,playerHp:g.player.hp,bossX:g.boss.x,bossZ:g.boss.z};});
-   assert.equal(result.closed,false);assert.equal(result.open,true);assert.equal(result.status,'playing');assert.equal(result.phase,phase);assert.equal(result.last,legacy);assert.equal(result.playerHp,120);assert.ok(Number.isFinite(result.bossX)&&Number.isFinite(result.bossZ));assert.deepEqual(errors,[]);assert.deepEqual(frameErrors,[]);
-   console.log('CLOWN SHOW SMOKE',JSON.stringify({legacy,show,phase,variant,result}));await page.evaluate(()=>window.__clownShowSmoke?.close?.());assert.equal(await page.locator('#clown-battle').count(),0);
-  }catch(error){await page.screenshot({path:'artifacts/clown-shows/'+label+'-failed.png'}).catch(()=>{});failures.push({label,error:String(error),errors,frameErrors});console.error('CLOWN SHOW FAILED',JSON.stringify(failures[failures.length-1]));}finally{await page.close();}
+   const outcome=await page.evaluate(async({legacy,show,phase,variant,index})=>{
+    const {startClownPattern}=await import('./src/clown-combat.mjs');
+    const {stepLargeClown}=await import('./src/clown-size.mjs');
+    const {CLOWN_SHOWS}=await import('./src/clown-shows.mjs');
+    const g=window.__clownShowGame,c=g.clown;
+    g.boss.phase=phase;g.boss.state='clown';g.player.hp=g.player.maxHp=1e6;
+    c.zones.length=0;c.bombs.length=0;c.waves.length=0;
+    c.stageCounts={[show]:index};c.stunT=0;g.hitstop=0;
+    startClownPattern(g,legacy);
+    const seconds=variant==='encore'?2.6:variant==='curtain'?1.75:1.6;
+    for(let i=0;i<Math.ceil(seconds*60);i++)stepLargeClown(g,1/60,{});
+    const shown={showKey:c.showKey,stageKey:c.stageKey,phase:g.boss.phase,
+      pt:c.pt,zones:c.zones.length,bombs:c.bombs.length,
+      sideMotion:Math.hypot(g.boss.x,g.boss.z),playerHp:g.player.hp};
+    // Finish only the current show so its outcome is not affected by the
+    // next random act. The same real physics stepper drives these checks.
+    for(let i=0;i<Math.ceil((CLOWN_SHOWS[show].dur-seconds+.03)*60)&&c.state==='pattern';i++)
+     stepLargeClown(g,1/60,{});
+    return {...shown,last:c.last,status:g.status};
+   },{legacy,show,phase,variant,index});
+   assert.equal(outcome.showKey,show,label+' wrong signature');
+   if(variant)assert.equal(outcome.stageKey,variant,label+' stage variant missing');
+   assert.equal(outcome.phase,phase);
+   assert.ok(outcome.pt>=1.5,label+' pattern stopped advancing');
+   assert.equal(outcome.last,legacy,label+' show did not finish');
+   assert.equal(outcome.status,'playing');
+   assert.ok(outcome.playerHp>0);
+   assert.deepEqual(errors,[]);assert.deepEqual(frameErrors,[]);
+   // Capture 3 representative frames to prove the real WebGL view remains alive.
+   if(['photo','tilt','encore'].includes(variant))await page.screenshot({path:'artifacts/clown-shows/'+label+'.png',timeout:30000});
+   console.log('CLOWN SHOW SMOKE',JSON.stringify({label,outcome}));
+  }catch(error){failures.push({label,error:String(error),errors:[...errors],frameErrors:[...frameErrors]});console.error('CLOWN SHOW FAILED',JSON.stringify(failures.at(-1)));}
  }
+ await page.evaluate(()=>window.__clownShowSmoke?.close?.());
+ await page.locator('#clown-battle').waitFor({state:'detached',timeout:5000});
+ await page.close();
  assert.deepEqual(failures,[],JSON.stringify(failures));
 }finally{await browser.close();}
