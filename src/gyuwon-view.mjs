@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {createGyuwonActor} from './gyuwon-actor.mjs';
 import {createGyuwonSpectacle} from './gyuwon-spectacle.mjs';
 import {createGyuwonPhilosophyFx} from './gyuwon-philosophy-fx.mjs';
-import {hazardPosition} from './gyuwon-data.mjs';
+import {createGyuwonHazardFx} from './gyuwon-hazard-vfx.mjs';
 import {GYUWON_RULES as R} from './gyuwon-data.mjs';
 
 export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
@@ -32,10 +32,10 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const actor=createGyuwonActor(stage,{coarse}),root=actor.root,spectacle=createGyuwonSpectacle(stage,{coarse}),philosophy=createGyuwonPhilosophyFx(stage,{coarse,reduced});
  const ghosts=[-1,1].map(side=>{const rig=root.clone(true);rig.name='gyuwon-contradiction';rig.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false;}});stage.add(rig);return {rig,side};});
  const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
- const warnings=new THREE.Group();stage.add(warnings);const meshes=new Map();
- const circleGeo=new THREE.CircleGeometry(1,48),laneGeo=new THREE.PlaneGeometry(1,1);
+ // All attack warnings are 3D material fractures bound to authoritative collision footprints.
+ const hazardFx=createGyuwonHazardFx(stage,{coarse});
  let deathElapsed=0;
- function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();for(const m of meshes.values()){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();}meshes.clear();}
+ function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();hazardFx.clear();}
  function update(g,dt=0){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
@@ -48,16 +48,9 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
   // A continuous, non-colliding floor makes metaphysical spaces legible.
   floor.visible=!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
-  warnings.visible=!won;
   spectacle.update(g,dt,deathElapsed);recall.update(g);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
-  const live=new Set();for(const h of s.hazards){live.add(h.id);let m=meshes.get(h.id);
-   if(!m){const geometry=h.shape==='ring'?new THREE.RingGeometry(Math.max(.01,h.r-h.width),h.r+h.width,64):h.shape==='cone'?new THREE.CircleGeometry(h.r,40,-Math.PI/2-h.arc,h.arc*2):h.shape==='wave'?new THREE.PlaneGeometry(h.opening*2,42):h.shape==='lane'?laneGeo:circleGeo;m=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:0xcce8f8,roughness:.64,metalness:.08,transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.06;warnings.add(m);meshes.set(h.id,m);}
-   const hp=hazardPosition(h);m.visible=h.shape!=='wave';m.position.set(hp.x,.06,hp.z);m.rotation.z=['lane','cone'].includes(h.shape)?h.yaw:0;if(h.shape==='wave')m.position.set(h.gap,.06,0);
-   if(h.shape==='lane')m.scale.set(h.width*2,h.length,1);else if(h.shape==='circle')m.scale.set(h.r,h.r,1);else if(h.shape==='ring'){const pos=m.geometry.attributes.position;for(let i=0;i<pos.count;i++){const a=Math.atan2(pos.getY(i),pos.getX(i)),r=hp.r+(i<65?-h.width:h.width);pos.setXYZ(i,Math.cos(a)*r,Math.sin(a)*r,0);}pos.needsUpdate=true;}
-   const active=h.age>=h.warn;m.material.color.setHex(h.shape==='wave'?0x41bba1:active?0xff6c67:b.phase===3?0xc48c22:s.pattern==='repeat'?0xe8c273:white?0x24334a:0xcce8f8);m.material.opacity=active?.85:.18+.35*Math.min(1,h.age/Math.max(.01,h.warn));
-  }
-  for(const[id,m]of meshes)if(!live.has(id)){warnings.remove(m);m.material.dispose();if(m.geometry!==circleGeo&&m.geometry!==laneGeo)m.geometry.dispose();meshes.delete(id);}
+  hazardFx.update(g);
  }
- return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:meshes.size,recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();recall.dispose();philosophy.dispose();spectacle.dispose();circleGeo.dispose();laneGeo.dispose();}};
+ return {root,update,clear,event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
