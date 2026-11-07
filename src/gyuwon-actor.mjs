@@ -94,9 +94,9 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const x=facePos.getX(i),y=facePos.getY(i),z=facePos.getZ(i);
   const jawT=Math.max(0,Math.min(1,(-y+.025)/.5));
   const templeT=Math.max(0,Math.min(1,(y-.11)/.4));
-  const cheek=.045*Math.exp(-((Math.abs(x)-.23)/.16)**2-((y+.065)/.19)**2);
-  const bridge=.032*Math.exp(-(x/.105)**2-((y-.08)/.27)**2);
-  const chin=.016*Math.exp(-(x/.20)**2-((y+.38)/.15)**2);
+  const cheek=.045*Math.exp(-Math.pow((Math.abs(x)-.23)/.16,2)-Math.pow((y+.065)/.19,2));
+  const bridge=.032*Math.exp(-Math.pow(x/.105,2)-Math.pow((y-.08)/.27,2));
+  const chin=.016*Math.exp(-Math.pow(x/.20,2)-Math.pow((y+.38)/.15,2));
   facePos.setXYZ(i,x*(1-.22*jawT+.06*templeT),y,
    z+(z>0?cheek+bridge+chin:0));
  }
