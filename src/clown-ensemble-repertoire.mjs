@@ -165,11 +165,19 @@ function allCastRequiem(g,c,a,t,api){
 }
 // Four vintage acts RECUT as living-cast attack performances, not old
 // spheres, camera gags or free-floating arbitrary warning cylinders.
-function drumMarch(g,c,a,t,api){midnightDrumline(g,c,a,t,api);}
+function drumMarch(g,c,a,t,api){
+ curtain(g,c,api,'drums','drums');
+ const center=api.once(c,'old-drum-centre',()=>bound(g.player));
+ for(let i=0;i<3;i++)if(cross(a,t,.22+i*.93)){
+  beat(api,g,c,'remaster-drum'+i,t,{role:'acrobat',roleIndex:i,pose:'drum',sound:'drum',wind:1.24});
+  const x=clamp(center.x+(i-1)*4.1,-20,20),yaw=i%2?Math.PI:0;
+  lane(api,g,{x,z:yaw?16:-16},yaw,29,2.25,1.24,21,'drumLine');
+ }
+}
 function spotlightSweep(g,c,a,t,api){
  curtain(g,c,api,'chorus','spotlight');
  const p=api.once(c,'spotlight-p',()=>bound(g.player));
- for(let i=0;i<3;i++)if(cross(a,t,.22+i*.85)){
+ for(let i=0;i<2;i++)if(cross(a,t,.22+i*1.07)){
   const singer=beat(api,g,c,'spot'+i,t,{role:'chorister',roleIndex:i,pose:'sing',sound:'bell',wind:1.26});
   actorLane(api,g,singer,move(p,i%2?.31:-.31,2),{w:3.0,warn:1.26,damage:21,sound:'spotlightChoir'});
  }
@@ -185,7 +193,7 @@ function carousel(g,c,a,t,api){
 function curtainCall(g,c,a,t,api){
  curtain(g,c,api,'curtain','curtain');
  const p=api.once(c,'call-p',()=>bound(g.player));
- for(let i=0;i<5;i++)if(cross(a,t,.33+i*1.02)){
+ for(let i=0;i<5;i++)if(cross(a,t,.33+i*.96)){
   const singer=beat(api,g,c,'curtain'+i,t,{role:i%2?'chorister':'puppeteer',roleIndex:i,pose:i%2?'sing':'strings',sound:'curtain',wind:1.32});
   actorLane(api,g,singer,p,{w:2.45,warn:1.32,damage:24,sound:'curtainEcho'});
  }
