@@ -7,11 +7,8 @@ import {slowThrownHazards} from './dice-giant-throw-speed.mjs';
 import {giantReadableWarning} from './attack-readability.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
-import {stepPortraitBarrage} from './dice-portrait-barrage.mjs';
-import {beginChainSweep} from './dice-chain-sweep.mjs';
-import {clearDiceFaceAttack} from './dice-slow.mjs';
 export const GIANT={transition:POSSESSION.end,recovery:2.4*BOSS_TEMPO.gap,feralRecovery:1.5*BOSS_TEMPO.gap,handHp:340,crumble:1.15,rageBeat:1.2,rageHp:1/3,handDisable:8,handRecover:.6};
-export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀','초상화 카드 탄막','황금 사슬 휩쓸기'];
+export const GIANT_NAMES=['거인의 손가락','칩 정렬','운명의 다이스','코인 플립','체스의 행마','양손 압박','룰렛 선언','교차 내려찍기','운명의 손도장','황금칩 역회수','양손 단두대','도박사의 손 · 도미노','운명의 룰렛','탐욕의 손아귀'];
 export const FERAL_NAMES=['광란의 내려찍기','탁자 쓸어버리기','주사위 머리 박기','짐승의 양손 압박','부서진 체스판','분노의 난타','최후의 올인','머리 떨림 · 5연속 박치기','주먹으로 찢는 룰렛','짐승의 삼연속 박치기','핏빛 테이블 포위','최후의 머리 삼중추락','찢어진 계약서','광란의 탁자 회전','도박판 분쇄','카지노 전복'];
 // Both palms rest on the SINGLE table edge directly in front of the giant, close to the shoulders.
 export const HAND_REST=Object.freeze([{x:-22,y:2,z:-64},{x:22,y:2,z:-64}]);
@@ -76,14 +73,6 @@ export function giantPattern(index,player,temperament='controlled',healthRatio=1
     {...circle(clamp(x+12,-46,46),z,10,1.0,1.65,32),handIndex:1,active:.32},
     {...circle(x,z,9,2.2,1.45,36),handIndex:0,active:.3}
   ];
-  // Two archived casino techniques are now real controlled-phase attacks.
-  // Their dedicated engines and 3D effects own every damaging projectile and
-  // swept chain. These inert beats reserve a fair, exclusive giant timeline:
-  // do NOT add a second invisible giant-palm hitbox over the card/chain hit.
-  if(slot===14)hazards=[{...circle(x,z,2,0,1.25,0),
-    active:12.3,damage:0,cancelled:true,faceAttack:'portrait'}];
-  if(slot===15)hazards=[{...rect(x,z,4,4,0,1.0),
-    active:1.6,damage:0,cancelled:true,faceAttack:'chain'}];
   // Thrown props now have a distinct pickup, sustained arc and exact impact beat; palm/head timing stays intact.
  hazards=slowThrownHazards(hazards,h=>giantPropType({slot,temperament:'controlled'},h)).map(giantReadableWarning);
  return {slot,name:GIANT_NAMES[slot]+([6,12].includes(slot)?' · '+hazards.length+'발 예고':'')+(slot===3?' · '+(coinFace==='heads'?'앞면':'뒷면'):slot===4?' · '+({rook:'룩',bishop:'비숍',knight:'나이트'})[chessPiece]:''),coinFace:slot===3?coinFace:null,chessPiece:slot===4?chessPiece:null,hazards:hazards.map((h,i)=>({...giantReadableWarning(h),id:i,handIndex:Number.isInteger(h.handIndex)?h.handIndex:handKind({slot,temperament},h)?i%2:null,hit:false})),duration:Math.max(...hazards.map(h=>h.start+h.warn+h.active))};
@@ -170,7 +159,7 @@ function handKind(s,h){
 export const handCanAttack=(s,i)=>Boolean(s&&!s.destroyed?.[i]&&!(s.revive?.[i]>0));
 export function beginGiant(g){
  g.boss.name='운명의 찬탈자 박성원';const d=g.dice;d.giant={state:'transition',t:0,ordinal:0,phaseCastCount:0,temperament:'controlled',rageTriggered:false,rageBeat:0,cinematicBeat:'still',hands:[GIANT.handHp,GIANT.handHp],destroyed:[false,false],disabledFor:[0,0],revive:[0,0],crumble:[0,0],smooth:HAND_REST.map(h=>({...h})),hazards:[],from:{...d.pose,rotation:[...d.pose.rotation]}};
- d.state='giant';d.telegraph=d.pips=d.groundSpikes=null;d.frenzyRemaining=d.chainCharges=0;d.stun=0;
+ d.state='giant';d.telegraph=d.pips=null;d.frenzyRemaining=d.chainCharges=0;d.stun=0;
  g.player.action=null;if(g.projectiles)g.projectiles.length=0;g.boss.phase2PendingDesign=false;g.events.push({type:'dice-possession',duration:GIANT.transition});
 }
 export function beginFeral(g){
@@ -178,7 +167,6 @@ export function beginFeral(g){
  if(!q||q.rageTriggered||q.state==='dead')return false;
  if(q.state==='transition'){q.pendingFeral=true;return true;}
  q.pendingFeral=false;q.rageTriggered=true;q.temperament='feral';q.rageBeat=GIANT.rageBeat;q.phaseCastCount=0;
- clearDiceFaceAttack(g);g.dice.facePattern=null;
  q.pressureSlots=[];q.lastPressureSlot=null;
  q.state='recovery';q.t=-GIANT.rageBeat;q.hazards=[];
  q.hands=[GIANT.handHp,GIANT.handHp];q.destroyed=[false,false];q.disabledFor=[0,0];q.revive=[GIANT.handRecover,GIANT.handRecover];q.crumble=[0,0];
@@ -368,13 +356,10 @@ export function nextGiantPressureSlot(g){
  // Limit the priority to the opening casts, then exhaust every remaining slot
  // exactly once via the original seeded, phase-specific shuffle bag.
  const count=s.phaseCastCount||0;
- const signature=feral?[7,13,14,15]:[14,15,6,12,13];
+ const signature=feral?[7,13,14,15]:[6,12,13,10];
  const early=count<signature.length;
- // The restored portrait and chain must actually fire in the real giant
- // encounter, not in an ordinary phase-two engine that the game bypasses.
- const earlyChoices=!feral&&count<2?[14,15]:signature;
  const selected=drawPatternShuffle(g.dice.patternShuffle,'giant-'+(feral?'feral':'controlled'),slots,
-  {preferred:early?earlyChoices:favored,avoid:s.lastPressureSlot});
+  {preferred:early?signature:favored,avoid:s.lastPressureSlot});
  s.phaseCastCount=(s.phaseCastCount||0)+1;s.lastPressureSlot=selected;
  return selected;
 }
@@ -407,15 +392,6 @@ export function stepGiant(g,dt,frozen=false){
     pattern=giantPattern(authoredIndex,g.player,q.temperament,g.boss.hp/g.boss.maxHp,rouletteTurn);
   if(q.temperament==='controlled'&&(slot===6||slot===12))q.rouletteTurn=rouletteTurn+1;
   Object.assign(q,{state:'attack',t:0,slot:pattern.slot,name:pattern.name,currentPattern:q.temperament+':'+pattern.slot,coinFace:pattern.coinFace||null,chessPiece:pattern.chessPiece||null,hazards:pattern.hazards,duration:pattern.duration});
-  // Controlled giant phase already replaces the former ordinary phase two;
-  // explicitly cast the two recovered attacks on the actual live battle path.
-  if(q.temperament==='controlled'&&(slot===14||slot===15)){
-   g.dice.facePattern=slot===14?'portrait':'chain';
-   if(slot===14){
-    g.dice.nextFaceAttack='portrait';
-    stepPortraitBarrage(g,.0001,false,12,65,.42,true);
-   }else beginChainSweep(g,65);
-  }
   g.events.push({type:'dice-giant-warning',name:q.name});
   if(q.temperament==='feral'&&slot>=13)g.events.push({type:'dice-table-omen',slot,name:q.name});
   if(q.temperament==='controlled'&&(slot===6||slot===12))g.events.push({type:'dice-gentleman-roulette',count:pattern.hazards.length,jackpot:slot===12});
