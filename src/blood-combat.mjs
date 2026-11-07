@@ -206,6 +206,8 @@ function tickBoss(g,dt){
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
   if(s.phasePending){beginPhase(g);return;}
+  // Brace during the windup without changing the visible hit timing.
+  if(s.whip){s.recover-=dt;return;}
   if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
   s.walk.t+=dt;const step=sampleBloodWalk(s.walk);b.x=step.x;b.z=step.z;b.yaw=s.whip?.yaw??step.yaw;
   s.recover-=dt;
