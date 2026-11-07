@@ -6,7 +6,7 @@ import {disposeScene} from './runtime/scene-resources.mjs';
 // PBR geometry, articulating legs, role-specific apparatus, frame-independent
 // movement and real theatrical cues. The troupe exists in the combat state;
 // this view can never manufacture a damaging hitbox.
-export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
+export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActorCreated=null}={}){
  const root=new THREE.Group();root.name='seulwoo-living-circus-troupe';scene.add(root);
  const live=new Map(),hoops=new Map();
  const direction=new THREE.Vector3(),from=new THREE.Vector3(),to=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
@@ -25,7 +25,9 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
   ember:new THREE.MeshStandardMaterial({color:0xe18a51,roughness:.54,emissive:0x9d3118,emissiveIntensity:.78})
  };
  const add=(parent,g,m,name,x=0,y=0,z=0)=>{
-  const o=new THREE.Mesh(g,m);o.name=name;o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o;
+  const o=new THREE.Mesh(g,m);o.name=name;o.position.set(x,y,z);
+   o.castShadow=!coarse&&/costume|mask-shadow-back|stage-shoe|ragged-velvet-coat-hem/.test(name);
+   parent.add(o);return o;
  };
  const oval=(parent,m,name,x,y,z,rx,ry,rz)=>{const o=add(parent,geo,m,name,x,y,z);o.scale.set(rx,ry,rz);return o;};
  const tube=(parent,m,name,x,y,z,radius,length)=>{const o=add(parent,cylinder,m,name,x,y,z);o.scale.set(radius,length,radius);return o;};
@@ -88,6 +90,9 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
    const wing=add(body,new THREE.ConeGeometry(.62,1.4,coarse?8:15,1,true),mat.crimson,'false-ringmaster-short-coat',0,.63,-.35);
    wing.rotation.x=-.18;
   }
+  // Newly summoned performers receive the same prefiltered PBR maps and
+  // physically based environment shading as the boss, once at entrance.
+  if(typeof onActorCreated==='function')onActorCreated(group);
   return {group,body,head,jaw,mask,shoulders,legs,fire,strings,skirt,springs,yaw:null,role};
  }
  function createHoop(z){

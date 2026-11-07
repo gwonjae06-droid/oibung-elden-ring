@@ -63,14 +63,15 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  $('boss-hud').querySelector('h2').textContent='광대 오슬우';$('boss-hud').setAttribute('aria-label','광대 오슬우 상태');shell.querySelector('.brand span').textContent='전투 실험실 · 02';$('quit').textContent='광대전 무기 선택으로';$('change').textContent='광대전 무기 재선택';$('retry').textContent='같은 무기로 광대전 재도전';
  let warmup=null;const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});const quality=createEncounterQuality({coarse}),audit=createFramePerformanceAudit({renderer,boss:'clown'});startup.own('Clown renderer',()=>renderer.dispose());renderer.setPixelRatio(1);renderer.shadowMap.enabled=!coarse;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;renderer.outputColorSpace=THREE.SRGBColorSpace;d.showModal();
  const eventScope=createEventScope(window);startup.own('Battle callbacks',()=>eventScope.dispose());
- const scene=new THREE.Scene();startup.own('Battle scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x29272a);scene.fog=new THREE.Fog(0x3c3533,53,125);const camera=new THREE.PerspectiveCamera(KWON_CAMERA_REFERENCE.fov,1,.1,145);const hemisphere=new THREE.HemisphereLight(0xe9e0d2,0x47403c,1.55);scene.add(hemisphere);
- const sun=new THREE.DirectionalLight(0xffe3c4,2.05);sun.position.set(8,20,15);sun.castShadow=!coarse;sun.shadow.mapSize.set(coarse?512:1024,coarse?512:1024);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:80});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0005;scene.add(sun);
+ const scene=new THREE.Scene();startup.own('Battle scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x1e1a23);scene.fog=new THREE.Fog(0x2d2731,45,120);const camera=new THREE.PerspectiveCamera(KWON_CAMERA_REFERENCE.fov,1,.1,145);const hemisphere=new THREE.HemisphereLight(0xe6d6c4,0x282028,1.32);scene.add(hemisphere);
+ const sun=new THREE.DirectionalLight(0xffdbbb,1.85);sun.position.set(8,20,15);sun.castShadow=!coarse;sun.shadow.mapSize.set(coarse?512:1024,coarse?512:1024);Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,near:1,far:80});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0005;scene.add(sun);
  const circus=createClownCircusStage(scene,{coarse,reduced});startup.own('Clown radiant circus',()=>circus.dispose());
  const nightmare=createClownNightmareTheatre(scene,{coarse,reduced});startup.own('Clown impossible theatre',()=>nightmare.dispose());
  const livingWorld=createClownLivingWorld(scene,{coarse,reduced,keyLight:sun,ambientLight:hemisphere});startup.own('Clown living world',()=>livingWorld.dispose());
   const atmosphere=createBossAtmosphere(scene,{profile:'clown',coarse,reduced});startup.own('Clown silent atmosphere',()=>atmosphere.dispose());
  const actor=createClownActor({coarse});scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);
- const troupeView=createCircusTroupeView(scene,{coarse,reduced});startup.own('Living circus troupe',()=>troupeView.dispose());
+ const troupeView=createCircusTroupeView(scene,{coarse,reduced,
+  onActorCreated:performer=>cinematic.apply(performer,{actor:true})});startup.own('Living circus troupe',()=>troupeView.dispose());
  const P=buildPlayer(Object.keys(WEAPONS));scene.add(P.rig);
   const cinematic=createCinematicWorld(scene,renderer,{profile:'clown',coarse,reduced});startup.own('Clown cinematic PBR',()=>cinematic.dispose());
   cinematic.apply(circus.root);cinematic.apply(actor.root,{actor:true});cinematic.apply(P.rig,{actor:true});
