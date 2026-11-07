@@ -348,12 +348,16 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     else if(pose==='hoop'){spread=side*(-.7*weight);reach=(-1.75+.13*accent)*weight;}
     else if(pose==='mirror'){spread=side*(-1.15*weight);reach=(-.98+.25*accent)*weight;}
     else if(pose==='crush'){
-     const strike=routine.elapsed>=routine.wind;
-     spread=side*(-.3-.2*weight);reach=(strike?.48:-2.1)*weight;
+     const nextBlow=m.melee?.impacts.find(at=>at>routine.elapsed);
+     const raising=nextBlow!==undefined&&nextBlow-routine.elapsed<.55;
+     const released=routine.elapsed>=routine.wind&&!raising;
+     spread=side*(-.3-.2*weight);reach=(raising||!released?-2.1:.48)*weight;
     }
     else if(pose==='slash'){
-     const strike=routine.elapsed>=routine.wind;
-     spread=side*(-.48-.38*weight);reach=(strike?-.12:-1.65)*weight+
+     const nextBlow=m.melee?.impacts.find(at=>at>routine.elapsed);
+     const raising=nextBlow!==undefined&&nextBlow-routine.elapsed<.48;
+     const released=routine.elapsed>=routine.wind&&!raising;
+     spread=side*(-.48-.38*weight);reach=(raising||!released?-1.65:-.12)*weight+
       (side>0?1:-1)*accent*.30*weight;
     }
     else if(pose==='cannon'){spread=side*(-.35*weight);reach=(-.85+.15*accent)*weight;}
