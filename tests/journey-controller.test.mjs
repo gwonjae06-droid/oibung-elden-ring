@@ -139,6 +139,9 @@ test('main-menu forge invests permanent points and can refund across weapons',as
  assert.deepEqual(f.game().evolutions,['blade-wave','blade-wave']);
  await f.click('home');await f.click('forge');
  await f.click('forge-refund',{weapon:'sword'});
+ assert.match(f.dialog.html,/forge-refund-confirm/);
+ assert.equal(JSON.parse(f.data.get(SAVE_KEY)).forge.sword['blade-wave'],2,'confirmation is required');
+ await f.click('forge-refund-confirm');
  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).flames,4);
  assert.equal(JSON.parse(f.data.get(SAVE_KEY)).forge.sword['blade-wave'],0);
  await f.click('forge-weapon',{weapon:'bow'});await f.click('forge-buy',{evolution:'twin-arrow'});
@@ -150,8 +153,8 @@ test('unlocked boss travel is free and retries at the chosen starting boss',asyn
  profile.forge.bow['twin-arrow']=1;
  const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
  assert.doesNotMatch(f.dialog.html,/skip-toggle|불꽃 지름길/);
- assert.match(f.dialog.html,/해금 보스 선택 · 이동/);
- await f.click('bosses');assert.match(f.dialog.html,/거대 주사위 박성원부터 도전/);
+ assert.match(f.dialog.html,/시련 시작 · 보스 선택/);
+ await f.click('new');await f.click('boss-target',{stage:'2'});assert.match(f.dialog.html,/거대 주사위 박성원부터 도전/);
  await f.click('weapon',{weapon:'bow'});assert.match(f.dialog.html,/j-stat-chart/);
  assert.match(f.dialog.html,/한 번 공격 피해|최대 체력/);
  await f.click('begin');assert.equal(f.game().boss.maxHp,5711);
@@ -175,7 +178,7 @@ test('locked bosses cannot be chosen, including fake clicks, and no currency is 
 test('any earlier unlocked boss can be chosen with zero flames, and chain progression stays intact',async()=>{
  const profile=freshProfile();profile.defeated=['kwon','clown','dice'];
  const f=rig({savedProfile:profile}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- await f.click('bosses');assert.match(f.dialog.html,/영원한 혈왕 배서준부터 도전/);
+ await f.click('new');await f.click('boss-target',{stage:'3'});assert.match(f.dialog.html,/영원한 혈왕 배서준부터 도전/);
  await f.click('boss-target',{stage:'1'});assert.match(f.dialog.html,/광대 오슬우부터 도전/);
  await f.click('weapon',{weapon:'bow'});
  await f.click('begin');assert.equal(f.game().boss.maxHp,5076);
@@ -187,7 +190,7 @@ test('any earlier unlocked boss can be chosen with zero flames, and chain progre
 test('a failed destination load is retryable without spending flames',async()=>{
  const profile=freshProfile();profile.defeated=['kwon'];profile.flames=2;
  const f=rig({savedProfile:profile,failLoadOnce:true}),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- await f.click('bosses');await f.click('begin');
+ await f.click('new');await f.click('boss-target',{stage:'1'});await f.click('begin');
  assert.match(f.dialog.html,/전장을 열지 못했습니다/);assert.equal(saved().flames,2);
  await f.click('continue');assert.equal(f.game().boss.maxHp,5076);assert.equal(saved().flames,2);
  await f.click('continue');assert.equal(saved().flames,2);await f.api.dispose();f.release();
@@ -195,7 +198,7 @@ test('a failed destination load is retryable without spending flames',async()=>{
 test('starting at final unlocked boss rewards only its clear and records that starting point',async()=>{
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice','blood'];
  profile.records=[{weapon:'sword',time:100,deaths:0,bossCount:4,startStage:0}];profile.clears=1;
- const f=rig({savedProfile:profile});await f.click('bosses');await f.click('begin');
+ const f=rig({savedProfile:profile});await f.click('new');await f.click('boss-target',{stage:'4'});await f.click('begin');
  assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.gyuwon.maxHp);
  f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
  assert.match(f.dialog.html,/마지막 시련을 넘어섰다/);assert.match(f.dialog.html,/별도로 기록/);
