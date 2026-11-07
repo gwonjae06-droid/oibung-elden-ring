@@ -19,7 +19,7 @@ test('phase one has no roulette coins and cycles through its physical patterns',
  assert.equal(createDicePlayerGame().dice.patternCount,0);
 });
 test('gentleman phase inherits the original count and jackpot roulette shot ranges',()=>{
- assert.equal(GIANT_NAMES.length,16);
+ assert.equal(GIANT_NAMES.length,14);
  for(let turn=0;turn<8;turn++){
   for(const [slot,min,max]of [[6,2,6],[12,4,6]]){
    const p=giantPattern(slot,{x:6,z:-38},'controlled',.55,turn);
