@@ -1,0 +1,150 @@
+// Independently simulated, targetable nightmare-circus ensemble.
+// Every attack uses the same telegraphed zone engine as the ringmaster.
+// There is no decorative "mob" which can damage without a real cue.
+const TAU=Math.PI*2;
+const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
+const ROLES=Object.freeze(['chorister','acrobat','puppeteer','firekeeper','mimic','chorister','acrobat','puppeteer']);
+export const CIRCUS_ROLES=Object.freeze({
+ chorister:{hp:80,speed:2.3,range:13,attack:13,wind:1.35},
+ acrobat:{hp:85,speed:5.2,range:7.5,attack:16,wind:1.05},
+ puppeteer:{hp:100,speed:2.0,range:11,attack:15,wind:1.4},
+ firekeeper:{hp:90,speed:2.1,range:9.7,attack:16,wind:1.45},
+ mimic:{hp:65,speed:4.4,range:8.2,attack:12,wind:1.20}
+});
+const targetCount=stage=>stage>=3?7:stage===2?5:3;
+const away=p=>{const d=Math.hypot(p.x,p.z);return d>23?{x:p.x*23/d,z:p.z*23/d}:p};
+function spawn(g,i){
+ const role=ROLES[i%ROLES.length],a=i*TAU/8+.55,r=11+(i%3)*2,origin=g.boss;
+ return {id:g.nextId++,role,x:origin.x+Math.sin(a)*r,z:origin.z+Math.cos(a)*r,
+  vx:0,vz:0,yaw:a+Math.PI,life:CIRCUS_ROLES[role].hp,maxHp:CIRCUS_ROLES[role].hp,
+  age:0,cast:0,cooldown:2.0+(i%4)*1.3,down:false,death:0,flash:0,step:0,
+  target:null,showCue:null,seenHit:null};
+}
+export function createCircusTroupe(g){
+ return {members:[],stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,beat:0};
+}
+export function setCircusAct(g,stage){
+ if(!g?.clown)return;
+ const t=g.clown.troupe||(g.clown.troupe=createCircusTroupe(g));
+ if(stage<=t.stage)return;
+ // After the unskippable transformation, a different corps enters from
+ // the perimeter; corpses do not instant-respawn in the middle of a hit.
+ t.stage=stage;t.members=[];t.cycle=0;t.globalCooldown=1.4;
+ for(let i=0;i<targetCount(stage);i++)t.members.push(spawn(g,i));
+}
+export function clearCircusTroupe(g){
+ const t=g?.clown?.troupe;if(!t)return;
+ t.members=[];t.show='';t.showAge=0;t.globalCooldown=3;
+}
+export function cueCircusShow(g,show){
+ const t=g?.clown?.troupe;if(!t)return;
+ t.show=show;t.showAge=0;t.cue++;
+ // One curtain call may summon replacements, but only when a real authored
+ // troupe pattern happens. Enemies already defeated stay defeated otherwise.
+ if(t.members.filter(m=>!m.down).length<2){
+  const limit=targetCount(t.stage||1);
+  for(let i=0;i<Math.min(3,limit);i++)t.members.push(spawn(g,(t.cycle++%ROLES.length)));
+ }
+}
+export function circusTroupeAlive(g){return g?.clown?.troupe?.members?.filter(m=>!m.down)||[];}
+function contactAngle(a,b){return Math.atan2(b.x-a.x,b.z-a.z);}
+function damageMember(g,m,damage,emit){
+ if(m.down||!(damage>0))return;
+ m.life=Math.max(0,m.life-damage);m.flash=.27;
+ emit(g,'clown-troupe-hit',{id:m.id,role:m.role,amount:Math.round(damage),x:m.x,z:m.z});
+ if(g.stats){g.stats.hits=(g.stats.hits||0)+1;}
+ if(m.life===0){m.down=true;m.death=0;emit(g,'clown-troupe-down',{id:m.id,role:m.role,x:m.x,z:m.z});}
+}
+function playerContacts(g,t,emit){
+ const p=g.player,a=p.action;
+ // A visible weapon swing must face and reach a member. This does not
+ // register phantom "boss hits" when an actor happens to be nearby.
+ if(a?.kind==='attack'&&!a?.projectile&&Number.isFinite(a.wind)
+  &&a.t>=a.wind&&a.t<=a.wind+a.active){
+  for(const m of t.members){
+   if(m.down||m.seenHit===a)continue;
+   const d=Math.hypot(m.x-p.x,m.z-p.z);
+   const yaw=contactAngle(p,m),dif=Math.atan2(Math.sin(yaw-a.yaw),Math.cos(yaw-a.yaw));
+   const reach=g.weapon==='hammer'?4.0:3.6;
+   if(d>reach||Math.abs(dif)>.78)continue;
+   m.seenHit=a;
+   damageMember(g,m,g.weapon==='hammer'?70:45,emit);
+  }
+ }
+ // Real shots hit the members too; the projectile is consumed and cannot
+ // penetrate through a singer to damage the boss on the next tick.
+ for(const q of g.projectiles||[]){
+  if(q.hit||q.bossHit||q.life<=0)continue;
+  for(const m of t.members){
+   if(m.down)continue;
+   const range=m.role==='acrobat'?1.05:1.15;
+   if(Math.hypot(q.x-m.x,q.z-m.z)<range){
+    q.hit=true;q.life=0;
+    damageMember(g,m,q.damage||32,emit);break;
+   }
+  }
+ }
+}
+function castAttack(g,m,zone,emit){
+ const p=g.player,role=m.role,s=CIRCUS_ROLES[role],warn=s.wind;
+ const aim=away({x:p.x,z:p.z});
+ m.cast=warn+.35;m.showCue=role;m.target={...aim};
+ if(role==='chorister'){
+  const yaw=contactAngle(m,p),len=clamp(Math.hypot(m.x-p.x,m.z-p.z)+2,3,17);
+  zone(g,{shape:'lane',x:m.x,z:m.z,yaw,len,w:2.6,warn,damage:s.attack,sound:'choir'});
+ }else if(role==='acrobat'){
+  zone(g,{shape:'circle',...aim,r:2.35,warn,damage:s.attack,sound:'acrobat'});
+ }else if(role==='puppeteer'){
+  const q=away({x:p.x+Math.sin(m.age*2)*2.5,z:p.z+Math.cos(m.age*2)*2.5});
+  zone(g,{shape:'circle',...q,r:2.9,warn,damage:s.attack,sound:'puppet'});
+ }else if(role==='firekeeper'){
+  zone(g,{shape:'circle',...aim,r:3.15,warn,damage:s.attack,sound:'infernalHoops'});
+ }else{
+  const side=Math.atan2(p.x-m.x,p.z-m.z)+((Math.floor(m.age)%2)?.3:-.3);
+  zone(g,{shape:'lane',x:m.x,z:m.z,yaw:side,len:13,w:2.25,warn,damage:s.attack,sound:'falseRingmaster'});
+ }
+ emit(g,'clown-troupe-cast',{id:m.id,role,wind:warn,x:m.x,z:m.z});
+}
+export function stepCircusTroupe(g,dt,{zone,emit}){
+ if(!g?.clown||!g?.boss||g.status!=='playing')return;
+ const t=g.clown.troupe;if(!t)return;
+ const c=g.clown,b=g.boss,stage=c.horrorStage||1;
+ if(b.state==='transition'||b.state==='dead')return;
+ setCircusAct(g,stage);
+ const h=clamp(dt,0,1/30);
+ t.beat+=h;t.showAge+=h;t.globalCooldown=Math.max(0,t.globalCooldown-h);
+ playerContacts(g,t,emit);
+ const target=g.player,phase=b.phase,locked=Boolean(c.punish||c.stunT>0||c.noSeparate);
+ for(let i=0;i<t.members.length;i++){
+  const m=t.members[i],s=CIRCUS_ROLES[m.role];
+  m.age+=h;m.flash=Math.max(0,m.flash-h);
+  if(m.down){m.death+=h;continue;}
+  if(m.cast>0){m.cast=Math.max(0,m.cast-h);m.cooldown=Math.max(m.cooldown,m.cast+.8);}
+  else m.cooldown-=h;
+  // The full ensemble continually repositions, not a fixed texture
+  // billboard. Accelerations and damping prevent teleporting footwork.
+  const wave=i*Math.PI*.48+t.beat*.13*(phase===2?1.35:1);
+  const desiredRadius=s.range+(t.show==='chorus'?-1.5:0);
+  const around={x:target.x+Math.sin(wave)*desiredRadius,z:target.z+Math.cos(wave)*desiredRadius};
+  const safe=away(around),dx=safe.x-m.x,dz=safe.z-m.z,len=Math.hypot(dx,dz),speed=m.cast>0?.24:s.speed;
+  const accel=Math.min(1,8*h);
+  m.vx+=(len>1e-4?dx/len*speed:0-m.vx)*accel;
+  m.vz+=(len>1e-4?dz/len*speed:0-m.vz)*accel;
+  // Apply friction to physical velocity, then stay inside the arena.
+  m.vx*=Math.exp(-h*1.1);m.vz*=Math.exp(-h*1.1);
+  const oldX=m.x,oldZ=m.z;
+  m.x+=m.vx*h;m.z+=m.vz*h;
+  const bounded=away(m);m.x=bounded.x;m.z=bounded.z;
+  m.step+=Math.hypot(m.x-oldX,m.z-oldZ);
+  m.yaw=contactAngle(m,target);
+  // Do not stack all performer attacks simultaneously outside a deliberate
+  // choreographed show, nor attack into the boss's punish / cutscene window.
+  if(locked||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
+  if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
+  castAttack(g,m,zone,emit);
+  m.cooldown=3.8+i*.27;t.globalCooldown=stage===3?1.2:stage===2?1.75:2.6;
+ }
+ // Delete only after the exit animation has had time to finish.
+ t.members=t.members.filter(m=>!m.down||m.death<1.8);
+}
