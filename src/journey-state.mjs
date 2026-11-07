@@ -24,24 +24,15 @@ export function latestUnlockedStage(profile){
  while(stage<BOSSES.length-1&&profile?.defeated?.includes(BOSSES[stage]))stage++;
  return stage;
 }
-// Any consecutively unlocked boss AFTER the first can be a flame starting
-// point. The ordinary first-boss route is free and uses newRun instead.
-export function canFlameSkipTo(profile,stage){
- return Number.isInteger(stage)&&stage>0&&stage<BOSSES.length&&
-  stage<=latestUnlockedStage(profile)&&flameBalance(profile)>=1;
+// A defeated boss unlocks the following encounter. Revisit any unlocked
+// destination without consuming purification flames (those are forge-only).
+export function canTravelTo(profile,stage){
+ return Number.isInteger(stage)&&stage>=0&&stage<BOSSES.length&&
+  stage<=latestUnlockedStage(profile);
 }
-export function newFlameRun(profile,weapon='sword',stage=latestUnlockedStage(profile)){
- if(!canFlameSkipTo(profile,stage))return null;
- return {...newRun(weapon),stage,startStage:stage,skipFlamePending:true};
-}
-// Selection reserves nothing. Charge once only after a battle session opens;
-// failed loading, cancelling, and reloading the menu never consume a flame.
-export function consumeFlameSkip(profile,run){
- if(!run?.skipFlamePending||run.secret||run.stage!==run.startStage||
-  !canFlameSkipTo(profile,run.stage))return false;
- profile.flames=flameBalance(profile)-1;
- delete run.skipFlamePending;
- return true;
+export function newTravelRun(profile,weapon='sword',stage=0){
+ if(!canTravelTo(profile,stage)||!Object.hasOwn(EVOLUTIONS,weapon))return null;
+ return {...newRun(weapon),stage,startStage:stage};
 }
 export function loadProfile(storage){try{
  const p=JSON.parse(storage.getItem(SAVE_KEY));
@@ -66,7 +57,7 @@ export function loadProfile(storage){try{
  });
  }catch{return freshProfile();}}
 // Persist only the durable account state. A run is intentionally not resumed
-// on reload; flame-skip selection is session-only and is never persisted.
+// on reload; boss selection is session-only and is never persisted.
 export function saveProfile(storage,profile){try{
  storage.setItem(SAVE_KEY,JSON.stringify({...profile,version:4,run:null}));return true;
  }catch{return false;}}
