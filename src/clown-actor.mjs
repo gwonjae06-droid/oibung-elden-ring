@@ -13,7 +13,7 @@ import {clownWeightAccent} from './boss-performance.mjs';
 import {createClownGait} from './clown-gait.mjs';
 import {createClownNightmareAnatomy} from './clown-nightmare-anatomy.mjs';
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
-import {clownDismountPose,clownBallWorldPose,CLOWN_VISUAL_SCALE} from './clown-grounded-physics.mjs';
+import {clownDismountPose,clownBallWorldPose,clownContactFrame,CLOWN_VISUAL_SCALE} from './clown-grounded-physics.mjs';
 import {createPoseContinuity} from './boss-animation-continuity.mjs';
 export {disposeScene} from './runtime/scene-resources.mjs';
 export function createClownActor({coarse=false}={}){
@@ -61,10 +61,10 @@ export function createClownActor({coarse=false}={}){
   red.color.setHex(horror===3?0x471728:horror===2?0x741e36:0x981d38);
   white.color.setHex(horror===3?0xc5b5a5:horror===2?0xd8c4af:0xe8d5ad);
   const A=clownSpectaclePose(g,cartoonPose(c.name,c.pt,boss.phase,c.state==='pattern'&&boss.state!=='transition'&&g.status==='playing'));
-  const groundBase=boss.phase===2?(boss.state==='transition'?clownDismountPose(boss.t).bodyY:Q.bodyHeight):5.2;
+  const contact=clownContactFrame(g,A,Q),groundBase=contact.base;
   const airborne=boss.state==='transition'||(v.jump||0)>.02||(A.lift||0)>.25;
-  const footMotion=gait.update(g,dt,{bodyHeight:groundBase+(A.lift||0),pitch:Q.pitch,
-   supportY:airborne?groundBase+(A.lift||0):boss.phase===2?0:5.2}),weightAccent=clownWeightAccent(g,A);
+  const footMotion=gait.update(g,dt,{bodyHeight:contact.height,pitch:contact.pitch,
+   supportY:airborne?contact.height:boss.phase===2?0:5.2}),weightAccent=clownWeightAccent(g,A);
   if(lastGame!==g||time<lastClock){balance.reset();recoil.reset();gestureBlend.reset();lastGame=g;}lastClock=time;
   if(reduced){A.lift*=.25;A.twist*=.25;A.smear=0;}
   p.inflate=(p.inflate||1)*A.headScale;p.stretch=(p.stretch||0)+(A.bodyY-1)*.2;
@@ -75,14 +75,14 @@ export function createClownActor({coarse=false}={}){
   const size=p.inflate||1,crouch=v.crouch||0,elongation=M?M.elongation:0,rise=M?2.6*M.scale*(A.headScale-1):0;for(const m of[red,white,black,gold,purple])m.emissive.setHex(c.flash>0?0x5a2518:0);
   root.position.set(boss.x,Math.max(0,v.jump*1.1),boss.z);
   root.rotation.y=A.facingYaw??c.yaw;
-  body.position.y=Math.max(0,groundBase+(A.lift||0)+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0));
+  body.position.y=Math.max(0,contact.height+footMotion.bob*(Q.active?.25:1)-(death?.bodyDrop||0));
   body.scale.set(A.bodyX,A.bodyY,A.bodyZ);
   body.rotation.y=soft.twist;
   body.rotation.z=death?death.roll:soft.tilt*.13+footMotion.roll+weightAccent.roll+Q.bodyRoll;
   const ordinaryPitch=(death?death.pitch:(v.neck>0?v.neck*.3:0))+soft.lean+footMotion.lean+weightAccent.pitch;
   // Large cartoon lean angles used to pull the feet through the ground.
   // Use a smaller supported hip rotation once dismounted.
-  body.rotation.x=boss.phase===2&&!death?Q.pitch+Math.max(-.22,Math.min(.25,ordinaryPitch*.32)):
+  body.rotation.x=boss.phase===2&&!death?contact.pitch:
    ordinaryPitch+(death?0:recoil.step('spine:impact',
     (A.clapClose??0)*1.1+(v.stomp||0)*.7-(v.jump||0)*.5,dt,
     {strength:1.5,frequency:18,limit:.065}));

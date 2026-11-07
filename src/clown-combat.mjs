@@ -1075,13 +1075,11 @@ export function choosePattern(g) {
  const horror=pool.filter(k=>HORROR_PATTERNS.includes(k));
  if(horror.length&&stage>=2&&c.seq%3===0)
   preferred=[...horror.filter(k=>c.last!==k),...preferred];
- // Give the new physically distinctive beast patterns meaningful screen time.
- if(phase===2&&stage>=2){
-  const beasts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&k!==c.last),
-   unseen=beasts.filter(k=>(c.used?.[k]||0)===0);
-  if(unseen.length&&(c.seq%2===0||!c.used?.feralSkitter))
-   preferred=[...unseen,...preferred];
-  else if(beasts.length&&c.seq%3===1)preferred=[...beasts,...preferred];
+ // A crawl is an unsettling punctuation mark, not the boss's main gait.
+ // The exhaustive shuffle bag still guarantees every authored move.
+ if(phase===2&&stage>=2&&c.seq%6===3){
+  const beasts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&k!==c.last);
+  if(beasts.length)preferred=[...beasts,...preferred];
  }
  if(g.journeyBalance?.mode==='story'){
   const follow={dash:'clap',juggle:'bounce',confettiCurtain:'spotlightSweep',
@@ -1104,9 +1102,7 @@ export function choosePattern(g) {
   else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
   const debut=pool.filter(k=>['funeralParade','brokenHorses'].includes(k)&&!(c.used?.[k]>0));
-  const hunts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
-  else if(hunts.length)preferred=hunts;
  }
  c.seq++;
  return drawPatternShuffle(g.patternShuffle,'clown-'+phase+'-act'+stage,pool,

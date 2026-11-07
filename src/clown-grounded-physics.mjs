@@ -11,6 +11,18 @@ export function clownDismountPose(time){
  const raised=2*CLOWN_BALL_RADIUS*phaseTwoBallScale(Math.min(t,1.65));
  return {bodyY:raised*(1-u*u),airborne:u>0&&u<1,progress:u};
 }
+// Shared pure rig/hurtbox frame: neither a lifted shoulder nor a crawling
+// skull may keep a phantom ground-level collision volume.
+export function clownContactFrame(g,animation,beast){
+ const boss=g?.boss||{},a=animation||{},q=beast||{};
+ const base=boss.phase===2
+  ?boss.state==='transition'?clownDismountPose(boss.t).bodyY:q.bodyHeight||0
+  :5.2;
+ const pitch=boss.phase===2
+  ?(q.pitch||0)+Math.max(-.22,Math.min(.25,(a.lean||0)*.32))
+  :0;
+ return {base,pitch,height:Math.max(0,base+(a.lift||0))};
+}
 export const createClownStageBall=(x=0,z=0)=>({
  x,z,vx:0,vz:0,r:CLOWN_BALL_RADIUS*CLOWN_VISUAL_SCALE,
  scale:1,roll:0,launched:false,impacts:0

@@ -2,7 +2,8 @@
 // dimensions and the same phase/pose data used by its visual rig. No Three.js
 // dependency: combat and browser draw the same simulation-time silhouette.
 import {headFrame} from './clown-visual-data.mjs';
-import {clownBeastPose} from './clown-beast-pose.mjs';
+import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
+import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
 import {cartoonPose} from './clown-cartoon.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
@@ -23,18 +24,28 @@ export function clownHurtShapes(g){
   A=clownSpectaclePose(g,cartoonPose(g.clown.name,g.clown.pt,b.phase,g.clown.state==='pattern'&&b.state!=='transition'&&g.status==='playing')),
   jump=(v.jump||0)*1.1,shapes=[];
  if(b.phase===2){
-  // Upright by default, briefly pitched for the authored crawl attacks.
-  // The old spherical mount is now an independently grounded stage prop.
-  const sy=Math.cos(Q.pitch),sz=Math.sin(Q.pitch),base=Q.bodyHeight;
-  shapes.push(ellipsoid(b,'torso',{x:0,y:(base+2.25*sy+jump)*CLOWN_SCALE,z:2.25*sz*CLOWN_SCALE},
-   1.12*CLOWN_SCALE,1.02*CLOWN_SCALE,1.33*CLOWN_SCALE));
-  shapes.push(ellipsoid(b,'head',{x:0,y:(base+4.7*sy+jump)*CLOWN_SCALE,z:4.7*sz*CLOWN_SCALE},
-   .96*CLOWN_SCALE,1.05*CLOWN_SCALE,.94*CLOWN_SCALE));
-  if(Q.entry>.16)for(const side of [-1,1]){
-   const z=1.95*Math.cos(Q.pitch)+2.7*Math.sin(Q.pitch);
+  // Upright baseline and temporary crawl share the real torso's animation
+  // lift and tilt; moving jumps never leave hittable air below the body.
+  const frame=clownContactFrame(g,A,Q),sy=Math.cos(frame.pitch),sz=Math.sin(frame.pitch),
+   crouch=v.crouch||0,lift=frame.height+(v.jump||0)*1.1,
+   scaleY=A.bodyY||1;
+  const torsoY=(2.25-crouch*.25)*scaleY;
+  const headSize=A.headScale||1,headY=(4.7+(headSize-1)*.8-crouch*.25)*scaleY;
+  shapes.push(ellipsoid(b,'torso',
+   {x:0,y:(lift+torsoY*sy)*CLOWN_SCALE,z:torsoY*sz*CLOWN_SCALE},
+   1.05*(A.bodyX||1)*CLOWN_SCALE,1.28*scaleY*CLOWN_SCALE,
+   .83*(A.bodyZ||1)*CLOWN_SCALE));
+  shapes.push(ellipsoid(b,'head',
+   {x:0,y:(lift+headY*sy)*CLOWN_SCALE,z:headY*sz*CLOWN_SCALE},
+   .84*headSize*(A.bodyX||1)*CLOWN_SCALE,1.0*headSize*scaleY*CLOWN_SCALE,
+   .88*headSize*(A.bodyZ||1)*CLOWN_SCALE));
+  if(Q.entry>.75)for(const side of [-1,1]){
+   const paw=clownBeastPaw(Q,side,0),localY=paw[1]*scaleY;
+   const wy=Math.max(.72,lift+localY*sy-paw[2]*sz);
+   const wz=localY*sz+paw[2]*sy;
    shapes.push(ellipsoid(b,side<0?'left-paw':'right-paw',
-    {x:side*1.65*CLOWN_SCALE,y:(.9+jump)*CLOWN_SCALE,z:z*CLOWN_SCALE},
-    .52*CLOWN_SCALE*Q.entry,.48*CLOWN_SCALE,.63*CLOWN_SCALE*Q.entry));
+    {x:paw[0]*CLOWN_SCALE,y:wy*CLOWN_SCALE,z:wz*CLOWN_SCALE},
+    .52*CLOWN_SCALE,.48*CLOWN_SCALE,.63*CLOWN_SCALE));
   }
   return shapes;
  }

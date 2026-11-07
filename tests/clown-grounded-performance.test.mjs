@@ -52,3 +52,13 @@ test('standing and pitched shoe IK never asks for a below-floor planted sole',()
   }
  }
 });
+
+test('the actor and real hurt regions rise together during the visible leap',async()=>{
+ const {clownHurtShapes}=await import('../src/boss-hit-regions.mjs');
+ const g=createClownGame('sword',{register:false});g.boss.phase=2;
+ g.clown.state='pattern';g.clown.name='bounceChain';g.clown.pt=1.3;
+ const lifted=clownHurtShapes(g).find(s=>s.id==='head').y;
+ g.clown.name='ballRain';g.clown.pt=1.3;
+ const planted=clownHurtShapes(g).find(s=>s.id==='head').y;
+ assert.ok(lifted>planted,'airborne head and chest hitboxes must follow the actual rig lift');
+});
