@@ -34,6 +34,8 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  // All attack warnings are 3D material fractures bound to authoritative collision footprints.
  const hazardFx=createGyuwonHazardFx(stage,{coarse});
+ const studyTint=new THREE.Color(0x111b28),whiteTint=new THREE.Color(0xffffff),voidTint=new THREE.Color(0x010105);
+ const studyFloor=new THREE.Color(0x354252),whiteFloor=new THREE.Color(0xe9e7e4),darkFloor=new THREE.Color(0x090810);
  let deathElapsed=0;
  function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();hazardFx.clear();}
  function update(g,dt=0){
@@ -44,10 +46,13 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   edge.material.color.setHex(b.phase===3?0x92734d:b.phase===2?(white?0x7a697a:0x8c839a):0x9bb6ca);
   edge.material.opacity=b.phase===3?.25:b.phase===2?.20:.45;
   for(const o of stage.children)if(o.name==='gyuwon-endless-desks')o.visible=!voidSpace;
-  scene.background.setHex(white?0xffffff:voidSpace?0x010105:0x111b28);
+  // Keep transitions legible, without a white-screen flash or per-frame allocation.
+   const blend=dt>0?1-Math.exp(-Math.min(.05,dt)*4.4):1;
+   scene.background.lerp(white?whiteTint:voidSpace?voidTint:studyTint,blend);
   scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
   // A continuous, non-colliding floor makes metaphysical spaces legible.
-  floor.visible=!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));floor.material.color.setHex(voidSpace?(white?0xe9e7e4:0x090810):0x354252);
+  floor.visible=!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));
+   floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);
   spectacle.update(g,dt,deathElapsed);recall.update(g,dt);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   hazardFx.update(g);
