@@ -66,7 +66,7 @@ export function startGyuwonPattern(g,id){
   // At shared movement speed, a randomly distant safe fifth can be
   // physically unreachable from the perimeter. Keep the player's CURRENT
   // sector safe; a late, separately warned locked note then forces movement.
-  const sector=Math.PI*2/5,theta=(aim%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+  const sector=Math.PI*2/5,theta=(Math.atan2(p.x,p.z)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
   const nearest=Math.round(theta/sector)%5;
   for(let i=0;i<5;i++)if(i!==nearest)hazard(g,'cone',{
    x:0,z:0,yaw:i*sector,arc:.5,r:26,warn:1.95+i*.15
