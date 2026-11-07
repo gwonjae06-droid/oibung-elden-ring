@@ -8,23 +8,27 @@ const TAU=Math.PI*2;
 // free-spawning simultaneous hits would steal the lead and break recovery.
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
-const ROLES=Object.freeze(['chorister','acrobat','puppeteer','firekeeper','mimic','chorister','acrobat','puppeteer']);
+// Frontliners occupy real physical space rather than firing another remote projectile.
+const ROLES=Object.freeze(['chorister','strongman','acrobat','bladeDancer','puppeteer','firekeeper','mimic','chorister']);
+const MELEE_ROLES=new Set(['strongman','bladeDancer']);
 export const CIRCUS_ROLES=Object.freeze({
- chorister:{hp:80,speed:2.3,range:13,attack:13,wind:1.35},
- acrobat:{hp:85,speed:5.2,range:7.5,attack:16,wind:1.05},
- puppeteer:{hp:100,speed:2.0,range:11,attack:15,wind:1.4},
- firekeeper:{hp:90,speed:2.1,range:9.7,attack:16,wind:1.45},
- mimic:{hp:65,speed:4.4,range:8.2,attack:12,wind:1.20},
+ chorister:{hp:132,speed:2.45,range:12.5,attack:16,wind:1.35},
+ strongman:{hp:192,speed:3.65,range:3.1,attack:24,wind:1.42},
+ acrobat:{hp:144,speed:5.5,range:6.7,attack:19,wind:1.05},
+ bladeDancer:{hp:148,speed:5.85,range:3.45,attack:18,wind:1.12},
+ puppeteer:{hp:172,speed:2.2,range:10.6,attack:19,wind:1.4},
+ firekeeper:{hp:158,speed:2.35,range:9.1,attack:20,wind:1.45},
+ mimic:{hp:116,speed:4.7,range:7.7,attack:15,wind:1.20},
  legacyEcho:{hp:LEGACY_ECHO_CONFIG.hp,speed:LEGACY_ECHO_CONFIG.speed,range:LEGACY_ECHO_CONFIG.range,attack:11,wind:LEGACY_ECHO_CONFIG.telegraph}
 });
 const targetCount=stage=>stage>=3?7:stage===2?5:3;
 const away=p=>{const d=Math.hypot(p.x,p.z);return d>23?{x:p.x*23/d,z:p.z*23/d}:p};
 function spawn(g,i){
- const role=ROLES[i%ROLES.length],a=i*TAU/8+.55,r=11+(i%3)*2,origin=g.boss;
+ const role=ROLES[i%ROLES.length],a=i*TAU/ROLES.length+.55,r=11+(i%3)*2,origin=g.boss;
  return {id:g.nextId++,role,x:origin.x+Math.sin(a)*r,z:origin.z+Math.cos(a)*r,
   vx:0,vz:0,yaw:a+Math.PI,life:CIRCUS_ROLES[role].hp,maxHp:CIRCUS_ROLES[role].hp,
   age:0,cast:0,cooldown:2.0+(i%4)*1.3,down:false,death:0,flash:0,step:0,
-  target:null,showCue:null,seenHit:null,routine:null};
+  target:null,showCue:null,seenHit:null,routine:null,melee:null};
 }
 export function createCircusTroupe(g){
  return {members:[],fallen:[],reprise:null,hush:null,faceSync:null,stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,attackBeat:0,beat:0};
@@ -181,9 +185,63 @@ function playerContacts(g,t,emit){
   }
  }
 }
+
+const approach=(p,yaw,distance)=>away({x:p.x+Math.sin(yaw)*distance,z:p.z+Math.cos(yaw)*distance});
+const eased=x=>{const v=sat(x);return v*v*(3-2*v);};
+// A close-range cast locks its direction on the actor's obvious weapon windup.
+// The damage is evaluated at the actual blade / club position AFTER the windup;
+// the decorative lane never deals remote damage or tracks a dodging player.
+function beginMelee(g,m,zone,emit){
+ const s=CIRCUS_ROLES[m.role],now=g.clown.time||0,from={x:m.x,z:m.z};
+ const yaw=contactAngle(from,g.player),distance=Math.hypot(g.player.x-from.x,g.player.z-from.z);
+ const heavy=m.role==='strongman',wind=s.wind,travel=heavy?.29:.24;
+ const stride=clamp(distance-(heavy?1.72:1.48),0,heavy?2.3:2.65);
+ const follow=(g.clown.horrorStage||1)>=2,third=(g.clown.horrorStage||1)>=3&&!heavy;
+ const impacts=[wind+travel*.48];
+ if(follow)impacts.push(wind+travel+.57);
+ if(third)impacts.push(wind+travel+1.08);
+ m.melee={kind:m.role,from,yaw,start:now,wind,travel,stride,impacts,hit:impacts.map(()=>false)};
+ m.cast=impacts.at(-1)+.34;
+ m.cooldown=heavy?5.0:4.45;
+ m.target=approach(from,yaw,stride);
+ m.showCue=heavy?'club-crush':'blade-cross';
+ m.routine={pose:heavy?'crush':'slash',start:now,until:now+m.cast,wind};
+ // Visual-only danger rehearsal: the visible limb and weapon are the cue.
+ // Unlike a ranged projectile, there is no damaging zone at the old aim point.
+ zone(g,{shape:'lane',x:from.x,z:from.z,yaw,len:stride+(heavy?2.7:2.5),
+  w:heavy?2.7:1.8,warn:wind,damage:0,visual:true,
+  sound:heavy?'acrobat':'falseRingmaster',source:'troupe-melee',owner:m.id});
+ emit(g,'clown-troupe-cast',{id:m.id,role:m.role,wind,x:from.x,z:from.z,melee:true});
+}
+function advanceMelee(g,m,h,hurt){
+ const a=m.melee;if(!a||m.down)return false;
+ const elapsed=(g.clown.time||0)-a.start;
+ const progress=eased((elapsed-a.wind)/a.travel);
+ const p=approach(a.from,a.yaw,a.stride*progress);
+ const moved=Math.hypot(p.x-m.x,p.z-m.z);
+ m.x=p.x;m.z=p.z;m.step+=moved;m.yaw=a.yaw;
+ m.motionLean=elapsed<a.wind?-.10:elapsed<a.wind+a.travel?.32:-.10;
+ const heavy=a.kind==='strongman';
+ for(let k=0;k<a.impacts.length;k++){
+  if(a.hit[k]||elapsed<a.impacts[k])continue;
+  a.hit[k]=true;
+  // Backhand / cross-slash reaches a little to the side, but never across
+  // the arena. Missing because the player moved out is intentional.
+  const dx=g.player.x-m.x,dz=g.player.z-m.z;
+  const distance=Math.hypot(dx,dz),angle=Math.atan2(dx,dz);
+  const difference=Math.atan2(Math.sin(angle-a.yaw),Math.cos(angle-a.yaw));
+  const reach=heavy?2.75:2.55,arc=heavy?1.08:1.22;
+  if(distance<=reach&&Math.abs(difference)<=arc&&typeof hurt==='function')
+   hurt(g,Math.round(CIRCUS_ROLES[a.kind].attack*(k===0?1:k===1?.78:.68)),a.kind+'-'+m.id+'-'+k);
+ }
+ if(elapsed>=a.impacts.at(-1)+.34){m.melee=null;m.showCue=null;return false;}
+ return true;
+}
+
 function castAttack(g,m,zone,emit){
  const p=g.player,role=m.role,s=CIRCUS_ROLES[role],warn=s.wind;
  if(m.legacy)return beginLegacyEchoAttack(g,m,{zone,emit});
+ if(MELEE_ROLES.has(role))return beginMelee(g,m,zone,emit);
  const aim=away({x:p.x,z:p.z});
  m.cast=warn+(g.clown.horrorStage>=2?1.7:.35);m.showCue=role;m.target={...aim};
  m.routine={pose:role==='chorister'?'sing':role==='acrobat'?'vault':
@@ -247,6 +305,9 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   if(m.legacyAttack)stepLegacyEcho(g,m,{hurt});
   if(m.cast>0){m.cast=Math.max(0,m.cast-h);m.cooldown=Math.max(m.cooldown,m.cast+.8);}
   else m.cooldown-=h;
+  // The locked strike owns the actor's movement until recovery, rather
+  // than the orbit AI pulling its body away while its blade connects.
+  if(m.melee&&advanceMelee(g,m,h,hurt))continue;
   // The full ensemble continually repositions, not a fixed texture
   // billboard. Accelerations and damping prevent teleporting footwork.
   // Living performers sweep their own orbital lanes around the player,
@@ -270,7 +331,7 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   const bx=m.x-b.x,bz=m.z-b.z,bd=bx*bx+bz*bz;
   if(bd>1e-4&&bd<12.25){dx+=bx/bd*6;dz+=bz/bd*6;}
   const len=Math.hypot(dx,dz),speed=(silent||unison||wasRolling)?0:acrobatRush?12.5:m.cast>0?.18:s.speed;
-  const accel=Math.min(1,(m.legacy?5.4:m.role==='acrobat'?8.2:6.2)*h);
+  const accel=Math.min(1,(m.legacy?5.4:m.role==='acrobat'||m.role==='bladeDancer'?8.2:6.2)*h);
   m.vx+=((len>1e-4?dx/len*speed:0)-m.vx)*accel;
   m.vz+=((len>1e-4?dz/len*speed:0)-m.vz)*accel;
   // Apply friction to physical velocity, then stay inside the arena.
