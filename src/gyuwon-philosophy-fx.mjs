@@ -3,7 +3,7 @@ import * as THREE from 'three';
 // Phase-two metaphysics is architecture and animated sculpture rather than
 // unreadable red UI circles. Every piece stays outside the authoritative
 // collision system; all movement and damage still come from gyuwon-combat.
-export const PHILOSOPHY_FORMS=Object.freeze(['verdict','mirror','axiom','paradox','erasure']);
+export const PHILOSOPHY_FORMS=Object.freeze(['verdict','mirror','axiom','paradox','erasure','counterproof']);
 export function createGyuwonPhilosophyFx(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='gyuwon-two-worlds-metaphysical-court';scene.add(root);
  const gold=new THREE.MeshPhysicalMaterial({color:0xbba079,metalness:.55,roughness:.34,
@@ -49,6 +49,17 @@ export function createGyuwonPhilosophyFx(scene,{coarse=false,reduced=false}={}){
    const geo=new THREE.TorusKnotGeometry(2.2,.22,coarse?56:112,coarse?7:12);
    mesh(g,geo,gold,[-4,8,0],[1.25,1.25,1.25]);
    mesh(g,geo,shadow,[4,8,0],[1.25,1.25,1.25]);
+  }else if(name==='counterproof'){
+   // Interleaved slanted judgment mirrors remain visual-only.
+   for(const side of [-1,1]){
+    const frame=mesh(g,new THREE.BoxGeometry(.30,13,7),side<0?shadow:gold,
+     [side*5,8,0]);
+    frame.rotation.z=side*.48;frame.rotation.y=side*.35;
+   }
+   for(let i=0;i<3;i++){
+    const hoop=mesh(g,hoopGeo,i%2?shadow:gold,[0,6+i*2.5,0],[2.8+i*1.25,2.8+i*1.25,1]);
+    hoop.rotation.x=i*.41;hoop.rotation.y=i*.65;
+   }
   }else if(name==='erasure'){
    const geo=new THREE.BoxGeometry(2.3,4.3,.12);
    for(let i=0;i<9;i++){
