@@ -57,7 +57,7 @@ test('moving sideways, roll invulnerability and transformation prevent unfair co
  assert.equal(contacts,0,'sidestepping the warning is a valid escape');
  const dodge=ready();dodge.player.invuln=2;
  const before=dodge.player.hp;
- stepBlood(dodge,1.53);
+ for(let i=0;i<Math.ceil(1.53*120);i++)stepBlood(dodge,1/120);
  assert.equal(dodge.player.hp,before,'dodging/iframing the cable prevents damage');
  const phase=ready();beginBloodWhip(phase);
  phase.boss.state='transition';
