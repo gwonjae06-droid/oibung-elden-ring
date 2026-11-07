@@ -1,0 +1,14 @@
+# Publish the game without repository-only test and authoring sources.
+# Keep src/, root HTML/CSS and assets/ (all consumed by the browser).
+exclude:
+  - .github
+  - .gitignore
+  - AGENTS.md
+  - README.md
+  - docs
+  - scripts
+  - server
+  - tests
+  - node_modules
+  - package.json
+  - package-lock.json

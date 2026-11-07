@@ -5,7 +5,9 @@ export function createBattleQualityGovernor({initial=1,min=.65,max=1,interval=2.
  let scale=clamp(initial),time=0,frames=0,recovery=0;
  function sample(dt,active=true){
   if(!active||!Number.isFinite(dt)||dt<=0){time=0;frames=0;recovery=0;return scale;}
-  time+=Math.min(.05,dt);frames++;
+  // Physics dt is capped elsewhere; quality control measures actual frame latency.
+  // Keep genuine hitches, while bounding pathological long foreground wakeups.
+  time+=Math.min(.5,dt);frames++;
   if(time<interval)return scale;
   const fps=frames/time;time=0;frames=0;
   if(fps<48){recovery=0;setScale(Math.max(min,scale-.15));}

@@ -114,7 +114,17 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  let stickId=null,cx=0,cy=0;const moveStick=e=>{let x=e.clientX-cx,z=cy-e.clientY;const n=Math.max(1,Math.hypot(x,z)/40);x/=n;z/=n;stick.x=x/40;stick.z=z/40;$('thumb').style.transform='translate('+x+'px,'+(-z)+'px)';};$('stick').onpointerdown=e=>{e.preventDefault();stickId=e.pointerId;$('stick').setPointerCapture(stickId);const r=$('stick').getBoundingClientRect();cx=r.left+r.width/2;cy=r.top+r.height/2;moveStick(e);};$('stick').onpointermove=e=>{if(e.pointerId===stickId)moveStick(e);};$('stick').onpointerup=$('stick').onpointercancel=()=>{stickId=null;stick.x=stick.z=0;$('thumb').style.transform='';};
  const pauseOnBlur=()=>{if(!paused&&g.status==='playing')toggle();};eventScope.listen(window,'blur',pauseOnBlur);const visibility=()=>{if(document.hidden)pauseOnBlur();};eventScope.listen(document,'visibilitychange',visibility);
  $('pause').onclick=toggle;$('resume').onclick=toggle;$('quit').onclick=close;$('retry').onclick=()=>{soundState();reset(true);};$('change').onclick=close;
- base.onerror=()=>{shell.style.visibility='';notice('기본 UI 스타일을 불러오지 못했습니다. Esc로 돌아가 새로고침해 주세요.');};
+ base.onerror=()=>{
+  // No CSS means no in-battle messaging: show a standalone, inline-styled exit.
+  ready=false;introGate.cancel();shell.style.visibility='hidden';
+  const failure=document.createElement('section');failure.setAttribute('role','alert');
+  failure.style.cssText='position:fixed;inset:0;z-index:15000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#090b12;color:#fff3df;padding:24px;text-align:center;font:600 18px sans-serif';
+  const message=document.createElement('p');message.textContent='오슬우 전투 화면을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.';
+  const backButton=document.createElement('button');backButton.type='button';backButton.textContent='전투 화면 닫기';
+  backButton.style.cssText='cursor:pointer;background:#d9ae67;color:#141015;border:0;border-radius:8px;padding:14px 28px;font:700 16px sans-serif';
+  failure.append(message,backButton);shadow.appendChild(failure);
+  eventScope.listen(backButton,'click',()=>close());backButton.focus();
+ };
  function close(){return cleanupClose();}
  const cleanupClose=createBattleCleanup(()=>[
   ['Stop clown battle',()=>{closed=true;freeLook.dispose();warmup?.dispose();introGate.cancel();unbindSession();base.onload=base.onerror=null;winBinding?.restore();battleLoop.dispose();eventScope.clearTimeout(noticeTimer);}],

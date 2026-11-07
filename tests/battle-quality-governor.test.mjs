@@ -58,3 +58,9 @@ test('physical screen resolution caps internal WebGL pixels on smaller desktop a
  assert.deepEqual(values[1],[693,390]);
  assert.ok(values[1][0]<values[0][0]&&values[1][1]<values[0][1]);
 });
+
+test('long 300ms render stalls trigger adaptive downscaling rather than being capped at 50ms',()=>{
+ const q=createBattleQualityGovernor({interval:.5});
+ q.sample(.3);q.sample(.3);
+ assert.ok(q.scale<1,'two 300ms stalls should lower the render pixel budget');
+});
