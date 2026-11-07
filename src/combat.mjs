@@ -24,7 +24,7 @@ import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 import {KWON_THIRD_PATTERNS,KWON_THIRD_COMBOS,KWON_THIRD_FAR,KWON_THIRD_CLOSE,
- kwonThirdTransition,makeKwonFractures,advanceKwonFractures} from './kwon-third-phase.mjs';
+ kwonThirdTransition,KWON_POSSESSION,kwonThirdBodyDrag,makeKwonFractures,advanceKwonFractures} from './kwon-third-phase.mjs';
 export const TAU = Math.PI * 2;
 export const TEMPO = 1;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -261,8 +261,10 @@ export function bodyPose(b) {
   return {standing: s, angle: -0.9 * s, pivotY: 1.5, pivotZ: -1.5, lift: air};
 }
 export function kwonVisibleHurtShapes(b){
- const pose=bodyPose(b),cinema=cinematicPose(b);
- return kwonHurtShapes(b,{point:p=>bodyPoint(b,p),angle:pose.angle,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
+ const pose=bodyPose(b),cinema=cinematicPose(b),drag=kwonThirdBodyDrag(b);
+ return kwonHurtShapes(b,{point:p=>{const q=bodyPoint(b,p);
+  return {x:q.x+drag.x,y:q.y+drag.y,z:q.z+drag.z};},
+  angle:pose.angle+drag.tilt*.28,scale:BOSS_SCALE,headAttached:cinema.detach<.5});
 }
 export function kwonBossAimPoint(b){
  // The same centre of the visible chest drives player targeting and hurt tests.
@@ -630,6 +632,17 @@ export function swordPose(b) {
       y: mix(neck.y, grip.y, equip),
       z: mix(neck.z, grip.z, equip) + offset,
     };
+  if(b.phase===3&&b.state==='transition'){
+    const c=kwonThirdTransition(b.t);
+    // The blade floats, grows, and cuts its former owner. No collision while
+    // the unskippable transformation is executing.
+    const strike=c.betrayalSwing;
+    yaw=mix(-.32,1.16,strike)-.65*c.bladeHover;
+    pitch=mix(-.52,.32,strike)-.14*c.skyScar;
+    return {x:mix(grip.x,-2.4,strike),y:grip.y+.9*c.bladeHover-1.6*strike,
+     z:grip.z+.38*c.bladeHover-.5*strike,yaw,pitch,
+     length:SWORD.length*(1+(KWON_POSSESSION.swordScale-1)*c.bladeGrowth)};
+  }
   if(b.state==='transition'){
     if(b.phase===3){
       const c=kwonThirdTransition(b.t);
@@ -641,6 +654,10 @@ export function swordPose(b) {
       yaw=mix(0,-1.25,q.equip);pitch=mix(.15,-.6,q.equip);
     }
   }
+  if(b.phase===3){
+   return {...root,x:root.x,y:grip.y+.70+.14*Math.sin((b.t||0)*1.25),
+    z:grip.z+.15+offset,yaw,pitch,length:SWORD.length*KWON_POSSESSION.swordScale};
+  }
   return {...root, yaw, pitch, length: SWORD.length};
 }
 export function swordSegment(b) {
@@ -649,12 +666,12 @@ export function swordSegment(b) {
     s = Math.sin(b.yaw),
     a = {x: b.x + p.x * c + p.z * s, y: p.y, z: b.z - p.x * s + p.z * c},
     yaw = b.yaw + p.yaw,
-    len = SWORD.length * Math.cos(p.pitch);
+    len = p.length * Math.cos(p.pitch);
   return {
     a,
     b: {
       x: a.x + Math.sin(yaw) * len,
-      y: a.y - Math.sin(p.pitch) * SWORD.length,
+      y: a.y - Math.sin(p.pitch) * p.length,
       z: a.z + Math.cos(yaw) * len,
     },
   };
@@ -1011,7 +1028,7 @@ export function step(g, dt, input = {}) {
       // 4.4-unit ground zone and this sword sweep could deal invisible
       // instant damage before any traveling grave projectiles arrived.
       !['wave', 'retreat', 'graveSword'].includes(b.pattern) &&
-      sweptBladeHits(p, previousSword, swordSegment(b))
+      sweptBladeHits(p, previousSword, swordSegment(b),b.phase===3?SWORD.width*1.22:SWORD.width)
     ) {
       b.hit = true;
       hurtPlayer(g, cfg.damage);
@@ -1020,7 +1037,7 @@ export function step(g, dt, input = {}) {
       b.state = 'recovery';
       b.t = 0;
       b.punishable = b.queue.length === 0;
-      b.recovery = b.punishable ? cfg.recover : 0.13;
+      b.recovery = b.punishable ? cfg.recover : b.phase===3?.58:.13;
       emit(g, b.punishable ? 'opening' : 'combo-gap');
     }
   } else if (b.state === 'recovery' && b.t >= b.recovery) {

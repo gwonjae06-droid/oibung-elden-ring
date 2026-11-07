@@ -1,0 +1,66 @@
+name: Kwon possessed sword and world cleave
+on:
+  pull_request:
+    paths:
+      - 'src/kwon-third-phase.mjs'
+      - 'src/kwon-third-phase-view.mjs'
+      - 'src/kwon-world-cleave.mjs'
+      - 'src/combat.mjs'
+      - 'src/boss-stance.mjs'
+      - 'src/arena.mjs'
+      - 'spider-combat.html'
+      - 'tests/kwon-possession-cinematic.test.mjs'
+      - 'scripts/kwon-possession-smoke.mjs'
+      - '.github/workflows/kwon-possession-cinematic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  physical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install simulation engine
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: All modified modules parse
+        run: |
+          for f in src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/kwon-world-cleave.mjs src/combat.mjs src/arena.mjs src/boss-stance.mjs tests/kwon-possession-cinematic.test.mjs; do node --check "$f"; done
+      - name: Possession, exact hitboxes, old moves and phase choreography
+        run: |
+          node --test \
+            tests/kwon-possession-cinematic.test.mjs \
+            tests/kwon-third-phase.test.mjs \
+            tests/kwon-anatomical-hurtbox.test.mjs \
+            tests/kwon-melee-contact-readability.test.mjs \
+            tests/kwon-close-engagement.test.mjs \
+            tests/kwon-ranged-pressure.test.mjs \
+            tests/kwon-stance-rig.test.mjs \
+            tests/kwon-torso-rig.test.mjs \
+            tests/kwon-leg-rig.test.mjs
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser preview dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Render sword betrayal, collapsed puppet, split world at two sizes
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/kwon-possession-http.log 2>&1 &
+          sleep 2
+          node scripts/kwon-possession-smoke.mjs
+      - name: Retain browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kwon-possession-screenshots
+          path: artifacts/kwon-possession/
+          retention-days: 7
+          if-no-files-found: ignore
