@@ -234,7 +234,8 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 
 
 /* Guard narrow selection screens, fixed launch actions and small-height viewports. */
-#journey .j-shell{min-width:0;max-width:100%;padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+#journey .j-shell{min-width:0;max-width:100%}
+@media(max-width:1000px){#journey .j-shell{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}}
 #journey .j-top{min-width:0;gap:8px;flex-wrap:wrap}
 #journey .j-panel,#journey .j-select-layout,#journey .j-select-left,#journey .j-select-right,
 #journey .j-boss-target,#journey .j-weapon button{min-width:0}
