@@ -19,7 +19,7 @@ function spawn(g,i){
  return {id:g.nextId++,role,x:origin.x+Math.sin(a)*r,z:origin.z+Math.cos(a)*r,
   vx:0,vz:0,yaw:a+Math.PI,life:CIRCUS_ROLES[role].hp,maxHp:CIRCUS_ROLES[role].hp,
   age:0,cast:0,cooldown:2.0+(i%4)*1.3,down:false,death:0,flash:0,step:0,
-  target:null,showCue:null,seenHit:null};
+  target:null,showCue:null,seenHit:null,routine:null};
 }
 export function createCircusTroupe(g){
  return {members:[],stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,beat:0};
@@ -44,9 +44,11 @@ export function cueCircusShow(g,show){
  // mirror attack can originate from their location. Reinforcements always
  // enter from the perimeter, and are capped to prevent an endless mob flood.
  const roleFor={chorus:'chorister',puppets:'puppeteer',fire:'firekeeper',
-  twins:'mimic',stampede:'acrobat',finale:'chorister'}[show];
+  twins:'mimic',stampede:'acrobat',finale:'chorister',
+  juggle:'acrobat',drums:'acrobat',trapeze:'acrobat',
+  cannon:'mimic',curtain:'chorister'}[show];
  const required=show==='chorus'?3:show==='twins'?2:show==='stampede'?3:
-  show==='finale'?3:show==='fire'?2:2;
+  show==='finale'?3:show==='fire'?2:show==='drums'?3:2;
  let count=t.members.filter(m=>!m.down&&m.role===roleFor).length;
  const cap=targetCount(t.stage||1)+3;
  for(let i=0;i<required*2&&count<required&&t.members.filter(m=>!m.down).length<cap;i++){
@@ -64,6 +66,17 @@ export function cueCircusShow(g,show){
   t.members.push(spawn(g,t.cycle++));
 }
 export function circusTroupeAlive(g){return g?.clown?.troupe?.members?.filter(m=>!m.down)||[];}
+// A real stage actor rehearses this exact beat. UI cannot create damage.
+export function stageCircusBeat(g,{role,index=0,pose='conductor',wind=1.3,hold=1.8}={}){
+ const alive=circusTroupeAlive(g).filter(m=>m.role===role);
+ if(!alive.length)return null;
+ const actor=alive[index%alive.length],now=g.clown.time||0;
+ actor.routine={pose,start:now,until:now+Math.max(.3,hold),wind};
+ actor.cast=Math.max(actor.cast||0,Math.min(wind+.15,hold));
+ actor.cooldown=Math.max(actor.cooldown||0,hold+.35);
+ actor.showCue=pose;
+ return actor;
+}
 function contactAngle(a,b){return Math.atan2(b.x-a.x,b.z-a.z);}
 function damageMember(g,m,damage,emit){
  if(m.down||!(damage>0))return;
@@ -136,6 +149,7 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
  for(let i=0;i<t.members.length;i++){
   const m=t.members[i],s=CIRCUS_ROLES[m.role];
   m.age+=h;m.flash=Math.max(0,m.flash-h);
+  if(m.routine&&c.time>=m.routine.until)m.routine=null;
   if(m.down){m.death+=h;continue;}
   if(m.cast>0){m.cast=Math.max(0,m.cast-h);m.cooldown=Math.max(m.cooldown,m.cast+.8);}
   else m.cooldown-=h;
@@ -159,7 +173,13 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   m.yaw=contactAngle(m,target);
   // Do not stack all performer attacks simultaneously outside a deliberate
   // choreographed show, nor attack into the boss's punish / cutscene window.
-  if(locked||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
+  const authored=c.state==='pattern'&&new Set([
+  'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
+  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
+  'drumMarch','spotlightSweep','carousel','curtainCall',
+  'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale'
+ ]).has(c.name);
+  if(locked||authored||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
   if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
   castAttack(g,m,zone,emit);
   m.cooldown=3.8+i*.27;t.globalCooldown=stage===3?1.2:stage===2?1.75:2.6;

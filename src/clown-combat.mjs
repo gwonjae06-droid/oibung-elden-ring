@@ -1,6 +1,7 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
 import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe} from './clown-troupe.mjs';
+import {REMASTERED_CIRCUS_RUN} from './clown-ensemble-repertoire.mjs';
 import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN,HORROR_PATTERNS,horrorMinStage} from './clown-horror-patterns.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -1058,7 +1059,13 @@ function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage
 const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart,crawlPart});
 Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
+// Vintage pattern names now use troupe choreography, never toy-ball poses.
+Object.assign(RUN,Object.fromEntries(Object.entries(REMASTERED_CIRCUS_RUN).map(([key,fn])=>
+ [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 export const LIVE_REPERTOIRE=Object.freeze([
+ 'knifeJugglerRelay','midnightDrumline','tightropeExecution','maskedTrapdoor','ringmasterDoubleAct',
+ 'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
+ 'drumMarch','spotlightSweep','carousel','curtainCall',
  'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale',
  'wrongTwin','mirrorStage','puppetFuneral','fireHoop','echoApplause','laughContagion','emptyAudience',
  'curtainNightmare','audienceJudgement','funeralParade','facePeelHunt','stolenFace','brokenHorses',
@@ -1077,7 +1084,7 @@ export function choosePattern(g) {
  const repertoire=new Set(LIVE_REPERTOIRE);
  const pool=Object.keys(PATTERNS).filter(k=>repertoire.has(k)&&k!=='shove'
   &&PATTERNS[k].phases.includes(phase)&&horrorMinStage(k)<=stage);
- const close=new Set(['clap','bounce','inverseBow','lastClap','carousel','ballSpin',
+ const close=new Set(['drumMarch','knifeJugglerRelay','maskedTrapdoor','ringmasterDoubleAct','carousel','ballSpin',
   'trapdoorWaltz','invertedApplause','puppetFuneral','lastMagic']);
  let preferred=d<5.5?pool.filter(k=>close.has(k))
   :d>12?pool.filter(k=>!close.has(k)):[];
@@ -1107,12 +1114,12 @@ export function choosePattern(g) {
  if(phase===2&&stage===3){
   // Premiere the two authored climax attacks while there is still boss HP
   // to experience them; afterwards the original shuffle bag stays exhaustive.
-  const debut=pool.filter(k=>['audienceJudgement','marionetteDevour'].includes(k)&&!(c.used?.[k]>0));
+  const debut=pool.filter(k=>['allCastRequiem','audienceJudgement'].includes(k)&&!(c.used?.[k]>0));
   const finale=pool.filter(k=>horrorMinStage(k)===3&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
   else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
-  const debut=pool.filter(k=>['funeralParade','brokenHorses'].includes(k)&&!(c.used?.[k]>0));
+  const debut=pool.filter(k=>['candlelightChoir','marionetteGallows','emberCarouselRevue'].includes(k)&&!(c.used?.[k]>0));
   if(debut.length)preferred=debut;
  }
  c.seq++;
