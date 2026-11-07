@@ -18,6 +18,7 @@ export const GYUWON_PATTERNS=Object.freeze({
  axiom:{name:'공리의 붕괴',duration:5.4,recover:2.5},
  paradox:{name:'참과 거짓의 역습',duration:5.0,recover:2.3},
  erasure:{name:'기억의 소거',duration:5.8,recover:2.6},
+ counterproof:{name:'반례의 그림자',duration:5.1,recover:2.5},
  sword:{name:'이권재의 기억 · 천지절단',duration:5.5,recover:2.5},
  circus:{name:'오슬우의 기억 · 마지막 대공연',duration:7,recover:2.5},
  gamble:{name:'박성원의 기억 · 천상의 도박장',duration:7,recover:2.5},
@@ -30,7 +31,7 @@ export const gyuwonPool=(phase,space='white')=>phase===1
  ?['line','repeat','mark','choice','contradiction','timetable','blank']
  :phase===2?(space==='white'
    ?['negate','verdict','mirror','axiom']
-   :['reverse','stop','paradox','erasure'])
+   :['reverse','stop','paradox','erasure','counterproof'])
  :MEMORY_ORDER;
 // Shared collision geometry also drives the warning meshes.
 import {hazardContains as ordinaryContains} from './blood-data.mjs';
