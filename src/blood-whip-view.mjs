@@ -33,7 +33,7 @@ export function createBloodWhipView(root,{coarse=false,reduced=false,hand=null}=
   const anchor=hand?Math.max(0,1-t/.24):0;
   return out.set(
    p.x+anchor*(handWorld.x-w.x),
-   (4.7*(1-t)+.9*t+curve*(reduced?.5:1.7))*(1-anchor)+handWorld.y*anchor,
+   (.9+3.8*Math.pow(1-t,5)+curve*(reduced?.08:.22))*(1-anchor)+handWorld.y*anchor,
    p.z+anchor*(handWorld.z-w.z)
   );
  }
