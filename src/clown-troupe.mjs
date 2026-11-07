@@ -198,8 +198,8 @@ function beginMelee(g,m,zone,emit){
  const stride=clamp(distance-(heavy?1.72:1.48),0,heavy?2.3:2.65);
  const follow=(g.clown.horrorStage||1)>=2,third=(g.clown.horrorStage||1)>=3&&!heavy;
  const impacts=[wind+travel*.48];
- if(follow)impacts.push(wind+travel+.57);
- if(third)impacts.push(wind+travel+1.08);
+ if(follow)impacts.push(wind+travel+.94);
+ if(third)impacts.push(wind+travel+1.80);
  m.melee={kind:m.role,from,yaw,start:now,wind,travel,stride,impacts,hit:impacts.map(()=>false)};
  m.cast=impacts.at(-1)+.34;
  m.cooldown=heavy?5.0:4.45;
