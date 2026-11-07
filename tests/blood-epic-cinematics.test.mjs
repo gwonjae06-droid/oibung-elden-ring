@@ -24,6 +24,19 @@ test('all monumental patterns reserve a reaction window AFTER their camera retur
  assert.ok(bloodPool(2).includes('requiem'));
 });
 
+test('phase-one large spells never seize the camera or inherit cinematic extra delay',()=>{
+ const fx=createBloodEpicCinematics(new THREE.Scene());
+ for(const id of ['lances','cross']){
+  const g=start(id);
+  assert.equal(g.boss.phase,1);
+  assert.equal(bloodEpicKey(g),null);
+  assert.equal(bloodEpicShotState(g).blocking,false);
+  assert.equal(fx.isFraming(g),false);
+  assert.equal(BLOOD_EPIC_CUTS[id],undefined);
+  assert.ok(g.blood.hazards.some(h=>h.warn<2),id+' must use its natural warning');
+ }
+ fx.dispose();
+});
 test('first see a small distant tsunami, return to the arena before the actual wave',()=>{
  const g=start('requiem'),scene=new THREE.Scene();
  const fx=createBloodEpicCinematics(scene);
@@ -83,7 +96,7 @@ test('pause, reduced-motion and retry isolate the cinematic from combat state',(
 });
 
 test('multiple giant spells retain one authoritatively timed cast and recover normally',()=>{
- for(const id of ['tide','requiem','eclipse','judgement','ritual','wingGenesis','lances','cross']){
+ for(const id of ['tide','requiem','eclipse','judgement','ritual','wingGenesis']){
   const g=start(id),finish=BLOOD_EPIC_CUTS[id].finish;
   const before=g.player.hp;
   for(let t=0;t<finish+.4;t+=.05)stepBlood(g,.05);
