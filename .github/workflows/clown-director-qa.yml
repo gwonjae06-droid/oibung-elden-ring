@@ -1,0 +1,45 @@
+name: Clown ringmaster identity and direct combat
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/clown-ringmaster-attacks.mjs'
+      - 'src/clown-ringmaster-actor.mjs'
+      - 'src/clown-head.mjs'
+      - 'src/clown-combat.mjs'
+      - 'src/clown-horror-patterns.mjs'
+      - 'tests/clown-ringmaster-autonomy.test.mjs'
+      - '.github/workflows/clown-director-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ringmaster:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install existing 3D test dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Confirm source and boss model parse
+        run: |
+          node --check src/clown-head.mjs
+          node --check src/clown-face.mjs
+          node --check src/clown-ringmaster-actor.mjs
+          node --check src/clown-ringmaster-attacks.mjs
+          node --check src/clown-ensemble-poses.mjs
+          node --check src/clown-theatre-cues.mjs
+          node --check src/clown-horror-patterns.mjs
+          node --check src/clown-combat.mjs
+      - name: Run dedicated ringmaster and ensemble continuity tests
+        run: >
+          node --test
+          tests/clown-ringmaster-autonomy.test.mjs
+          tests/clown-encore-escalation.test.mjs
+          tests/clown-ensemble-repertoire.test.mjs
