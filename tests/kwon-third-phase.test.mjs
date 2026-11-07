@@ -115,7 +115,7 @@ test('pooled 3D ground fractures and sky wounds share rift positions and release
  const q=makeKwonFractures({x:1,z:-2,yaw:.7},'skyRend',22)[0];
  const g={boss,kwonFractures:[q]};
  view.update(g);
- assert.equal(view.stats().live,1);
+ assert.equal(view.stats().live,3,'three advancing physical sword tears render for skyRend');
  assert.ok(view.root.getObjectByName('kwon-torn-sky'));
  q.age=1.4;view.update(g);
  assert.ok(view.root.getObjectByName('kwon-torn-sky').visible);

@@ -2,7 +2,7 @@ import {KWON_THREE} from './kwon-third-phase.mjs';
 const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
- if(g?.status!=='playing'||!Number.isFinite(amount)||amount<=0||!Number.isFinite(poise)||poise<0||!Number.isFinite(b?.hp)||b.hp<=0||b.state==='transition')return 0;
+ if(g?.status!=='playing'||!Number.isFinite(amount)||amount<=0||!Number.isFinite(poise)||poise<0||!Number.isFinite(b?.hp)||b.hp<=0||['transition','moonCinematic','moonStorm'].includes(b.state))return 0;
  const damage=Math.min(b.hp,amount*(!developer&&b.state==='stagger'?1.25:1)),big=developer||damage>=150;
  b.hp-=damage;
  if(g.stats){g.stats.damage+=damage;if(!dot)g.stats.hits++;}
@@ -29,7 +29,7 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
   if(Array.isArray(g.kwonFractures))g.kwonFractures.length=0;
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'transition',name:null,f:{},punish:false,noSeparate:false});
   emit(g,'phase',{phase:nextPhase});
- }else if(!developer&&b.poise>=(b.phase>=2?280:180)&&!['transition','stagger'].includes(b.state)){
+ }else if(!developer&&b.poise>=(b.phase>=2?280:180)&&!['transition','moonCinematic','moonStorm','stagger'].includes(b.state)){
   Object.assign(b,{poise:0,state:'stagger',t:0,queue:[],punishable:false});emit(g,'stagger');
  }
  return damage;

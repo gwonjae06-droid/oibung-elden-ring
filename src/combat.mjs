@@ -23,6 +23,7 @@ import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-r
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
+import {makeKwonMoonState,beginKwonMoonCinematic,advanceKwonMoon} from './kwon-moon-cataclysm.mjs';
 import {KWON_THIRD_PATTERNS,KWON_THIRD_COMBOS,KWON_THIRD_FAR,KWON_THIRD_CLOSE,
  kwonThirdTransition,KWON_POSSESSION,kwonThirdBodyDrag,makeKwonFractures,advanceKwonFractures} from './kwon-third-phase.mjs';
 export const TAU = Math.PI * 2;
@@ -367,6 +368,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
     projectiles: [],
     bossShots: [],
     kwonFractures: [],
+    kwonMoon: makeKwonMoonState(),
     nextId: 0,
     patternShuffle: createPatternShuffle(seed),
     bossAutonomy: createBossAutonomy(seed??0x72a9c1),
@@ -412,6 +414,7 @@ export function createGame(weapon = 'sword', {register = true,seed} = {}) {
   return register ? registerEncounter(game) : game;
 }
 export function act(g, type) {
+  if(g.kwonMoon?.mode==='cinematic')return false;
   return actPlayer(g, type);
 }
 export function rolling(p) {
@@ -793,6 +796,9 @@ export function step(g, dt, input = {}) {
   const p = g.player,
     b = g.boss,
     w = WEAPONS[g.weapon];
+  // Begin only after an attack completes; never interrupt an authored swing.
+  if(!g.clown&&['idle','recovery'].includes(b.state))beginKwonMoonCinematic(g);
+  if(g.kwonMoon?.mode==='cinematic'){advanceKwonMoon(g,dt);return;}
   if (b.state === 'transition') {
     b.t += dt;
     if (b.t >= CINEMATIC) {
@@ -863,6 +869,11 @@ export function step(g, dt, input = {}) {
   }
   g.projectiles = g.projectiles.filter((q) => q.life > 0);
   if (g.status !== 'playing' || b.state === 'transition') return;
+  if(g.kwonMoon?.mode==='storm'){
+   // Dodge and walk during the meteor sequence; normal boss hits are suspended.
+   advanceKwonMoon(g,dt,damage=>hurtPlayer(g,damage,false));
+   return;
+  }
   for (const q of g.bossShots) {
     const old = {x: q.x, z: q.z};
     if(q.turnRate){const delta=angleDelta(q.yaw,toward(q,p));q.yaw+=clamp(delta,-q.turnRate*dt,q.turnRate*dt);}
