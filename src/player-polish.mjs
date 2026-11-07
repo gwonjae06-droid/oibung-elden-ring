@@ -51,7 +51,11 @@ export function createPlayerPolish(scene,{reduced=false,mobile=false,emit,ring,m
    if(g.status==='playing')balance.apply(pose,{dt:h,clock:g.time||0,phase,speed,moveX:localX,moveZ:localZ,action});
    parts.rig.scale.y=1;applyPlayerMotion(parts,pose,g.weapon,(g.time||0)+deathTime,speed);
    parts.weapons.sword.scale.z=g.weapon==='sword'&&(g.evolutions||[]).includes('charged-blade')?2:1;
-   parts.weapons.hammer.visible=!(g.weapon==='hammer'&&g.projectiles?.some(q=>q.kind==='hammer-throw'&&q.life>0));
+   // Only the selected weapon may be visible. The old expression set the hammer
+   // to true for every non-hammer loadout and overrode battle-specific hiding.
+   const hammerAway=g.weapon==='hammer'&&g.projectiles?.some(q=>q.kind==='hammer-throw'&&q.life>0);
+   for(const [key,rig]of Object.entries(parts.weapons))
+    rig.visible=key===g.weapon&&!(key==='hammer'&&hammerAway);
    modernFx.update(h,g,parts,pose);
    const skill=p.skill||{},hurt=action?.kind==='hurt';
    const enchant=action?.stun||skill.nextYellow?0xf6d36e:skill.nextRed?0xe56c79:skill.blue>0?0x79bdf2:0;
