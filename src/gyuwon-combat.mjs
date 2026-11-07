@@ -199,11 +199,12 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
+ let shapes=null;const bodyShapes=()=>shapes??=gyuwonHurtShapes(g);
  tickPlayerAction(g,dt,w,{
   backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},
   melee:a=>{
    if(g.gyuwon.elevation>2)return;
-   const impact=kwonMeleeContact(gyuwonHurtShapes(g),p,{
+   const impact=kwonMeleeContact(bodyShapes(),p,{
     reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85,bladeRadius:.28});
    if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a,impact);}
   }
@@ -212,7 +213,7 @@ function tickPlayer(g,dt,input){
  for(const q of g.projectiles){
   const prev=advancePlayerProjectile(q,dt,p);
   if(q.hit||q.bossHit||q.life<=0)continue;
-  const impact=kwonProjectileContact(gyuwonHurtShapes(g),prev,{x:q.x,y:q.y,z:q.z});
+  const impact=kwonProjectileContact(bodyShapes(),prev,{x:q.x,y:q.y,z:q.z});
   if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,impact);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
