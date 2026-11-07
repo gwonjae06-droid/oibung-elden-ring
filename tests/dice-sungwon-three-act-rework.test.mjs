@@ -93,6 +93,19 @@ test('disabled hands suppress their table attack but cannot invent thrown projec
  assert.ok(s.hazards.every(h=>h.handIndex!==0||h.cancelled));
  assert.ok(s.hazards.some(h=>h.tableShock&&!h.cancelled),'the independent table cannot be deleted by a hand break');
 });
+test('the moving perimeter never turns the combat floor, grid or chip cover',()=>{
+ const scene=new THREE.Scene(),stableFloor=new THREE.Group(),outer=new THREE.Group();
+ stableFloor.name='sungwon-stable-casino-floor';
+ outer.name='sungwon-rotating-casino-perimeter';
+ scene.add(stableFloor,outer);
+ const view=buildDiceTableRuin(THREE,scene,outer,{coarse:true,reduced:false});
+ const game={time:2,boss:{phase:3},dice:{giant:{temperament:'feral',state:'attack',slot:13,t:2,
+  hazards:giantPattern(13,{x:0,z:-40},'feral').hazards}}};
+ for(let i=0;i<180;i++){game.time+=.016;game.dice.giant.t+=.016;view.update(game,.016);}
+ assert.ok(outer.rotation.y>.2,'the perimeter is visibly moving');
+ assert.equal(stableFloor.rotation.y,0,'the central playable floor never rotates');
+ assert.equal(stableFloor.position.y,0,'the arena horizon is level');
+});
 test('casino ruin view rotates only peripheral scenery and draws exact growing ring and finite shards',()=>{
  const scene=new THREE.Scene(),deck=new THREE.Group();scene.add(deck);
  const view=buildDiceTableRuin(THREE,scene,deck,{coarse:true,reduced:false});
