@@ -1,0 +1,36 @@
+name: Attack telegraph timing and readability
+on:
+  pull_request:
+    paths:
+      - 'src/clown-stage-shows.mjs'
+      - 'src/clown-encore-shows.mjs'
+      - 'src/clown-pressure.mjs'
+      - 'src/clown-combat.mjs'
+      - 'src/clown-visual-data.mjs'
+      - 'src/clown-impact-fx.mjs'
+      - 'src/blood-whip-view.mjs'
+      - 'src/gyuwon-hazard-vfx.mjs'
+      - 'tests/attack-telegraph-clarity.test.mjs'
+      - '.github/workflows/attack-telegraph-clarity.yml'
+  workflow_dispatch:
+concurrency:
+  group: attack-clarity-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  clarity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three.js test dependency
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Check source syntax
+        run: |
+          for f in src/clown-stage-shows.mjs src/clown-encore-shows.mjs src/clown-pressure.mjs src/clown-combat.mjs src/clown-visual-data.mjs src/clown-impact-fx.mjs src/blood-whip-view.mjs src/gyuwon-hazard-vfx.mjs tests/attack-telegraph-clarity.test.mjs; do node --check "$f"; done
+      - name: Verify telegraph safety and related combat
+        run: node --test tests/attack-telegraph-clarity.test.mjs tests/clown-stage-batch.test.mjs tests/clown-stage-isolation.test.mjs tests/blood-whip.test.mjs tests/gyuwon-performance-readability.test.mjs

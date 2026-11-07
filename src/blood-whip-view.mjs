@@ -19,12 +19,24 @@ export function createBloodWhipView(root,{coarse=false,reduced=false,hand=null}=
  });
  const tipGeometry=new THREE.SphereGeometry(.72,coarse?9:14,7);
  const tip=new THREE.Mesh(tipGeometry,material);group.add(tip);tip.visible=false;
- const omenGeometry=new THREE.RingGeometry(.4,.72,20).rotateX(-Math.PI/2);
+ // A ragged, direction-locked seep of real blood, not a geometric danger ring.
+ // Keep a single pooled mesh even on mobile; the physical cable remains the hitbox.
+ const omenPoints=[];
+ for(let i=0;i<24;i++){
+  const a=i*Math.PI/12,b=(i+1)*Math.PI/12;
+  const radii=t=>({inner:.30+.07*Math.sin(t*3+.4),outer:.82+.16*Math.sin(t*5)+.09*Math.cos(t*7)});
+  const ra=radii(a),rb=radii(b);
+  const p=(r,t)=>[Math.cos(t)*r,0,Math.sin(t)*r];
+  omenPoints.push(...p(ra.inner,a),...p(ra.outer,a),...p(rb.outer,b),
+   ...p(ra.inner,a),...p(rb.outer,b),...p(rb.inner,b));
+ }
+ const omenGeometry=new THREE.BufferGeometry();
+ omenGeometry.setAttribute('position',new THREE.Float32BufferAttribute(omenPoints,3));
  const omenMaterial=new THREE.MeshBasicMaterial({
-  color:0x900c28,transparent:true,opacity:.26,depthWrite:false,side:THREE.DoubleSide
+  color:0xd04757,transparent:true,opacity:.31,depthWrite:false,side:THREE.DoubleSide
  });
  const omen=new THREE.Mesh(omenGeometry,omenMaterial);omen.name='blood-whip-locked-aim-liquid-omen';
- omen.position.y=.09;group.add(omen);
+ omen.position.y=.10;group.add(omen);
  const start=new THREE.Vector3(),end=new THREE.Vector3(),direction=new THREE.Vector3(),mid=new THREE.Vector3(),handWorld=new THREE.Vector3();
  function sample(w,t,out){
   const p=bloodWhipPath(w,t),curve=Math.sin(t*Math.PI);
@@ -51,8 +63,11 @@ export function createBloodWhipView(root,{coarse=false,reduced=false,hand=null}=
   // the *locked* destination; dodge timing starts before the whip extends.
   const destination=bloodWhipPath(w);
   omen.visible=warning;omen.position.set(destination.x,.09,destination.z);
-  omen.scale.setScalar(1+.28*charge);
-  omenMaterial.opacity=.12+.34*charge;
+  // Rising pooled blood, with enough contrast to survive pale cathedral floors.
+  // Size describes the physical caster's locked aim, never a fabricated AoE.
+  omen.scale.set(1.04+.22*charge,.95+.19*charge,1.09+.34*charge);
+  omen.rotation.y=w.yaw;
+  omenMaterial.opacity=.31+.37*charge;
   for(let i=0;i<segments.length;i++){
    const mesh=segments[i];mesh.visible=i<used;
    if(!mesh.visible)continue;
@@ -66,7 +81,7 @@ export function createBloodWhipView(root,{coarse=false,reduced=false,hand=null}=
   }
   tip.visible=true;sample(w,length,end);tip.position.copy(end);
   tip.scale.setScalar(warning?.55+.45*charge:1.3);
-  material.emissiveIntensity=warning?.45+charge*.38:1.35;
+  material.emissiveIntensity=warning?.63+charge*.38:1.35;
  }
  function clear(){group.visible=false;for(const m of segments)m.visible=false;tip.visible=omen.visible=false;}
  function dispose(){clear();group.parent?.remove(group);geometry.dispose();tipGeometry.dispose();omenGeometry.dispose();material.dispose();omenMaterial.dispose();}

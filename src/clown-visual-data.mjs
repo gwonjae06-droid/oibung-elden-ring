@@ -11,9 +11,11 @@ export function mountPose(time,transition=false){
  return {bodyHead:t<1.6,visible:t>=1.6,inflate:1+1.6*smooth(t/1.6),scale,bodyY:5.2+BODY_OFFSET*smooth((t-3.2)/1),y:drop+2.6*(scale-1)*u,z:13.5*u*(1-u),ball:1-smooth((t-2.2)/1.2),ballZ:-8*smooth((t-2.2)/1.2),lift:1.4*Math.sin(Math.PI*sat((t-2.1)/2.1)),elongation:smooth((t-3.8)/1.4)};
 }
 export function bombPose(q,phase=1){
- const travel=q.travel||ROLL.travel,k=q.kind==='roll'?sat(q.t/travel):sat(q.t/q.fly),land=q.kind==='roll'||q.t>=q.fly,final=q.kind==='roll'?sat((q.t-travel)/Math.max(.01,q.warn-travel)):sat((q.t-q.fly)/Math.max(.01,q.warn-q.fly));
+ const travel=q.travel||ROLL.travel,windup=q.kind==='roll'?q.windup||0:0,rollAge=Math.max(0,q.t-windup);
+ const k=q.kind==='roll'?sat(rollAge/travel):sat(q.t/q.fly),land=q.kind==='roll'||q.t>=q.fly;
+ const final=q.kind==='roll'?sat((rollAge-travel)/Math.max(.01,q.warn-windup-travel)):sat((q.t-q.fly)/Math.max(.01,q.warn-q.fly));
  const startY=phase===2?4.6:q.from.y+(q.kind==='head'?1.92:0);
- return {x:q.kind==='roll'?q.px:q.from.x+(q.x-q.from.x)*k,z:q.kind==='roll'?q.pz:q.from.z+(q.z-q.from.z)*k,y:q.kind==='roll'?2.1:startY*(1-k)+2.1*k+Math.sin(Math.PI*k)*4,land,final,inflate:q.kind==='ball'?.45:land?3.1+final*.6:3.1,stretch:land?-.25*(1-final):.2,spin:q.kind==='roll'?Math.hypot(q.x-q.from.x,q.z-q.from.z)*k/2.1:k*2};
+ return {x:q.kind==='roll'?q.px:q.from.x+(q.x-q.from.x)*k,z:q.kind==='roll'?q.pz:q.from.z+(q.z-q.from.z)*k,y:q.kind==='roll'?2.1:startY*(1-k)+2.1*k+Math.sin(Math.PI*k)*4,land,final,inflate:q.kind==='ball'?.45:land?3.1+final*.6:3.1,stretch:q.kind==='roll'&&q.t<windup?-.28*sat(q.t/Math.max(.01,windup)):land?-.25*(1-final):.2,spin:q.kind==='roll'?Math.hypot(q.x-q.from.x,q.z-q.from.z)*k/2.1:k*2};
 }
 export function headFrame(g){
  const v=g.clown?.vis||{};

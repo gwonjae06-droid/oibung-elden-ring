@@ -23,7 +23,7 @@ export function runEncoreVariant(mode,g,c,a,t,api){
  c.vis.crouch=t<.6?.9:t>4.25?.6:0;c.vis.tilt=t<.6?.6:t>4.25?-.3:0;
  const path=api.once(c,'encore-path',()=>{const from={x:g.boss.x,z:g.boss.z},yaw=Math.atan2(g.player.x-from.x,g.player.z-from.z),len=api.fitLen(from,yaw,24);return {from,to:{x:from.x+Math.sin(yaw)*len,z:from.z+Math.cos(yaw)*len}};});
  if(cross(a,t,.6))api.bomb(g,{kind:'head',from:{...path.from,y:2.1},...path.from,fly:.001,warn:.8,r:2.1});
- if(cross(a,t,1.4)){api.bomb(g,{kind:'roll',from:{...path.from,y:2.1},...path.to,px:path.from.x,pz:path.from.z,fly:0,travel:.65,warn:.65,r:2.1});api.emit(g,'clown-roll');}
+ if(cross(a,t,1.4)){api.bomb(g,{kind:'roll',from:{...path.from,y:2.1},...path.to,px:path.from.x,pz:path.from.z,fly:0,windup:.35,travel:.65,warn:1.0,r:2.1});api.emit(g,'clown-roll');}
  api.dashPart(g,c,a,t,2.2,'encore-dash');
  if(cross(a,t,3.6)){c.yaw=Math.atan2(g.player.x-g.boss.x,g.player.z-g.boss.z);api.cone(g,c.yaw,.65,12,.9,32,'clap');}
  c.vis.glove=t>=3.6&&t<4.25?sat((t-3.6)/.65):0;

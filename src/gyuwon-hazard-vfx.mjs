@@ -21,7 +21,7 @@ function fragments(h,f,coarse=false){
  const points=[];
  const add=(x,z,tx,tz,i,variation=0)=>{
   const len=(coarse?.36:.44)+(i%4)*.10;
-  const height=.30+(i%7)*.12+variation;
+  const height=.38+(i%7)*.14+variation;
   const off=(i%3-1)*.07;
   points.push(
    x-tx*len, .025, z-tz*len,
@@ -72,8 +72,9 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse),3));
   geo.computeVertexNormals();
   const material=new THREE.MeshPhysicalMaterial({
-   color:COLOR[pattern]||0x9c9ca5,roughness:.72,metalness:.18,
-   side:THREE.DoubleSide,transparent:true,opacity:.2,depthWrite:false
+   color:COLOR[pattern]||0x9c9ca5,roughness:.62,metalness:.14,
+   emissive:COLOR[pattern]||0x9c9ca5,emissiveIntensity:.12,
+   side:THREE.DoubleSide,transparent:true,opacity:.32,depthWrite:false
   });
   const mesh=new THREE.Mesh(geo,material);mesh.name='gyuwon-hazard-fractured-material';
   mesh.castShadow=false;mesh.receiveShadow=false;mesh.frustumCulled=false;
@@ -104,8 +105,12 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    const impact=hit?smooth((h.age-h.warn)/Math.max(.08,h.life)):0;
    mesh.position.set(f.x,.005,f.z);
    mesh.rotation.y=f.kind===3||f.kind===4?f.yaw:0;
-   mesh.scale.y=.18+.9*smooth(charge)+.3*(1-impact)*(hit?1:0);
-   mesh.material.opacity=.14+.33*smooth(charge)+(hit?.16*(1-impact):0);
+   // Fragments rise visibly BEFORE impact, rather than appearing as a faint
+   // near-flat decal. Preserve authored footprint, timing and draw-call count.
+   const strength=smooth(charge);
+   mesh.scale.y=.42+.82*strength+.18*(1-impact)*(hit?1:0);
+   mesh.material.opacity=.32+.35*strength+(hit?.10*(1-impact):0);
+   mesh.material.emissiveIntensity=.12+.13*strength;
    mesh.material.color.setHex(COLOR[s.pattern]||0x9c9ca5);
   }
   for(const [id,state]of states)if(!live.has(id)){release(state);states.delete(id);}

@@ -6,4 +6,6 @@ export function waveCrosses(w,oldR,newR,a,b,playerR=.45){
  if(Math.min(da,db)>w.range+playerR||Math.min(sa,sb)>pad||Math.max(sa,sb)<-pad)return false;
  for(const p of[a,b,{x:(a.x+b.x)/2,z:(a.z+b.z)/2}]){const dx=p.x-w.x,dz=p.z-w.z,d=Math.hypot(dx,dz),angle=Math.atan2(dx,dz)-w.yaw,delta=Math.abs(Math.atan2(Math.sin(angle),Math.cos(angle)));if(delta<=w.half+Math.asin(Math.min(1,playerR/Math.max(.001,d))))return true;}return false;
 }
-export function rollPosition(q){const k=Math.max(0,Math.min(1,q.t/(q.travel||ROLL.travel)));return {x:q.from.x+(q.x-q.from.x)*k,z:q.from.z+(q.z-q.from.z)*k};}
+// Optional per-projectile pre-roll compression. The collider and renderer must both
+// use the same delayed trajectory; older rolling-smile attacks keep windup=0.
+export function rollPosition(q){const moving=Math.max(0,(q.t||0)-(q.windup||0)),k=Math.max(0,Math.min(1,moving/(q.travel||ROLL.travel)));return {x:q.from.x+(q.x-q.from.x)*k,z:q.from.z+(q.z-q.from.z)*k};}
