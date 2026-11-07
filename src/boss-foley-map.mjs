@@ -44,7 +44,7 @@ export function bossFoleySpec(ev,g){
    // A staged percussion/choir/knife formation already has recorded
    // instrument preparation. Never add an unrelated tennis-ball sample
    // to each of its many concurrent danger-zone warnings.
-   if(/knife|drum|trapeze|trapdoor|mirror|cannon|curtain|choir|requiem|infernalHoops|puppet|marionette/i.test(ev.sound||''))return null;
+   if(/director|knife|drum|trapeze|trapdoor|mirror|cannon|curtain|choir|requiem|infernalHoops|puppet|marionette/i.test(ev.sound||''))return null;
    return ev.warn>=.5?cue(f.ball,.12,.3,.08,.28,ev.shape==='cone'?1.1:.8):null;
   case 'clown-roll':return cue(f.ball,.2,.32,.08,.18,.85);
   case 'clown-juggle':return cue(f.ball,.26,.7,.13,.18);

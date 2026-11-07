@@ -44,8 +44,9 @@ test('new clown performances use delayed real hazards and moving physical attack
 });
 test('new ensemble premieres start stage two and finale, while old acts stay in the shuffle',()=>{
  for(const [stage,names] of [
-  [2,['corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue']],
-  [3,['allCastRequiem','audienceJudgement']]
+  [2,['directorStringLash','directorStalkingRush','directorInfernalRing',
+   'corpseMarionetteReprise','mouthlessLament','candlelightChoir','marionetteGallows','emberCarouselRevue']],
+  [3,['directorFinalVerdict','allCastRequiem','audienceJudgement']]
  ]){
   const g=createClownGame('sword',{register:false,seed:53});
   g.boss.phase=2;g.clown.horrorStage=stage;

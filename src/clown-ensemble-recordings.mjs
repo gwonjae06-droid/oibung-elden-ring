@@ -21,6 +21,8 @@ export const CLOWN_ENSEMBLE_RECORDINGS=Object.freeze({
 });
 export function clownEnsembleRecording(event){
  const ev=event||{},kind=String(ev.kind||'');
+ if(ev.type==='clown-ringmaster-attack'&&CLOWN_ENSEMBLE_RECORDINGS[kind])
+  return {...CLOWN_ENSEMBLE_RECORDINGS[kind],volume:kind==='finale'?.28:.22,minGap:kind==='knife'?.2:.36,natural:true};
  if(ev.type==='clown-troupe-beat'&&CLOWN_ENSEMBLE_RECORDINGS[kind])
   return {...CLOWN_ENSEMBLE_RECORDINGS[kind],minGap:kind==='choir'?.68:kind==='drum'?.25:.36,natural:true};
  if(ev.type==='clown-troupe-show'){
@@ -35,7 +37,12 @@ export function clownEnsembleRecording(event){
  }
  if(ev.type==='clown-impact'){
   const sound=String(ev.key||'');
-  const kind=/corpseReprise/i.test(sound)?'reprise':
+  const kind=/directorBaton|directorVerdict|directorCurtainBlade/i.test(sound)?'knife':
+   /directorCackle/i.test(sound)?'choir':
+   /directorStrings/i.test(sound)?'puppet':
+   /directorFireRing/i.test(sound)?'fire':
+   /directorFinalStomp/i.test(sound)?'cannon':
+   /corpseReprise/i.test(sound)?'reprise':
    /unisonSmile/i.test(sound)?'unison':
    /mouthlessChoir/i.test(sound)?'mouthless':
    /cannon/i.test(sound)?'cannon':

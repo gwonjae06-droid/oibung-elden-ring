@@ -17,7 +17,12 @@ export function nightmareWorldState(game){
  const c=game?.clown||{},b=game?.boss||{},stage=clamp(c.horrorStage||1,1,3);
  const pattern=c.state==='pattern'?c.name:null, t=Number.isFinite(c.time)?c.time:0;
  let mode='carnival';
- if(['wrongTwin','mirrorStage','facePeelHunt','vanishingAct'].includes(pattern))mode='mirror';
+ if(['wrongTwin','mirrorStage','facePeelHunt','vanishingAct','directorVelvetStep'].includes(pattern))mode='mirror';
+ else if(pattern==='directorBatonRake')mode='carnival';
+ else if(pattern==='directorStringLash'||pattern==='directorStalkingRush')mode='flesh';
+ else if(pattern==='directorCackle')mode='audience';
+ else if(pattern==='directorInfernalRing')mode='inversion';
+ else if(pattern==='directorFinalVerdict')mode='void';
  else if(pattern==='synchronizedHush'||pattern==='mouthlessLament')mode='audience';
  else if(pattern==='corpseMarionetteReprise')mode='flesh';
  else if(pattern==='allCastRequiem'||pattern==='midnightGrandFinale')mode='void';
