@@ -192,7 +192,7 @@ test('the authoritative liquid footprint agrees with every real blood hitbox at 
   }
  }
  assert.ok(samples>10000,'sample all attacks, including translated lanes and expanding rings');
- assert.equal(BLOOD_CONTACT_MARGIN,.55);
+ assert.equal(BLOOD_CONTACT_MARGIN,.28);
 });
 test('the wet safety field includes simultaneous strikes, future warnings and their exact moving centres',()=>{
  assert.ok(BLOOD_SAFE_GROUND_PATTERNS.has('eclipse'));

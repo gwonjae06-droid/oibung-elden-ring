@@ -11,7 +11,7 @@ export function createBloodWalk(boss,player,recovery){
  const turn=.12+Math.abs(angle(yaw-boss.yaw))*.10,budget=Math.max(0,recovery-BLOOD_COUNTER_WINDOW);
  const steps=d>4.15?Math.max(0,Math.min(2,Math.floor((budget-turn-CLOSE+1e-7)/STEP))):0;
  return {x:boss.x,z:boss.z,yawFrom:boss.yaw,yaw,dx:d?dx/d:0,dz:d?dz/d:1,
-  steps,stride:steps?Math.min(.85,(d-4)/steps):0,turn:steps?turn:0,stepTime:STEP,close:CLOSE,t:0};
+  steps,stride:steps?Math.min(.85,(d-4)/steps)*.70:0,turn:steps?turn:0,stepTime:STEP,close:CLOSE,t:0};
 }
 // After the protected counter window, Seojun deliberately repositions
 // instead of instantly chaining another static spell. The existing IK uses
@@ -20,8 +20,9 @@ export function createBloodManeuver(boss,player,duration,ordinal=0,phase=1){
  const vx=player.x-boss.x,vz=player.z-boss.z,d=Math.hypot(vx,vz);
  const forwardX=d>.001?vx/d:Math.sin(boss.yaw),forwardZ=d>.001?vz/d:Math.cos(boss.yaw);
  const side=(ordinal+phase)%4<2?1:-1;
- const desired=phase===2?7.2:6.3,radial=Math.max(-.72,Math.min(1,(d-desired)*.33))*1.65;
- const dx=forwardX*radial+forwardZ*side*1.35,dz=forwardZ*radial-forwardX*side*1.35;
+ // Maintain a reachable melee distance, not a permanent retreat orbit.
+ const desired=phase===2?4.9:4.6,radial=Math.max(-.14,Math.min(1,(d-desired)*.33))*1.35;
+ const dx=forwardX*radial+forwardZ*side*.90,dz=forwardZ*radial-forwardX*side*.90;
  const n=Math.hypot(dx,dz)||1;
  const nx=dx/n,nz=dz/n,turn=.12+Math.abs(angle(Math.atan2(vx,vz)-boss.yaw))*.055;
  // For shorter intervals use two quicker but continuous strides, so the
@@ -31,7 +32,7 @@ export function createBloodManeuver(boss,player,duration,ordinal=0,phase=1){
  const steps=quick?2:Math.max(1,Math.min(3,Math.floor((duration-turn-close+.00001)/STEP)));
  const stepTime=quick?Math.max(.22,(duration-turn-close)/steps):STEP;
  const bound=25.5,forwardGap=bound-Math.hypot(boss.x,boss.z);
- const stride=Math.max(0,Math.min(.87,Math.max(0,forwardGap+.3)/steps));
+ const stride=Math.max(0,Math.min(.87,Math.max(0,forwardGap+.3)/steps))*.70;
  return {x:boss.x,z:boss.z,yawFrom:boss.yaw,
    yaw:d>.001?Math.atan2(vx,vz):boss.yaw,dx:nx,dz:nz,
    steps,stride,turn,stepTime,close,t:0};

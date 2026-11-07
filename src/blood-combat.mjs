@@ -185,7 +185,10 @@ function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';
 export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=R.transition;return true;}
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
- if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
+ if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}
+  // Once dodged, a travelling ring cannot re-hit on its lingering tail.
+  if(h.shape==='ring')h.hit=true;
+  return;}
  h.hit=true;const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage));
  const before=p.hp;p.hp=Math.max(0,p.hp-amount);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}

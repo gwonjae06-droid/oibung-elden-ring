@@ -28,8 +28,9 @@ export function clownCuePalette(z){
 const cap=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 export function clownDangerSpotlightCue(z){
- return !!(z&&z.state==='warn'&&!z.visual&&!z.waveKind&&
-  (safe(z.damage)>0||z.kind==='push')&&
+ return !!(z&&z.state==='warn'&&
+  (z.chargeCue===true&&z.shape==='lane'||!z.visual&&!z.waveKind&&
+   (safe(z.damage)>0||z.kind==='push'))&&
   ['circle','lane','cone'].includes(z.shape)&&
   Number.isFinite(z.x)&&Number.isFinite(z.z)&&
   Number.isFinite(z.warn)&&z.warn>0);
@@ -95,7 +96,7 @@ export function createClownDangerSpotlight(THREE,scene,z,{reduced=false}={}){
   transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,
   blending:THREE.AdditiveBlending});
  const rayGeometry=new THREE.ConeGeometry(1,21,14,1,true).translate(0,10.5,0);
- const count=z.shape==='lane'?Math.min(4,Math.max(1,Math.ceil(safe(z.len)/8))):
+ const count=z.chargeCue?0:z.shape==='lane'?Math.min(4,Math.max(1,Math.ceil(safe(z.len)/8))):
   z.shape==='cone'?2:1;
  for(let i=0;i<count;i++){
   const ray=new THREE.Mesh(rayGeometry,lightMat);ray.name='clown-stage-spotlight-beam';
@@ -113,7 +114,7 @@ export function createClownDangerSpotlight(THREE,scene,z,{reduced=false}={}){
   floorMat.uniforms.uProgress.value=charge;
   // Allow time to react before the spotlight reaches full intensity.
   const glow=(.55+.45*charge)*(reduced?.72:1);
-  floorMat.uniforms.uAlpha.value=.70*glow;
+  floorMat.uniforms.uAlpha.value=(zone.chargeCue?.48:.70)*glow;
   lightMat.opacity=.10*glow;
   for(let i=0;i<rays.length;i++){
    const ray=rays[i],offset=(i+.5)/rays.length-.5;

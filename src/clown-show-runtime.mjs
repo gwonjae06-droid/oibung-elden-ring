@@ -11,7 +11,7 @@ function bomb(g,data){const q={id:g.nextId++,t:0,fly:.9,warn:1.45,from:{x:g.boss
 function fitLen(b,yaw,len){for(let i=0;i<128&&len>0&&Math.hypot(b.x+Math.sin(yaw)*len,b.z+Math.cos(yaw)*len)>19.5;i++)len=Math.max(0,len-.5);return len;}
 function dashPart(g,c,a,t,start,key){
  if(t<start)return;let lane=c.f[key];const radius=3.3*1.25*(g.boss.phase===2?1.25:1);
- if(!lane){const b=g.boss,yaw=Math.atan2(g.player.x-b.x,g.player.z-b.z),len=fitLen(b,yaw,24);lane=c.f[key]={x:b.x,z:b.z,yaw,len,hit:false,done:false};c.yaw=yaw;zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:radius*2,warn:.9,visual:true});emit(g,'clown-stomp');}
+ if(!lane){const b=g.boss,yaw=Math.atan2(g.player.x-b.x,g.player.z-b.z),len=fitLen(b,yaw,24);lane=c.f[key]={x:b.x,z:b.z,yaw,len,hit:false,done:false};c.yaw=yaw;zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:radius*2,warn:.9,visual:true,chargeCue:true});emit(g,'clown-stomp');}
  if(lane.done)return;const u=t-start;c.vis.stomp=u<.9?Math.abs(Math.sin(u*16)):0;c.vis.crouch=u<.9?sat(u/.9):0;
  if(a<start+.9&&t>=start+.9)emit(g,'clown-dash');if(u<.9)return;
  const b=g.boss,old={x:b.x,z:b.z},k=sat((u-.9)/.45),x=lane.x+Math.sin(lane.yaw)*lane.len*k,z=lane.z+Math.cos(lane.yaw)*lane.len*k;c.odo+=Math.hypot(x-b.x,z-b.z);b.x=x;b.z=z;c.noSeparate=u<1.35;

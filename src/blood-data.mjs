@@ -44,13 +44,12 @@ export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
 ]);
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
-// The rendered blood footprint and authoritative player-centre collision
-// both consume these exact dimensions. .55 is the existing edge allowance:
-// never hide it in the hit test while showing a smaller puddle.
-export const BLOOD_CONTACT_MARGIN=.55;
+// Rendered warning blood and authoritative collision share the same footprint.
+// Reduced padding is deliberately forgiving for evasive melee play.
+export const BLOOD_CONTACT_MARGIN=.28;
 export function bloodHazardFootprint(h){
  const c=hazardPosition(h),pad=BLOOD_CONTACT_MARGIN;
- if(h.shape==='ring')return {kind:2,x:c.x,z:c.z,r:c.r,halfWidth:h.width+pad,halfLength:0,yaw:0,inner:0,arc:0};
+ if(h.shape==='ring')return {kind:2,x:c.x,z:c.z,r:c.r,halfWidth:Math.max(.25,h.width*.72),halfLength:0,yaw:0,inner:0,arc:0};
  if(h.shape==='lane'){
   // A moving blood wall's far leading half used to damage players long
   // before the rendered wave crest reached them. This is the shared 3D

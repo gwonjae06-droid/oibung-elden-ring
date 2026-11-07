@@ -78,6 +78,11 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
   const shadowMaterial=new THREE.MeshBasicMaterial({color:0x151019,transparent:true,opacity:.22,depthWrite:false});
   const landingShadow=new THREE.Mesh(new THREE.CircleGeometry(2.8,36).rotateX(-Math.PI/2),shadowMaterial);
   landingShadow.visible=false;root.add(landingShadow);
+  // Two thin world-space edges show the locked charge lane; no hitbox fill.
+  const chargeGuideGeo=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
+  const chargeGuideMat=new THREE.MeshBasicMaterial({color:0xe9c38a,transparent:true,opacity:.36,depthWrite:false,side:THREE.DoubleSide});
+  const chargeGuide=[0,1,2].map(i=>{const mesh=new THREE.Mesh(chargeGuideGeo,chargeGuideMat);
+   mesh.name=i===0?'dice-charge-trajectory':'dice-charge-boundary';mesh.visible=false;mesh.renderOrder=4;root.add(mesh);return mesh;});
  const pipGeo=new THREE.PlaneGeometry(R.edge-.6,R.edge-.6).rotateX(-Math.PI/2),dotGeo=new THREE.CircleGeometry(1.6,20).rotateX(-Math.PI/2),pipTiles=[],pipDots=[];
  for(let i=0;i<6;i++){const m=new THREE.Mesh(pipGeo,new THREE.MeshBasicMaterial({color:0xff3b1d,transparent:true,opacity:0,depthWrite:false})),dot=new THREE.Mesh(dotGeo,new THREE.MeshBasicMaterial({color:0xfff0c0,transparent:true,opacity:0,depthWrite:false}));m.visible=dot.visible=false;root.add(m,dot);pipTiles.push(m);pipDots.push(dot);}
  function updatePips(g){const pp=g.dice.pips,time=Number.isFinite(g.time)?g.time:0;for(let i=0;i<6;i++){const m=pipTiles[i],dot=pipDots[i];if(!pp||i>=pp.tiles.length){m.visible=dot.visible=false;continue;}const t=DICE_BOARD[pp.tiles[i]],f=pp.flash>0?Math.min(1,pp.flash/.4):0,prog=g.dice.state==='pip-warning'?Math.min(1,g.dice.t/pp.warn):1;m.visible=false;dot.visible=true;dot.position.set(t.x,.12,t.z);
@@ -85,6 +90,15 @@ const root=new THREE.Group();root.name='roulette-table-arena';scene.add(root);co
    dot.material.opacity=f>0?f:.28+.65*prog;dot.scale.setScalar(f>0?1+.6*(1-f):.7+.45*prog);}}
  return {root,update(g,dt){room.update(g.time,g,dt);tableRuin.update(g,dt);if(rouletteWheel){const spin=g.dice.roulette;if(spin&&spin.stage==='spin')rouletteWheel.rotation.y+=Math.max(0,dt)*(.8+8*Math.max(0,1-spin.t/1.85));else if(g.dice.giant&&!reduced)rouletteWheel.rotation.y+=Math.sin(g.time*6)*.0002;}chipMesh.rotation.z=g.dice.giant&&!reducedMotion()?Math.sin(g.time*9)*.008:0;updatePips(g);updateNeon(g);warning.visible=g.status==='playing'&&g.dice.state==='warning';warning.position.x=g.dice.to.x;warning.position.z=g.dice.to.z;warning.material.opacity=.08+.24*Math.min(1,g.dice.t/R.warning);
   const v=diceTelegraphView(g,R.edge,R.playerRadius);
+  const chargeWarning=v?.kind==='line'&&g.dice.state==='charge-warning';
+  for(let i=0;i<chargeGuide.length;i++){
+   const m=chargeGuide[i];m.visible=Boolean(chargeWarning);
+   if(!chargeWarning)continue;
+   const side=i===0?0:i===1?-1:1,yaw=v.yaw;
+   m.position.set(v.x+Math.cos(yaw)*v.width/2*side,.12+i*.006,v.z-Math.sin(yaw)*v.width/2*side);
+   m.rotation.y=yaw;m.scale.set(i===0?.24:.16,1,v.length);
+  }
+  chargeGuideMat.opacity=.22+.24*Math.min(1,g.dice.t/Math.max(.1,g.dice.chargeWarnTime||1.0));
   landingShadow.visible=v?.kind==='circle'&&g.dice.state==='jump-warning';
   if(landingShadow.visible){landingShadow.position.set(v.x,.09,v.z);
    const progress=Math.min(1,g.dice.t/Math.max(.1,g.dice.telegraph?.warn||1));

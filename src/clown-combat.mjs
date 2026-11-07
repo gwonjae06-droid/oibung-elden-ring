@@ -370,6 +370,7 @@ function dashPart(g, c, a, t, start, key) {
         w: BODY_R * 2,
         warn: 0.9,
         visual: true,
+        chargeCue: true,
       });
       emit(g, 'clown-stomp');
       return {x: b.x, z: b.z, yaw, len, hit: false, done: false};
@@ -1042,7 +1043,7 @@ function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage
  if(t<start)return;
  const b=g.boss,lane=once(c,key,()=>{
   const yaw=toward(b,g.player)+angleOffset,len=fitLen(b,yaw,reach);c.yaw=yaw;
-  zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*1.8,warn:anticipation,visual:true});
+  zone(g,{shape:'lane',x:b.x,z:b.z,yaw,len,w:BODY_R*1.8,warn:anticipation,visual:true,chargeCue:true});
   emit(g,'clown-horror',{cue:'reverse-crawl',x:b.x,z:b.z});
   return {x:b.x,z:b.z,yaw,len,hit:false,done:false};
  });
@@ -1208,7 +1209,7 @@ function tickClown(g, dt) {
     const committed=Boolean(p.action&&['attack','skill'].includes(p.action.kind)&&dist(b,p)<9);
     if(!committed){
       const motion=stepBossAutonomy(c.autonomy,b,p,dt,{
-        spacing:b.phase===2?5.7:6.5,
+        spacing:b.phase===2?4.0:4.4,
         speed:PRESSURE.chase[b.phase===2?1:0],
         sideSpeed:b.phase===2?4.0:3.25,
         arena:BALL_LIMIT,phase:b.phase,farDistance:10.5

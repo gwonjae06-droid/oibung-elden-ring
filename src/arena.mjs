@@ -129,6 +129,27 @@ function playEvent(ev,g){const bossCue=Boolean(bossFoleySpec(ev,g));recoverySfx.
  case 'kwon-meteor-warning':audio.play('tele-slam');break;
  case 'kwon-meteor-impact':audio.play('boss-slam');break;case 'stagger':audio.play('stagger');break;case 'victory':playBossCue('die');audio.play('victory');break;case 'death':audio.play('death');break;case 'skill-cast':case 'skill-stun':case 'skill-ready':case 'skill-pierce':break;case 'skill-heal':break;}}
 let selectedWeapon='sword',game=createGame(selectedWeapon,{register:false}),mode='menu',lock=true,queued=null,endAt=0,shake=0;
+// Ordinary sword attacks remain motion-led. Only a committed rush previews
+// its intended physical route as subtle floor seams without text or overlays.
+const rushGuideGeo=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
+const rushGuideMat=new THREE.MeshBasicMaterial({color:0xb7a79a,transparent:true,opacity:.30,depthWrite:false,side:THREE.DoubleSide});
+const rushGuides=[0,1,2].map(i=>{
+ const mesh=new THREE.Mesh(rushGuideGeo,rushGuideMat);
+ mesh.name=i===0?'kwon-rush-direction':'kwon-rush-path-edge';
+ mesh.visible=false;mesh.renderOrder=4;scene.add(mesh);return mesh;
+});
+function updateRushGuide(){
+ const b=game?.boss,visible=mode==='playing'&&game.status==='playing'&&b?.state==='windup'&&b.pattern==='rush';
+ for(let i=0;i<rushGuides.length;i++){
+  const m=rushGuides[i];m.visible=Boolean(visible);if(!visible)continue;
+  const yaw=b.aim??b.yaw,len=(b.phase>=2?31:23)*PATTERNS.rush.active,
+   side=i===0?0:i===1?-1:1,offset=side*2.25;
+  m.position.set(b.x+Math.sin(yaw)*len/2+Math.cos(yaw)*offset,.115+i*.007,
+   b.z+Math.cos(yaw)*len/2-Math.sin(yaw)*offset);
+  m.rotation.y=yaw;m.scale.set(i===0?.24:.16,1,len);
+ }
+ if(visible)rushGuideMat.opacity=.19+.24*Math.min(1,b.t/.48);
+}
 const introGate=createBossIntroGate(document,$('arena'),'kwon',{ready:()=>arenaRuntime.running&&warmup.ready,focus:()=>canvas.focus({preventScroll:true}),reduced:reduceMotion});
 cameraVisibility=createCameraVisibility(scene,{roots:()=>[boundary,atmosphere.root,...(sanctuary?[sanctuary]:[])],targets:()=>[{x:game.player.x,y:1.4,z:game.player.z},{x:game.boss.x,y:game.boss.phase>=2?4:2,z:game.boss.z,radius:4}]});startup.own('Arena camera visibility',()=>cameraVisibility.dispose());
 const view={yaw:Math.PI,pitch:.4,dist:9.5},vis={pyaw:Math.PI,time:0,legPhase:0,bx:0,bz:0,px:0,pz:13,pphase:0,cast:0},keys=new Set(),stick={x:0,y:0};
@@ -226,7 +247,7 @@ function frame(now,dt,realDt=dt){if(!warmup.ready||drewArena&&arenaCovered(docum
    // rotates on the canonical yaw/pitch channels shared with swordSegment.
    swordGroup.rotation.z=b.phase===3&&b.state==='transition'
     ?Math.sin(kwonThirdTransition(b.t).betrayal*Math.PI)*.28:0;
-  }if(game.boss.state==='dead'){swordGroup.position.y=-.1;swordGroup.rotation.x=1.5;swordGroup.rotation.z=.35;}effects?.update(mode==='paused'?0:dt,game);dangerVeil.update(game,dt,mode==='playing'&&!introGate.blocked);skillFx?.update(mode==='paused'?0:dt,game);updateCamera(dt);if(game.status==='won'){const b=game.boss;camera.position.lerp(new THREE.Vector3(b.x+12,8,b.z+18),Math.min(1,dt*2));camera.lookAt(b.x,2,b.z);}impact.camera(camera);updateHud();atmosphere.cameraReaction(camera);camera.updateMatrixWorld(true);stance?.projectTarget(camera,mode==='playing'&&lock,canvas);traitView.update(game,camera);renderer.render(scene,camera);quality.sample(realDt,mode==='playing'&&!introGate.blocked&&!document.hidden);audit.sample(dt,{timestamp:now,active:mode==='playing'&&!introGate.blocked&&!document.hidden,phase:game.boss.phase,pattern:game.boss.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});drewArena=true;}
+  }if(game.boss.state==='dead'){swordGroup.position.y=-.1;swordGroup.rotation.x=1.5;swordGroup.rotation.z=.35;}effects?.update(mode==='paused'?0:dt,game);dangerVeil.update(game,dt,mode==='playing'&&!introGate.blocked);skillFx?.update(mode==='paused'?0:dt,game);updateCamera(dt);if(game.status==='won'){const b=game.boss;camera.position.lerp(new THREE.Vector3(b.x+12,8,b.z+18),Math.min(1,dt*2));camera.lookAt(b.x,2,b.z);}impact.camera(camera);updateHud();atmosphere.cameraReaction(camera);camera.updateMatrixWorld(true);stance?.projectTarget(camera,mode==='playing'&&lock,canvas);traitView.update(game,camera);updateRushGuide();renderer.render(scene,camera);quality.sample(realDt,mode==='playing'&&!introGate.blocked&&!document.hidden);audit.sample(dt,{timestamp:now,active:mode==='playing'&&!introGate.blocked&&!document.hidden,phase:game.boss.phase,pattern:game.boss.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});drewArena=true;}
 function resize(){resizeBattleViewport(renderer,camera,canvas,quality.scale);}
 unbindSession=bindBattleSession(document,()=>({game,active:mode==='playing',pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),start:startBattle,intro:introGate.begin,selectWeapon,menu:backToMenu,ready:true}));installChargeInput(document,{getGame:()=>game,isActive:()=>mode==='playing'&&!introGate.blocked,listen:(...args)=>listen(...args),act:actPlayer});listen(window,'resize',resize);resize();setWeaponVisual();setUi();$('start').disabled=false;$('start').textContent='전투 시작';$('load-status').textContent='준비 완료. 시작 무기를 고른 뒤 전투를 시작하세요.';arenaRuntime.start();warmup.start().then(()=>{if(arenaRuntime.running&&mode==='playing')introGate.whenReady(!game.introControlled);});
 
