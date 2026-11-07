@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {CIRCUS_ROLES} from './clown-troupe.mjs';
+import {CIRCUS_ROLES,circusUncannyFrame} from './clown-troupe.mjs';
 import {solveFixedLimb,stageFootTarget,circusFootPhasing,smoothYaw} from './clown-performance-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
@@ -10,7 +10,7 @@ import {troupeBeatMotion,ENSEMBLE_DISPLAY_STYLE} from './clown-ensemble-poses.mj
 // this view can never manufacture a damaging hitbox.
 export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActorCreated=null}={}){
  const root=new THREE.Group();root.name='seulwoo-living-circus-troupe';scene.add(root);
- const live=new Map(),hoops=new Map();
+ const live=new Map(),hoops=new Map(),puppetGhosts=new Map();
  const theatreCues=createClownTheatreCues(root,{coarse,reduced});
  const direction=new THREE.Vector3(),from=new THREE.Vector3(),to=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
  function bone(mesh,a,b){from.set(...a);to.set(...b);direction.copy(to).sub(from);
@@ -38,7 +38,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   const group=new THREE.Group();group.name='circus-member-'+role;root.add(group);
   const body=new THREE.Group();group.add(body);let mask,shoulders=[],legs=[],fire=[],strings=[],head,jaw;
   const clothes=role==='acrobat'?mat.cyan:role==='firekeeper'?mat.crimson:mat.velvet;
-  oval(body,clothes,'volumetric-theatre-costume',0,1.42,0,.56,.9,.36);
+  const torso=oval(body,clothes,'volumetric-theatre-costume',0,1.42,0,.56,.9,.36);
   const skirt=add(body,new THREE.ConeGeometry(.73,1.14,coarse?10:22,1,true),clothes,'ragged-velvet-coat-hem',0,.7,0);
   skirt.rotation.y=.21;
   const springs=createSpringBank();
@@ -62,7 +62,29 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    oval(head,mat.gilt,'thin-hairline-crack',s*.25,-.13,.424,.017,.20,.008);
   }
   jaw=oval(head,mat.black,'singing-mask-mouth',0,-.20,.438,.24,.08,.037);
-  oval(head,mat.ivory,'chin-porcelain',[0][0],-.38,.27,.26,.11,.14);
+  oval(head,mat.ivory,'chin-porcelain',0,-.38,.27,.26,.11,.14);
+  // A porcelain singer has no mouth; its ribcage performs the vocals.
+  const seal=role==='chorister'?oval(head,mat.ivory,'seamless-mouthless-porcelain-seal',
+    0,-.21,.495,.265,.145,.059):null;
+  const cracks=[];
+  if(seal)for(let i=0;i<3;i++){
+   const crack=oval(head,mat.crimson,'singing-face-stress-fracture',
+     (i-1)*.105,-.19,.558,.012,.06,.009);
+   crack.rotation.z=(i-1)*.28;cracks.push(crack);
+  }
+  // All 3rd-act performers grow the ringmaster's identical fixed red grin.
+  // Geometry is shared, with no texture allocation per frame.
+  const unisonMask=new THREE.Group();unisonMask.name='all-performers-share-ringmaster-face';
+  head.add(unisonMask);unisonMask.visible=false;
+  oval(unisonMask,mat.ivory,'unison-ringmaster-ivory-face',0,0,.52,.43,.50,.22);
+  for(const side of [-1,1]){
+   oval(unisonMask,mat.black,'unison-unblinking-eyes',side*.19,.13,.72,.115,.154,.045);
+   const grin=oval(unisonMask,mat.crimson,'unison-stretched-crimson-smile',
+     side*.17,-.27,.754,.20,.036,.027);grin.rotation.z=side*.20;
+  }
+  oval(unisonMask,mat.crimson,'unison-crooked-blood-red-nose',0,-.08,.77,.115,.085,.056);
+  oval(unisonMask,mat.black,'unison-too-wide-locked-smile',0,-.34,.752,.33,.045,.027);
+
   if(role==='chorister'){
    const hood=add(head,new THREE.ConeGeometry(.55,.95,coarse?12:22),clothes,'open-hood-and-choir-veil',0,.30,-.13);
    hood.rotation.x=-.11;
@@ -144,7 +166,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   // Newly summoned performers receive the same prefiltered PBR maps and
   // physically based environment shading as the boss, once at entrance.
   if(typeof onActorCreated==='function')onActorCreated(group);
-  return {group,body,head,jaw,mask,shoulders,legs,fire,strings,skirt,springs,props,yaw:null,role};
+  return {group,body,head,jaw,mask,seal,cracks,unisonMask,torso,shoulders,legs,fire,strings,skirt,springs,props,yaw:null,role};
  }
  function createHoop(z){
   const group=new THREE.Group();group.name='real-infernal-hoop-performance-cue';root.add(group);
@@ -175,11 +197,12 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
  }
  function update(g,dt=1/60){
   const troupe=g?.clown?.troupe,alive=troupe?.members||[],seen=new Set(),time=g?.time||0,
-   h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
+   uncanny=circusUncannyFrame(g),h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
   for(const m of alive){
    seen.add(m.id);let v=live.get(m.id);if(!v){v=actor(m.role);live.set(m.id,v);}
    const sway=(reduced?0:Math.sin(time*2.5+m.id*.9))*.06,
-    routine=troupeBeatMotion(m,g.clown?.time||0),style=ENSEMBLE_DISPLAY_STYLE[routine.pose]||{lift:0,lean:0};
+    routine=troupeBeatMotion(m,g.clown?.time||0),style=ENSEMBLE_DISPLAY_STYLE[routine.pose]||{lift:0,lean:0},
+    choirRise=m.role==='chorister'&&routine.pose==='sing'?routine.weight:0;
    v.group.position.set(m.x,Math.max(0,(m.down?-.22*Math.min(1,m.death/.6):0)),m.z);
    // Curtains reveal newly summoned actors over several frames instead of
    // snapping fully formed NPCs into existence on top of the player.
@@ -196,6 +219,8 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):
      sway*.4+(routine.pose==='mirror'?.18*routine.weight*routine.beat:0),h,12));
    v.skirt.rotation.x=v.springs.step('skirt',-.05+moving*.2+m.cast*.024,h,9);
+   v.torso.scale.y=.9*(1+.18*choirRise*(.45+.55*Math.abs(routine.beat)));
+   v.head.scale.set(1+.055*choirRise,1+.10*choirRise,1+.04*choirRise);
    for(let i=0;i<2;i++){
     const side=i?1:-1,L=v.legs[i],phase=circusFootPhasing(m.step*3.0,moving,side),
       hip=[side*.30,.92,0];
@@ -229,12 +254,27 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     arm.rotation.x=v.springs.step('arm-reach-'+side,reach,h,17);
    }
    v.head.rotation.x=v.springs.step('mask-head',m.cast>0?-.17:Math.sin(time*.8+m.id)*.055,h,12);
-   v.head.rotation.z=v.springs.step('mask-performer-tilt',routine.pose==='mirror'?.24*routine.weight:
-    routine.pose==='sing'?.09*routine.beat*routine.weight:0,h,11);
+   v.head.rotation.z=v.springs.step('mask-performer-tilt',
+    uncanny.hush*.25+uncanny.unison*.19+
+    (routine.pose==='mirror'?.24*routine.weight:
+    routine.pose==='sing'?.09*routine.beat*routine.weight:0),h,11);
+   v.head.rotation.y=v.springs.step('unison-neck-turn',
+    uncanny.hush*-.34+uncanny.unison*.32,h,16);
    // The mouth geometry's authored Y radius is .08, not 1. The old
    // assignment inflated singers' mouths into a giant slab on every note.
-   v.jaw.scale.y=.08*(1+(m.role==='chorister'&&m.cast>0?1.4:0)+
-    (routine.pose==='sing'?routine.weight*.55*(.5+.5*routine.beat):0));
+   const mouthless=m.role==='chorister'&&(troupe?.stage||1)>=2;
+   v.jaw.visible=!mouthless;
+   v.jaw.scale.y=.08*(1+(m.cast>0?1.1:0));
+   if(v.seal)v.seal.visible=mouthless;
+   for(const crack of v.cracks){
+    crack.visible=mouthless&&choirRise>.20;
+    crack.scale.y=.06*(.7+3.8*choirRise*Math.max(.10,Math.abs(routine.beat)));
+   }
+   const maskChange=uncanny.face;
+   v.unisonMask.visible=maskChange>.005;
+   v.unisonMask.scale.set(.2+.8*maskChange,.15+.85*maskChange,.2+.8*maskChange);
+   v.mask.visible=maskChange<.96;
+   v.unisonMask.rotation.z=Math.sin(time*1.2)*.025*maskChange;
    for(const f of v.fire)f.scale.y=1+(reduced?0:Math.sin(time*8+m.id)*.10);
    if(m.flash>0)v.mask.material=mat.ember;else v.mask.material=mat.ivory;
    for(const s of v.strings)s.rotation.z=Math.sin(time*3+m.id)*.03;
