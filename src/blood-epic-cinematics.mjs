@@ -55,7 +55,7 @@ export function createBloodEpicCinematics(scene,{coarse=false,reduced=false}={})
  function update(game){
   if(disposed)return;
   const s=game?.blood,b=game?.boss,def=BLOOD_EPIC_CUTS[s?.pattern];
-  const visible=game?.status==='playing'&&b?.state==='pattern'&&
+  const visible=game?.status==='playing'&&b?.phase===2&&b?.state==='pattern'&&
    def?.type==='horizon'&&s?.hazards?.length;
   if(!visible){waveRoot.visible=false;return;}
   const firstHit=Math.min(...s.hazards.map(h=>h.warn));
