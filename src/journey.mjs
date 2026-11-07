@@ -44,8 +44,15 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   dialog.innerHTML=JOURNEY_ART+`<div class="j-shell"><header class="j-top">${screen==='ready'?back():'<span>다섯 소망. 하나의 서약.</span>'}${flameCounter(profile)}</header><main class="j-main">${content}</main></div>`+MOBILE_LANDSCAPE_GATE_HTML;
   if(!dialog.open)dialog.showModal();
   syncMusic();
-  const same=focusKey&&Array.from(dialog.querySelectorAll?.('[data-j]')||[]).find(el=>
+  const buttons=Array.from(dialog.querySelectorAll?.('[data-j]')||[]);
+  let same=focusKey&&buttons.find(el=>
    ['j','weapon','stage','evolution','tier'].every((key,i)=>(el.dataset[key]??'')===focusKey[i]));
+  // A purchased tier becomes disabled: move keyboard focus to the next
+  // purchasable tier of the same path, or back to the active weapon tab.
+  if(same?.disabled){
+   same=buttons.find(el=>el.dataset.j==='forge-buy'&&el.dataset.evolution===focusKey?.[3]&&!el.disabled)||
+    buttons.find(el=>el.dataset.j==='forge-weapon'&&el.dataset.weapon===forgeWeapon)||null;
+  }
   const target=same||(preserve?null:screen==='ready'?dialog.querySelector('[data-j="next"]'):dialog.querySelector('button:not(:disabled)'));
   target?.focus?.({preventScroll:true});
   if(Number.isFinite(scroll))dialog.scrollTop=scroll;
@@ -73,7 +80,15 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   show(`<div class="j-panel j-select"><div class="j-select-heading"><h1>${TRIAL_NAME}</h1><p>해금된 보스를 선택하고 무기를 정해 출정하세요. 보스 해금과 대장간 각인은 영구 유지됩니다.</p></div><div class="j-select-layout"><div class="j-select-left">${bossChooser()}<section class="j-select-weapons"><h2 class="j-select-subtitle">무기 선택</h2><div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div></section></div><div class="j-select-right">${weaponStatChart(weapon,{profile})}</div></div><div class="j-select-actions"><span class="j-selected-route" role="status">${BOSS_NAMES[selectedStage]} · ${WEAPONS[weapon]}</span>${button('begin','선택한 보스로 출정','class="j-primary j-begin"')}</div>${back()}${warning()}</div>`,{preserve});
  }
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
- function forge(preserve=false){screen='forge';show(forgeScreen(profile,forgeWeapon,{button,back,warning,confirmRefund:refundConfirmWeapon===forgeWeapon}),{preserve});}
+ function forge(preserve=false){
+  screen='forge';
+  show(forgeScreen(profile,forgeWeapon,{button,back,warning,confirmRefund:refundConfirmWeapon===forgeWeapon}),{preserve});
+  if(refundConfirmWeapon===forgeWeapon){
+   const cancelButton=dialog.querySelector?.('[data-j="forge-refund-cancel"]');
+   cancelButton?.focus?.({preventScroll:true});
+   cancelButton?.scrollIntoView?.({block:'nearest'});
+  }
+ }
  function flameReward(){if(!pendingReward)return;screen='flame';show(flameRewardScreen(profile,pendingReward.name,{button,back,warning,complete:pendingReward.complete}));}
  function records(){
   screen='records';
