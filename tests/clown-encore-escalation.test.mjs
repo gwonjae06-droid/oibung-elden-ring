@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createClownGame,PATTERNS,startClownPattern,stepClown} from '../src/clown-combat.mjs';
+import {createClownGame,PATTERNS,choosePattern,startClownPattern,stepClown} from '../src/clown-combat.mjs';
 import {HORROR_DEFINITIONS,HORROR_RUN} from '../src/clown-horror-patterns.mjs';
 import {nightmareWorldState} from '../src/clown-nightmare-world.mjs';
 import {clownPrecastTime} from '../src/attack-readability.mjs';
@@ -40,6 +40,16 @@ test('new clown performances use delayed real hazards and moving physical attack
   if(id==='funeralParade')assert.ok(bombs.size>=4,'parade needs visible live projectiles');
   if(id==='brokenHorses'||id==='marionetteDevour')
    assert.ok(Math.hypot(g.boss.x,g.boss.z+6)>1,'boss must physically pursue the player');
+ }
+});
+test('new phase-two premieres get actual screen time before the player reaches the final act',()=>{
+ for(const [stage,names] of [[2,['funeralParade','brokenHorses']],[3,['audienceJudgement','marionetteDevour']]]){
+  const g=createClownGame('sword',{register:false,seed:53});g.boss.phase=2;g.clown.horrorStage=stage;
+  const seen=new Set();
+  for(let i=0;i<2;i++){
+   const id=choosePattern(g);seen.add(id);startClownPattern(g,id);g.clown.last=id;
+  }
+  assert.deepEqual([...seen].sort(),names.sort());
  }
 });
 test('legacy beast attacks gain extra recovery-aware beats',()=>{

@@ -20,8 +20,8 @@ export const HORROR_DEFINITIONS=Object.freeze([
  ['stolenFace','내 얼굴 좀 가져가세요',6.1,1.65,[2],2],
  ['mouthOfTheAudience','관객의 입이 열린다',6.3,1.7,[2],3],
  ['stageRupture','무대는 아프지 않다고 했잖아요',6.8,1.85,[2],3],
- ['feralSkitter','네발 난입 · 부러진 박자의 추격',6.6,1.35,[2],2],
- ['reverseCrawl','접힌 척추의 역주행',7.4,1.35,[2],2],
+ ['feralSkitter','네발 난입 · 부러진 박자의 추격',7.4,1.35,[2],2],
+ ['reverseCrawl','접힌 척추의 역주행',8.5,1.35,[2],2],
  ['facePeelHunt','가면을 벗은 사냥',7.0,1.4,[2],2],
  ['ceilingPounce','거꾸로 매달린 사냥꾼',7.2,1.45,[2],3],
  ['unhingedClap','턱이 열리는 박수',7.5,1.35,[2],3],
@@ -228,7 +228,7 @@ function facePeelHunt(g,c,a,t,api){
   api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});
  }
  api.crawlPart(g,c,a,t,1.75,'face-side-hunt',{reach:11,travel:1.2,damage:29,angleOffset:c.seq%2?.75:-.75});
- if(cross(a,t,4.5)){const q=offset(bound(g.player),c.seq%2?-.95:.95,4.4);
+ if(cross(a,t,4.05)){const q=offset(bound(g.player),c.seq%2?-.95:.95,4.4);
   circle(api,g,q,3.25,1.35,28,'stolenFace');
   api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});}
 }

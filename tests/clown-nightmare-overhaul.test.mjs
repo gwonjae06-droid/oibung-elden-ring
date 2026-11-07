@@ -8,10 +8,10 @@ import {createClownNightmareAnatomy} from '../src/clown-nightmare-anatomy.mjs';
 import {bossFoleySpec} from '../src/boss-foley-map.mjs';
 import {clownDangerSpotlightCue} from '../src/clown-danger-spotlight.mjs';
 
-test('seventeen eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
- assert.equal(HORROR_PATTERNS.length,17);
+test('twenty-two eerie routines are registered with meaningful windup, recovery and three-act eligibility',()=>{
+ assert.equal(HORROR_PATTERNS.length,22);
  const phase1=HORROR_PATTERNS.filter(k=>PATTERNS[k].phases.includes(1));
- assert.equal(phase1.length,4);
+ assert.equal(phase1.length,5);
  for(const name of HORROR_PATTERNS){
   const d=PATTERNS[name];
   assert.ok(d,d?.name||name);

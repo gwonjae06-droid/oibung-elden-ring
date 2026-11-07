@@ -1095,11 +1095,17 @@ export function choosePattern(g) {
  // Without this, the final-act attacks are legal at 25% HP but are rarely
  // selected before the player kills the boss. The full shuffle bag survives.
  if(phase===2&&stage===3){
+  // Premiere the two authored climax attacks while there is still boss HP
+  // to experience them; afterwards the original shuffle bag stays exhaustive.
+  const debut=pool.filter(k=>['audienceJudgement','marionetteDevour'].includes(k)&&!(c.used?.[k]>0));
   const finale=pool.filter(k=>horrorMinStage(k)===3&&!(c.used?.[k]>0));
-  if(finale.length)preferred=finale;
+  if(debut.length)preferred=debut;
+  else if(finale.length)preferred=finale;
  }else if(phase===2&&stage===2){
+  const debut=pool.filter(k=>['funeralParade','brokenHorses'].includes(k)&&!(c.used?.[k]>0));
   const hunts=pool.filter(k=>BEAST_PATTERNS.includes(k)&&!(c.used?.[k]>0));
-  if(hunts.length)preferred=hunts;
+  if(debut.length)preferred=debut;
+  else if(hunts.length)preferred=hunts;
  }
  c.seq++;
  return drawPatternShuffle(g.patternShuffle,'clown-'+phase+'-act'+stage,pool,

@@ -13,7 +13,7 @@ export const EXTRA_HORROR_DEFINITIONS=Object.freeze([
  ['funeralParade','객석에서 행진하는 장례 악단',7.9,1.5,[2],2],
  ['brokenHorses','목이 꺾인 회전목마',7.8,1.5,[2],2],
  ['audienceJudgement','빈 객석의 마지막 판결',8.2,1.7,[2],3],
- ['marionetteDevour','인형줄에 매달린 포식자',8.8,1.7,[2],3]
+ ['marionetteDevour','인형줄에 매달린 포식자',9.7,1.7,[2],3]
 ]);
 function vanishingAct(g,c,a,t,api){
  tell(api,g,c,'face');c.vis.glove=t<3.3?.8:0;
@@ -22,7 +22,7 @@ function vanishingAct(g,c,a,t,api){
  if(cross(a,t,.32)){circle(api,g,p,3.5,1.45,24,'wrongTwin');api.emit(g,'clown-horror',{cue:'face',x:p.x,z:p.z});}
  if(cross(a,t,1.84)){const q=offset(p,c.seq%2?1.2:-1.2,5.9);
   circle(api,g,q,3.4,1.4,26,'wrongTwin');api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});}
- if(cross(a,t,3.5)){const q=bound(g.player);circle(api,g,q,3.1,1.35,27,'echoApplause');
+ if(cross(a,t,3.3)){const q=bound(g.player);circle(api,g,q,3.1,1.35,27,'echoApplause');
   api.emit(g,'clown-horror',{cue:'clap-delay',x:q.x,z:q.z});}
 }
 // Alternating four giant projectile impacts and a three-beat procession.
@@ -50,7 +50,7 @@ function brokenHorses(g,c,a,t,api){
  if(cross(a,t,2.36)){const q=offset(bound(g.player),c.seq%2?1.2:-1.2,4.8);
   circle(api,g,q,3.4,1.35,26,'foldedCrawl');}
  api.crawlPart(g,c,a,t,3.58,'broken-horse-right',{reach:12,anticipation:.85,travel:1.1,damage:31,angleOffset:-.82});
- if(cross(a,t,5.62)){const q=bound(g.player);circle(api,g,q,3.25,1.35,29,'foldedCrawl');
+ if(cross(a,t,4.82)){const q=bound(g.player);circle(api,g,q,3.25,1.35,29,'foldedCrawl');
   api.emit(g,'clown-horror',{cue:'landing',x:q.x,z:q.z});}
 }
 // Ten audience lights ignite in sequence, deliberately missing two adjacent
@@ -64,7 +64,7 @@ function audienceJudgement(g,c,a,t,api){
   circle(api,g,q,2.05,1.35,23,'clockOfTeeth');
   api.emit(g,'clown-horror',{cue:'seats',x:q.x,z:q.z});
  }
- for(let i=0;i<2;i++)if(cross(a,t,4.45+i)){
+ for(let i=0;i<2;i++)if(cross(a,t,4.0+i*.65)){
   const yaw=look(g.boss,g.player)+(i?-.56:.56);
   api.zone(g,{shape:'lane',x:g.boss.x,z:g.boss.z,yaw,len:19,w:3,
    warn:1.55,damage:31,blast:true,major:true,sound:'stageRupture'});
@@ -77,7 +77,7 @@ function marionetteDevour(g,c,a,t,api){
  api.crawlPart(g,c,a,t,.5,'marionette-first',{reach:12,anticipation:.95,travel:1.12,damage:29,angleOffset:.66});
  api.crawlPart(g,c,a,t,3,'marionette-second',{reach:12,anticipation:.9,travel:1.05,damage:31,angleOffset:-.75});
  api.crawlPart(g,c,a,t,5.45,'marionette-last',{reach:11,anticipation:.95,travel:1.05,damage:33});
- if(cross(a,t,6.72)){const q=offset(bound(g.player),c.seq%2?.8:-.8,4.2);
+ if(cross(a,t,6.48)){const q=offset(bound(g.player),c.seq%2?.8:-.8,4.2);
   circle(api,g,q,3.4,1.35,29,'stolenFace');
   api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});}
 }
