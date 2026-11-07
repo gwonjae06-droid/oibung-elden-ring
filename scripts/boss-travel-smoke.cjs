@@ -58,7 +58,10 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   await destination(3).click();
   await page.locator('[data-j="weapon"][data-weapon="bow"]').click();
   assert.equal(await page.locator('[data-j="weapon"][data-weapon="bow"]').evaluate(el=>el===document.activeElement),true,'weapon selection must preserve focus');
-  assert.equal(await page.locator('.j-stat-chart [role="meter"]').count(),7);
+  assert.equal(await page.locator('.j-stat-chart svg[role="img"]').count(),1);
+  assert.equal(await page.locator('.j-stat-chart .j-stat-fact').count(),6);
+  assert.equal(await page.locator('.j-stat-chart .j-stat-recovery').count(),1);
+  assert.equal(await page.locator('.j-stat-chart .j-radar-node').count(),6);
   assert.match(await page.locator('.j-stat-chart').innerText(),/체력|공격 피해/);
   await page.setViewportSize({width:844,height:390});
   await page.locator('[data-j="begin"]').scrollIntoViewIfNeeded();

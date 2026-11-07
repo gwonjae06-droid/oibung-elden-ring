@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {WEAPONS} from '../src/weapon-data.mjs';
 import {WEAPON_STATS} from '../src/weapon-stats.mjs';
-import {weaponStatRows,weaponStatChart} from '../src/weapon-stat-chart.mjs';
+import {weaponStatRows,weaponStatChart,radarVertices} from '../src/weapon-stat-chart.mjs';
 import {forgeScreen} from '../src/forge-view.mjs';
 import {freshProfile} from '../src/journey-state.mjs';
 
@@ -20,16 +20,24 @@ test('every weapon graph uses the same live values as combat',()=>{
   assert.equal(rows[6].text,Math.round(s.staminaRegen*100)+'%');
   assert.ok(rows.every(r=>Number.isFinite(r.percent)&&r.percent>=0&&r.percent<=100));
   const chart=weaponStatChart(id);
-  assert.equal((chart.match(/role="meter"/g)||[]).length,7);
-  assert.match(chart,/aria-valuetext=/);
-  assert.equal((chart.match(/j-stat-average/g)||[]).length,7);
+  assert.equal((chart.match(/class="j-stat-radar"/g)||[]).length,1);
+  assert.match(chart,/role="img"/);
+  assert.equal((chart.match(/class="j-radar-ring"/g)||[]).length,4);
+  assert.equal((chart.match(/class="j-radar-ray"/g)||[]).length,6);
+  assert.equal((chart.match(/class="j-radar-node"/g)||[]).length,6);
+  assert.equal((chart.match(/class="j-radar-current"/g)||[]).length,1);
+  assert.equal((chart.match(/class="j-radar-average"/g)||[]).length,1);
+  assert.equal((chart.match(/class="j-stat-fact"/g)||[]).length,6);
+  assert.match(chart,/class="j-stat-recovery"/);
+  assert.match(chart,/4종 평균/);
+  assert.doesNotMatch(chart,/j-stat-average|j-stat-track|j-stat-fill|role="meter"/);
   assert.match(chart,/기본 사거리/);
   assert.match(chart,/기본 동작/);
   assert.match(chart,/기력 소모/);
   assert.match(chart,/실제|상대 비교/);
  }
 });
-test('defense bars increase when incoming damage falls; invalid identifiers never inject HTML',()=>{
+test('defense scores increase when incoming damage falls; invalid identifiers never inject HTML',()=>{
  assert.ok(weaponStatRows('hammer')[3].percent>weaponStatRows('bow')[3].percent);
  assert.equal(weaponStatChart('unknown'),weaponStatChart('sword'));
  assert.equal(weaponStatChart('__proto__'),weaponStatChart('sword'));
@@ -54,9 +62,24 @@ test('forge chart distinguishes permanent skill effects from basic damage',()=>{
 });
 
 
-test('weapon average markers are local to each meter and cannot draw white lines over the whole page',()=>{
+test('radar geometry stays inside the hexagon and the same average is reused for all weapons',()=>{
+ assert.equal(radarVertices([100,100,100,100,100,100]).split(' ').length,6);
+ assert.equal(radarVertices([0,0,0,0,0,0]),Array(6).fill('180.00,135.00').join(' '));
+ assert.throws(()=>radarVertices([100,100]),RangeError);
+ const all=Object.keys(WEAPONS).map(id=>weaponStatChart(id));
+ const get=(html,cls)=>html.match(new RegExp('class="'+cls+'" points="([^"]+)"'))?.[1];
+ const avgs=all.map(html=>get(html,'j-radar-average'));
+ assert.equal(new Set(avgs).size,1,'the 4-weapon average must remain constant regardless of selection');
+ const selected=all.map(html=>get(html,'j-radar-current'));
+ assert.equal(new Set(selected).size,4,'every weapon must produce a distinct polygon');
+ for(const html of all){
+  assert.equal(get(html,'j-radar-current').split(' ').length,6);
+  assert.equal((html.match(/class="j-radar-label"/g)||[]).length,6);
+  assert.doesNotMatch(html,/class="j-stat-average"|class="j-stat-track"|class="j-stat-fill"/);
+ }
  const css=readFileSync(new URL('../journey.css',import.meta.url),'utf8');
- assert.match(css,/#journey \.j-stat-track\{position:relative;isolation:isolate;height:8px;/);
- assert.match(css,/#journey \.j-stat-average\{position:absolute;top:0;bottom:0;width:2px;max-height:100%/);
- assert.equal((weaponStatChart('sword').match(/class="j-stat-average"/g)||[]).length,7);
+ assert.match(css,/#journey \.j-stat-radar\{display:block;width:min\(100%,360px\)/);
+ assert.match(css,/\.j-radar-average\{fill:#c5c9ce/);
+ assert.match(css,/\.j-radar-current\{fill:#d4ab67/);
+ assert.doesNotMatch(css,/\.j-stat-average\{|\.j-stat-track\{/);
 });
