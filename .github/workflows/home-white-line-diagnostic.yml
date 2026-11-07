@@ -1,0 +1,28 @@
+name: Home white-line renderer diagnostic
+on:
+  pull_request:
+    paths:
+      - 'journey.css'
+      - 'src/journey-art.mjs'
+      - 'spider-combat.html'
+      - 'scripts/home-white-line-diagnostic.mjs'
+      - '.github/workflows/home-white-line-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser and PNG inspection
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0 pngjs@7.0.0
+      - name: Diagnose desktop and mobile home screen
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/home-ui-http.log 2>&1 &
+          sleep 2
+          node scripts/home-white-line-diagnostic.mjs
