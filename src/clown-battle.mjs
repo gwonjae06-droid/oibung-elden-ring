@@ -70,7 +70,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const nightmare=createClownNightmareTheatre(scene,{coarse,reduced});startup.own('Clown impossible theatre',()=>nightmare.dispose());
  const livingWorld=createClownLivingWorld(scene,{coarse,reduced,keyLight:sun,ambientLight:hemisphere});startup.own('Clown living world',()=>livingWorld.dispose());
   const atmosphere=createBossAtmosphere(scene,{profile:'clown',coarse,reduced});startup.own('Clown silent atmosphere',()=>atmosphere.dispose());
- const actor=createClownActor({coarse});scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);
+ const actor=createClownActor({coarse});startup.own('Clown original face',()=>actor.disposePortrait?.());scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);
  const troupeView=createCircusTroupeView(scene,{coarse,reduced,
   onActorCreated:performer=>cinematic.apply(performer,{actor:true})});startup.own('Living circus troupe',()=>troupeView.dispose());
  const P=buildPlayer(Object.keys(WEAPONS));scene.add(P.rig);

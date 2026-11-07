@@ -365,7 +365,12 @@ export function createClownActor({coarse=false}={}){
   crimson.color.setHex(phase?0x591425:0x7d2433);
   if(g.status==='won'){body.rotation.z=clamp((c.time||0)*.2,0,1.15);}
  }
- return {root,update,
+ function disposePortrait(){
+  portraitDisposed=true;
+  portraitTexture?.dispose();portraitTexture=null;
+  portrait.visible=false;portraitMaterial.map=null;
+ }
+ return {root,update,disposePortrait,
   head:{ready:portraitReady,portrait,source:'clown-face.mjs'},
   maskStyle:'sculpted-with-original-face',isRebuiltRingmaster:true};
  });

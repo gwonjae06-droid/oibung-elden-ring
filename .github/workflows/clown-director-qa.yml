@@ -10,6 +10,8 @@ on:
       - 'src/clown-combat.mjs'
       - 'src/clown-horror-patterns.mjs'
       - 'tests/clown-ringmaster-autonomy.test.mjs'
+      - 'tests/clown-encore-escalation.test.mjs'
+      - 'src/clown-troupe.mjs'
       - '.github/workflows/clown-director-qa.yml'
   workflow_dispatch:
 
