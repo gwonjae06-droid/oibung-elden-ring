@@ -1,4 +1,4 @@
-import {poseGyuwonHorizonCamera} from './gyuwon-horizon-camera.mjs';
+import {gyuwonMemoryFraming} from './gyuwon-horizon-camera.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
 import {createFramePerformanceAudit} from './runtime/performance-audit.mjs';
 import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
@@ -71,7 +71,11 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   function move(e){const r=$('stick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,z=r.top+r.height/2-e.clientY;const n=Math.max(1,Math.hypot(x,z)/40);x/=n;z/=n;stick.x=x/40;stick.z=z/40;$('thumb').style.transform=`translate(${x}px,${-z}px)`;}
   $('stick').onpointerdown=e=>{e.preventDefault();stickPointer=e.pointerId;$('stick').setPointerCapture(stickPointer);move(e);};$('stick').onpointermove=e=>{if(e.pointerId===stickPointer)move(e);};$('stick').onpointerup=$('stick').onpointercancel=()=>{releaseCapturedPointer($('stick'),stickPointer);stickPointer=null;stick.x=stick.z=0;$('thumb').style.transform='';};
   installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&mode==='playing',listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
-  hud.ready.then(ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
+  hud.ready.then(ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
+    // First-use GPU shader compilation belongs behind the initial loading
+    // gate, never in the middle of a phase-three memory map transition.
+    try{study.prewarm(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    if(closed)return;ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
    // Keep the modal's containing block in sync with browser viewport resizes.
@@ -83,13 +87,15 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
    for(const e of g.events){if(e.type==='victory')playBossCue('die');study.event(e,g);recoverySfx.event(e);damageFeedback.hit(e);impact.event(e,g);fx.event(e,g);weaponSfx.event(e,g);if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
    study.update(g,impact.frozen?0:visualDt);study.root.rotation.x=study.root.rotation.z=0;impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
    quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
-   if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const fov=KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('gyuwon',{
-  player:p,boss:g.boss,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
+   if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const fov=KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const memoryCamera=gyuwonMemoryFraming(g),frame=matchedBossCamera('gyuwon',{
+  player:p,boss:g.boss,yaw,pitch:Math.max(pitch,memoryCamera.pitch),zoom,
+  aspect:camera.aspect,locked:lock,extraDistance:memoryCamera.distance,
   headHeight:3+Math.max(0,g.gyuwon.elevation||0)*.35
  });
- desired.set(frame.position.x,frame.position.y,frame.position.z);
- camera.position.lerp(desired,1-Math.exp(-6*dt));
- target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseGyuwonHorizonCamera(camera,target,g,{reduced});study.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
+ desired.set(frame.position.x,frame.position.y+memoryCamera.height,frame.position.z);
+ camera.position.lerp(desired,1-Math.exp(-4.6*dt));
+ target.set(frame.focus.x,frame.focus.y+memoryCamera.height*.18,frame.focus.z);
+ study.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,view:study.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
  });
