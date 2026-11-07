@@ -15,7 +15,7 @@ on:
       - '.github/workflows/responsive-ui-smoke.yml'
   workflow_dispatch:
 concurrency:
-  group: responsive-ui-\${{ github.ref }}
+  group: responsive-ui-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
