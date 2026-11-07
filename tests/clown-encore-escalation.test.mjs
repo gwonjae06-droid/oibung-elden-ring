@@ -34,7 +34,14 @@ test('new clown performances use delayed real hazards and moving physical attack
    for(const b of g.clown.bombs)bombs.add(b.id);
   }
   const hits=[...zones.values()].filter(z=>z.damage>0&&!z.visual);
-  assert.ok(hits.length>=3,id);
+  // The two living-body hunt acts damage through their real swept torso,
+  // not an invisible, redundant zone. Count their visible warning lanes
+  // separately; forcing three fake damage circles would be unfair.
+  const sweeps=[...zones.values()].filter(z=>z.visual&&z.shape==='lane');
+  const requiredCircles=id==='marionetteDevour'?1:id==='brokenHorses'?2:3;
+  assert.ok(hits.length>=requiredCircles,id);
+  if(id==='marionetteDevour'||id==='brokenHorses')
+   assert.ok(sweeps.length>=(id==='marionetteDevour'?3:2),id+' must warn each body lunge');
   assert.ok(hits.every(z=>Number.isFinite(z.x)&&Number.isFinite(z.z)&&z.warn>=1.3),id);
   assert.equal(g.status,'playing',id);
   if(id==='funeralParade')assert.ok(bombs.size>=4,'parade needs visible live projectiles');
