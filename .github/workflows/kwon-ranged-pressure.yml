@@ -6,6 +6,7 @@ on:
       - 'src/combat.mjs'
       - 'src/pattern-shuffle.mjs'
       - 'tests/kwon-ranged-pressure.test.mjs'
+      - 'tests/kwon-close-engagement.test.mjs'
   push:
     branches: [main]
   workflow_dispatch:
@@ -32,6 +33,7 @@ jobs:
         run: >
           node --test
           tests/kwon-ranged-pressure.test.mjs
+          tests/kwon-close-engagement.test.mjs
           tests/boss-pattern-shuffle.test.mjs
           tests/royal-pressure.test.mjs
           tests/patterns.test.mjs
