@@ -17,9 +17,11 @@ try{
     document.querySelectorAll('dialog').forEach(d=>{if(d.open)d.close();});
     const T=await import('three');
     const [{buildBoss},{createBossStance},{createGame,swordPose,SWORD},{createKwonThirdPhaseView},
-      {createKwonWorldCleave},{makeKwonFractures}]=await Promise.all([
+      {createKwonShatteredWorld},{createKwonMoonCataclysmView},{moonPosition},
+      {makeKwonFractures}]=await Promise.all([
      import('./src/models.mjs'),import('./src/boss-stance.mjs'),import('./src/combat.mjs'),
-     import('./src/kwon-third-phase-view.mjs'),import('./src/kwon-world-cleave.mjs'),
+     import('./src/kwon-third-phase-view.mjs'),import('./src/kwon-shattered-world.mjs'),
+     import('./src/kwon-moon-cataclysm-view.mjs'),import('./src/kwon-moon-cataclysm.mjs'),
      import('./src/kwon-third-phase.mjs')]);
     const scene=new T.Scene();scene.background=new T.Color(0x15161d);
     scene.add(new T.HemisphereLight(0xffefd9,0x352b30,1.8));
@@ -37,34 +39,44 @@ try{
     const B=buildBoss({coarse:true});scene.add(B.root);
     const stance=createBossStance(B);
     const view=createKwonThirdPhaseView(scene,{coarse:true});
-    const world=createKwonWorldCleave(arena,{coarse:true,reduced:true});
+    const world=createKwonShatteredWorld(scene,{coarse:true,reduced:true});
+    const meteorView=createKwonMoonCataclysmView(scene,{coarse:true});
     const g=createGame('sword',{register:false});g.boss.phase=3;g.boss.state='transition';g.boss.yaw=0;
     function paint(t,pattern='transition'){
      const b=g.boss;b.t=t;b.state=pattern;
      b.pattern=pattern==='active'?'heavenSplit':'sweep';
+     if(pattern==='moonCinematic'){
+      g.kwonMoon.mode='cinematic';g.kwonMoon.triggered=true;g.kwonMoon.time=t;
+      const moon=moonPosition();
+      camera.position.set(moon.x-24,moon.y-3,moon.z+27);camera.lookAt(moon.x,moon.y,moon.z);
+     }else{camera.position.set(9,12,32);camera.lookAt(0,5,0);}
      if(B.swordGroup.parent!==B.root)B.root.add(B.swordGroup);
      const p=swordPose(b);B.swordGroup.position.set(p.x,p.y,p.z);
      B.swordGroup.rotation.set(p.pitch,p.yaw,0);const sc=p.length/SWORD.length;
      B.swordGroup.scale.set(1+(sc-1)*.58,1+(sc-1)*.58,sc);
      if(pattern==='active')g.kwonFractures=makeKwonFractures({...b,x:0,z:0,yaw:0},'heavenSplit',200).map(q=>({...q,age:q.delay+.5}));
      else g.kwonFractures=[];
-     stance.update(b);view.update(g);world.update(g);renderer.render(scene,camera);
+     stance.update(b);view.update(g);world.update(g,.6);meteorView.update(g);floor.visible=false;renderer.render(scene,camera);
      return {draws:renderer.info.render.calls,triangles:renderer.info.render.triangles,
       parent:B.swordGroup.parent===B.root,scale:B.swordGroup.scale.z,
-      dropped:B.model.position.z<-.3,screen:world.root.style.display,
+      dropped:B.model.position.z<-.3,split:world.root.getObjectByName('kwon-real-left-continent').position.x<0,
+      lunar:meteorView.root.visible,
       sever:view.root.getObjectByName('kwon-blade-severs-master')?.visible};
     }
-    window.__kwonPreview={paint,dispose(){world.dispose();view.dispose();stance.dispose();renderer.dispose();canvas.remove();}};
+    window.__kwonPreview={paint,dispose(){world.dispose();meteorView.dispose();view.dispose();stance.dispose();renderer.dispose();canvas.remove();}};
     return paint(2.3);
    });
    assert.ok(setup.parent&&setup.scale>1&&setup.sever&&setup.draws>0,JSON.stringify(setup));
    await page.screenshot({path:'artifacts/kwon-possession/'+vp.name+'-master-cut.png'});
    const possessed=await page.evaluate(()=>window.__kwonPreview.paint(4.3));
-   assert.ok(possessed.dropped&&possessed.screen==='block',JSON.stringify(possessed));
+   assert.ok(possessed.dropped&&possessed.split,JSON.stringify(possessed));
    await page.screenshot({path:'artifacts/kwon-possession/'+vp.name+'-world-split.png'});
    const strike=await page.evaluate(()=>window.__kwonPreview.paint(.46,'active'));
-   assert.ok(strike.draws>0&&strike.scale>1.35&&strike.screen==='block');
+   assert.ok(strike.draws>0&&strike.scale>1.35&&strike.split);
    await page.screenshot({path:'artifacts/kwon-possession/'+vp.name+'-rift-strike.png'});
+   const moon=await page.evaluate(()=>window.__kwonPreview.paint(4.8,'moonCinematic'));
+   assert.ok(moon.lunar&&moon.draws>0);
+   await page.screenshot({path:'artifacts/kwon-possession/'+vp.name+'-moon-cut.png'});
    assert.deepEqual(errors,[]);
    console.log('KWON POSSESSION BROWSER',vp.name,JSON.stringify({setup,possessed,strike}));
    await page.evaluate(()=>window.__kwonPreview.dispose());

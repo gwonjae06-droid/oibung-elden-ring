@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {kwonFractureFront,kwonThirdTransition} from './kwon-third-phase.mjs';
+import {moonPosition,moonCinematicPose,KWON_MOON} from './kwon-moon-cataclysm.mjs';
 
 // Bounded, pooled scene geometry: every physical front uses the combat data
 // for its exact location, delay, length and width. No tutorial ring/decal is
@@ -29,6 +30,12 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
  skyGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
  skyGeo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
  skyGeo.setIndex(indices);skyGeo.computeVertexNormals();
+ // Three-dimensional sword arcs travel on the actual advancing collision
+ // front. They are decorative; the physical line keeps its narrow dodge lane.
+ const bladeArcGeo=new THREE.TorusGeometry(3.15,.11,6,coarse?20:40,Math.PI*1.28);
+ const bladeArcMat=new THREE.MeshStandardMaterial({color:0xd8bac5,
+  metalness:.22,roughness:.19,emissive:0xa95376,emissiveIntensity:2.2,
+  transparent:true,opacity:.82,depthWrite:false,side:THREE.DoubleSide});
  const lipGeo=new THREE.BoxGeometry(.11,1,.16);
  const dummy=new THREE.Object3D(),pool=[];
  for(let i=0;i<POOLS;i++){
@@ -39,6 +46,9 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   cracks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   rock.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   group.add(cracks,rock);
+  const bladeWave=new THREE.Mesh(bladeArcGeo,bladeArcMat.clone());
+  bladeWave.name='kwon-thunderous-3d-advancing-sword-wave';group.add(bladeWave);
+  bladeWave.visible=false;
   const voidMat=new THREE.MeshStandardMaterial({color:0x100d18,emissive:0x371321,
    emissiveIntensity:.35,roughness:.7,transparent:true,opacity:.56,
    depthWrite:false,side:THREE.DoubleSide});
@@ -50,14 +60,14 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   const left=new THREE.Mesh(lipGeo,edgeMat),right=new THREE.Mesh(lipGeo,edgeMat);
   for(const lip of [left,right]){lip.position.y=18.5;lip.scale.set(1,37,1);sky.add(lip);}
   left.position.x=-.26;right.position.x=.26;
-  pool.push({id:null,group,cracks,rock,sky,voidMat,edgeMat});
+  pool.push({id:null,group,cracks,rock,sky,voidMat,edgeMat,bladeWave});
  }
  // The moon is a sculpted PBR body split by the SAME travelling sword front.
  // It never adds a hitbox and is built once, not every animation frame.
  const moon=new THREE.Group();moon.name='kwon-split-falling-moon';moon.userData.decorativeOnly=true;root.add(moon);
  const moonLeftGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,0,Math.PI,0,Math.PI);
  const moonRightGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,Math.PI,Math.PI,0,Math.PI);
- const moonStone=new THREE.MeshStandardMaterial({color:0xaba69a,roughness:.98,metalness:.015,emissive:0x3b3536,emissiveIntensity:.18,side:THREE.DoubleSide});
+ const moonStone=new THREE.MeshStandardMaterial({color:0xaba69a,roughness:.98,metalness:.015,emissive:0x3b3536,emissiveIntensity:.18,side:THREE.DoubleSide,fog:false});
  const lunarA=new THREE.Mesh(moonLeftGeo,moonStone),lunarB=new THREE.Mesh(moonRightGeo,moonStone);
  lunarA.name='kwon-moon-left-hemisphere';lunarB.name='kwon-moon-right-hemisphere';moon.add(lunarA,lunarB);
  const lunarDust=new THREE.MeshStandardMaterial({color:0x675d57,roughness:.98});
@@ -120,6 +130,13 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   o.cracks.instanceMatrix.needsUpdate=true;o.rock.instanceMatrix.needsUpdate=true;
   // Sky slit travels above the advancing stone seam, staying aligned with
   // the *actual* damaging front rather than targeting the player by fiat.
+  o.bladeWave.visible=front>.1&&fade>.08;
+  if(o.bladeWave.visible){
+   o.bladeWave.position.set(0,3.6+Math.sin(q.age*4)*.32,Math.max(.1,front));
+   o.bladeWave.scale.set(1.0+q.width*.24,1.1+q.width*.3,.72);
+   o.bladeWave.rotation.z=Math.sin(q.id*2.34)*.16;
+   o.bladeWave.material.opacity=.74*fade;
+  }
   o.sky.visible=front>.25&&fade>0;
   o.sky.position.set(0,.15,Math.min(front,q.length));
   o.sky.scale.setScalar(q.pattern==='heavenSplit'?1.28:1);
@@ -139,14 +156,12 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
   }
   moon.visible=active;
   if(active){
-   const q=rifts.find(a=>a.pattern==='heavenSplit'||a.pattern==='skyRend');
-   const open=q?clamp(kwonFractureFront(q)/Math.max(1,q.length)):0;
-   const falling=q?clamp((q.age-q.delay-q.length/q.speed)/1.35):0;
-   const transitionScars=b.state==='transition'?kwonThirdTransition(b.t).skyScar:0;
-   const split=Math.max(open,transitionScars*.18);
-   moon.position.set(b.x+Math.sin((b.yaw||0)+1.08)*43,51-18*falling*falling,
-    b.z+Math.cos((b.yaw||0)+1.08)*43);
-   moon.rotation.y=(b.yaw||0)+.7;
+   const cut=g?.kwonMoon,progress=cut?.triggered?
+    moonCinematicPose(cut.mode==='cinematic'?cut.time:KWON_MOON.cinematic).fracture:0;
+   const split=clamp(progress);
+   const location=moonPosition();
+   moon.position.set(location.x,location.y,location.z);
+   moon.rotation.y=.7;
    lunarA.position.x=-split*2.6;lunarB.position.x=split*2.6;
    lunarA.rotation.z=-split*.15;lunarB.rotation.z=split*.15;
    for(let i=0;i<lunarChips.length;i++){const c=lunarChips[i],a=i*Math.PI*2/12;
@@ -179,9 +194,9 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
  }
  function dispose(){
   if(disposed)return;disposed=true;reset();scene.remove(root);
-  for(const o of pool){o.voidMat.dispose();o.edgeMat.dispose();}
-  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo,moonLeftGeo,moonRightGeo,chipGeo,severGeo])g.dispose();
-  for(const m of [crackMat,stoneMat,omenMat,moonStone,lunarDust,severMat])m.dispose();
+  for(const o of pool){o.voidMat.dispose();o.edgeMat.dispose();o.bladeWave.material.dispose();}
+  for(const g of [crackGeo,stoneGeo,skyGeo,lipGeo,bladeArcGeo,moonLeftGeo,moonRightGeo,chipGeo,severGeo])g.dispose();
+  for(const m of [crackMat,stoneMat,omenMat,moonStone,lunarDust,severMat,bladeArcMat])m.dispose();
  }
  return {root,update,reset,dispose,stats:()=>({pool:POOLS,crackInstances:POOLS*SEGMENTS,
   live:pool.filter(o=>o.id!==null).length,moonPieces:14})};

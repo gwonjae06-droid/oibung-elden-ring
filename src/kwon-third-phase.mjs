@@ -100,17 +100,21 @@ export function kwonThirdSwordDrive(b){
 // crack is visible along the swept ground, but old cracks are never damaging.
 // A sideways dodge clears the narrow front. Each lane may hit at most once.
 export function makeKwonFractures(b,pattern,nextId){
- const angles=pattern==='earthRend'?[-.40,.40]:
-  pattern==='heavenSplit'?[-.12,.12]:[0];
+ // A fan of actual travelling sword-wounds replaces the former sparse
+ // two-line effect. Staggered blade fronts leave readable escape corridors.
+ const angles=pattern==='earthRend'?[-.53,-.16,.21,.51]:
+  pattern==='heavenSplit'?[-.67,-.34,0,.34,.67]:
+  pattern==='skyRend'?[-.38,0,.38]:[0];
  return angles.map((offset,i)=>{
   const yaw=b.yaw+offset;
   return {
    id:nextId+i,kind:'kwon-earth-sky-rift',x:b.x+Math.sin(yaw)*4.1,
    z:b.z+Math.cos(yaw)*4.1,yaw,age:0,
-   delay:KWON_THREE.releaseDelay+(pattern==='heavenSplit'?i*.15:0),
+   delay:KWON_THREE.releaseDelay+(pattern==='heavenSplit'?i*.25:
+    pattern==='earthRend'?i*.24:i*.23),
    length:pattern==='heavenSplit'?KWON_THREE.fractureReach:20,
    speed:pattern==='heavenSplit'?17:KWON_THREE.fractureSpeed,
-   width:pattern==='heavenSplit'?1.25:KWON_THREE.fractureWidth,
+   width:pattern==='heavenSplit'?1.10:pattern==='earthRend'?.92:KWON_THREE.fractureWidth,
    damage:pattern==='heavenSplit'?34:pattern==='skyRend'?27:24,
    hit:false,pattern,phase:3,
   };
