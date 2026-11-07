@@ -96,3 +96,33 @@
 /* Fixed 16:9 projection; empty space belongs to the surrounding viewport. */
 body:has(>#arena){background:#050608;overflow:hidden}
 #arena .hud{max-width:42%}#arena .boss-hud{max-width:88%}
+
+/* Combat HUD priority: preserve boss silhouettes while keeping touch controls readable. */
+@media(pointer:coarse) and (orientation:landscape){
+ #arena .hud{top:clamp(48px,12vh,72px);left:calc(12px + env(safe-area-inset-left));width:min(300px,34vw);padding:9px 11px;background:#101713d9;backdrop-filter:blur(2px)}
+ #arena .hud .player-line,#arena .hud .flask-line{font-size:12px;gap:7px}
+ #arena .hud .stat{font-size:12px;margin-bottom:5px;gap:5px}
+ #arena .hud .stat b,#arena .hud .stat>span{font-size:12px}
+ #arena .hud .meter{height:10px}
+ #arena .boss-hud{top:auto;bottom:calc(13px + env(safe-area-inset-bottom));left:50%;width:min(360px,34vw);padding:6px 8px 8px;background:#090d0bca;border:1px solid #b29b7063;border-radius:7px;backdrop-filter:blur(2px)}
+ #arena .boss-hud .boss-line{display:flex;align-items:center;gap:5px;margin:0 0 5px}
+ #arena .boss-hud .boss-line h2{font-size:clamp(13px,1.5vw,16px);line-height:1.25;margin:0}
+ #arena .boss-hud .boss-line span{font-size:11px}
+ #arena .boss-hud .meter.boss{height:12px}
+ #arena .boss-hud p{display:none}
+ #arena #touch{left:calc(12px + env(safe-area-inset-left));right:calc(12px + env(safe-area-inset-right));bottom:calc(10px + env(safe-area-inset-bottom));align-items:end}
+ #arena #stick{width:clamp(98px,12vw,118px);height:clamp(98px,12vw,118px);background:#17211ad9}
+ #arena .touch-actions{grid-template-columns:repeat(3,56px);gap:7px}
+ #arena .touch-actions button{width:56px;height:54px;min-height:54px;padding:4px;font-size:12px;line-height:1.2;background:#1b251be8}
+ #arena .touch-actions .attack{background:#b59b68;color:#11170f;font-weight:700}
+ #arena .top-actions button{min-height:42px}
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:420px){
+ #arena .hud{top:46px;padding:6px 8px;width:min(264px,32vw)}
+ #arena .hud .player-line{margin-bottom:4px}
+ #arena .hud .stat{margin-bottom:3px}
+ #arena .hud .flask-line{font-size:11px}
+ #arena .boss-hud{width:min(285px,33vw);padding:5px 7px}
+ #arena .boss-hud .boss-line h2{font-size:13px}
+ #arena #touch{bottom:8px}
+}
