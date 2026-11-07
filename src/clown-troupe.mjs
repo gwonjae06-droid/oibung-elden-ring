@@ -27,7 +27,7 @@ function spawn(g,i){
   target:null,showCue:null,seenHit:null,routine:null};
 }
 export function createCircusTroupe(g){
- return {members:[],fallen:[],reprise:null,hush:null,faceSync:null,stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,beat:0};
+ return {members:[],fallen:[],reprise:null,hush:null,faceSync:null,stage:0,cycle:0,show:'',showAge:0,cue:0,globalCooldown:1.7,attackBeat:0,beat:0};
 }
 export function setCircusAct(g,stage){
  if(!g?.clown)return;
@@ -35,7 +35,7 @@ export function setCircusAct(g,stage){
  if(stage<=t.stage)return;
  // After the unskippable transformation, a different corps enters from
  // the perimeter; corpses do not instant-respawn in the middle of a hit.
- t.stage=stage;t.members=[];t.cycle=0;t.globalCooldown=1.4;
+ t.stage=stage;t.members=[];t.cycle=0;t.attackBeat=0;t.globalCooldown=1.4;
  t.reprise=null;t.hush=null;t.faceSync=null;
  for(let i=0;i<targetCount(stage);i++)t.members.push(spawn(g,i));
  // One or two small original ringmasters emerge AFTER the main director's
@@ -46,7 +46,7 @@ export function setCircusAct(g,stage){
 export function clearCircusTroupe(g){
  const t=g?.clown?.troupe;if(!t)return;
  t.members=[];t.fallen=[];t.reprise=null;t.hush=null;t.faceSync=null;
- t.show='';t.showAge=0;t.globalCooldown=3;
+ t.show='';t.showAge=0;t.attackBeat=0;t.globalCooldown=3;
 }
 export function cueCircusShow(g,show){
  const t=g?.clown?.troupe;if(!t)return;
@@ -219,6 +219,11 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
  t.globalCooldown=Math.max(0,t.globalCooldown-h);
  playerContacts(g,t,emit);
  const target=g.player,phase=b.phase,locked=Boolean(c.punish||c.stunT>0||c.noSeparate);
+ // Small retired-O-Seulwoo bosses must take turns instead of being starved
+ // by the faster-indexed ordinary NPCs. At most one mini cast begins every
+ // three solo turns; the main ringmaster still owns the authored shows.
+ const miniReady=stage===2&&t.members.some(m=>m.legacy&&!m.down&&m.cast<=0&&m.cooldown<=h);
+ const miniTurn=miniReady&&t.attackBeat%3===0;
  for(let i=0;i<t.members.length;i++){
   const m=t.members[i],s=CIRCUS_ROLES[m.role];
   m.age+=h;m.flash=Math.max(0,m.flash-h);
@@ -267,10 +272,12 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   // choreographed show, nor attack into the boss's punish / cutscene window.
   const authored=c.state==='pattern';
   if(locked||authored||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
+  if(miniTurn&&!m.legacy)continue;
   if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
   castAttack(g,m,zone,emit);
   m.cooldown=m.legacy?Math.max(m.cooldown,6.4+i*.25):3.8+i*.27;
   t.globalCooldown=m.legacy?2.9:stage===3?1.2:stage===2?1.75:2.6;
+  t.attackBeat++;
  }
  // Delete only after the exit animation has had time to finish.
  t.members=t.members.filter(m=>!m.down||m.death<1.8);
