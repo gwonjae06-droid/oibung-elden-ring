@@ -57,8 +57,6 @@ function tick(g,dt,input){tickBossHitTraits(g,dt);g.dice.crushCooldown=Math.max(
   d.pips=null;clearDiceRoulette(g);stepGiant(g,dt,Boolean(input.freezeBoss));
   return;
  }
-  return;
- }
  stepDiceRoulette(g,dt,Boolean(input.freezeBoss));if(g.status!=='playing')return;
  if(d.pips&&d.pips.flash>0){d.pips.flash-=dt;if(d.pips.flash<=0)d.pips=null;}
  if(input.freezeBoss){if(!['jump','charge'].includes(d.state))contact(g,false);return;}
