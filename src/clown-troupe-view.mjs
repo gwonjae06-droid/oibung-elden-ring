@@ -3,12 +3,14 @@ import {CIRCUS_ROLES} from './clown-troupe.mjs';
 import {solveFixedLimb,stageFootTarget,circusFootPhasing,smoothYaw} from './clown-performance-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
+import {createClownTheatreCues} from './clown-theatre-cues.mjs';
 // PBR geometry, articulating legs, role-specific apparatus, frame-independent
 // movement and real theatrical cues. The troupe exists in the combat state;
 // this view can never manufacture a damaging hitbox.
 export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActorCreated=null}={}){
  const root=new THREE.Group();root.name='seulwoo-living-circus-troupe';scene.add(root);
  const live=new Map(),hoops=new Map();
+ const theatreCues=createClownTheatreCues(root,{coarse,reduced});
  const direction=new THREE.Vector3(),from=new THREE.Vector3(),to=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
  function bone(mesh,a,b){from.set(...a);to.set(...b);direction.copy(to).sub(from);
   mesh.position.copy(from).add(to).multiplyScalar(.5);mesh.scale.y=Math.max(.001,direction.length());
@@ -101,7 +103,26 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   const ring=add(group,new THREE.TorusGeometry(1,.10,8,coarse?28:54),material,'vertical-flame-arc');ring.rotation.y=.28;
   const core=add(group,new THREE.TorusGeometry(.89,.035,6,coarse?26:52),new THREE.MeshBasicMaterial({
    color:0xffdf8b,transparent:true,opacity:.72,depthWrite:false}),'bright-hot-hoop-interior');
-  return {group,ring,core};
+  // Low-drawcall flaring flames: only a single instanced render batch.
+  const count=coarse?12:22,flameGeo=new THREE.ConeGeometry(.11,.54,5),
+   flameMat=new THREE.MeshBasicMaterial({color:0xffa45d,transparent:true,
+    opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,
+    side:THREE.DoubleSide,toneMapped:false}),
+   tongues=new THREE.InstancedMesh(flameGeo,flameMat,count);
+  tongues.name='individually-flaring-circus-fire-tongues';
+  const matrix=new THREE.Matrix4(),point=new THREE.Vector3(),direction=new THREE.Vector3(),
+   quat=new THREE.Quaternion(),scale=new THREE.Vector3(),upAxis=new THREE.Vector3(0,1,0);
+  for(let i=0;i<count;i++){
+   const a=i*Math.PI*2/count,r=1.02+(i%3)*.038;
+   point.set(Math.cos(a)*r,Math.sin(a)*r,0);
+   direction.set(Math.cos(a),Math.sin(a),0);
+   quat.setFromUnitVectors(upAxis,direction);
+   scale.set(.76+(i%3)*.15,.86+(i%4)*.12,1);
+   matrix.compose(point,quat,scale);tongues.setMatrixAt(i,matrix);
+  }
+  tongues.instanceMatrix.needsUpdate=true;
+  tongues.frustumCulled=false;tongues.renderOrder=5;group.add(tongues);
+  return {group,ring,core,tongues};
  }
  function update(g,dt=1/60){
   const troupe=g?.clown?.troupe,alive=troupe?.members||[],seen=new Set(),time=g?.time||0,
@@ -164,13 +185,16 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    v.group.position.set(z.x,2.0+Math.sin(progress*Math.PI)*1.0,z.z);
    v.group.rotation.y=time*.55;v.group.scale.setScalar(Math.min(2.0,(z.r||2.0)*.43));
    v.ring.material.opacity=.30+.52*progress;
+   v.group.rotation.z=Math.sin(time*1.35+z.id)*.055;
+   v.tongues.material.opacity=(reduced?.55:.72)*(.55+.45*progress);
   }
   for(const [id,v] of hoops)if(!hoopSet.has(id)){
    root.remove(v.group);disposeScene(v.group);hoops.delete(id);
   }
+  theatreCues.update(g,h);
  }
  function dispose(){for(const v of live.values())v.group.traverse(o=>{if(o.geometry&&o.geometry!==geo&&o.geometry!==cylinder)o.geometry.dispose();});
-  live.clear();hoops.clear();root.parent?.remove(root);disposeScene(root);
+  live.clear();hoops.clear();theatreCues.dispose();root.parent?.remove(root);disposeScene(root);
   geo.dispose();cylinder.dispose();for(const x of Object.values(mat))x.dispose();}
- return {root,update,dispose,stats:()=>({performers:live.size,hoops:hoops.size})};
+ return {root,update,dispose,stats:()=>({performers:live.size,hoops:hoops.size,airCues:theatreCues.stats().active})};
 }
