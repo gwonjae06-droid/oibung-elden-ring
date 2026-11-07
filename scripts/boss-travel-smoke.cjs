@@ -42,11 +42,12 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   const artifacts=path.join(root,'artifacts/boss-travel');await fs.mkdir(artifacts,{recursive:true});
   assert.equal(await page.locator('[data-j="skip-toggle"]').count(),0,'old shortcut should not exist');
   assert.equal(await page.locator('.j-skip-offer').count(),0);
-  await click('bosses');
+  await click('new');
   const destination=stage=>page.locator('[data-j="boss-target"][data-stage="'+stage+'"]');
   for(const stage of [0,1,2,3])assert.equal(await destination(stage).isEnabled(),true);
   assert.equal(await destination(4).isDisabled(),true);
   await destination(1).click();
+  assert.equal(await destination(1).evaluate(el=>el===document.activeElement),true,'focus should stay on the chosen boss');
   assert.match(await page.locator('.j-boss-chooser').innerText(),/오슬우부터 도전/);
   await destination(3).click();
   assert.match(await page.locator('.j-boss-chooser').innerText(),/배서준부터 도전/);
@@ -56,11 +57,14 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
   assert.match(await page.locator('.j-boss-note').innerText(),/이권재부터 도전/);
   await destination(3).click();
   await page.locator('[data-j="weapon"][data-weapon="bow"]').click();
+  assert.equal(await page.locator('[data-j="weapon"][data-weapon="bow"]').evaluate(el=>el===document.activeElement),true,'weapon selection must preserve focus');
   assert.equal(await page.locator('.j-stat-chart [role="meter"]').count(),7);
   assert.match(await page.locator('.j-stat-chart').innerText(),/체력|공격 피해/);
   await page.setViewportSize({width:844,height:390});
   await page.locator('[data-j="begin"]').scrollIntoViewIfNeeded();
   assert.ok(await page.locator('[data-j="begin"]').isVisible());
+  const buttonBox=await page.locator('[data-j="begin"]').boundingBox();
+  assert.ok(buttonBox.y+buttonBox.height<=390&&buttonBox.y>=0,'departure button should remain in the mobile viewport');
   const bounds=await page.locator('.j-boss-chooser').boundingBox();assert.ok(bounds.width<=844&&bounds.x>=0);
   await page.screenshot({path:path.join(artifacts,'weapon-mobile.png')});
   await click('begin');
@@ -83,7 +87,7 @@ const which=name=>{try{return execFileSync('which',[name],{encoding:'utf8',stdio
    const p=JSON.parse(localStorage.getItem(SAVE_KEY));p.defeated=[];p.memories=[];localStorage.setItem(SAVE_KEY,JSON.stringify(p));
    window.__journey=installJourney(document,window,{makeMusic:()=>({unlock(){},update(){},dispose(){}})});
   });
-  assert.equal(await page.locator('[data-j="bosses"]').count(),0);
+  assert.equal(await page.locator('[data-j="bosses"]').count(),0,'duplicate home path should stay removed');
   await click('new');assert.equal(await destination(1).isDisabled(),true);
   assert.equal(await destination(0).isEnabled(),true);
   await page.evaluate(()=>window.__journey.dispose());assert.deepEqual(errors,[]);
