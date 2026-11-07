@@ -18,7 +18,7 @@ export function createGyuwonGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:'sword'}};
+  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null}};
  // All weapon skills (card sigils, burning arrows, hammer guard and throw)
  // settle through the shared player combat manager, including DoT statistics.
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
@@ -54,13 +54,16 @@ export function startGyuwonPattern(g,id){
  const spec=GYUWON_PATTERNS[id];if(!spec||g.status!=='playing'||g.boss.state==='transition')return false;
  const b=g.boss,s=g.gyuwon,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.hazards.length=0;s.pattern=id;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  if(b.phase===3&&MEMORY_ORDER.includes(id)){
-  s.stageMemory=id;s.stageTime=0;emit(g,'memory-stage',{memory:id});
+  // Only the actual attack may advance the memory room. Never change rooms on an idle timer.
+  s.stageMemory=id;s.stageTime=0;s.stageIndex++;emit(g,'memory-stage',{memory:id});
  }
  const lane=(x,z,yaw,warn,extra={})=>hazard(g,'lane',{x,z,yaw,warn,width:1.15,length:42,life:.3,damage:24,...extra});
  if(id==='line')for(let i=-1;i<=1;i++)lane(p.x+i*5,p.z,0,1.35+Math.abs(i)*.22);
  if(id==='mark')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*4,z:p.z,r:2.5,warn:1.35+i*.5,damage:22});
  if(id==='repeat'){
- const traces=s.memory.length?s.memory:[{shape:'lane',x:p.x,z:p.z,yaw:aim,width:1.15,length:42,r:2}];
+ // Replay at most three recognizable writing traces, not a screen of overlapping sectors.
+  const remembered=s.memory.filter(h=>h.shape==='lane'||h.shape==='circle').slice(0,3);
+  const traces=remembered.length?remembered:[{shape:'lane',x:p.x,z:p.z,yaw:aim,width:1.15,length:42,r:2}];
  for(const h of traces){hazard(g,h.shape,{...h,warn:1,age:0,hit:false,fired:false,damage:26,life:.3});hazard(g,h.shape,{...h,warn:g.boss.phase===2?1.85:2.25,age:0,hit:false,fired:false,damage:26,life:.3});}
  }
  if(id==='choice'){
@@ -151,14 +154,23 @@ export function startGyuwonPattern(g,id){
  s.motionBeats=[...new Set(s.hazards.map(h=>h.warn).filter(Number.isFinite))].sort((a,b)=>a-b);
  emit(g,'gyuwon-warning',{pattern:id});return true;
 }
-// Separate, persistent decks ensure every white/dark-space pattern can play.
-// A returning space continues its remaining moves instead of starting over.
+// These pairs give each phase a legible question -> answer -> consequence rhythm.
+// Shuffled decks remain authoritative: all abilities play before any repeats.
+export const GYUWON_FOLLOWUPS=Object.freeze({
+ '1':Object.freeze({mark:['repeat'],line:['contradiction'],timetable:['blank'],choice:['mark'],contradiction:['mark'],blank:['line']}),
+ white:Object.freeze({negate:['verdict'],verdict:['mirror'],mirror:['axiom'],axiom:['negate']}),
+ dark:Object.freeze({reverse:['paradox'],paradox:['counterproof'],counterproof:['stop'],stop:['erasure'],erasure:['reverse']}),
+ '3':Object.freeze({sword:['circus'],circus:['gamble'],gamble:['tsunami'],tsunami:['chalk'],chalk:['sword']})
+});
+// Independent decks preserve previously unplayed white/dark spells and varied openings.
 export function chooseGyuwonPattern(g){
  const b=g.boss,s=g.gyuwon,pool=gyuwonPool(b.phase,s.space);
+ const family=b.phase===2?s.space:String(b.phase);
+ const preferred=GYUWON_FOLLOWUPS[family]?.[s.pattern]||[];
  return drawPatternShuffle(s.patternDeck,'gyuwon-'+b.phase+'-'+(b.phase===2?s.space:'main'),
-  pool,{avoid:s.pattern});
+  pool,{avoid:s.pattern,preferred});
 }
-function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.t=0;s.index=0;s.space='white';s.spaceTime=0;s.stageTime=0;s.stageIndex=0;s.stageMemory='sword';s.hazards.length=0;s.motionBeats=[];s.pattern=null;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
+function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.t=0;s.index=0;s.space='white';s.spaceTime=0;s.stageTime=0;s.stageIndex=0;s.stageMemory=null;s.hazards.length=0;s.motionBeats=[];s.memory=[];s.pattern=null;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
@@ -170,14 +182,8 @@ function hurt(g,h){
 function tickBoss(g,dt){
  const b=g.boss,s=g.gyuwon;
  if(b.phase===2&&b.state!=='transition'){s.spaceTime+=dt;if(s.spaceTime>= (b.hp/b.maxHp>.45?12:8)&&b.state==='recovery'){s.space=s.space==='white'?'dark':'white';s.spaceTime=0;emit(g,'space');}}
- if(b.phase===3){
-  // The grand setting follows the actual memory being cast; old code could
-  // swap to a different boss's room in the middle of an attack.
-  s.stageTime+=dt;
-  if(b.state==='recovery'&&s.stageTime>=memoryInterval(b.hp/b.maxHp)){
-   s.stageTime=0;s.stageIndex++;emit(g,'memory-stage',{memory:s.stageMemory});
-  }
- }
+ // Actual memory transitions are emitted by startGyuwonPattern, never the idle clock.
+ if(b.phase===3&&s.stageMemory)s.stageTime+=dt;
  s.slow=Math.max(0,s.slow-dt);
  if(b.state==='transition'){s.t+=dt;s.elevation=0;if(s.t>=R.transition){b.state='recovery';s.recover=2.8;s.elevation=0;s.t=0;emit(g,'gyuwon-land');}return;}
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);return;}
@@ -186,7 +192,10 @@ function tickBoss(g,dt){
   if(s.phasePending){beginPhase(g);return;}
   // Land close enough to offer every melee weapon a real counterattack window.
   const dx=g.player.x-b.x,dz=g.player.z-b.z,d=Math.hypot(dx,dz);
-  if(d>4){const speed=Math.min(5.4,(d-4)*1.6);b.x+=dx/d*speed*dt;b.z+=dz/d*speed*dt;clampArena(b);}
+  // Let the player punish the landed attack before any forward steps resume.
+  const lastSpec=GYUWON_PATTERNS[s.pattern],window=lastSpec?.recover??(b.phase===1?1.2:2.8);
+  const planted=Math.min(.8,window*.35);
+  if(s.recover<=window-planted&&d>4){const speed=Math.min(4.4,(d-4)*1.35);b.x+=dx/d*speed*dt;b.z+=dz/d*speed*dt;clampArena(b);}
   // The rig, sword collision capsules and the recovery facing share this yaw.
   const facing=Math.atan2(dx,dz);
   b.yaw+=Math.atan2(Math.sin(facing-b.yaw),Math.cos(facing-b.yaw))*Math.min(1,dt*6.5);
@@ -195,7 +204,13 @@ function tickBoss(g,dt){
  s.t+=dt;const spec=GYUWON_PATTERNS[s.pattern];s.elevation=0;
  for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'gyuwon-impact',{pattern:s.pattern});}if(h.age>=h.warn&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
- if(s.t>=spec.duration){s.hazards.length=0;b.state='recovery';s.recover=spec.recover;s.elevation=0;emit(g,'gyuwon-land');}
+ if(s.t>=spec.duration){
+  s.hazards.length=0;b.state='recovery';
+  // Low-health memories shorten downtime only, never the actual telegraph or hit.
+  const pressure=b.phase===3?memoryInterval(b.hp/b.maxHp):8;
+  s.recover=spec.recover*(pressure<=1?.82:pressure<=2.5?.90:1);
+  s.elevation=0;emit(g,'gyuwon-land');
+ }
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);

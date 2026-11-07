@@ -16,6 +16,14 @@ export const GYUWON_MOTION_STYLE=Object.freeze({
  sword:[.45,-.5,-.42,1.4],circus:[-.38,.7,.4,1.3],gamble:[.35,-.66,-.15,1.5],
  tsunami:[-.52,.2,.5,1.5],chalk:[-.25,.52,-.5,1.25]
 });
+// Distinct articulated casting silhouettes for every question, judgment and memory.
+export const GYUWON_GESTURES=Object.freeze({
+ line:[.34,1.36,-.10],mark:[1.38,.42,.16],repeat:[1.14,1.18,-.10],
+ choice:[1.20,.72,.09],contradiction:[.80,1.32,.12],timetable:[1.34,.36,.20],blank:[.66,.60,-.25],
+ negate:[.82,1.28,-.18],verdict:[1.27,1.31,-.24],mirror:[1.39,.50,.20],axiom:[1.20,1.20,-.20],
+ reverse:[.62,1.39,.24],stop:[1.28,.38,-.22],paradox:[1.18,1.30,.18],erasure:[1.42,.52,-.16],counterproof:[.40,1.44,.23],
+ sword:[1.32,1.42,-.35],circus:[.58,1.48,.27],gamble:[.45,1.55,-.20],tsunami:[1.48,1.42,-.30],chalk:[1.36,.54,.20]
+});
 export function gyuwonRawMotion(g){
  const b=g?.boss,s=g?.gyuwon;if(!b||!s||b.state==='dead')return {...NEUTRAL};
  if(b.state==='transition'){
@@ -46,18 +54,19 @@ export function gyuwonRawMotion(g){
  const strike=Math.max(0,...warns.map(w=>pulse(t-w,.16)));
  const after=Math.max(0,...warns.map(w=>pulse(t-w-.27,.26)));
  const tail=1-ease((t-(spec.duration-spec.recover*.40))/.38);
- const [lean,twist,head,force]=style,power=(prep*.38+strike+after*.48)*tail;
+ const [lean,twist,head,force]=style,[lBias,rBias,hBias]=GYUWON_GESTURES[s.pattern];
+ const power=(prep*.38+strike+after*.48)*tail,left=force*lBias,right=force*rBias;
  const alt=warns.filter(w=>w<t+.04).length%2;
  return {lean:lean*(power-prep*.22),twist:twist*(prep*.32+power*.75),
-  headPitch:head*(prep*.48+power*.70),headYaw:-twist*(prep*.15+power*.12),
-  leftArm:-.5-force*(prep*.42+power*(alt?.48:.85)),
-  rightArm:-force*(prep*.50+power*(alt?.95:.62)),
-  leftElbow:-.16-force*(prep*.28+strike*(alt?.24:.42)+after*.16),
-  rightElbow:-.16-force*(prep*.34+strike*(alt?.52:.29)+after*.22),
+  headPitch:head*(prep*.48+power*.70)+hBias*(prep*.20+strike*.15),headYaw:-twist*(prep*.15+power*.12),
+  leftArm:-.5-left*(prep*.42+power*(alt?.48:.85)),
+  rightArm:-right*(prep*.50+power*(alt?.95:.62)),
+  leftElbow:-.16-left*(prep*.28+strike*(alt?.24:.42)+after*.16),
+  rightElbow:-.16-right*(prep*.34+strike*(alt?.52:.29)+after*.22),
   leftWrist:.04+twist*(prep*.14+strike*.24),
   rightWrist:twist*(prep*.22+strike*.3),
   weightShift:twist*(prep*.11+power*.24),
-  book:-.6+force*(prep*.18+strike*.28)};
+  book:-.6+left*(prep*.18+strike*.28)};
 }
 export function createGyuwonMotionDirector(){
  const pose=createPoseContinuity();let owner=null,lastPos=null,speed=0,facing=0;
