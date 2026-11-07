@@ -1,7 +1,7 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 import {beginBloodWhip,stepBloodWhip} from './blood-whip.mjs';
-import {bloodTsunamiFlanks} from './blood-tsunami.mjs';
+import {bloodTsunamiFlanks,bloodTsunamiApproach} from './blood-tsunami.mjs';
 import {bloodReadableWarning} from './attack-readability.mjs';
 import {addBloodRiteAccent} from './blood-rite-escalation.mjs';
 import {BOSS_TEMPO} from './boss-tempo.mjs';
@@ -82,7 +82,7 @@ export function severHeartNode(g,amount,point){
 }
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.pattern=id;s.patternDuration=spec.duration;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false;s.pattern=id;s.patternDuration=spec.duration;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
@@ -234,6 +234,12 @@ function tickBoss(g,dt){
   return;
  }
  s.t+=dt;const spec=BLOOD_PATTERNS[s.pattern];
+ // Sound is keyed to the authoritative wave's distance, not to the camera
+ // (which may cut away), and fires once before the first actual sweep.
+ if(s.pattern==='requiem'&&!s.tsunamiSoundPlayed&&
+  bloodTsunamiApproach(g).intensity>.16){
+  s.tsunamiSoundPlayed=true;emit(g,'blood-tsunami-approach',{pattern:'requiem'});
+ }
  s.elevation=spec.air?bloodFlightHeight(s.pattern,s.t,spec.duration,s.strikeAt):0;
  if(spec.air){const pos=bloodFlightPosition(s.pattern,s.t,s.origin,s.target,s.strikeAt);b.x=pos.x;b.z=pos.z;}
  for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(bloodHazardContactReady(h)&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
