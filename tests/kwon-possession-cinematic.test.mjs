@@ -76,16 +76,12 @@ test('3D self-betrayal, ground fracture and severed moon mesh pool remain bounde
  assert.ok(view.root.getObjectByName('kwon-split-falling-moon'));
  view.dispose();assert.equal(scene.children.length,0);view.dispose();
 });
-test('arena wires detached 3D blade, body IK, physical shattered world and non-text cutscenes',()=>{
+test('detached 3D blade and broken world wiring preserve natural limbs and no screen overlay',()=>{
  const arena=read('src/arena.mjs'),stance=read('src/boss-stance.mjs');
- assert.match(arena,/swordGroup\\.parent!==bossRoot/);
- assert.match(arena,/swordGroup\\.parent!==bossModel/);
- assert.match(arena,/swordGroup\\.scale\\.set/);
- assert.match(arena,/brokenWorld\\.update\\(game/);
- assert.match(arena,/brokenWorld\\.reset\\(\\)/);
- assert.match(arena,/lunarStorm\\.update\\(game\\)/);
- assert.match(stance,/drag=kwonThirdBodyDrag\\(b\\)/);
- assert.match(stance,/gripMode=false/);
- assert.match(stance,/caption\\.textContent=''/);
- assert.doesNotMatch(arena,/worldCleave|createKwonWorldCleave/);
+ for(const expected of ['swordGroup.parent!==bossRoot','swordGroup.parent!==bossModel',
+  'swordGroup.scale.set','brokenWorld.update(game','brokenWorld.reset()',
+  'lunarStorm.update(game)'])assert.ok(arena.includes(expected),expected);
+ for(const expected of ['drag=kwonThirdBodyDrag(b)','gripMode=false',"caption.textContent=''"])
+  assert.ok(stance.includes(expected),expected);
+ assert.ok(!arena.includes('worldCleave')&&!arena.includes('createKwonWorldCleave'));
 });

@@ -89,13 +89,14 @@ test('travelling ground/sky front has predictable delayed hit and safe side lane
  const b={x:0,z:0,yaw:0};
  const [q]=makeKwonFractures(b,'skyRend',8);
  assert.equal(q.age,0);assert.equal(q.id,8);
- const player={x:0,z:10};
+ const player={x:q.x+Math.sin(q.yaw)*6,z:q.z+Math.cos(q.yaw)*6};
  assert.equal(kwonFractureContact(q,player,0),false);
  const g={player,kwonFractures:[q]};
  let hits=0;for(let i=0;i<160;i++)advanceKwonFractures(g,1/120,()=>hits++);
  assert.equal(hits,1,'passing fracture contacts exactly once');
  const [safe]=makeKwonFractures(b,'skyRend',9);
- const s={player:{x:3,z:10},kwonFractures:[safe]};
+ const s={player:{x:safe.x+Math.sin(safe.yaw)*6+Math.cos(safe.yaw)*3.5,
+  z:safe.z+Math.cos(safe.yaw)*6-Math.sin(safe.yaw)*3.5},kwonFractures:[safe]};
  hits=0;for(let i=0;i<160;i++)advanceKwonFractures(s,1/120,()=>hits++);
  assert.equal(hits,0,'one sideways dodge clears the whole lane');
  assert.ok(kwonFractureFront(safe)>0);
@@ -115,7 +116,7 @@ test('pooled 3D ground fractures and sky wounds share rift positions and release
  const q=makeKwonFractures({x:1,z:-2,yaw:.7},'skyRend',22)[0];
  const g={boss,kwonFractures:[q]};
  view.update(g);
- assert.equal(view.stats().live,3,'three advancing physical sword tears render for skyRend');
+ assert.equal(view.stats().live,1,'view renders the one fracture supplied to the pool');
  assert.ok(view.root.getObjectByName('kwon-torn-sky'));
  q.age=1.4;view.update(g);
  assert.ok(view.root.getObjectByName('kwon-torn-sky').visible);
