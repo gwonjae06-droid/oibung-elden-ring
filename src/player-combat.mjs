@@ -5,17 +5,20 @@ import {evolutionCount} from './weapon-evolution.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createSkillState} from './skills.mjs';
 import {completePlayerHeal} from './player-tick.mjs';
+import {createRangedMagazine,canFireRanged,spendRangedAmmo} from './ranged-reload.mjs';
 import {WEAPON_ACTIVE_COOLDOWN,applyWeaponHitEffects,attackStoredDamage,equippedPath,
  launchHammer,moveReturningHammer,BOW_BACKSHOT_ARROWS} from './weapon-abilities.mjs';
 
 export function createPlayerState({x=0,z=13,yaw=Math.PI,weapon='sword'}={}){
  const stats=weaponStats(weapon);
  return {weapon,x,z,yaw,hp:stats.maxHp,maxHp:stats.maxHp,stamina:100,regen:0,
-  action:null,invuln:0,potions:3,skill:createSkillState()};
+  action:null,invuln:0,potions:3,skill:createSkillState(),ranged:createRangedMagazine(weapon)};
 }
 
 export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}){
  const count=action.projectileCount||(game.weapon==='cards'?3:1);
+ // A cancelled windup must not consume ammo; only actual release does.
+ if(weapon.projectile&&!spendRangedAmmo(game,count))return false;
  const fireRank=game.weapon==='bow'&&action.basic?evolutionCount(game,'piercing-arrow'):0;
  const volleyScale=game.journeyBalance?.mode==='story'&&game.weapon==='cards'&&count>1
   ?Math.max(.78,1-.055*(count-1)):1;
@@ -28,6 +31,7 @@ export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}
    piercing:false,bossHit:false,hit:false,skill:false});
  }
  game.events.push({type:'shot'});
+ return true;
 }
 
 export function tickPlayerAction(game,dt,weapon,{roll=()=>{},backstep=()=>{},melee=()=>{},basicLifetime=1.7}={}){
@@ -99,7 +103,8 @@ export function actPlayer(game,type){
  }
  if(type==='skill'){
   const path=equippedPath(game);
-  if(!WEAPON_ACTIVE_COOLDOWN[path]||skill.cooldown>0)return false;
+  if(!WEAPON_ACTIVE_COOLDOWN[path]||skill.cooldown>0||
+    (path==='twin-arrow'&&!canFireRanged(game,BOW_BACKSHOT_ARROWS)))return false;
   skill.cooldown=WEAPON_ACTIVE_COOLDOWN[path]-(path==='twin-arrow'&&evolutionCount(game,path)>=2?2:0);
   const kind=path==='earth-wave'?'guard':path==='blood-hammer'?'throw':'backshot';
   player.action={kind,t:0,total:kind==='guard'?1.2:kind==='throw'?.5:.62,
@@ -109,7 +114,7 @@ export function actPlayer(game,type){
   return true;
  }
  const cost=playerStaminaCost(weapon.cost+(game.journey?.cost??0));
- if(type!=='light'||player.stamina<cost)return false;
+ if(type!=='light'||player.stamina<cost||!canFireRanged(game))return false;
  player.stamina-=cost;player.regen=.85;
  const speed=Math.max(.1,game.journey?.speed??1),wind=weapon.wind/speed,active=weapon.active/speed,end=weapon.end/speed;
  const bonus=game.weapon==='hammer'?attackStoredDamage(game,{basic:true}):0;
