@@ -23,7 +23,7 @@ export function createGyuwonGame(weapon='sword',{seed}={}){
  // settle through the shared player combat manager, including DoT statistics.
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
-   const dealt=damageGyuwon(game,amount);
+   const dealt=damageGyuwon(game,amount,null,{dot});
    if(dealt>0){game.stats.damage+=dealt;if(!dot)game.stats.hits++;}
    return dealt;
   }});
@@ -34,17 +34,18 @@ export function actGyuwon(g,type,input={}){
  if(!g.player.action)g.player.yaw=type==='roll'&&(input.x||input.z)?Math.atan2(input.x||0,input.z||0):Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
  return actPlayer(g,type);
 }
-export function damageGyuwon(g,amount){
+export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  if(g.status!=='playing'||g.boss.state==='transition'||!Number.isFinite(amount)||amount<=0)return 0;
  const b=g.boss,s=g.gyuwon,damage=Math.min(amount,b.phase<3?Math.max(0,b.hp-1):b.hp);b.hp-=damage;
- if(damage)emit(g,'boss-hit',{amount:damage});
+ if(damage&&!dot)emit(g,'boss-hit',{amount:damage,
+  ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
  if(b.phase===1&&b.hp<=b.maxHp*.65||b.phase===2&&b.hp<=b.maxHp*.3)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
 }
-function hit(g,amount,source){
+function hit(g,amount,source,impact=null){
  const s=g.gyuwon;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
- const damage=damageGyuwon(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1));
+ const damage=damageGyuwon(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1),impact);
  if(!damage)return;
  settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
 }
@@ -204,7 +205,7 @@ function tickPlayer(g,dt,input){
    if(g.gyuwon.elevation>2)return;
    const impact=kwonMeleeContact(gyuwonHurtShapes(g),p,{
     reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85,bladeRadius:.28});
-   if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a);}
+   if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a,impact);}
   }
  });
  if(g.status!=='playing')return;
@@ -212,7 +213,7 @@ function tickPlayer(g,dt,input){
   const prev=advancePlayerProjectile(q,dt,p);
   if(q.hit||q.bossHit||q.life<=0)continue;
   const impact=kwonProjectileContact(gyuwonHurtShapes(g),prev,{x:q.x,y:q.y,z:q.z});
-  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source);
+  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,impact);
  }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
  const a=p.action;if(a?.kind==='roll'){
