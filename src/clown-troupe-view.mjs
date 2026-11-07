@@ -94,6 +94,9 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false}={}){
    seen.add(m.id);let v=live.get(m.id);if(!v){v=actor(m.role);live.set(m.id,v);}
    const sway=(reduced?0:Math.sin(time*2.5+m.id*.9))*.06;
    v.group.position.set(m.x,Math.max(0,(m.down?-.22*Math.min(1,m.death/.6):0)),m.z);
+   // Curtains reveal newly summoned actors over several frames instead of
+   // snapping fully formed NPCs into existence on top of the player.
+   v.group.scale.setScalar(Math.min(1,Math.max(.025,m.age/.45))*(m.down?1-.25*Math.min(1,m.death):1));
    v.group.rotation.y=m.yaw;
    v.group.visible=!m.down||m.death<1.45;
    const moving=Math.min(1,Math.hypot(m.vx,m.vz)/Math.max(1,CIRCUS_ROLES[m.role].speed));

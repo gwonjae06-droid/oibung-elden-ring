@@ -49,9 +49,9 @@ export function cueCircusShow(g,show){
   show==='finale'?3:show==='fire'?2:2;
  let count=t.members.filter(m=>!m.down&&m.role===roleFor).length;
  const cap=targetCount(t.stage||1)+3;
- for(let i=0;i<ROLES.length&&count<required&&t.members.filter(m=>!m.down).length<cap;i++){
-  if(ROLES[i]!==roleFor)continue;
-  const guest=spawn(g,i);guest.showGuest=true;
+ for(let i=0;i<required*2&&count<required&&t.members.filter(m=>!m.down).length<cap;i++){
+  const roleIndex=ROLES.indexOf(roleFor);if(roleIndex<0)break;
+  const guest=spawn(g,roleIndex);guest.showGuest=true;
   const r=18,angle=(t.cue+i)*TAU/9;
   guest.x=g.boss.x+Math.sin(angle)*r;guest.z=g.boss.z+Math.cos(angle)*r;
   const bound=away(guest);guest.x=bound.x;guest.z=bound.z;
@@ -129,7 +129,8 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
  if(b.state==='transition'||b.state==='dead')return;
  setCircusAct(g,stage);
  const h=clamp(dt,0,1/30);
- t.beat+=h;t.showAge+=h;t.globalCooldown=Math.max(0,t.globalCooldown-h);
+ t.beat+=h;t.showAge+=h;if(t.showAge>10)t.show='';
+ t.globalCooldown=Math.max(0,t.globalCooldown-h);
  playerContacts(g,t,emit);
  const target=g.player,phase=b.phase,locked=Boolean(c.punish||c.stunT>0||c.noSeparate);
  for(let i=0;i<t.members.length;i++){
@@ -143,7 +144,9 @@ export function stepCircusTroupe(g,dt,{zone,emit}){
   const wave=i*Math.PI*.48+t.beat*.13*(phase===2?1.35:1);
   const desiredRadius=s.range+(t.show==='chorus'?-1.5:0);
   const around={x:target.x+Math.sin(wave)*desiredRadius,z:target.z+Math.cos(wave)*desiredRadius};
-  const safe=away(around),dx=safe.x-m.x,dz=safe.z-m.z,len=Math.hypot(dx,dz),speed=m.cast>0?.24:s.speed;
+  const acrobatRush=m.role==='acrobat'&&m.cast>0&&m.cast<.85&&m.cast>.28;
+  const safe=away(acrobatRush&&m.target?m.target:around),dx=safe.x-m.x,dz=safe.z-m.z,
+    len=Math.hypot(dx,dz),speed=acrobatRush?14:m.cast>0?.24:s.speed;
   const accel=Math.min(1,8*h);
   m.vx+=((len>1e-4?dx/len*speed:0)-m.vx)*accel;
   m.vz+=((len>1e-4?dz/len*speed:0)-m.vz)*accel;
