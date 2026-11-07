@@ -1,4 +1,5 @@
 import {EVOLUTIONS} from './weapon-evolution.mjs';
+import {weaponStatChart} from './weapon-stat-chart.mjs';
 import {flameBalance,forgeTier,investedFlames,FORGE_MAX_TIER} from './purification-forge.mjs';
 
 export const FORGE_WEAPON_NAMES=Object.freeze({sword:'검',hammer:'망치',bow:'활',cards:'카드'});
@@ -60,6 +61,7 @@ export function forgeScreen(profile,weapon,{button,back,warning}){
   '<div class="j-forge-resources"><span>보유한 정화의 불꽃</span>',flameCounter(profile),
   '<small>누적 획득 ',safe(profile.earnedFlames),'개 · 총 투자 ',safe(investedFlames(profile)),'개</small></div>',
   '<nav class="j-forge-tabs" aria-label="진화할 무기 선택">',tabs,'</nav>',
+  weaponStatChart(w),
   '<div class="j-forge-trees">',trees,'</div>',
   '<div class="j-forge-bottom"><div><strong>',FORGE_WEAPON_NAMES[w],'에 투자한 불꽃 ',owned,
   '개</strong><p>반환하면 이 무기의 모든 진화가 해제되고 투자한 불꽃 ',owned,
@@ -74,7 +76,7 @@ export function flameRewardScreen(profile,bossName,{button,back,warning,complete
   '<p class="j-flame-overline">',bossName,' 토벌</p>',
   '<h1>정화의 불꽃을 획득했습니다</h1>',
   '<p>소멸한 지배자의 혼에서 작은 빛 하나가 되살아났습니다. 불꽃은 메인화면의 ',
-  '<strong>대장간</strong>에서 영구 무기 진화에 쓰거나, 메인에서 1개를 사용해 해금된 마지막 보스로 건너뛸 수 있습니다.</p>',
+  '<strong>대장간</strong>에서 영구 무기 진화에 쓰십시오. 해금한 보스에게는 시련 시작 화면에서 자유롭게 이동할 수 있습니다.</p>',
   '<div class="j-earned-balance">',flameCounter(profile),'<span>+1 정화의 불꽃</span></div>',
   button('flame-next',complete?'서약의 기록을 마주한다':'다음 시련으로','class="j-primary"'),
   back(),warning(),'</div>');
