@@ -2,7 +2,7 @@
 // full pattern or hijacks the camera; all contact shares this fixed cable.
 export const BLOOD_WHIP=Object.freeze({
  minRange:13.5,maxRange:38,warning:.94,extension:.34,linger:.15,
- width:1.25,cooldown:5.4,phaseOneDamage:17,phaseTwoDamage:23
+ width:.56,cooldown:5.4,phaseOneDamage:17,phaseTwoDamage:23
 });
 export const bloodWhipDuration=BLOOD_WHIP.warning+BLOOD_WHIP.extension+BLOOD_WHIP.linger;
 const clamp=x=>Math.max(0,Math.min(1,x));
@@ -22,7 +22,7 @@ export function bloodWhipContact(whip,player){
  const ux=dx/dist,uz=dz/dist,px=player.x-whip.x,pz=player.z-whip.z;
  const along=px*ux+pz*uz,side=Math.abs(px*uz-pz*ux);
  // The visible cable extends from the boss to this exact progress value.
- return along>=-.35&&along<=dist*bloodWhipExtension(whip)+.5&&side<=BLOOD_WHIP.width+.42;
+ return along>=Math.min(4.2,dist*.23)&&along<=dist*bloodWhipExtension(whip)+.5&&side<=BLOOD_WHIP.width+.42;
 }
 export function bloodWhipCanStart(g){
  const s=g?.blood,b=g?.boss,p=g?.player;
