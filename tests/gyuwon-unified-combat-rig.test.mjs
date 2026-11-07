@@ -29,12 +29,12 @@ test('incoming Gyuwon damage is weapon-specific and still respects invulnerabili
  for(const weapon of ['sword','hammer','bow','cards']){
   const g=createGyuwonGame(weapon);
   assert.ok(startGyuwonPattern(g,'mark'));
-  advance(g,1.8);
+  advance(g,2.1);
   const expected=playerIncomingDamage(g,22);
   assert.ok(Math.abs(g.player.hp-(g.player.maxHp-expected))<.01,weapon+' defense');
   assert.equal(g.stats.dodges,0);
-  const immune=createGyuwonGame(weapon);immune.player.invuln=2;
-  startGyuwonPattern(immune,'mark');advance(immune,1.8);
+  const immune=createGyuwonGame(weapon);immune.player.invuln=3;
+  startGyuwonPattern(immune,'mark');advance(immune,2.1);
   assert.equal(immune.player.hp,immune.player.maxHp,weapon+' invulnerability');
  }
 });
