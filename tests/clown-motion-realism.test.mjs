@@ -26,7 +26,7 @@ test('shortest-path yaw and stance do not snap around the PI seam',()=>{
  const grounded=stageFootTarget([0,-1,1],x=>x,x=>x,{soleRadius:.29,worldScale:1.25,plant:true});
  assert.equal(grounded[1],.29*1.25);
 });
-test('the ringmaster's grounded shoes remain above stage throughout neutral phases',()=>{
+test("the ringmaster's grounded shoes remain above stage throughout neutral phases",()=>{
  const actor=createClownActor({coarse:true}),g=createClownGame('sword',{register:false});
  actor.root.scale.setScalar(1.25);
  for(const phase of[1,2]){
