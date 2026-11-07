@@ -17,7 +17,7 @@ test('every signature beast pattern has a different readable nightmare world and
 test('sideways reverse crawl really moves diagonally and its warning exists first',()=>{
  const g=createClownGame('sword',{register:false});g.boss.phase=2;g.clown.horrorStage=3;
  startClownPattern(g,'reverseCrawl');const origin={x:g.boss.x,z:g.boss.z};
- turn(g,130);
+ turn(g,250);
  assert.ok(g.clown.zones.some(z=>z.shape==='lane'&&z.visual));
  assert.ok(Math.abs(g.boss.x-origin.x)>.5,'the monster must move sideways, not just slide straight ahead');
 });

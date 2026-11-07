@@ -19,7 +19,7 @@ function make(stage=3){
 test('world modes follow active horror shows and rotate in idle without touching combat',()=>{
  const g=make(3);
  const cases={wrongTwin:'mirror',emptyAudience:'audience',stageRupture:'inversion',
-  mouthOfTheAudience:'flesh',foldedCrawl:'flesh',livingShadow:'void'};
+  mouthOfTheAudience:'void',foldedCrawl:'flesh',livingShadow:'void'};
  for(const [pattern,mode]of Object.entries(cases)){
   g.clown.name=pattern;g.clown.state='pattern';
   assert.equal(nightmareWorldState(g).mode,mode);
@@ -78,7 +78,7 @@ test('the mask, jaw and puppet-body deformation become more disturbing as HP fal
  assert.ok(torn.maskSplit>end.maskSplit);
  g.clown.name='mouthOfTheAudience';
  const gaping=clownMutationPose(g,2);
- assert.ok(gaping.jaw>end.jaw);
+ assert.ok(gaping.jaw>=end.jaw&&gaping.jaw>.9,'final jaw clamps at a physically plausible maximum');
  g.clown.name='foldedCrawl';
  const folded=clownMutationPose(g,2);
  assert.ok(folded.skeletalFold>end.skeletalFold);

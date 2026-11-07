@@ -52,6 +52,6 @@ test('all four boss scenes wire free-look capture, release, and cleanup',()=>{
   assert.match(src,/freeLook\.dispose\(\)/,file+' cleanup');
  }
  const clown=readFileSync(new URL('../src/clown-battle.mjs',import.meta.url),'utf8');
- assert.match(clown,/lock\?\(b\.x-p\.x\)\*\.42:0/,'unlocked clown view no longer follows the boss');
+ assert.match(clown,/matchedBossCamera\('clown'/,'clown camera uses unified free-look and lock-on framing');
  assert.match(clown,/if\(g\.status!=='playing'\)freeLook\.release\(\)/,'the result screen releases pointer lock');
 });

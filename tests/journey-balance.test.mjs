@@ -22,7 +22,7 @@ test('weakness values affect story fights only',()=>{
  const normal=createDicePlayerGame(),dice=story(createDicePlayerGame(),2);
  assert.equal(diceFaceDamageMultiplier(normal,photo),1);
  assert.equal(diceFaceDamageMultiplier(dice,photo),1.5);
- assert.equal(diceFaceDamageMultiplier(dice,armor),.5);
+ assert.equal(diceFaceDamageMultiplier(dice,armor),0,'armored faces are protected, only the photograph is vulnerable');
  assert.equal(journeyWeaknessMultiplier(normal,'dice',2.8),2.8);
  assert.equal(journeyWeaknessMultiplier(dice,'dice',2.8),1.5);
  assert.equal(journeyWeaknessMultiplier(story(createBloodGame(),3),'blood',1.6),1.3);

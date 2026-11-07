@@ -92,7 +92,7 @@ export function createGyuwonPhilosophyFx(scene,{coarse=false,reduced=false}={}){
   root.removeFromParent();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();
  }
  function stats(){return {forms:PHILOSOPHY_FORMS.length,architecturalPillars:pillars.count,
-  activePattern:[...groups].find(([id,g])=>g.visible)?.[0]||null,
+  activePattern:root.visible?[...weights].sort((a,b)=>b[1]-a[1]).find(([,weight])=>weight>.012)?.[0]||null:null,
   decorativeOnly:true};}
  reset();return {root,update,reset,dispose,stats};
 }
