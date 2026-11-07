@@ -180,6 +180,8 @@ export function createClownActor({coarse=false}={}){
   head.rotation.z=springs.step('head-roll',clamp((v.tilt||0)*.18+perf.offBeat*perf.director*.07,-.17,.17),step,12);
   head.scale.setScalar(p.headScale);
   jaw.rotation.x=springs.step('jaw',clamp((perf.director*.25)+(phase?.10:.035)+Math.max(0,perf.offBeat)*.09,0,.5),step,20);
+  hat.rotation.x=springs.step('hat-tilt',perf.act?.mode==='drum'?.07*perf.act.beat:
+    perf.act?.mode==='mirror'?.14*perf.act.weight:0,step,10);
   hat.rotation.z=Math.sin(time*.6)*.024;
   for(const tail of tails){
    const target=-.10+(phase?-.08:0)+Math.sin(time*2.2+tail.side+tail.i)*.08+(foot.activity||0)*.27;
@@ -190,7 +192,24 @@ export function createClownActor({coarse=false}={}){
    const s=a.side,gesture=perf.director,fight=c.state==='pattern'&&g.status==='playing',
     shoulder=[s*.88,3.5-(v.crouch||0)*.13,0];
    let target=[s*(1.45+.34*gesture),2.28+.5*gesture,.30+gesture*.75];
-   if(fight&&!gesture){target=[s*(1.16+.27*(p.arms-1)),2.25+(p.glove-1)*.3,1.0+(p.glove-1)*.5];}
+   // Bespoke director gestures define which musician is expected to answer.
+   // Wrist IK retains constant bone lengths as the baton follows each cue.
+   const action=perf.act,weight=action.weight,beat=action.beat;
+   if(weight>.001){
+    const mode=action.mode;
+    let special=target;
+    if(mode==='drum')special=[s*1.16,2.05+(s>0?beat:-beat)*.43,1.12];
+    else if(mode==='juggle')special=[s*1.57,2.66+((s>0?beat:-beat)+1)*.34,1.01];
+    else if(mode==='vault')special=[s*2.10,3.03,.42];
+    else if(mode==='sing'||mode==='finale')special=[s*1.72,3.44+beat*.17,.66];
+    else if(mode==='strings'||mode==='trapdoor')special=[s*1.80,3.0+(s>0?beat:-beat)*.21,1.26];
+    else if(mode==='hoop')special=[s*1.93,3.26,1.0];
+    else if(mode==='mirror')special=[s*1.46,2.92+.24*beat,.92];
+    else if(mode==='cannon')special=[s*1.32,2.32,1.84];
+    else if(mode==='curtain')special=[s*2.18,2.88,1.28];
+    target=target.map((x,i)=>x*(1-weight)+special[i]*weight);
+   }
+   if(fight&&!gesture&&(!perf.act||perf.act.weight<.01)){target=[s*(1.16+.27*(p.arms-1)),2.25+(p.glove-1)*.3,1.0+(p.glove-1)*.5];}
    if(q.active){
     const paw=clownBeastPaw(q,s,foot.activity);
     target=target.map((x,i)=>x*(1-q.entry)+paw[i]*q.entry);

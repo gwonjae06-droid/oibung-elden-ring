@@ -2,6 +2,7 @@
 // Never drive combat timings or health from smoothing / animation frames.
 import {cartoonPose} from './clown-cartoon.mjs';
 import {clownSpectaclePose} from './clown-spectacle-pose.mjs';
+import {ringmasterActMotion} from './clown-ensemble-poses.mjs';
 const finite=(v,d=0)=>Number.isFinite(v)?v:d;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,finite(v,1)));
 export function ringmasterPerformance(g){
@@ -16,13 +17,14 @@ export function ringmasterPerformance(g){
 }
 export function ringmasterGesture(g){
  const c=g?.clown||{},name=c.name||'',stage=c.horrorStage||1,t=finite(c.pt);
- const conducting=/choir|Chorus|choral|finale|Finale|conductor|orchestra|choirOf/i.test(name);
+ const act=ringmasterActMotion(name,t,g?.status==='playing'&&c.state==='pattern');
+ const conducting=/choir|Chorus|choral|finale|Finale|conductor|orchestra|choirOf|requiem/i.test(name);
  const puppets=/puppet|marionette|funeral|strings|procession/i.test(name);
  const flames=/hoop|fire|infernal|cinder/i.test(name);
  const phantom=/twin|ghost|double|vanishing/i.test(name);
  const active=g?.status==='playing'&&c.state==='pattern';
  const pulse=active?Math.min(1,t/.65)*Math.max(0,Math.min(1,(8-t)/.9)):0;
- return {conducting,puppets,flames,phantom,stage,
-  director:pulse*(conducting?1:puppets?.8:flames?.7:phantom?.55:0),
+ return {conducting,puppets,flames,phantom,stage,act,
+  director:Math.max(act.weight*.8,pulse*(conducting?1:puppets?.8:flames?.7:phantom?.55:0)),
   offBeat:active?Math.sin(t*(stage===3?7:4.1)):0};
 }

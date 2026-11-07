@@ -4,6 +4,7 @@ import {solveFixedLimb,stageFootTarget,circusFootPhasing,smoothYaw} from './clow
 import {createSpringBank} from './secondary-physics.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import {createClownTheatreCues} from './clown-theatre-cues.mjs';
+import {troupeBeatMotion,ENSEMBLE_DISPLAY_STYLE} from './clown-ensemble-poses.mjs';
 // PBR geometry, articulating legs, role-specific apparatus, frame-independent
 // movement and real theatrical cues. The troupe exists in the combat state;
 // this view can never manufacture a damaging hitbox.
@@ -129,7 +130,8 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
   for(const m of alive){
    seen.add(m.id);let v=live.get(m.id);if(!v){v=actor(m.role);live.set(m.id,v);}
-   const sway=(reduced?0:Math.sin(time*2.5+m.id*.9))*.06;
+   const sway=(reduced?0:Math.sin(time*2.5+m.id*.9))*.06,
+    routine=troupeBeatMotion(m,g.clown?.time||0),style=ENSEMBLE_DISPLAY_STYLE[routine.pose]||{lift:0,lean:0};
    v.group.position.set(m.x,Math.max(0,(m.down?-.22*Math.min(1,m.death/.6):0)),m.z);
    // Curtains reveal newly summoned actors over several frames instead of
    // snapping fully formed NPCs into existence on top of the player.
@@ -138,10 +140,13 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    v.group.rotation.y=v.yaw;
    v.group.visible=!m.down||m.death<1.45;
    const moving=Math.min(1,Math.hypot(m.vx,m.vz)/Math.max(1,CIRCUS_ROLES[m.role].speed));
-   v.body.position.y=v.springs.step('pelvis-rise',m.down?-Math.min(1,m.death*2)*.35:sway+moving*.035,h,14);
+   v.body.position.y=v.springs.step('pelvis-rise',m.down?-Math.min(1,m.death*2)*.35:
+    sway+moving*.035+style.lift*routine.weight,h,14);
    v.body.rotation.set(
-    v.springs.step('pitch',m.down?Math.min(1.2,m.death*3):m.cast>0?-.13:0,h,15),0,
-    v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):sway*.4,h,12));
+    v.springs.step('pitch',m.down?Math.min(1.2,m.death*3):
+     style.lean*routine.weight+(m.cast>0?-.07:0),h,15),0,
+    v.springs.step('roll',m.down?Math.min(.8,m.death*1.2):
+     sway*.4+(routine.pose==='mirror'?.18*routine.weight*routine.beat:0),h,12));
    v.skirt.rotation.x=v.springs.step('skirt',-.05+moving*.2+m.cast*.024,h,9);
    for(let i=0;i<2;i++){
     const side=i?1:-1,L=v.legs[i],phase=circusFootPhasing(m.step*3.0,moving,side),
@@ -160,15 +165,28 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
     // Keep the toe more horizontal on stage and tilt during the airborne step.
     L.shoe.rotation.x=v.springs.step('toe-'+side,phase.lift>0?-.21*phase.lift/Math.max(.02,.23):0,h,16)-v.body.rotation.x;
     const arm=v.shoulders[i];
-    arm.rotation.z=v.springs.step('arm-spread-'+side,
-      side*(m.cast>0?-.56:Math.sin(time*1.8+side)*.14),h,14);
-    arm.rotation.x=v.springs.step('arm-reach-'+side,
-      m.cast>0?-.65:Math.sin(m.step*3.0+side*Math.PI)*.16*moving,h,15);
+    const pose=routine.pose,weight=routine.weight,accent=routine.beat;
+    let spread=side*(m.cast>0?-.56:Math.sin(time*1.8+side)*.14),
+      reach=m.cast>0?-.65:Math.sin(m.step*3.0+side*Math.PI)*.16*moving;
+    if(pose==='juggle'){spread=side*(-.54-.25*weight);reach=-(1.2+accent*(side>0?1:-1)*.55)*weight;}
+    else if(pose==='drum'){spread=side*(-.35-.32*weight);reach=(-1.1+.70*Math.max(0,accent)) *weight;}
+    else if(pose==='vault'){spread=side*(-1.3*weight);reach=(-.75+.3*accent)*weight;}
+    else if(pose==='strings'||pose==='trapdoor'){spread=side*(-.7*weight);reach=-1.8*weight+.12*accent;}
+    else if(pose==='sing'||pose==='finale'){spread=side*(-1.1*weight);reach=(-.72+.18*accent)*weight;}
+    else if(pose==='hoop'){spread=side*(-.7*weight);reach=(-1.75+.13*accent)*weight;}
+    else if(pose==='mirror'){spread=side*(-1.15*weight);reach=(-.98+.25*accent)*weight;}
+    else if(pose==='cannon'){spread=side*(-.35*weight);reach=(-.85+.15*accent)*weight;}
+    else if(pose==='curtain'){spread=side*(-1.35*weight);reach=(-.70+.14*accent)*weight;}
+    arm.rotation.z=v.springs.step('arm-spread-'+side,spread,h,16);
+    arm.rotation.x=v.springs.step('arm-reach-'+side,reach,h,17);
    }
    v.head.rotation.x=v.springs.step('mask-head',m.cast>0?-.17:Math.sin(time*.8+m.id)*.055,h,12);
+   v.head.rotation.z=v.springs.step('mask-performer-tilt',routine.pose==='mirror'?.24*routine.weight:
+    routine.pose==='sing'?.09*routine.beat*routine.weight:0,h,11);
    // The mouth geometry's authored Y radius is .08, not 1. The old
    // assignment inflated singers' mouths into a giant slab on every note.
-   v.jaw.scale.y=.08*(1+(m.role==='chorister'&&m.cast>0?1.4:0));
+   v.jaw.scale.y=.08*(1+(m.role==='chorister'&&m.cast>0?1.4:0)+
+    (routine.pose==='sing'?routine.weight*.55*(.5+.5*routine.beat):0));
    for(const f of v.fire)f.scale.y=1+(reduced?0:Math.sin(time*8+m.id)*.10);
    if(m.flash>0)v.mask.material=mat.ember;else v.mask.material=mat.ivory;
    for(const s of v.strings)s.rotation.z=Math.sin(time*3+m.id)*.03;
