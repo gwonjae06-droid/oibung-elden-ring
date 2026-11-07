@@ -1115,7 +1115,7 @@ export function choosePattern(g) {
 export function startClownPattern(g, name) {
   if (!PATTERNS[name]) throw Error('Unknown clown pattern');
   const c = g.clown;
-  c.beastRecoverAt=CRAWL_PATTERNS.includes(name)?PATTERNS[name].dur-PATTERNS[name].recover-1.05:null;
+  c.beastRecoverAt=CRAWL_PATTERNS.includes(name)?PATTERNS[name].dur-PATTERNS[name].recover-.25:null;
   c.used ||= {};
   c.used[name] = (c.used[name] || 0) + 1;
   Object.assign(c, {

@@ -15,7 +15,7 @@ test('the second act is a standing clown, not permanent crawling',()=>{
  }
  startClownPattern(g,'reverseCrawl');tick(g,180);
  assert.ok(clownBeastPose(g).entry>.9,'a real crawling performance');
- tick(g,Math.ceil(PATTERNS.reverseCrawl.dur*120));
+ tick(g,Math.ceil(PATTERNS.reverseCrawl.dur*120)-180+2);
  assert.equal(clownBeastPose(g).entry,0,'returns to two feet');
 });
 test('the enlarged circus sphere rolls across the arena but stays grounded and tangible',()=>{

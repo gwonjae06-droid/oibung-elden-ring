@@ -29,9 +29,9 @@ test('Clown legs keep constant-length bone segments while switching planted and 
 });
 test('Clown rig reaches actual thigh, shin and ankle meshes without depending on WebGL',()=>{
  const src=readFileSync(new URL('../src/clown-actor.mjs',import.meta.url),'utf8');
- assert.match(src,/gait\.update\(g,dt\)/);
- assert.match(src,/link\(L\.thigh,hip,knee\)/);
- assert.match(src,/link\(L\.shin,knee,foot\)/);
+ assert.match(src,/gait\.update\(g,dt,\{/);
+ assert.match(src,/link\(L\.thigh,hip,hinge\)/);
+ assert.match(src,/link\(L\.shin,hinge,planted\)/);
  assert.match(src,/L\.shoe\.rotation\.x=.*anklePitch/);
 });
 test('Blood shoulders, armor, mantle and phase-two growth are children of the same torso socket',()=>{

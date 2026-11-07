@@ -8,7 +8,7 @@ export function clownBeastPose(g){
  const b=g?.boss||{},c=g?.clown||{},third=(c.horrorStage||1)>=3;
  const attacking=b.phase===2&&b.state!=='transition'&&c.state==='pattern'&&CRAWL_PATTERNS.includes(c.name);
  const t=Number.isFinite(c.pt)?c.pt:0,end=Number.isFinite(c.beastRecoverAt)?c.beastRecoverAt:6;
- const entry=attacking?smooth((t-.05)/.82)*(1-smooth((t-end)/1.1)):0;
+ const entry=attacking?smooth((t-.05)/.82)*(1-smooth((t-end)/.8)):0;
  const pitch=(third?.87:.80)*entry;
  return {active:entry>.001,third,entry,pitch,bodyHeight:.35*entry,
   bodyRoll:Math.sin((c.time||0)*2.2)*.075*entry*(third?1.5:1),

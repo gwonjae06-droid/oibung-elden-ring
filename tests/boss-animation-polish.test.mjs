@@ -78,7 +78,7 @@ test('Cloth spring follows the same motion at 30fps and 120fps',()=>{
 });
 test('New motion modules are mounted on real boss visuals, not combat hitbox or timer sources',()=>{
  for(const [path,pattern]of [
-  ['clown-actor',/gait\.update\(g,dt\)/],
+  ['clown-actor',/gait\.update\(g,dt,\{/],
   ['dice-giant-view',/elbowFollow\[i\]\.step/],
   ['blood-wings',/elbowCurl.*wristCurl/s],
   ['blood-regalia',/createSpringBank/],
