@@ -111,36 +111,52 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 .j-memory-art[data-memory="blood"]{background:radial-gradient(circle,#8a1237 0,#270b1b 55%,transparent 70%);color:#ed8b9f}.j-memory-art[data-memory="blood"]::before{content:"♥";font-size:100px;text-shadow:0 0 30px #ca315e}
 
 
-/* Flame shortcut: a quiet, responsive boss destination chooser. */
-#journey .j-skip-offer{display:block;width:100%;margin:14px 0 16px;padding:12px 14px;border:1px solid #a88a534f;border-radius:9px;background:#0c1018c9;text-align:left}
-#journey .j-skip-head{display:flex;gap:14px;align-items:center;justify-content:space-between}
-#journey .j-skip-head>div{min-width:0;flex:1}
-#journey .j-skip-head strong{font-size:14px;color:#e6cc94;letter-spacing:.05em}
-#journey .j-skip-head p{margin:5px 0 3px;font:12px/1.6 system-ui;color:#d0c2a5}
-#journey .j-skip-head small,#journey .j-skip-footnote{display:block;font:10px/1.5 system-ui;color:#a4a4a1}
-#journey .j-skip-toggle{flex:0 0 auto;min-height:40px;padding:10px 13px;font:12px system-ui;white-space:nowrap;text-align:center}
-#journey .j-skip-targets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:14px}
-#journey button.j-skip-target{display:flex;flex-direction:column;min-width:0;min-height:68px;justify-content:center;gap:2px;padding:8px 11px;border-radius:5px;background:#111721e3}
-#journey button.j-skip-target.selected{border-color:#e9c986;background:#55422d9c;box-shadow:inset 3px 0 #d6b36b}
-#journey button.j-skip-target:disabled{opacity:.38}
-#journey .j-skip-target .j-skip-number{font:10px system-ui;color:#b99a60}
-#journey .j-skip-target b{display:block;font:600 12px/1.45 'Noto Serif KR',serif;color:#e7dcc4;white-space:normal}
-#journey .j-skip-target small{display:block;margin:0;font:10px/1.4 system-ui;color:#b6ae9e}
-#journey .j-skip-footnote{margin:9px 0 0}
-@media(max-width:430px){#journey .j-skip-offer{padding:10px}#journey .j-skip-head{gap:8px}#journey .j-skip-toggle{padding:9px;font-size:11px}#journey .j-skip-targets{gap:6px}}
-
 /* Keep the destructive journey exit in the top-left header, away from the
    next-boss confirmation button. The mobile header stays in normal flow. */
 #journey[data-screen='ready'] .j-top .j-back{margin:0;padding:10px 14px;font:600 12px/1.4 system-ui;letter-spacing:0;background:#10151dcf;border-color:#a68b4966;white-space:nowrap}
 @media(max-width:650px){#journey[data-screen='ready'] .j-top .j-back{padding:9px 11px;font-size:11px}}
 
-/* An expanded flame shortcut is a vertical card, never a horizontal flex row.
-   Keep the chosen destination fully visible on ordinary desktop viewports. */
+/* Unlocked encounters are destinations, not a resource-consuming shortcut. */
+#journey .j-boss-chooser{margin:22px 0 18px;padding:17px;border:1px solid #9b82564d;border-radius:9px;background:linear-gradient(135deg,#151a21e8,#111416e6)}
+#journey .j-boss-chooser-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+#journey .j-boss-chooser h2,#journey .j-select-subtitle{margin:0;font:600 19px 'Noto Serif KR',serif;color:#ead4a4}
+#journey .j-boss-chooser-head p{margin:0;color:#b3ac9f;font-size:12px}
+#journey .j-boss-targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#journey button.j-boss-target{display:flex;flex-direction:column;gap:4px;align-items:flex-start;justify-content:center;min-width:0;min-height:73px;padding:12px;text-align:left;background:#111822e0;border:1px solid #876f4857;border-radius:6px}
+#journey button.j-boss-target.selected{border-color:#efd59c;background:#493821b8;box-shadow:inset 3px 0 #deb978}
+#journey button.j-boss-target:disabled{opacity:.38;cursor:not-allowed}
+#journey .j-boss-number{font:10px system-ui;color:#b99f6d;letter-spacing:.14em}
+#journey .j-boss-target b{font:600 13px/1.35 'Noto Serif KR',serif;color:#f0e1c5;white-space:normal}
+#journey .j-boss-target small{font:11px/1.4 system-ui;color:#b2a994}
+#journey .j-boss-note{margin:12px 0 0;font:12px/1.6 system-ui;color:#d4c5a4}
+#journey .j-select-subtitle{margin:24px 0 0}
+#journey .j-select .j-weapon{margin:12px 0 17px}
+#journey .j-select .j-weapon button{min-height:113px;padding:12px;text-align:left}
+#journey .j-select .j-weapon strong{font-size:15px;margin-bottom:8px}
+#journey .j-select .j-weapon b{font-size:18px}
+#journey .j-select .j-weapon small{font:11px/1.5 system-ui;color:#a7a49f}
+#journey .j-stat-chart{margin:14px 0 24px;padding:17px 18px 15px;border-radius:9px;border:1px solid #aa8d5f54;background:linear-gradient(140deg,#0e131ae8,#1b1b1bdc)}
+#journey .j-stat-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:13px}
+#journey .j-stat-heading h2{margin:0;font:600 18px 'Noto Serif KR',serif;color:#e9d09c}
+#journey .j-stat-heading span{font:10px system-ui;color:#897c6d;letter-spacing:.16em}
+#journey .j-stat-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px;row-gap:12px}
+#journey .j-stat-row{min-width:0}
+#journey .j-stat-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:5px;font:12px system-ui;color:#c6c4bc}
+#journey .j-stat-label strong{color:#f0d6a4;font:600 11px system-ui;text-align:right}
+#journey .j-stat-track{height:8px;overflow:hidden;border-radius:5px;background:#55575a73;box-shadow:inset 0 1px 2px #0009}
+#journey .j-stat-fill{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#82653b,#e2b974 75%,#f5db9d);box-shadow:0 0 10px #dca85c55}
+#journey .j-stat-note{margin:15px 0 0;font:11px/1.6 system-ui;color:#aaa494}
 #journey[data-screen='home'] .j-main{padding:22px 0 14px;align-items:safe center}
-#journey[data-screen='home'] .j-copy:has(.j-skip-selected){max-width:min(650px,100%)}
-#journey[data-screen='home'] .j-skip-selected .j-skip-targets{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:650px){
- #journey[data-screen='home'] .j-copy:has(.j-skip-selected){max-width:300px}
- #journey[data-screen='home'] .j-skip-selected .j-skip-targets{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-boss-targets{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-boss-chooser{padding:12px}
+ #journey button.j-boss-target{min-height:67px;padding:9px}
+ #journey .j-select .j-weapon{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #journey .j-select .j-weapon button{min-height:96px}
+ #journey .j-stat-rows{grid-template-columns:1fr;row-gap:10px}
  #journey[data-screen='home'] .j-main{padding:48px 0;align-items:safe center}
+}
+@media(max-height:600px) and (min-width:700px){
+ #journey .j-boss-targets{grid-template-columns:repeat(5,minmax(0,1fr))}
+ #journey .j-stat-rows{row-gap:7px}
 }
