@@ -14,6 +14,7 @@ on:
       - 'tests/clown-patterns.test.mjs'
       - 'tests/clown-circus-rebuild.test.mjs'
       - 'tests/clown-motion-realism.test.mjs'
+      - 'tests/clown-ensemble-repertoire.test.mjs'
       - '.github/workflows/clown-nightmare-overhaul.yml'
   pull_request:
     paths:
@@ -40,10 +41,11 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: Check new combat and visual modules
         run: |
-          for f in src/clown-combat.mjs src/clown-horror-patterns.mjs src/clown-nightmare-anatomy.mjs src/clown-nightmare-theatre.mjs src/clown-nightmare-world.mjs src/clown-nightmare-mutation.mjs src/clown-nightmare-sfx.mjs src/clown-actor.mjs src/clown-ringmaster-actor.mjs src/clown-troupe.mjs src/clown-troupe-view.mjs src/clown-troupe-patterns.mjs src/clown-theatre-cues.mjs src/clown-performance-rig.mjs src/clown-battle.mjs src/clown-radiant-circus.mjs src/boss-foley-map.mjs; do node --check "$f"; done
+          for f in src/clown-combat.mjs src/clown-horror-patterns.mjs src/clown-nightmare-anatomy.mjs src/clown-nightmare-theatre.mjs src/clown-nightmare-world.mjs src/clown-nightmare-mutation.mjs src/clown-nightmare-sfx.mjs src/clown-actor.mjs src/clown-ringmaster-actor.mjs src/clown-troupe.mjs src/clown-troupe-view.mjs src/clown-troupe-patterns.mjs src/clown-theatre-cues.mjs src/clown-performance-rig.mjs src/clown-ensemble-repertoire.mjs src/clown-ensemble-poses.mjs src/clown-ensemble-recordings.mjs src/clown-stage-recordings.mjs src/clown-battle.mjs src/clown-radiant-circus.mjs src/boss-foley-map.mjs; do node --check "$f"; done
       - name: Test nightmare attacks, phase transitions, scenes and existing boss behavior
         run: >
           node --test
+          tests/clown-ensemble-repertoire.test.mjs
           tests/clown-motion-realism.test.mjs
           tests/clown-circus-rebuild.test.mjs
           tests/clown-nightmare-overhaul.test.mjs
