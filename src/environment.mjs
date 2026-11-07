@@ -120,7 +120,7 @@ export function buildEnvironment(scene,ground){
   const sky=new THREE.Mesh(new THREE.SphereGeometry(80,32,16),new THREE.MeshBasicMaterial({map:skyTexture(),side:THREE.BackSide,fog:false,depthWrite:false}));
   sky.renderOrder=-10;sky.frustumCulled=false;root.add(sky);
   const moon=new THREE.Mesh(new THREE.PlaneGeometry(22,22),new THREE.MeshBasicMaterial({map:moonTexture(),transparent:true,fog:false,depthWrite:false}));
-  moon.position.set(-38,34,-58);moon.lookAt(0,0,0);moon.renderOrder=-9;moon.frustumCulled=false;root.add(moon);
+  moon.name='kwon-sky-moon-billboard';moon.position.set(-38,34,-58);moon.lookAt(0,0,0);moon.renderOrder=-9;moon.frustumCulled=false;root.add(moon);
   const sigil=new THREE.Mesh(new THREE.CircleGeometry(24,64).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({map:sigilTexture(),transparent:true,opacity:.32,depthWrite:false,blending:THREE.AdditiveBlending}));
   sigil.position.y=.016;sigil.renderOrder=1;root.add(sigil);
   const mistTex=mistTexture(),mistGeo=new THREE.RingGeometry(13,38,72).rotateX(-Math.PI/2);
@@ -137,7 +137,11 @@ export function buildEnvironment(scene,ground){
     banners.forEach((B,i)=>{B.rotation.z=Math.sin(t*.9+i)*(silenced?0:reduced?.01:.05);});
   };
   const map=pavingTexture();ground.material.map=map;ground.material.color.setHex(0xffffff);ground.material.needsUpdate=true;
-  const sanctuary=buildSanctuary(THREE,root,{coarse,reduced});root.userData.updateSanctuary=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)visualTime=0;visualTime+=Math.max(0,dt);const p=sanctuary.update(game,dt);silenced=!!p.silence;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;sigil.material.color.setHex(game.boss.phase===2?0xff6681:0xd9b76c);if(scene.fog?.color)scene.fog.color.lerp(new THREE.Color(game.boss.phase===2?0x33212e:0x15202a),Math.min(1,Math.max(0,dt)*1.4));};
+  const sanctuary=buildSanctuary(THREE,root,{coarse,reduced});root.userData.updateSanctuary=(game,dt)=>{if(game.time<.1&&game.boss.phase===1)visualTime=0;visualTime+=Math.max(0,dt);const p=sanctuary.update(game,dt);silenced=!!p.silence;
+   // The original painted moon is replaced by its sculpted, breakable 3D
+   // counterpart in act three at precisely the same celestial coordinates.
+   moon.visible=game.boss.phase!==3;
+   if(scene.fog)scene.fog.far=game.boss.phase===3?134:75;sigil.material.opacity=p.silence?.05:.2+p.gold*.3;sigil.material.color.setHex(game.boss.phase===2?0xff6681:0xd9b76c);if(scene.fog?.color)scene.fog.color.lerp(new THREE.Color(game.boss.phase===2?0x33212e:0x15202a),Math.min(1,Math.max(0,dt)*1.4));};
   grass.visible=false;root.userData.decorativeOnly=true;scene.add(root);
   return root;
 

@@ -6,7 +6,7 @@ export const KWON_MOON=Object.freeze({
 });
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const smooth=x=>{const q=clamp(x,0,1);return q*q*(3-2*q);};
-export function moonPosition(){return {x:39,y:51,z:17};}
+export function moonPosition(){return {x:-38,y:34,z:-58};}
 export function moonCinematicPose(time){
  const t=Math.max(0,Number(time)||0);
  const cuts=KWON_MOON.slashTimes.map((start,index)=>{

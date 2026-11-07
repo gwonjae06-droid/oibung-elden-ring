@@ -34,7 +34,7 @@ test('three separate visible sword cuts are focused on one fixed distant moon',(
   previous=g.kwonMoon.slashes;
  }
  assert.equal(previous,3);
- const p=moonPosition();assert.ok(p.y>40&&Math.hypot(p.x,p.z)>35);
+ const p=moonPosition();assert.deepEqual(p,{x:-38,y:34,z:-58});
  assert.ok(moonCinematicPose(2.8).focus>.8,'camera focuses celestial target before slashes');
  while(g.kwonMoon.mode==='cinematic')advanceKwonMoon(g,1/120);
  assert.equal(g.boss.state,'moonStorm');
@@ -106,4 +106,7 @@ test('production no longer uses screen-space half filter; camera tracks stable m
  assert.match(arena,/ground\.visible=ring\.visible=game\.boss\.phase!==3/);
  assert.match(arena,/moonPosition\(\)/);
  assert.match(arena,/moonCinematicPose\(game\.kwonMoon\.time\)/);
+ const environment=readFileSync(new URL('../src/environment.mjs',import.meta.url),'utf8');
+ assert.ok(environment.includes("moon.visible=game.boss.phase!==3"));
+ assert.ok(environment.includes("kwon-sky-moon-billboard"));
 });

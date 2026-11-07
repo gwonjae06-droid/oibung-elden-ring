@@ -53,11 +53,28 @@ export function createKwonMoonCataclysmView(scene,{coarse=false,reduced=false}={
   const mesh=new THREE.Mesh(chipGeo,stone);mesh.name='kwon-lunar-3d-cut-fragment';
   mesh.scale.setScalar(2+(i%3)*.65);root.add(mesh);detached.push(mesh);
  }
+ // A gigantic *real 3D blade* passes across the camera-focused moon on each
+ // sword strike. Built once, never a postprocessed slash drawn on the screen.
+ const celestial=new THREE.Group();celestial.name='kwon-3d-celestial-greatsword-hitting-moon';
+ const spearGeo=new THREE.ConeGeometry(1.65,29,4);
+ spearGeo.rotateZ(-Math.PI/2);
+ const hiltGeo=new THREE.BoxGeometry(.65,7.3,1.05);
+ const weaponMat=new THREE.MeshPhysicalMaterial({color:0x9a9da8,roughness:.24,
+  metalness:.83,emissive:0x8f5369,emissiveIntensity:.92,clearcoat:.76});
+ const celestialEdge=new THREE.Mesh(spearGeo,weaponMat);
+ celestialEdge.name='kwon-real-3d-moon-slicing-sword';
+ celestial.add(celestialEdge);
+ const hilt=new THREE.Mesh(hiltGeo,weaponMat);hilt.position.set(-12.9,0,0);
+ hilt.rotation.z=Math.PI/2;celestial.add(hilt);
+ const cross=new THREE.Mesh(hiltGeo,weaponMat);
+ cross.scale.set(.65,2.8,1.6);cross.rotation.z=Math.PI/2;cross.position.set(-11.6,0,0);
+ celestial.add(cross);root.add(celestial);
  let lastGame=null,disposed=false;
  function reset(){
   for(const o of meteorPool){o.group.visible=o.shadow.visible=o.scar.visible=false;
    for(const rock of o.rubble)rock.visible=false;}
   for(const obj of [...slashes,...detached])obj.visible=false;
+  celestial.visible=false;
  }
  function update(g){
   if(disposed)return;
@@ -66,6 +83,14 @@ export function createKwonMoonCataclysmView(scene,{coarse=false,reduced=false}={
   root.visible=Boolean(g?.boss?.phase===3&&m?.triggered);
   if(!root.visible)return;
   const cuts=moonCinematicPose(m.mode==='cinematic'?m.time:KWON_MOON.cinematic);
+  celestial.visible=m.mode==='cinematic'&&cuts.cuts.some(q=>q.wind>.01&&q.stroke<1);
+  if(celestial.visible){
+   const active=cuts.cuts.find(q=>q.wind>.01&&q.stroke<1)||cuts.cuts.at(-1);
+   celestial.position.set(moon.x-11,moon.y+(active.index-1)*2.5,moon.z+1.3);
+   celestial.rotation.set(.25,active.index%2?.16:-.2,
+    (active.index%2?-1:1)*(-.72+active.stroke*2.26));
+   celestial.scale.setScalar(.87+.13*active.wind);
+  }
   for(let i=0;i<slashes.length;i++){
    const s=cuts.cuts[i],mesh=slashes[i];mesh.visible=s.wind>.005;
    mesh.scale.x=.1+.9*s.stroke;mesh.material.opacity=.16+.76*s.intensity;
@@ -112,8 +137,8 @@ export function createKwonMoonCataclysmView(scene,{coarse=false,reduced=false}={
   }
  }
  function dispose(){if(disposed)return;disposed=true;reset();root.removeFromParent();
-  for(const g of [geo,chipGeo,scarGeo,shadeGeo,slashGeo])g.dispose();
-  for(const m of [stone,inner,burn,shadowMat,slashMat,...slashes.map(s=>s.material)])m.dispose();
+  for(const g of [geo,chipGeo,scarGeo,shadeGeo,slashGeo,spearGeo,hiltGeo])g.dispose();
+  for(const m of [stone,inner,burn,shadowMat,slashMat,weaponMat,...slashes.map(s=>s.material)])m.dispose();
  }
  reset();return {root,update,reset,dispose,stats:()=>({pooled:meteorPool.length,
   maxRocks:KWON_MOON.maxMeteors*(coarse?3:6),slashBeats:slashes.length,collisionSources:0})};

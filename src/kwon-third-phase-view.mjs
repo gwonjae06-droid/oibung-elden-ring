@@ -67,7 +67,7 @@ export function createKwonThirdPhaseView(scene,{coarse=false}={}){
  const moon=new THREE.Group();moon.name='kwon-split-falling-moon';moon.userData.decorativeOnly=true;root.add(moon);
  const moonLeftGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,0,Math.PI,0,Math.PI);
  const moonRightGeo=new THREE.SphereGeometry(8,coarse?20:40,coarse?12:26,Math.PI,Math.PI,0,Math.PI);
- const moonStone=new THREE.MeshStandardMaterial({color:0xaba69a,roughness:.98,metalness:.015,emissive:0x3b3536,emissiveIntensity:.18,side:THREE.DoubleSide});
+ const moonStone=new THREE.MeshStandardMaterial({color:0xaba69a,roughness:.98,metalness:.015,emissive:0x3b3536,emissiveIntensity:.18,side:THREE.DoubleSide,fog:false});
  const lunarA=new THREE.Mesh(moonLeftGeo,moonStone),lunarB=new THREE.Mesh(moonRightGeo,moonStone);
  lunarA.name='kwon-moon-left-hemisphere';lunarB.name='kwon-moon-right-hemisphere';moon.add(lunarA,lunarB);
  const lunarDust=new THREE.MeshStandardMaterial({color:0x675d57,roughness:.98});

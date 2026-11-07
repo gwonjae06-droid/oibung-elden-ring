@@ -23,7 +23,7 @@ import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-r
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {registerEncounter} from './encounter-state.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
-import {makeKwonMoonState,beginKwonMoonCinematic,advanceKwonMoon} from './kwon-moon-cataclysm.mjs';
+import {makeKwonMoonState,beginKwonMoonCinematic,advanceKwonMoon,moonCinematicPose} from './kwon-moon-cataclysm.mjs';
 import {KWON_THIRD_PATTERNS,KWON_THIRD_COMBOS,KWON_THIRD_FAR,KWON_THIRD_CLOSE,
  kwonThirdTransition,KWON_POSSESSION,kwonThirdBodyDrag,makeKwonFractures,advanceKwonFractures} from './kwon-third-phase.mjs';
 export const TAU = Math.PI * 2;
@@ -635,6 +635,17 @@ export function swordPose(b) {
       y: mix(neck.y, grip.y, equip),
       z: mix(neck.z, grip.z, equip) + offset,
     };
+  if(b.phase===3&&b.state==='moonCinematic'){
+    const c=moonCinematicPose(b.t);
+    const moving=c.cuts.find(part=>part.wind>0&&part.stroke<1)||c.cuts.at(-1);
+    // The giant sword performs the same three upward strikes which physically
+    // scar the distant moon; the cutscene never applies player collision.
+    const raised=moving.wind*(1-moving.stroke),stroke=moving.stroke;
+    yaw=-.87+1.75*stroke+.12*Math.sin(moving.index*1.7);
+    pitch=-1.35+1.62*stroke-.18*raised;
+    return {x:grip.x,y:grip.y+1.8,z:grip.z+.15,
+      yaw,pitch,length:SWORD.length*KWON_POSSESSION.swordScale};
+  }
   if(b.phase===3&&b.state==='transition'){
     const c=kwonThirdTransition(b.t);
     // The blade floats, grows, and cuts its former owner. No collision while
