@@ -1071,6 +1071,8 @@ export const LIVE_REPERTOIRE=Object.freeze([
  'emberCarouselRevue','candlelightChoir','marionetteGallows','maskedCannonade','curtainOfLostVoices','allCastRequiem',
  'drumMarch','spotlightSweep','carousel','curtainCall',
  'ghostProcession','puppetOverture','infernalHoops','choirOfAshes','curtainStampede','midnightGrandFinale',
+ 'mimicMirrorExchange','acrobatKnifeWaltz','puppetMarionetteScissors',
+ 'choristerThroatCanon','firekeeperCinderSpiral','grandCastCounterpoint',
  'wrongTwin','mirrorStage','puppetFuneral','fireHoop','echoApplause','laughContagion','emptyAudience',
  'curtainNightmare','audienceJudgement','funeralParade','facePeelHunt','stolenFace','brokenHorses',
  'unhingedClap','vanishingAct','marionetteDevour'

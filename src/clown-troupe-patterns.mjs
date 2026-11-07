@@ -1,6 +1,6 @@
 // Six large-scale concert acts. No pattern text, no decorative fake attacks:
 // every strike is an ordinary delayed combat zone with an escape route.
-import {cueCircusShow} from './clown-troupe.mjs';
+import {cueCircusShow,stageCircusBeat} from './clown-troupe.mjs';
 const TAU=Math.PI*2;
 const cross=(a,t,x)=>a<x&&t>=x;
 const safe=p=>{const r=Math.hypot(p.x,p.z);return r>22.5?{x:p.x*22.5/r,z:p.z*22.5/r}:p;};
@@ -18,7 +18,13 @@ export const TROUPE_DEFINITIONS=Object.freeze([
  ['infernalHoops','화염 고리의 공중곡예',8.3,1.7,[1,2],1],
  ['choirOfAshes','유령 악단의 합창',8.4,1.7,[2],2],
  ['curtainStampede','장막 속 단원들의 습격',8.7,1.8,[2],2],
- ['midnightGrandFinale','악몽 서커스의 전원 피날레',10.2,2.2,[2],3]
+ ['midnightGrandFinale','악몽 서커스의 전원 피날레',10.2,2.2,[2],3],
+ ['mimicMirrorExchange','거울 가면의 교대',6.7,1.6,[1,2],1],
+ ['acrobatKnifeWaltz','끝없이 뒤집히는 곡예',7.8,1.65,[2],2],
+ ['puppetMarionetteScissors','인형줄의 교차 절단',8.2,1.65,[2],2],
+ ['choristerThroatCanon','목소리가 엇갈리는 합창',8.4,1.7,[2],2],
+ ['firekeeperCinderSpiral','불꽃 봉화의 공전',8.5,1.75,[2],2],
+ ['grandCastCounterpoint','서커스 전원의 불협화음',10.4,2.1,[2],3]
 ]);
 function ghostProcession(g,c,a,t,api){
  shout(g,c,api,'twins');
@@ -92,5 +98,81 @@ function midnightGrandFinale(g,c,a,t,api){
   api.zone(g,{shape:'circle',...q,r:3.2,warn:1.45,damage:34,blast:true,sound:'choir'});
  }
 }
+
+// New ensemble roles perform their *own* readable movements. Every attack
+// position is locked when its actor bends/inhales/raises the prop; no free
+// orbital AI is allowed to turn a committed warning into an invisible hit.
+const rank=(g,role,i,pose,wind=1.42)=>{
+ const performerOnStage=performer(g,role,i);
+ const actual=stageCircusBeat(g,{role,index:i,pose,wind,hold:wind+.65});
+ return actual||performerOnStage;
+};
+const focus=(api,c,key,p)=>api.once(c,key,()=>safe(p));
+const lane=(api,g,actor,p,{warn=1.42,width=2.4,damage=19,sound='acrobat',rotation=0}={})=>{
+ const theta=Math.atan2(p.x-actor.x,p.z-actor.z)+rotation;
+ const len=Math.max(3,Math.min(19,Math.hypot(p.x-actor.x,p.z-actor.z)+2.5));
+ return api.zone(g,{shape:'lane',x:actor.x,z:actor.z,yaw:theta,
+  len,w:width,warn,damage,sound,major:false});
+};
+function mimicMirrorExchange(g,c,a,t,api){
+ shout(g,c,api,'twins');
+ const target=focus(api,c,'mimic-duel-focus',safe(g.player));
+ for(let i=0;i<3;i++)if(cross(a,t,.4+i*1.35)){
+  const p=rank(g,'mimic',i,'mirror');
+  const aimed=point(target,(i-1)*.42,1.3);
+  lane(api,g,p,aimed,{warn:1.36,width:2.4,damage:18,sound:'falseRingmaster'});
+ }
+}
+function acrobatKnifeWaltz(g,c,a,t,api){
+ shout(g,c,api,'trapeze');
+ const target=focus(api,c,'knife-waltz-focus',safe(g.player));
+ for(let i=0;i<5;i++)if(cross(a,t,.4+i*1.11)){
+  const p=rank(g,'acrobat',i,'vault');
+  const aimed=point(target,i%2?1.21:-1.21,2.8);
+  lane(api,g,p,aimed,{warn:1.48,width:2.45,damage:i===4?23:19,sound:'acrobat'});
+ }
+}
+function puppetMarionetteScissors(g,c,a,t,api){
+ shout(g,c,api,'puppets');
+ const target=focus(api,c,'puppet-cut-focus',safe(g.player));
+ for(let i=0;i<5;i++)if(cross(a,t,.35+i*1.15)){
+  const p=rank(g,'puppeteer',i,'strings');
+  const aimed=point(target,i%2?1.35:-1.35,i===4?1.8:3.6);
+  lane(api,g,p,aimed,{warn:1.52,width:2.3,damage:20,sound:'marionette'});
+ }
+}
+function choristerThroatCanon(g,c,a,t,api){
+ shout(g,c,api,'chorus');
+ const target=focus(api,c,'throat-score-focus',safe(g.player));
+ for(let i=0;i<5;i++)if(cross(a,t,.45+i*1.21)){
+  const p=rank(g,'chorister',i,'sing');
+  const aimed=point(target,i%2?1.02:-1.02,2.1);
+  lane(api,g,p,aimed,{warn:1.50,width:2.55,damage:i===4?24:19,sound:'choir'});
+ }
+}
+function firekeeperCinderSpiral(g,c,a,t,api){
+ shout(g,c,api,'fire');
+ const target=focus(api,c,'firekeeper-ring-focus',safe(g.player)),gap=c.seq%9;
+ for(let i=0;i<9;i++)if(i!==gap&&i!==(gap+1)%9&&cross(a,t,.31+i*.47)){
+  const p=rank(g,'firekeeper',i,'hoop');
+  const q=point(target,i*TAU/9,7.3);
+  api.zone(g,{shape:'circle',...q,r:2.1,warn:1.48,damage:18,
+   blast:false,sound:'infernalHoops',major:false});
+ }
+}
+function grandCastCounterpoint(g,c,a,t,api){
+ shout(g,c,api,'finale');
+ const target=focus(api,c,'counterpoint-focus',safe(g.player));
+ const roles=['acrobat','puppeteer','chorister','mimic','firekeeper','puppeteer'];
+ const modes=['vault','strings','sing','mirror','hoop','strings'];
+ for(let i=0;i<6;i++)if(cross(a,t,.4+i*1.25)){
+  const role=roles[i],actor=rank(g,role,i,modes[i]);
+  const aimed=point(target,(i%2?1:-1)*1.1,3.5);
+  lane(api,g,actor,aimed,{warn:1.48,damage:22+i%2*3,width:2.45,
+   sound:role==='chorister'?'choir':role==='firekeeper'?'infernalHoops':role==='puppeteer'?'puppet':'acrobat'});
+ }
+}
 export const TROUPE_RUN=Object.freeze({ghostProcession,puppetOverture,infernalHoops,
- choirOfAshes,curtainStampede,midnightGrandFinale});
+ choirOfAshes,curtainStampede,midnightGrandFinale,
+ mimicMirrorExchange,acrobatKnifeWaltz,puppetMarionetteScissors,
+ choristerThroatCanon,firekeeperCinderSpiral,grandCastCounterpoint});
