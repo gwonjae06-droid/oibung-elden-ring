@@ -1,4 +1,10 @@
 import {tickBossHitTraits} from './boss-hit-traits.mjs';
+import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
+import {playerIncomingDamage} from './weapon-stats.mjs';
+import {playerMeleeReach} from './weapon-abilities.mjs';
+import {claimPlayerProjectileHit} from './player-projectile-data.mjs';
+import {kwonMeleeContact,kwonProjectileContact} from './kwon-hurtbox.mjs';
+import {gyuwonHurtShapes} from './boss-hit-regions.mjs';
 import {createPatternShuffle,drawPatternShuffle} from './pattern-shuffle.mjs';
 import {GYUWON_RULES as R,GYUWON_PATTERNS,gyuwonPool,hazardContains,memoryInterval,MEMORY_ORDER} from './gyuwon-data.mjs';
 import {WEAPONS} from './weapon-data.mjs';
@@ -10,9 +16,18 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createGyuwonGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
- return {bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
+ const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:'sword'}};
+ // All weapon skills (card sigils, burning arrows, hammer guard and throw)
+ // settle through the shared player combat manager, including DoT statistics.
+ Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
+  value:(amount,poise=0,{dot=false}={})=>{
+   const dealt=damageGyuwon(game,amount);
+   if(dealt>0){game.stats.damage+=dealt;if(!dot)game.stats.hits++;}
+   return dealt;
+  }});
+ return game;
 }
 export function actGyuwon(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition')return false;
@@ -122,9 +137,11 @@ export function chooseGyuwonPattern(g){
 }
 function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.t=0;s.index=0;s.space='white';s.spaceTime=0;s.stageTime=0;s.stageIndex=0;s.stageMemory='sword';s.hazards.length=0;s.motionBeats=[];s.pattern=null;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
 function hurt(g,h){
- const p=g.player,a=p.action,rolling=a?.kind==='roll'&&a.t>=.08&&a.t<=.4;
+ const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
- h.hit=true;p.hp=Math.max(0,p.hp-h.damage);p.invuln=.65;if(h.slow)g.gyuwon.slow=h.slow;emit(g,'hurt',{amount:h.damage});
+ const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage));
+ h.hit=true;p.hp=Math.max(0,p.hp-amount);p.invuln=.65;if(h.slow)g.gyuwon.slow=h.slow;
+ emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.gyuwon.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function tickBoss(g,dt){
@@ -145,7 +162,11 @@ function tickBoss(g,dt){
   s.elevation=Math.max(0,s.elevation-dt*10);
   if(s.phasePending){beginPhase(g);return;}
   // Land close enough to offer every melee weapon a real counterattack window.
-  const dx=g.player.x-b.x,dz=g.player.z-b.z,d=Math.hypot(dx,dz);if(d>4){const speed=Math.min(9,(d-4)/dt);b.x+=dx/d*speed*dt;b.z+=dz/d*speed*dt;clampArena(b);}
+  const dx=g.player.x-b.x,dz=g.player.z-b.z,d=Math.hypot(dx,dz);
+  if(d>4){const speed=Math.min(5.4,(d-4)*1.6);b.x+=dx/d*speed*dt;b.z+=dz/d*speed*dt;clampArena(b);}
+  // The rig, sword collision capsules and the recovery facing share this yaw.
+  const facing=Math.atan2(dx,dz);
+  b.yaw+=Math.atan2(Math.sin(facing-b.yaw),Math.cos(facing-b.yaw))*Math.min(1,dt*6.5);
   s.recover-=dt;if(s.recover<=0){s.index++;startGyuwonPattern(g,chooseGyuwonPattern(g));}return;
  }
  s.t+=dt;const spec=GYUWON_PATTERNS[s.pattern];s.elevation=0;
@@ -155,12 +176,29 @@ function tickBoss(g,dt){
 }
 function tickPlayer(g,dt,input){
  const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
- tickPlayerAction(g,dt,w,{melee:a=>{const dx=b.x-p.x,dz=b.z-p.z,dist=Math.hypot(dx,dz);if(dist<=w.range+1.5&&Math.abs(Math.atan2(Math.sin(Math.atan2(dx,dz)-a.yaw),Math.cos(Math.atan2(dx,dz)-a.yaw)))<1.2&&g.gyuwon.elevation<=2){a.hit=true;hit(g,w.damage*a.mult,a);}}});
+ tickPlayerAction(g,dt,w,{
+  backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},
+  melee:a=>{
+   if(g.gyuwon.elevation>2)return;
+   const impact=kwonMeleeContact(gyuwonHurtShapes(g),p,{
+    reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85,bladeRadius:.28});
+   if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a);}
+  }
+ });
  if(g.status!=='playing')return;
- for(const q of g.projectiles){const prev=advancePlayerProjectile(q,dt);if(q.hit||q.life<=0)continue;const dx=q.x-prev.x,dz=q.z-prev.z,n=dx*dx+dz*dz,u=n?Math.max(0,Math.min(1,((b.x-prev.x)*dx+(b.z-prev.z)*dz)/n)):0;if(Math.hypot(prev.x+dx*u-b.x,prev.z+dz*u-b.z)<=1.6){q.hit=true;hit(g,q.damage,q.source);q.life=0;}}
+ for(const q of g.projectiles){
+  const prev=advancePlayerProjectile(q,dt,p);
+  if(q.hit||q.bossHit||q.life<=0)continue;
+  const impact=kwonProjectileContact(gyuwonHurtShapes(g),prev,{x:q.x,y:q.y,z:q.z});
+  if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source);
+ }
  g.projectiles=g.projectiles.filter(q=>q.life>0);if(g.status!=='playing')return;
- const a=p.action;if(a?.kind==='roll'){p.x+=Math.sin(a.yaw)*18*dt;p.z+=Math.cos(a.yaw)*18*dt;}
- else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z)),speed=8*(g.gyuwon.slow>0?.65:1)*(p.skill.blue>0?1.5:1);p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);}
+ const a=p.action;if(a?.kind==='roll'){
+  const speed=playerRollSpeed(g);p.x+=Math.sin(a.yaw)*speed*dt;p.z+=Math.cos(a.yaw)*speed*dt;
+ }else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z));
+  const speed=playerWalkSpeed(p,(g.gyuwon.slow>0?.65:1)*(p.skill.blue>0?1.5:1));
+  p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);
+ }
  clampArena(p);
 }
 export function stepGyuwon(g,dt,input={}){
