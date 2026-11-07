@@ -1,5 +1,6 @@
 import test from 'node:test';
 import {BOSS_TEMPO} from '../src/boss-tempo.mjs';
+import {BOSS_AUTONOMY} from '../src/boss-autonomy.mjs';
 import assert from 'node:assert/strict';
 import {
  createGame,chooseOpening,beginSequence,step,startPattern,
@@ -66,7 +67,7 @@ test('idle Kwon runs toward the distant player faster in both phases, keeping re
   const start=Math.hypot(g.player.x-g.boss.x,g.player.z-g.boss.z);
   for(let i=0;i<30;i++)step(g,1/120);
   const distance=Math.hypot(g.player.x-g.boss.x,g.player.z-g.boss.z);
-  assert.ok(start-distance>KWON_RANGE_PRESSURE.chaseSpeed[phase]*.25*.94);
+  assert.ok(start-distance>KWON_RANGE_PRESSURE.chaseSpeed[phase]*BOSS_AUTONOMY.movementScale*.25*.94);
   g.boss.state='recovery';g.boss.pattern='sweep';g.boss.queue=[];
   g.boss.recovery=1;g.boss.t=0;
   const before={x:g.boss.x,z:g.boss.z};
