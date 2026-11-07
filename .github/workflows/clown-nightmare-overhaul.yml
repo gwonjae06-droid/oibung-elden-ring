@@ -15,6 +15,7 @@ on:
       - 'tests/clown-circus-rebuild.test.mjs'
       - 'tests/clown-motion-realism.test.mjs'
       - 'tests/clown-ensemble-repertoire.test.mjs'
+      - 'tests/clown-uncanny-circus.test.mjs'
       - '.github/workflows/clown-nightmare-overhaul.yml'
   pull_request:
     paths:
@@ -45,6 +46,7 @@ jobs:
       - name: Test nightmare attacks, phase transitions, scenes and existing boss behavior
         run: >
           node --test
+          tests/clown-uncanny-circus.test.mjs
           tests/clown-ensemble-repertoire.test.mjs
           tests/clown-motion-realism.test.mjs
           tests/clown-circus-rebuild.test.mjs

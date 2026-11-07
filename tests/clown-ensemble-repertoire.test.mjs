@@ -14,8 +14,8 @@ import {CLOWN_ENSEMBLE_RECORDINGS,clownEnsembleRecording} from '../src/clown-ens
 import {createClownRecordedFoley} from '../src/clown-stage-recordings.mjs';
 import {bossFoleySpec} from '../src/boss-foley-map.mjs';
 
-test('eleven new and four remastered performances are really registered in live combat',()=>{
- assert.equal(ENSEMBLE_DEFINITIONS.length,11);
+test('fourteen new and four remastered performances are really registered in live combat',()=>{
+ assert.equal(ENSEMBLE_DEFINITIONS.length,14);
  assert.equal(Object.keys(REMASTERED_CIRCUS_RUN).length,4);
  for(const [key,,dur,recover,phases,stage] of ENSEMBLE_DEFINITIONS){
   assert.equal(typeof HORROR_RUN[key],'function',key);
