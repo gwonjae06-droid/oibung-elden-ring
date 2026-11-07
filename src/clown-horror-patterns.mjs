@@ -1,3 +1,4 @@
+import {EXTRA_HORROR_DEFINITIONS,EXTRA_HORROR_RUN} from './clown-encore-attacks.mjs';
 // The nightmare programme uses the original zone/bomb engine. Every damaging
 // prop has an authored delay and a real floor spotlight; uncanny silhouettes,
 // harmless false performers, and environmental effects NEVER call hurt().
@@ -19,11 +20,12 @@ export const HORROR_DEFINITIONS=Object.freeze([
  ['stolenFace','내 얼굴 좀 가져가세요',6.1,1.65,[2],2],
  ['mouthOfTheAudience','관객의 입이 열린다',6.3,1.7,[2],3],
  ['stageRupture','무대는 아프지 않다고 했잖아요',6.8,1.85,[2],3],
- ['feralSkitter','네발 난입 · 부러진 박자의 추격',5.7,1.2,[2],2],
- ['reverseCrawl','접힌 척추의 역주행',5.9,1.2,[2],2],
- ['facePeelHunt','가면을 벗은 사냥',6.4,1.3,[2],2],
- ['ceilingPounce','거꾸로 매달린 사냥꾼',6.6,1.45,[2],3],
- ['unhingedClap','턱이 열리는 박수',6.4,1.25,[2],3],
+ ['feralSkitter','네발 난입 · 부러진 박자의 추격',6.6,1.35,[2],2],
+ ['reverseCrawl','접힌 척추의 역주행',7.4,1.35,[2],2],
+ ['facePeelHunt','가면을 벗은 사냥',7.0,1.4,[2],2],
+ ['ceilingPounce','거꾸로 매달린 사냥꾼',7.2,1.45,[2],3],
+ ['unhingedClap','턱이 열리는 박수',7.5,1.35,[2],3],
+ ...EXTRA_HORROR_DEFINITIONS,
 ]);
 export const HORROR_PATTERNS=Object.freeze(HORROR_DEFINITIONS.map(([key])=>key));
 export const horrorMinStage=key=>HORROR_DEFINITIONS.find(a=>a[0]===key)?.[5]??1;
@@ -208,12 +210,14 @@ function feralSkitter(g,c,a,t,api){
  if(cross(a,t,.17))api.emit(g,'clown-horror',{cue:'claw-scrape',x:g.boss.x,z:g.boss.z});
  api.dashPart(g,c,a,t,.38,'beast-skitter-one');
  api.dashPart(g,c,a,t,2.36,'beast-skitter-two');
+ api.dashPart(g,c,a,t,4.48,'beast-skitter-three');
 }
 function reverseCrawl(g,c,a,t,api){
  tell(api,g,c,'reverse-crawl');c.vis.crouch=1;c.vis.neck=.82;
  c.vis.tilt=.35+Math.sin(t*5)*.50;c.vis.shake=.20+Math.abs(Math.sin(t*8))*.19;
  api.crawlPart(g,c,a,t,.45,'beast-crawl-first',{reach:9,travel:1.55,damage:26,angleOffset:.72});
  api.crawlPart(g,c,a,t,3.1,'beast-crawl-second',{reach:8,travel:1.15,damage:27,angleOffset:-.82});
+ api.crawlPart(g,c,a,t,5.27,'beast-crawl-third',{reach:9.5,travel:.93,damage:29,angleOffset:.63});
 }
 function facePeelHunt(g,c,a,t,api){
  tell(api,g,c,'face-peel');c.vis.crouch=.85;c.vis.neck=.89;
@@ -224,6 +228,9 @@ function facePeelHunt(g,c,a,t,api){
   api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});
  }
  api.crawlPart(g,c,a,t,1.75,'face-side-hunt',{reach:11,travel:1.2,damage:29,angleOffset:c.seq%2?.75:-.75});
+ if(cross(a,t,4.5)){const q=offset(bound(g.player),c.seq%2?-.95:.95,4.4);
+  circle(api,g,q,3.25,1.35,28,'stolenFace');
+  api.emit(g,'clown-horror',{cue:'face',x:q.x,z:q.z});}
 }
 function ceilingPounce(g,c,a,t,api){
  tell(api,g,c,'ceiling-pounce');c.vis.crouch=t<1.35?1:.95;c.vis.neck=.55;
@@ -236,20 +243,25 @@ function ceilingPounce(g,c,a,t,api){
  }
  api.dashPart(g,c,a,t,1.35,'beast-ceiling-pounce');
  if(cross(a,t,2.5))api.emit(g,'clown-horror',{cue:'landing',x:g.boss.x,z:g.boss.z});
+ if(cross(a,t,3.18)){const land=bound(g.boss),gap=c.seq%8;
+  for(let i=0;i<8;i++)if(i!==gap&&i!==(gap+1)%8){
+   const q=offset(land,i*TAU/8,7.1);circle(api,g,q,2.2,1.45,24,'ceilingPounce');
+  }}
 }
 function unhingedClap(g,c,a,t,api){
  tell(api,g,c,'unhinged-clap');c.vis.crouch=.9;c.vis.neck=.72;
  c.vis.glove=.65+.35*Math.abs(Math.sin(t*8));
  c.vis.tilt=.60*Math.sin(t*6);c.vis.shake=.33;c.vis.crouch=.94;
  const look=api.once(c,'unhinged-look',()=>yawTo(g.boss,g.player));
- for(let i=0;i<3;i++)if(cross(a,t,.55+i*1.23)){
-  api.cone(g,look+[0,.85,-.85][i],1.08,19,.43,29+i*3,'clap');
-  api.emit(g,'clown-horror',{cue:i===2?'teeth-end':'unhinged-clap'});
+ for(let i=0;i<4;i++)if(cross(a,t,.55+i*1.29)){
+  api.cone(g,look+[0,.85,-.85,0][i],1.08,19,.43,29+Math.min(i,2)*3,'clap');
+  api.emit(g,'clown-horror',{cue:i===3?'teeth-end':'unhinged-clap'});
  }
 }
 export const HORROR_RUN=Object.freeze({
  echoApplause,wrongTwin,livingShadow,hatchingBalloons,
  porcelainRain,foldedCrawl,emptyAudience,curtainNightmare,clockOfTeeth,
  stolenFace,mouthOfTheAudience,stageRupture,
-  feralSkitter,reverseCrawl,facePeelHunt,ceilingPounce,unhingedClap
+  feralSkitter,reverseCrawl,facePeelHunt,ceilingPounce,unhingedClap,
+ ...EXTRA_HORROR_RUN
 });

@@ -7,8 +7,8 @@ export function clownMutationPose(g,time=0){
  const health=boss.maxHp>0?sat(boss.hp/boss.maxHp):1;
  const phaseBase=stage===3?.8:stage===2?.42:.11;
  const timeIn=ease((c.pt||0)/.85);
- const folded=['foldedCrawl','feralSkitter','reverseCrawl','ceilingPounce'].includes(name),mask=['stolenFace','porcelainRain','facePeelHunt'].includes(name),
-  mouth=['mouthOfTheAudience','clockOfTeeth','unhingedClap'].includes(name),
+ const folded=['foldedCrawl','feralSkitter','reverseCrawl','ceilingPounce','brokenHorses','marionetteDevour'].includes(name),mask=['stolenFace','porcelainRain','facePeelHunt','vanishingAct'].includes(name),
+  mouth=['mouthOfTheAudience','clockOfTeeth','unhingedClap','audienceJudgement'].includes(name),
   shadow=name==='livingShadow'||name==='reverseCrawl',doubles=name==='wrongTwin',rupture=['stageRupture','curtainNightmare','ceilingPounce'].includes(name);
  const special=folded||mask||mouth||shadow||doubles||rupture;
  const force=special?timeIn:0,anger=sat(phaseBase+(1-health)*.2+.25*force);

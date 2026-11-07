@@ -13,6 +13,7 @@ const QUICK_CLOWN=new Set(['shove','dash','clap','bounce']);
 const HEAVY_CLOWN=new Set([
  'tripleBomb','lastClap','curtainCall','humanCannon','ballCannon',
  'ballSpin','mirrorStage','trapdoorWaltz','grandEncore','invertedApplause',
+ 'vanishingAct','funeralParade','brokenHorses','audienceJudgement','marionetteDevour',
 ]);
 export function kwonReadableWind(pattern,wind,phase=1){
  const floor=HEAVY_KWON.has(pattern)?READABLE_ATTACK.kwon.heavy:
@@ -25,9 +26,9 @@ export function clownPrecastTime(name){
 }
 export function clownPrecastPose(name,t,lead){
  const u=smoothAnticipation(t/Math.max(.01,lead));
- const throwing=/Bomb|Cannon|juggle|Encore|ballRain|balloon/i.test(name);
+ const throwing=/Bomb|Cannon|juggle|Encore|ballRain|balloon|funeralParade/i.test(name);
  const clapping=/clap|applause|horn|fan/i.test(name);
- const jumping=/bounce|jump|dash|trapdoor|carousel/i.test(name);
+ const jumping=/bounce|jump|dash|trapdoor|carousel|brokenHorses|marionetteDevour/i.test(name);
  return {
   crouch:(jumping?.65:.22)*u,
   glove:(clapping?.95:throwing?.72:.38)*u,
