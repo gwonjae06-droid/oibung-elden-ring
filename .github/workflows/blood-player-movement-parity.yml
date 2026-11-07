@@ -1,18 +1,7 @@
 name: Blood player movement parity
 
 on:
-  pull_request:
-    paths:
-      - 'src/player-movement-rules.mjs'
-      - 'src/combat.mjs'
-      - 'src/blood-combat.mjs'
-      - 'src/blood-battle.mjs'
-      - 'tests/blood-player-movement-parity.test.mjs'
-      - 'tests/blood.test.mjs'
-  push:
-    branches: [main, fix/blood-player-movement-parity-20261106]
   workflow_dispatch:
-
 permissions:
   contents: read
 

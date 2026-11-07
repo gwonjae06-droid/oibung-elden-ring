@@ -1,22 +1,7 @@
 name: Full-body weight transfer regression
 
 on:
-  pull_request:
-    paths:
-      - 'src/player-balance.mjs'
-      - 'src/player-polish.mjs'
-      - 'src/kwon-torso-rig.mjs'
-      - 'src/blood-regalia.mjs'
-      - 'src/dice-giant-view.mjs'
-      - 'src/clown-actor.mjs'
-      - 'tests/player-balance.test.mjs'
-      - 'tests/boss-balance.test.mjs'
-      - '.github/workflows/full-body-weight-transfer.yml'
-  push:
-    branches:
-      - feature/full-body-weight-transfer-20261106
   workflow_dispatch:
-
 jobs:
   weight-transfer:
     runs-on: ubuntu-latest

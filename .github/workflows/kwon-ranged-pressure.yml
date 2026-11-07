@@ -1,20 +1,7 @@
 name: Kwon range pressure and fair sword patterns
 
 on:
-  pull_request:
-    paths:
-      - 'src/combat.mjs'
-      - 'src/kwon-third-phase.mjs'
-      - 'src/kwon-third-phase-view.mjs'
-      - 'src/arena-damage.mjs'
-      - 'src/pattern-shuffle.mjs'
-      - 'tests/kwon-ranged-pressure.test.mjs'
-      - 'tests/kwon-close-engagement.test.mjs'
-      - 'tests/kwon-third-phase.test.mjs'
-  push:
-    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
 

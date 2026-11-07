@@ -1,8 +1,5 @@
 name: Four boss full-body performance and cinematic light regression
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

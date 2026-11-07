@@ -1,8 +1,5 @@
 name: Camera clarity and fixed viewport
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read

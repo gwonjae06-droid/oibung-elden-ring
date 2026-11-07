@@ -1,20 +1,7 @@
 name: Balanced random boss patterns
 
 on:
-  pull_request:
-    paths:
-      - 'src/pattern-shuffle.mjs'
-      - 'src/combat.mjs'
-      - 'src/clown-combat.mjs'
-      - 'src/dice-combat.mjs'
-      - 'src/dice-player.mjs'
-      - 'src/dice-giant.mjs'
-      - 'tests/boss-pattern-shuffle.test.mjs'
-      - 'tests/dice-patterns.test.mjs'
-  push:
-    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
 

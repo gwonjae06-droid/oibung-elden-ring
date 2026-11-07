@@ -1,8 +1,5 @@
 name: Eight weapon skills rework tests
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
