@@ -58,7 +58,8 @@ function mapHazards(g,key,offset=0){
  if(key==='circus'){
   for(let i=0;i<3;i++){const angle=a+i*.8-1;
    const dx=Math.sin(angle),dz=Math.cos(angle);
-   mark(g,b.x+dx*7,b.z+dz*7,1.15+offset+i*.62,2.6,25,'year-circus');}
+   add(g,'circle',{x:-dx*36,z:-dz*36,r:2.65,vx:dx*23,vz:dz*23,
+    warn:1.15+offset+i*.62,life:2.35,damage:25,visual:'year-circus'});}
  }
  if(key==='gamble'){
   for(let i=0;i<3;i++)mark(g,p.x+Math.sin(i*2.05)*6,p.z+Math.cos(i*2.05)*6,1.3+offset+i*.55,2.65,27,'dice');
@@ -213,6 +214,10 @@ function beginCast(g,id,emit){
  }
  g.gyuwon.motionBeats=[...new Set(g.gyuwon.hazards.map(h=>h.warn))].sort((x,y)=>x-y);
  emit('gyuwon-warning',{pattern:'year-'+id});
+}
+export function startGyuwonYearCast(g,id,emit=()=>{}){
+ if(!g?.gyuwon?.years||!Object.hasOwn(GYUWON_YEAR_PATTERNS,id)||g.status!=='playing')return false;
+ beginCast(g,id,emit);return true;
 }
 function tickHazards(g,dt,hurt,emit){
  const s=g.gyuwon,e=s.years;
