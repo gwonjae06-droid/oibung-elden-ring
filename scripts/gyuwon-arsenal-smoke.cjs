@@ -1,3 +1,4 @@
+// Historical 5-11 annual-world visual QA runs in opt-in compatibility mode.
 const fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require('playwright-core');
 (async()=>{
@@ -20,7 +21,7 @@ const {chromium}=require('playwright-core');
   await page.evaluate(async()=>{
    localStorage.setItem('oibung-muted','1');document.getElementById('journey').close();
    window.riderRead=(await import('./src/battle-session.mjs')).readBattleSession;
-   window.riderBattle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.player.invuln=1e6;g.gyuwon.years.recover=1000;}});
+   window.riderBattle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.gyuwon.years.legacyAnnual=true;g.player.invuln=1e6;g.gyuwon.years.recover=1000;}});
   });
   await page.waitForFunction(()=>{const root=document.querySelector('#gyuwon-battle')?.firstElementChild.shadowRoot,s=root&&riderRead(root);return s?.active&&s.game.time>.05;},{},{timeout:150000});
   const idle=await page.evaluate(async()=>{const s=riderRead(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot),g=s.game;const {stepGyuwon}=await import('./src/gyuwon-combat.mjs');const before=g.gyuwon.years.day;for(let i=0;i<7200;i++)stepGyuwon(g,1/120);return {before,after:g.gyuwon.years.day,mode:g.gyuwon.years.mode};});assert.deepEqual(idle,{before:365,after:365,mode:'combat'});

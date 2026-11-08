@@ -1,3 +1,4 @@
+// Historical 5-11 annual-world visual QA runs in opt-in compatibility mode.
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {mkdir} from 'node:fs/promises';
@@ -27,6 +28,7 @@ try{
  const opened=await page.evaluate(async()=>{
   const {launchGyuwonBattle}=await import('./src/gyuwon-battle.mjs');
   window.__yearQa=launchGyuwonBattle({weapon:'sword',diagnostics:true,configure(g){
+   g.gyuwon.years.legacyAnnual=true;
    g.player.invuln=1e5;g.startGrace=0;
   }});
   return Boolean(window.__yearQa);

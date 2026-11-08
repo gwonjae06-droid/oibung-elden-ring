@@ -1,3 +1,4 @@
+// Historical 5-11 annual-world visual QA runs in opt-in compatibility mode.
 const fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
 (async()=>{
@@ -42,7 +43,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
    const stats=await page.evaluate(async({year,id,time})=>{
     const {createGyuwonGame,stepGyuwon}=await import('/src/gyuwon-combat.mjs'),{startGyuwonYearCast}=await import('/src/gyuwon-years.mjs');
     const {T,scene,renderer,camera,actor,fx}=qa;
-    const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.year=year;g.gyuwon.stageMemory='sword';g.player.invuln=1e5;g.player.z=9;g.boss.z=0;startGyuwonYearCast(g,id);
+    const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.legacyAnnual=true;g.gyuwon.years.year=year;g.gyuwon.stageMemory='sword';g.player.invuln=1e5;g.player.z=9;g.boss.z=0;startGyuwonYearCast(g,id);
     for(let t=0;t<time;t+=1/120){stepGyuwon(g,1/120);actor.update(g,0,1/120);}
     fx.update(g);window.qa.game=g;
     const close=['sniper','archery','sewageThrow'].includes(id),distance=close?8:37;
@@ -60,7 +61,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
     const ids=Object.keys(GYUWON_YEAR_PATTERNS);const memory=[];
     for(let cycle=0;cycle<3;cycle++){
     for(const id of ids){
-    const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.player.invuln=1e5;
+    const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.legacyAnnual=true;g.player.invuln=1e5;
     const year=Array.from({length:11},(_,i)=>i+1).find(y=>gyuwonYearRoster(y).includes(id)||GYUWON_YEAR_SIGNATURES[y]===id);
     g.gyuwon.years.year=year||({sewageThrow:5,sewageWave:5,sewageBomb:5,figures:6,photocard:6,merch:6,dance:7,donation:7,chatstorm:7,octoStrike:8,octoSweep:8,octoInk:8,ultimateSewage:5,ultimateShrine:6,ultimateGacha:7,ultimateOctopus:8})[id]||1;g.boss.phase=year>=9?3:1;g.gyuwon.stageMemory='sword';
     startGyuwonYearCast(g,id);
@@ -96,7 +97,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
    localStorage.setItem('oibung-muted','1');
    document.getElementById('journey').close();
    const {launchGyuwonBattle}=await import('/src/gyuwon-battle.mjs');
-   window.liveQa=launchGyuwonBattle({weapon:'sword',diagnostics:true,configure(g){g.player.invuln=1e5;}});
+   window.liveQa=launchGyuwonBattle({weapon:'sword',diagnostics:true,configure(g){g.gyuwon.years.legacyAnnual=true;g.player.invuln=1e5;}});
    if(!window.liveQa)throw Error('real battle startup failed');
   });
   await page.evaluate(async()=>{window.readLiveSession=(await import('/src/battle-session.mjs')).readBattleSession;});

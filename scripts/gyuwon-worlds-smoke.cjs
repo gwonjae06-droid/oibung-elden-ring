@@ -1,3 +1,4 @@
+// Historical 5-11 annual-world visual QA runs in opt-in compatibility mode.
 const fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{execFileSync}=require('node:child_process');
 const {chromium}=require('playwright-core');
 (async()=>{
@@ -19,7 +20,7 @@ const {chromium}=require('playwright-core');
   await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/**',route=>route.fulfill({path:path.join(project,'node_modules/three/build',new URL(route.request().url()).pathname.split('/').at(-1)),contentType:'text/javascript'}));
   await page.route('https://fonts.**',route=>route.abort());
   await page.goto(`http://127.0.0.1:${server.address().port}/spider-combat.html`,{waitUntil:'domcontentloaded'});await page.waitForSelector('[data-j="new"]',{timeout:60000});await page.waitForTimeout(200);
-  await page.evaluate(async()=>{localStorage.setItem('oibung-muted','1');document.getElementById('journey').close();window.readWorldSession=(await import('/src/battle-session.mjs')).readBattleSession;window.worldBattle=(await import('/src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.player.invuln=1e6;g.gyuwon.years.recover=1000;g.gyuwon.years.worldSeed=42;}});});
+  await page.evaluate(async()=>{localStorage.setItem('oibung-muted','1');document.getElementById('journey').close();window.readWorldSession=(await import('/src/battle-session.mjs')).readBattleSession;window.worldBattle=(await import('/src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.gyuwon.years.legacyAnnual=true;g.player.invuln=1e6;g.gyuwon.years.recover=1000;g.gyuwon.years.worldSeed=42;}});});
   await page.waitForFunction(()=>{const root=document.querySelector('#gyuwon-battle')?.firstElementChild.shadowRoot,s=root&&readWorldSession(root);return s?.active&&s.game.time>.01;},{},{timeout:120000});
   for(const year of process.env.GYUWON_WORLD_PROBE?[1,9]:before?[1,4,9,10,11]:[1,2,3,4,5,6,7,8,9,10,11,12,13]){
    await page.evaluate(year=>{const s=readWorldSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot),g=s.game,e=g.gyuwon.years;Object.assign(e,{year,season:1,mode:'combat',cast:null,castT:0,recover:1000,signatureUsed:true,mapClock:0,mapPending:false,bannerUntil:-1});g.boss.phase=year>=9?3:1;g.boss.x=0;g.boss.z=-5;g.player.x=0;g.player.z=14;g.gyuwon.hazards=[];g.gyuwon.stageMemory=year>=9?'tsunami':null;g.gyuwon.stageTime=1;},year);
