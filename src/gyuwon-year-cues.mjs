@@ -10,7 +10,7 @@ export function gyuwonYearCuePhase(h){
 }
 export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
  const group=new THREE.Group();group.name='gyuwon-physical-combat-telegraphs';stage.add(group);
- const mats=[],geos=[],items=new Map();let owner=null,disposed=false;
+ const mats=[],geos=[],items=new Map(),coneGeoCache=new Map();let owner=null,disposed=false;
  const fog=new THREE.MeshPhysicalMaterial({color:0x767e83,metalness:.06,roughness:.77,
   transparent:true,opacity:.30,depthWrite:false,side:THREE.DoubleSide});
  const thundercard=new THREE.MeshPhysicalMaterial({color:0xb88f69,metalness:.35,roughness:.43,
@@ -26,6 +26,8 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
  // An actual arcing smoke plume, with a 3D raised skin on the front and sides.
  // The footprint is never enlarged beyond the cone's authoritative extent.
  function coneGeometry(h){
+  const key=[h.visual,h.r,h.arc,h.innerR||0,coarse?1:0].join(':');
+  if(coneGeoCache.has(key))return coneGeoCache.get(key);
   const segments=coarse?14:30;
   const inner=h.innerR||0,r=h.r,arc=h.arc,pts=[],index=[];
   const bands=[inner,inner+(r-inner)*.22,inner+(r-inner)*.52,r];
@@ -44,7 +46,7 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
   }
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-  geo.setIndex(index);geo.computeVertexNormals();geos.push(geo);return geo;
+  geo.setIndex(index);geo.computeVertexNormals();geos.push(geo);coneGeoCache.set(key,geo);return geo;
  }
  function make(h){
   const parent=new THREE.Group();parent.name='gyuwon-'+h.visual+'-volumetric';
