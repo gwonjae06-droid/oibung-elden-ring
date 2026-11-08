@@ -144,5 +144,5 @@ export function createGyuwonYearRig({torso,head,coarse=false}={}){
   for(const g of new Set(geos))g.dispose();
   for(const m of new Set(mats))m.dispose();
  }
- return {update,dispose,get activeYear(){return activeYear},stats:()=>({activeYear,faceControls:eyelids.length+brows.length+eyes.length,garments:perYear.size})};
+ return {update,dispose,get activeYear(){return activeYear},get tint(){return yearTints.get(activeYear)||null},stats:()=>({activeYear,faceControls:eyelids.length+brows.length+eyes.length,garments:perYear.size})};
 }
