@@ -46,6 +46,12 @@ export const BLOOD_ATTACK_GESTURES=Object.freeze({
  seraphFeathers:{style:'seraph-feather-rain',lean:-.35,twist:.15,arms:[1.6,1.6],open:[1.2,1.2],elbow:[-.3,-.3],head:-.37,wing:1.42,fold:-.3,sweep:.2,cape:1.4},
  seraphEmbrace:{style:'seraph-embrace',lean:.18,twist:0,arms:[1.85,1.85],open:[1.15,1.15],elbow:[.3,.3],head:-.1,wing:1.2,fold:.85,sweep:.3,cape:1.1},
  seraphDescent:{style:'seraph-descent',lean:.65,twist:0,arms:[1.75,1.75],open:[.4,.4],elbow:[-.6,-.6],head:-.4,wing:-.4,fold:1.0,sweep:0,cape:1.6},
+ seraphSweep:{style:'seraph-eye-sweep',lean:-.25,twist:0,arms:[1.6,1.6],open:[1.1,1.1],elbow:[.2,.2],head:-.25,wing:.5,fold:.1,sweep:.3,cape:1.25},
+ seraphWingCross:{style:'seraph-wheel-crossing',lean:.1,twist:.4,arms:[1.7,1.7],open:[.85,.85],elbow:[-.3,-.3],head:-.3,wing:1.7,fold:.8,sweep:1.45,cape:1.5},
+ seraphInwardPillars:{style:'seraph-pillars-inward',lean:-.45,twist:0,arms:[1.85,1.85],open:[1.2,1.2],elbow:[-.1,-.1],head:-.3,wing:1.15,fold:-.15,sweep:.5,cape:1.2},
+ seraphFrenzy:{style:'seraph-ocular-frenzy',lean:-.2,twist:.55,arms:[1.65,1.65],open:[1.35,1.35],elbow:[.2,.2],head:-.48,wing:1.2,fold:0,sweep:.5,cape:1.4},
+ seraphHaloProcession:{style:'seraph-rolling-halos',lean:-.32,twist:.2,arms:[1.9,1.9],open:[1.35,1.35],elbow:[-.3,-.3],head:-.22,wing:1.3,fold:-.1,sweep:.2,cape:1.3},
+ seraphBloodRosette:{style:'seraph-blood-rosette',lean:-.35,twist:.14,arms:[1.9,1.9],open:[1.3,1.3],elbow:[-.45,-.45],head:-.38,wing:1.35,fold:.35,sweep:.75,cape:1.5},
  seraphFinale:{style:'seraph-last-hymn',lean:-.45,twist:.35,arms:[1.95,1.95],open:[1.3,1.3],elbow:[-.55,-.55],head:-.52,wing:1.55,fold:-.35,sweep:1.15,cape:1.7},
 });
 // All keyframe envelopes share actual hazard warning times from combat state.

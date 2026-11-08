@@ -58,6 +58,12 @@ try{
  assert.equal(cinematic.view.seraph.visible,true);
  assert.equal(cinematic.view.seraph.hinges,6);
  assert.ok(cinematic.view.seraph.featherInstances>=60);
+ // Verify the user's photo is actually mapped onto the curved 3D skull;
+ // simply naming the asset or seeing a placeholder face is NOT enough.
+ await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.photoLoaded===true,
+  {},{timeout:45000});
+ assert.equal((await page.evaluate(()=>window.__seraphSession().diagnostics().view.seraph.photoAsset)),
+  'assets/baeseojun.png');
  assert.equal(cinematic.view.seraph.ownsHurtSilhouette,true);
  assert.equal(cinematic.view.seraph.decorativeOnly,false);
  const afterHeal=await page.evaluate(()=>window.__seraphSession().game.boss.hp);
@@ -68,7 +74,7 @@ try{
   const s=window.__seraphSession(),g=s.game;
   skipBloodTransition(g);stepBlood(g,.03);
   if(g.boss.state!=='recovery')throw Error('3P cinematic did not complete');
-  if(!startBloodPattern(g,'seraphWings'))throw Error('3P first wing pattern unavailable');
+  if(!startBloodPattern(g,'seraphWingCross'))throw Error('3P wing-wheel pattern unavailable');
   return {phase:g.boss.phase,pattern:g.blood.pattern,warnings:g.blood.hazards.map(h=>h.warn)};
  });
  await page.waitForFunction(()=>{
@@ -81,7 +87,7 @@ try{
    pattern:s.game.blood.pattern,phaseLabel:root.getElementById('phase-label')?.textContent};
  });
  assert.equal(live.phase,3);
- assert.equal(live.pattern,'seraphWings');
+ assert.equal(live.pattern,'seraphWingCross');
  assert.equal(live.view.seraph.visible,true);
  assert.ok(live.view.hazards>=3);
  assert.match(live.phaseLabel,/세 번째/);
@@ -92,7 +98,7 @@ try{
   const {stepBlood,startBloodPattern}=await import('./src/blood-combat.mjs');
   const g=window.__seraphSession().game;
   g.boss.state='recovery';g.blood.hazards.length=0;
-  if(!startBloodPattern(g,'seraphGaze'))throw Error('eye phase pattern unavailable');
+  if(!startBloodPattern(g,'seraphSweep'))throw Error('face sweep pattern unavailable');
   const first=g.blood.hazards[0].warn;
   for(let left=first+.08;left>1e-7;left-=.04)stepBlood(g,Math.min(.04,left));
   return {pattern:g.blood.pattern,warn:first,phase:g.boss.phase};
@@ -100,6 +106,26 @@ try{
  await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.eyeRayVisible,
   {},{timeout:15000});
  await page.screenshot({path:'artifacts/blood-seraph/seraph-eye-attack.png'});
+ // Verify that a detached rotating wing reaches the stage while its
+ // real telegraph marks the corresponding crossing lane BEFORE damage.
+ const wingWarning=await page.evaluate(async()=>{
+  const {startBloodPattern}=await import('./src/blood-combat.mjs');
+  const g=window.__seraphSession().game;g.boss.state='recovery';
+  g.blood.hazards.length=0;
+  if(!startBloodPattern(g,'seraphWingCross'))throw Error('wing-cross not available');
+  g.blood.hazards[0].age=g.blood.hazards[0].warn-.48;
+  return {warn:g.blood.hazards[0].warn,phase:g.boss.phase};
+ });
+ await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.warningGuides>0,
+  {},{timeout:16000});
+ await page.screenshot({path:'artifacts/blood-seraph/seraph-crossing-wing-telegraph.png'});
+ const wingPass=await page.evaluate(()=>{
+  const g=window.__seraphSession().game;g.blood.hazards[0].age=g.blood.hazards[0].warn+.1;
+  return g.blood.hazards[0].seraphCue;
+ });
+ await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.wingWheelVisible,
+  {},{timeout:14000});
+ await page.screenshot({path:'artifacts/blood-seraph/seraph-crossing-wing-active.png'});
  await page.setViewportSize({width:844,height:390});
  await page.waitForTimeout(350);
  const mobile=await page.evaluate(()=>{

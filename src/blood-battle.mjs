@@ -117,7 +117,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
    quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
    if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const grand=g.boss.state==='pattern'&&(
    g.boss.phase===2&&['wave','eclipse','tide','requiem','cross','judgement','ritual','wingGenesis'].includes(g.blood.pattern)||
-   g.boss.phase===3&&['seraphCrown','seraphFinale','seraphWings'].includes(g.blood.pattern));const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
+   g.boss.phase===3&&['seraphCrown','seraphFinale','seraphWings','seraphSweep','seraphWingCross','seraphFrenzy'].includes(g.blood.pattern));const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
   player:p,boss:g.boss,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
   headHeight:g.boss.phase===3?5.5:3+Math.max(0,g.blood.elevation||0)*.55,
   extraDistance:grand?4:g.boss.phase===3?2.6:0 // Preserve contact and the 3P six-wing silhouette.
