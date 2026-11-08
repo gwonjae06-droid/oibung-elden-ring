@@ -1,5 +1,6 @@
 import {KWON_THREE} from './kwon-third-phase.mjs';
 import {CLOWN_BALLET_THRESHOLDS} from './clown-ballet-score.mjs';
+import {clearCircusTroupe} from './clown-troupe.mjs';
 const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
@@ -23,6 +24,9 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
  const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.second:KWON_THREE.first)?2:
   b.phase===2&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.third:KWON_THREE.second)?3:null;
  if(nextPhase!==null){
+  // Perform the curtain call at the authoritative damage threshold, not in
+  // a later event observer: scripted hits and projectiles must agree.
+  if(g.clown&&nextPhase===3){clearCircusTroupe(g);g.clown.duetOrbitYaw=g.clown.yaw;}
   Object.assign(b,{phase:nextPhase,state:'transition',t:0,queue:[],poise:0,
    stun:0,punishable:false,from:null,motionFrom:null,riftFired:false,
    pendingOpening:null,closeCooldown:0,hug:0});
