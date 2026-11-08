@@ -7,6 +7,7 @@ import {HORROR_PATTERNS,horrorMinStage} from '../src/clown-horror-patterns.mjs';
 import {GIANT_NAMES,FERAL_NAMES,giantPattern} from '../src/dice-giant.mjs';
 import {BLOOD_PATTERNS,bloodPool} from '../src/blood-data.mjs';
 import {GYUWON_PATTERNS,gyuwonPool,MEMORY_ORDER} from '../src/gyuwon-data.mjs';
+import {GYUWON_EXAM_IDS} from '../src/gyuwon-exam.mjs';
 import {createGyuwonGame,startGyuwonPattern,stepGyuwon,chooseGyuwonPattern} from '../src/gyuwon-combat.mjs';
 const sorted=a=>[...a].sort(),intersect=(a,b)=>a.filter(x=>b.includes(x));
 
@@ -68,7 +69,8 @@ test('Gyuwon phase one academic, phase two metaphysical, phase three memory pool
  assert.deepEqual(intersect(first,[...white,...dark,...final]),[]);
  assert.deepEqual(intersect(white,dark),[]);
  assert.deepEqual(intersect([...white,...dark],final),[]);
- assert.deepEqual(sorted([...first,...white,...dark,...final]),sorted(Object.keys(GYUWON_PATTERNS)));
+ assert.deepEqual(sorted([...first,...white,...dark,...final,...GYUWON_EXAM_IDS]),sorted(Object.keys(GYUWON_PATTERNS)));
+ assert.ok(GYUWON_EXAM_IDS.every(id=>![...first,...white,...dark,...final].includes(id)),'exams are interruption casts, never random deck cards');
  assert.deepEqual(final,MEMORY_ORDER);
  for(const [space,pool] of [['white',white],['dark',dark]]){
   const g=createGyuwonGame('sword',{seed:19});g.boss.phase=2;g.gyuwon.space=space;
