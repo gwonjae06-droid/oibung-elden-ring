@@ -34,7 +34,7 @@ try{
  await page.locator('#clown-battle #world').waitFor({state:'visible',timeout:60000});
  // The intro UI may already be visible while renderer/texture preparation
  // is still compiling every troupe shader. Wait for the veil to truly exit.
- await page.locator('#clown-battle [role="status"]').waitFor({state:'detached',timeout:90000});
+ await page.locator('#clown-battle > div[role="status"]').waitFor({state:'detached',timeout:90000});
  await page.waitForTimeout(300);
  const setup=await page.evaluate(async()=>{
   const {setCircusAct}=await import('./src/clown-troupe.mjs');
