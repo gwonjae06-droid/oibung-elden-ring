@@ -11,14 +11,16 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {createGyuwonYears,tickGyuwonYears} from './gyuwon-years.mjs';
 
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
-export function createGyuwonGame(weapon='sword',{seed}={}){
+export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null,memoryVariant:0,memoryRun:0,memoryRunTarget:2,proofQueue:[],proofIndex:0,whiteQuota:2,whiteCycle:0,casts:0,lastWarpCast:-1,teleport:null}};
+ if(yearMode)game.gyuwon.years=createGyuwonYears();
  // All weapon skills (card sigils, burning arrows, hammer guard and throw)
  // settle through the shared player combat manager, including DoT statistics.
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
@@ -36,6 +38,15 @@ export function actGyuwon(g,type,input={}){
 }
 export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  if(g.status!=='playing'||g.boss.state==='transition'||!Number.isFinite(amount)||amount<=0)return 0;
+ // In the annual-exam encounter, every year is vulnerable;
+ // during the five-subject exam only, incoming damage is halved.
+ if(g.gyuwon.years){
+  const b=g.boss,s=g.gyuwon,dealt=Math.min(b.hp,amount*(s.years.mode==='exam'?.5:1));
+  b.hp-=dealt;if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
+   ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
+  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}
+  return dealt;
+ }
  // White space absorbs the blow. Record it so the view can dissolve it into written glyphs.
  if(g.boss.phase===2&&g.gyuwon.space==='white'){
   if(!dot){g.gyuwon.absorbAt=g.time;g.gyuwon.absorbCount=(g.gyuwon.absorbCount||0)+1;}
@@ -208,6 +219,7 @@ function hurt(g,h){
  if(p.hp<=0){g.status='lost';g.gyuwon.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function tickBoss(g,dt){
+ if(g.gyuwon.years){tickGyuwonYears(g,dt,{hurt:h=>hurt(g,h),emit:(type,data={})=>emit(g,type,data)});return;}
  const b=g.boss,s=g.gyuwon;
  if(b.phase===2&&b.state!=='transition')s.spaceTime+=dt;
  // Actual memory transitions are emitted by startGyuwonPattern, never the idle clock.

@@ -195,10 +195,13 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const transition=b.state==='transition';
   root.position.set(b.x,g.status==='won'?death*death*1.5:0,b.z);
   root.rotation.y=p.facing;
+  const roll=s.years?.dodge;
+  root.rotation.z=roll?Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7:0;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
+  if(s.years?.year===5&&g.status==='playing')root.scale.set(1+.065*Math.sin(t*3.7),1-.095*Math.sin(t*3.7),1+.05*Math.sin(t*2.8));
   torso.rotation.set(p.lean*.42,p.twist*.28,p.twist*.10+(p.weightShift||0)*.035);
   const breath=Math.sin(t*1.9)*.007;
-  torso.position.y=1.95-p.steps*.035+breath;
+  torso.position.y=(s.years?.mode==='exam'?1.54:1.95)-p.steps*.035+breath;
   head.rotation.set(p.headPitch,p.headYaw,Math.sin(t*2)*.012);
   neck.rotation.z=(p.weightShift||0)*.018;
   // Phase transformation retains the previous head pose until the story beat completes.
@@ -233,14 +236,14 @@ export function createGyuwonActor(stage,{coarse=false}={}){
     lift=Math.max(0,swing)*.18;
    // Knees always join the current thigh and calf. The shoe never sinks
    // below the table and returns to the same planted rest coordinates.
-   leg.hip.set(leg.side*.31,1.27+(p.weightShift||0)*leg.side*.025,0);
-   leg.ankle.set(leg.side*.32,.17+lift,.10+swing*.19);
-   leg.knee.set(leg.side*.315,.72+lift*.36,
-    .055+swing*.10+Math.abs(swing)*.14);
+   leg.hip.set(leg.side*.31,s.years?.mode==='exam'?1.02:1.27+(p.weightShift||0)*leg.side*.025,0);
+   leg.ankle.set(leg.side*.32,.17+(s.years?.mode==='exam'?0:lift),s.years?.mode==='exam'?1.2:.10+swing*.19);
+   leg.knee.set(leg.side*.315,s.years?.mode==='exam'?.85:.72+lift*.36,
+    s.years?.mode==='exam'?.67:.055+swing*.10+Math.abs(swing)*.14);
    setBone(leg.thigh,leg.knee,leg.hip);
    setBone(leg.shin,leg.ankle,leg.knee);
    leg.joint.position.copy(leg.knee);
-   leg.shoe.position.set(leg.ankle.x,.15+lift,leg.ankle.z+.07);
+   leg.shoe.position.set(leg.ankle.x,.15+(s.years?.mode==='exam'?0:lift),leg.ankle.z+.07);
    leg.shoe.rotation.x=swing*.06;
   }
   for(let i=0;i<pages.length;i++){const item=pages[i],a=t*.6+i*Math.PI/3;
