@@ -66,7 +66,7 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
     ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
    else if(receipt.calendarSeconds>0||receipt.credit>0)
     emit(g,'gyuwon-calendar-hit',{amount:Math.min(amount,b.maxHp*.025),
-     ...(impact?{x:impact.x,y:impact.y,z:impact.part?impact.z:impact.z,part:impact.part}:{})});
+     ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
   }
   if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}
   return dealt;
