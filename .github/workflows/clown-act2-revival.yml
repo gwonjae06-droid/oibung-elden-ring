@@ -17,6 +17,7 @@ on:
       - 'src/clown-marionette-cross.mjs'
       - 'tests/clown-act-two-revival.test.mjs'
       - 'tests/clown-marionette-reinforcements.test.mjs'
+      - 'scripts/clown-marionette-browser-smoke.mjs'
       - '.github/workflows/clown-act2-revival.yml'
   workflow_dispatch:
 
@@ -33,7 +34,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install existing Three dependency
-        run: npm install --no-save --no-audit --no-fund three@0.180.0
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Confirm live combat and cinematic syntax
         run: |
           for f in src/clown-legacy-echo.mjs src/clown-legacy-echo-view.mjs src/clown-troupe.mjs src/clown-troupe-view.mjs src/clown-troupe-patterns.mjs src/clown-combat.mjs src/clown-phase2-score.mjs src/clown-phase2-performance.mjs src/clown-battle.mjs src/clown-ringmaster-actor.mjs src/clown-marionette-cross.mjs tests/clown-marionette-reinforcements.test.mjs; do node --check "$f"; done
@@ -49,3 +50,16 @@ jobs:
           tests/clown-circus-rebuild.test.mjs
           tests/clown-motion-realism.test.mjs
           tests/clown-patterns.test.mjs
+      - name: Verify actual WebGL miniature models, X-shaped strings, projectiles and reinforcements
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/clown-marionette-http.log 2>&1 &
+          sleep 2
+          node scripts/clown-marionette-browser-smoke.mjs
+      - name: Upload actual old-mini and marionette screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clown-marionette-webgl-screenshots
+          path: artifacts/clown-marionette/
+          if-no-files-found: warn
+          retention-days: 7
