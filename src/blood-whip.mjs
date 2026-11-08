@@ -26,7 +26,7 @@ export function bloodWhipContact(whip,player){
 }
 export function bloodWhipCanStart(g){
  const s=g?.blood,b=g?.boss,p=g?.player;
- if(g?.status!=='playing'||!s||!b||!p||s.whip||s.stun>0||
+ if(g?.status!=='playing'||!s||!b||!p||b.phase===3||s.whip||s.stun>0||
   (s.whipCooldown||0)>0||b.state==='transition'||b.state==='dead'||s.phasePending||
   (s.elevation||0)>.45)return false;
  const dist=Math.hypot(b.x-p.x,b.z-p.z);

@@ -21,7 +21,8 @@ export function tickBloodSiphon(g,dt){
  const b=g?.boss,s=g?.blood?.siphon;
  if(!s||!Number.isFinite(dt)||dt<=0)return;
  s.flash=Math.max(0,s.flash-dt);
- if(g.status!=='playing'||b.phase!==2||b.state==='transition'||b.state==='dead'||b.hp<=0)return;
+ if(g.status!=='playing'||b.phase!==2||g.blood.seraphPending||
+  b.state==='transition'||b.state==='dead'||b.hp<=0)return;
  const rules=BLOOD_SIPHON_RULES;
  if(s.heals>=rules.maxHeals)return;
  const cap=b.maxHp*rules.phaseCeiling;

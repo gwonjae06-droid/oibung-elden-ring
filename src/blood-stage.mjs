@@ -40,7 +40,7 @@ function rawStage(g){
  if(!b||!s||g.status!=='playing'||b.state==='transition'||b.state==='dead')return IDLE;
  const spec=BLOOD_PATTERNS[s.pattern];if(!spec)return IDLE;
  if(b.state==='recovery'){const total=Math.max(.001,s.recover,spec.recover);return make('return',1-s.recover/total);}
- if(b.state==='maneuver')return make('return',.82+.18*(1-s.maneuver/(b.phase===2?1.14:1.24)));
+ if(b.state==='maneuver')return make('return',.82+.18*(1-s.maneuver/(b.phase===3?.78:b.phase===2?1.14:1.24)));
  const remain=spec.duration-s.t;
  if(remain<=DONE_WINDOW||!s.hazards.length)return make('done',1-remain/(DONE_WINDOW*2));
  const states=s.hazards.map(hazardStage),fired=s.hazards.filter(h=>h.age>=h.warn);

@@ -1,7 +1,13 @@
 // All cinematic clocks use combat simulation time, including pause and skip.
 export const smooth=(a,b,t)=>{const u=Math.max(0,Math.min(1,(t-a)/(b-a)));return u*u*(3-2*u);};
 export function bloodTransformation(g){
- const active=g.boss.state==='transition',t=active?g.blood.t:0,settled=g.boss.phase===2&&!active;
+ const active=g.boss.state==='transition',t=active?g.blood.t:0,
+  seraph=g.boss.phase===3;
+ if(seraph)return {active,t,seraph:active?smooth(.2,4.45,t):1,
+  prayer:0,bell:0,veins:1,bones:1,membrane:1,wings:1,dissolve:1,
+  darkness:0,wave:0,camera:0,rupture:1,seaRise:1,sky:1,storm:1,
+  musicGain:1,musicPhase:3};
+ const settled=g.boss.phase===2&&!active;
  return {active,t,prayer:active?smooth(.6,1.8,t):0,bell:active?Math.max(0,1-Math.abs(t-1.92)/.22):0,
   veins:settled?1:active?smooth(.8,2.6,t):0,bones:settled?1:active?smooth(1.8,2.9,t):0,
   membrane:settled?1:active?smooth(2.6,3.55,t):0,wings:settled?1:active?smooth(2.6,3.8,t):0,

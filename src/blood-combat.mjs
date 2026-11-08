@@ -8,7 +8,8 @@ import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
-import {BLOOD_RULES as R,BLOOD_PHASE_TWO_ENTRY_RATIO,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
+import {BLOOD_RULES as R,BLOOD_PHASE_TWO_ENTRY_RATIO,BLOOD_PHASE_THREE_ENTRY_RATIO,
+ BLOOD_FINAL_HYMN_RATIO,BLOOD_SERAPH_TRANSITION,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -38,7 +39,10 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{requiredTsunamiStarted:false,requiredTsunamiDone:false,deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
+  blood:{requiredTsunamiStarted:false,requiredTsunamiDone:false,
+    seraphArmed:false,seraphPending:false,seraphAwakened:false,
+    seraphFinaleStarted:false,seraphFinaleDone:false,transitionKind:null,
+    deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
    const dealt=damageBlood(game,amount,null,{dot});
@@ -57,10 +61,14 @@ export function damageBlood(g,amount,impact=null,{dot=false}={}){
  const b=g.boss,s=g.blood;
  // Hold at the threshold until the mandatory wave finishes, including DoT
  // and overkill hits. Do not heal a game whose HP was externally set lower.
- const floor=s.requiredTsunamiDone?(b.phase===1?1:0):Math.min(b.hp,BLOOD_REQUIRED_TSUNAMI_HP);
+ const floor=!s.requiredTsunamiDone?Math.min(b.hp,BLOOD_REQUIRED_TSUNAMI_HP):
+  b.phase===2&&s.seraphArmed?Math.min(b.hp,b.maxHp*BLOOD_PHASE_THREE_ENTRY_RATIO):
+  b.phase===1?1:0;
  const damage=Math.min(amount,Math.max(0,b.hp-floor));b.hp-=damage;
  if(damage&&!dot)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
  if(b.phase===1&&b.hp<=b.maxHp*BLOOD_PHASE_TWO_ENTRY_RATIO)s.phasePending=true;
+ if(b.phase===2&&s.seraphArmed&&s.requiredTsunamiDone&&
+   b.hp<=b.maxHp*BLOOD_PHASE_THREE_ENTRY_RATIO)s.seraphPending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.whip=null;s.slow=0;emit(g,'victory');}
  return damage;
 }
@@ -174,6 +182,31 @@ export function startBloodPattern(g,id){
   }
   hazard(g,'ring',{x:b.x,z:b.z,r:18,width:2,grow:-4,warn:5.6,life:.6,damage:29});
  }
+ if(id==='seraphWings')for(let i=0;i<3;i++)
+  hazard(g,'cone',{x:b.x,z:b.z,yaw:aim+[.67,-.67,0][i],
+   arc:.47,r:20,warn:1.15+i*.89,life:.48,damage:29+i*2});
+ if(id==='seraphPulse')for(let i=0;i<3;i++)
+  hazard(g,'ring',{x:b.x,z:b.z,r:3+i*1.9,width:1.18,grow:13.3,
+   warn:1.24+i*.83,life:1.38,damage:25});
+ if(id==='seraphLances')for(let i=0;i<5;i++){
+  const a=aim+Math.PI/2,offset=(i-2)*3.45,
+   q=point(p.x+Math.sin(a)*offset,p.z+Math.cos(a)*offset);
+  circle(q.x,q.z,1.28+i*.52,3.0,{life:.55,damage:27});
+ }
+ if(id==='seraphCrown'){
+  for(let i=0;i<3;i++)hazard(g,'cone',{x:b.x,z:b.z,
+   yaw:aim+[-.84,0,.84][i],arc:.44,innerR:3,r:23,
+   warn:1.34+i*.86,life:.5,damage:31});
+  hazard(g,'ring',{x:b.x,z:b.z,r:6,width:1.35,grow:10,
+   warn:4.05,life:1.06,damage:28});
+ }
+ if(id==='seraphFinale'){
+  for(let i=0;i<4;i++)hazard(g,'cone',{x:b.x,z:b.z,
+   yaw:aim+[-.95,.95,-.38,.38][i],arc:.34,innerR:3.5,r:24,
+   warn:1.48+i*.85,life:.48,damage:34});
+  for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:1.32,grow:14,
+   warn:5.15+i*.94,life:1.2,damage:34});
+ }
  // Bind the encounter state before passing the two-argument hazard spawner.
  addBloodRiteAccent(g,id,(shape,opts)=>hazard(g,shape,opts));
  // The camera completes its reveal and returns well before the first actual
@@ -188,8 +221,18 @@ export function startBloodPattern(g,id){
  s.strikeAt=Math.min(...s.hazards.map(h=>h.warn));
  emit(g,'blood-warning',{pattern:id});return true;
 }
-function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.walk=null;s.hazards.length=0;s.whip=null;s.whipCooldown=1.65;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
-export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=R.transition;return true;}
+function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';s.transitioned=true;s.phasePending=false;s.seraphArmed=true;s.transitionKind='angel';s.siphon=createBloodSiphonState();s.t=0;s.index=0;s.walk=null;s.hazards.length=0;s.whip=null;s.whipCooldown=1.65;g.projectiles.length=0;g.player.action=null;s.slow=0;s.stun=0;emit(g,'phase');}
+function beginSeraph(g){
+ const s=g.blood,b=g.boss;
+ b.phase=3;b.state='transition';s.transitionKind='seraph';s.seraphPending=false;
+ s.seraphArmed=false;s.seraphAwakened=false;s.t=0;s.pattern=null;
+ s.walk=null;s.hazards.length=0;s.heartNodes=[];s.whip=null;
+ s.whipCooldown=Infinity;s.stun=0;s.slow=0;s.elevation=0;
+ if(s.siphon)s.siphon.active=false;
+ g.projectiles.length=0;g.player.action=null;
+ emit(g,'phase',{phase:3});emit(g,'blood-seraph-awakening',{duration:BLOOD_SERAPH_TRANSITION});
+}
+export function skipBloodTransition(g){if(g.boss.state!=='transition')return false;g.blood.t=g.boss.phase===3?BLOOD_SERAPH_TRANSITION:R.transition;return true;}
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}
@@ -204,6 +247,15 @@ function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.rec
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
  if(b.state==='transition'){s.t+=dt;
+  if(s.transitionKind==='seraph'){
+   const progress=Math.min(1,s.t/BLOOD_SERAPH_TRANSITION);
+   s.elevation=Math.max(0,Math.sin(progress*Math.PI))*2;
+   if(s.t>=BLOOD_SERAPH_TRANSITION){
+    s.seraphAwakened=true;s.elevation=0;s.t=0;
+    beginRecovery(g,1.85);emit(g,'blood-seraph-reveal');
+   }
+   return;
+  }
   if(s.t>=2.65&&!s.cathedralShattered){s.cathedralShattered=true;emit(g,'blood-cathedral-shatter');}
   if(s.t>=3.85&&!s.seaCrashed){s.seaCrashed=true;emit(g,'blood-sea-crash');}
   s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
@@ -214,12 +266,15 @@ function tickBoss(g,dt){
   if(startBloodPattern(g,'requiem'))s.requiredTsunamiStarted=true;
   return;
  }
+ if(b.phase===2&&s.seraphPending&&b.state!=='pattern'){beginSeraph(g);return;}
+ if(b.phase===3&&b.state!=='pattern'&&!s.seraphFinaleStarted&&
+  b.hp<=b.maxHp*BLOOD_FINAL_HYMN_RATIO){
+  if(startBloodPattern(g,'seraphFinale')){s.seraphFinaleStarted=true;return;}
+ }
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);s.whip=null;return;}
  // A telegraphed, fixed-angle counter to distant ranged camping.
  // It cannot overlap the 2P camera-only spectacles or a real wide-area hit.
- stepBloodWhip(g,dt,h=>hurt(g,h));
- if(g.status!=='playing')return;
- beginBloodWhip(g);
+ if(b.phase!==3){stepBloodWhip(g,dt,h=>hurt(g,h));if(g.status!=='playing')return;beginBloodWhip(g);}
  if(b.state==='recovery'){
   s.elevation=Math.max(0,s.elevation-dt*10);
   if(s.phasePending){beginPhase(g);return;}
@@ -231,7 +286,7 @@ function tickBoss(g,dt){
   if(s.recover<=0){
    // Keep every frame of the existing stationary punish window first.
    // A separate non-attacking stance now makes the boss visibly reposition.
-   b.state='maneuver';s.maneuver=Math.max(.98,(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap);
+   b.state='maneuver';s.maneuver=b.phase===3?.78:Math.max(.98,(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap);
    s.walk=createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
   }
   return;
@@ -263,7 +318,8 @@ function tickBoss(g,dt){
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
  if(s.t>=spec.duration){
   if(s.pattern==='requiem'&&s.requiredTsunamiStarted&&!s.requiredTsunamiDone)s.requiredTsunamiDone=true;
-  if(s.pattern==='heartFeast'){
+  if(s.pattern==='seraphFinale'){s.seraphFinaleDone=true;emit(g,'blood-seraph-final-note');}
+  if(s.pattern==='heartFeast'&&!s.seraphPending){
    const alive=s.heartNodes.filter(n=>n.hp>0).length;
    const heal=Math.max(0,Math.min(b.maxHp*.025*alive/3,b.maxHp*BLOOD_PHASE_TWO_ENTRY_RATIO-b.hp));
    if(heal>0){b.hp+=heal;emit(g,'blood-siphon-heal',{amount:heal,x:b.x,z:b.z,y:4.7});}

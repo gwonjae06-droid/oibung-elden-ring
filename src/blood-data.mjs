@@ -3,6 +3,9 @@ import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:32,hp:6400,transition:4.6});
  // The normal-journey HP pool stays unchanged. Only the 1P/2P split moves.
 export const BLOOD_PHASE_TWO_ENTRY_RATIO=.70;
+export const BLOOD_PHASE_THREE_ENTRY_RATIO=.25;
+export const BLOOD_FINAL_HYMN_RATIO=.10;
+export const BLOOD_SERAPH_TRANSITION=4.65;
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
 const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wave:{name:'피의 파도',phase:1,duration:3.8,recover:2.2},
@@ -32,17 +35,24 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wingGenesis:{name:'혈익 개벽',phase:2,duration:5.8,recover:3.35,air:true},
  heartFeast:{name:'심장의 성찬',phase:2,duration:7.1,recover:3.75},
  requiem:{name:'해일의 장송',phase:2,duration:10.65,recover:3.8},
+ // Grounded final-phase attacks use the same visual/hitbox data as the blood spells.
+ seraphWings:{name:'여섯 날개의 장송',phase:3,duration:4.4,recover:2.15},
+ seraphPulse:{name:'성당의 심장',phase:3,duration:4.2,recover:2.1},
+ seraphLances:{name:'순교자의 검무',phase:3,duration:4.5,recover:2.2},
+ seraphCrown:{name:'진홍의 후광',phase:3,duration:5.2,recover:2.1},
+ seraphFinale:{name:'최후의 성가',phase:3,duration:8.0,recover:2.5}
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
  Object.entries(ORIGINAL_BLOOD_PATTERNS).map(([id,s])=>[
   id,Object.freeze({...s,duration:s.duration+(BLOOD_EPIC_CUTS[id]?.lead||0),
-   recover:Math.max(2.2,Math.round(s.recover*BOSS_TEMPO.recovery*100)/100)})
+   recover:Math.max(s.phase===3?1.65:2.2,Math.round(s.recover*BOSS_TEMPO.recovery*100)/100)})
  ])
 ));
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
  'burst','vortex','dive','eclipse','tide','ritual','judgement',
- 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross','requiem'
+ 'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross','requiem',
+ 'seraphWings','seraphPulse','seraphLances','seraphCrown','seraphFinale'
 ]);
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
