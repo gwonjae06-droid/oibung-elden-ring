@@ -1,4 +1,5 @@
 import {KWON_THREE} from './kwon-third-phase.mjs';
+import {CLOWN_BALLET_THRESHOLDS} from './clown-ballet-score.mjs';
 const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
@@ -17,10 +18,10 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'defeated'});
   emit(g,'victory');return damage;
  }
- // Clown still has its original two-phase transformation. Kwon gains
- // distinct 100-66.7%, 66.7-33.3%, 33.3-0% phases.
- const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?.5:KWON_THREE.first)?2:
-  !g.clown&&b.phase===2&&b.hp<=b.maxHp*KWON_THREE.second?3:null;
+ // Clown: circus 100-70%, ringmaster 70-33.3%, final wooden ballet 33.3%-0.
+ // Kwon's independent three-phase contract is unchanged.
+ const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.second:KWON_THREE.first)?2:
+  b.phase===2&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.third:KWON_THREE.second)?3:null;
  if(nextPhase!==null){
   Object.assign(b,{phase:nextPhase,state:'transition',t:0,queue:[],poise:0,
    stun:0,punishable:false,from:null,motionFrom:null,riftFired:false,
