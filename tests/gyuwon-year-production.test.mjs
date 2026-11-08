@@ -54,14 +54,17 @@ test('rifle warning, ballistics and physical muzzle center share one aim vector'
  fx.dispose();
 });
 
-test('seventh-year streaming attack is a real 3D cone and physical broadcast set',()=>{
+test('seventh-year donation is a physical six-way exam gacha, never a translucent danger cone',()=>{
  const g=game(7);startGyuwonYearCast(g,'donation');
  const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
  fx.update(g);
  assert.ok(stage.getObjectByName('gyuwon-seven-year-broadcast-studio'));
- const surface=stage.getObjectByName('gyuwon-live-cone-surface');
- assert.ok(surface?.geometry?.attributes?.position?.count>20);
- assert.equal(fx.stats().physicalCues,g.gyuwon.hazards.length);
+ const roulette=stage.getObjectByName('gyuwon-seven-year-suneung-gacha-roulette');
+ assert.ok(roulette?.visible);
+ assert.equal(fx.stats().gachaSectors,6);
+ assert.ok(g.gyuwon.hazards.every(h=>h.shape==='circle'&&h.visual==='year-gacha-prize'));
+ assert.ok(g.gyuwon.hazards.every(h=>h.warn>=3),'the outcome must be readable before prize impact');
+ assert.equal(stage.getObjectByName('gyuwon-live-cone-surface'),undefined);
  fx.dispose();
 });
 

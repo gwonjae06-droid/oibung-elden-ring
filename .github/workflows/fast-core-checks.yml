@@ -52,5 +52,11 @@ jobs:
           tests/kwon-close-defense-dodge-cancel.test.mjs
       - name: Verify giant lunar fragments, exact shadows and meteor timings
         run: node --test tests/kwon-moon-cataclysm.test.mjs
+      - name: Verify Gyuwon annual exams, physical rigs and Suneung donation roulette
+        run: >
+          node --test
+          tests/gyuwon-years.test.mjs
+          tests/gyuwon-year-production.test.mjs
+          tests/gyuwon-year-rework.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs
