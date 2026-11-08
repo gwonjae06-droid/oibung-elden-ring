@@ -1,6 +1,7 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
 import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe,prepareCircusPhaseTransition} from './clown-troupe.mjs';
+import {balanceClownTroupeWarning,protectClownEscapeFromDirector} from './clown-escape-routes.mjs';
 import {REMASTERED_CIRCUS_RUN} from './clown-ensemble-repertoire.mjs';
 import {RINGMASTER_ATTACK_DEFINITIONS} from './clown-ringmaster-attacks.mjs';
 import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
@@ -123,6 +124,9 @@ function zone(g, z) {
     blast: false,
     ...z,
   };
+  if(q.source==='troupe'||q.source==='legacyEcho')
+    Object.assign(q,balanceClownTroupeWarning(g,q));
+  else protectClownEscapeFromDirector(g,q);
   g.clown.zones.push(q);
   emit(g, 'clown-zone', {id: q.id, shape: q.shape, warn: q.warn, sound:q.sound||null});
   return q;
