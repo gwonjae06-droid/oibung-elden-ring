@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 // Actual handheld objects on the sculpted actor's wrist joints. No duplicate
-// 'rifle and bow at once' prop can be spawned in world space.
+// 4th-year dual-wield remains physically attached to the original wrist rig.
 export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  const materials=[],geometries=[],groups=[];
  const material=(color,opts={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.65,...opts});materials.push(m);return m;};
@@ -70,6 +70,16 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  drawLine.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9),3));
  const bowString=new THREE.Line(drawLine,new THREE.LineBasicMaterial({color:0xf4eac8}));
  materials.push(bowString.material);bowString.name='gyuwon-bow-live-drawn-string';bow.add(bowString);
+ // Mechanically reloaded bow magazine sits on the LEFT-hand bow; the
+ // right arm stays committed to the rifle instead of pulling the string.
+ const repeatingBow=add(bow,new THREE.BoxGeometry(.27,.30,.78),metal,
+  'gyuwon-mechanical-bow-autoloader',0,-.04,.56);
+ const guide=add(bow,new THREE.CylinderGeometry(.045,.045,1.37,coarse?8:12),barrel,
+  'gyuwon-repeating-bow-arrow-guide',0,-.08,1.05);guide.rotation.x=Math.PI/2;
+ const autoArrow=add(bow,new THREE.CylinderGeometry(.033,.033,1.2,coarse?7:12),
+  wood,'gyuwon-repeating-bow-loaded-arrow',0,-.08,1.13);autoArrow.rotation.x=Math.PI/2;
+ const autoTip=add(bow,new THREE.ConeGeometry(.11,.26,coarse?8:12),barrel,
+  'gyuwon-repeating-bow-broadhead',0,-.08,1.73);autoTip.rotation.x=Math.PI/2;
  const arrow=mount(wrists[1],'gyuwon-fourth-year-nocked-arrow');
  arrow.position.set(0,-.16,.18);
  const arrowShaft=add(arrow,new THREE.CylinderGeometry(.031,.031,1.55,coarse?8:12),
@@ -84,7 +94,10 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   const e=g?.gyuwon?.years,year=e?.year,cast=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
   const pose=gyuwonWeaponPose(e,g.gyuwon?.hazards);
   cigarette.visible=pose.cigarette;gun.visible=pose.rifle;
-  supportingHand.visible=gun.visible;bow.visible=pose.bow;arrow.visible=pose.nocked;
+  supportingHand.visible=gun.visible&&!pose.dual;
+  bow.visible=pose.bow;arrow.visible=pose.nocked;
+  repeatingBow.visible=pose.dual;guide.visible=pose.dual;
+  autoArrow.visible=pose.autoNocked;autoTip.visible=pose.autoNocked;
   const smoking=Math.max(0,Math.min(1,t/1.2));
   cigarette.rotation.set(-.24-.55*smoking,0,.16);
   ember.emissiveIntensity=1.1+.7*Math.max(0,Math.sin(t*8));
@@ -100,11 +113,17 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   const pull=pose.draw;
   const positions=drawLine.getAttribute('position');
   positions.setXYZ(0,0,-1.26,.17);
-  bow.updateWorldMatrix(true,false);wrists[1].getWorldPosition(stringHand);bow.worldToLocal(stringHand);
-  positions.setXYZ(1,stringHand.x,stringHand.y,stringHand.z);
+  if(pose.dual){
+   // Autonomous bowstring draw without dragging the rifle-bearing wrist.
+   positions.setXYZ(1,0,-.05,.64-.47*pull);
+  }else{
+   bow.updateWorldMatrix(true,false);wrists[1].getWorldPosition(stringHand);bow.worldToLocal(stringHand);
+   positions.setXYZ(1,stringHand.x,stringHand.y,stringHand.z);
+  }
   positions.setXYZ(2,0,1.26,.17);
   positions.needsUpdate=true;
   arrow.position.z=.18-pull*.54;arrow.rotation.x=.12*pull;
+  autoArrow.position.z=1.13-pull*.39;autoTip.position.z=1.73-pull*.39;
  }
  function dispose(){if(disposed)return;disposed=true;
   groups.forEach(g=>g.removeFromParent());
