@@ -115,7 +115,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
   // These buildings are outside radius 32 and never alter actual navigation.
   world.visible=worldStrength>.045;
   if(world.visible){
-   wall.material.color.copy(tint.setHex(0x687585).lerp(worldTint,breakLevel*.67));
+   wall.color.copy(tint.setHex(0x687585).lerp(worldTint,breakLevel*.67));
    const level=breakLevel;
    for(let i=0;i<wallCount;i++){
     const a=i*2*Math.PI/wallCount,r=41+(i%3)*3.7,phi=Math.sin(i*21.17);
