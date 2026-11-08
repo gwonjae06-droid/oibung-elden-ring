@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ownAnticipation,ridePose,smooth,tentacleYaw} from './gyuwon-year-choreography.mjs';
+import {ownAnticipation,ridePose,rideFrame,smooth,tentacleYaw} from './gyuwon-year-choreography.mjs';
 import {createGyuwonPressureCrest} from './gyuwon-pressure-crest.mjs';
 import {hazardPosition} from './gyuwon-data.mjs';
 import {buildGyuwonYearAttackCues} from './gyuwon-year-cues.mjs';
@@ -70,10 +70,13 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  mesh(exam,cylinder,graphite,.42,1.45,.15,.025,.63,.025).rotation.z=.63;
  const motorcycle=new THREE.Group();motorcycle.name='gyuwon-motorbike';root.add(motorcycle);
  const scooter=new THREE.Group();scooter.name='gyuwon-electric-scooter';root.add(scooter);
+ const rideWheels=[];let wheelTravel=0,wheelAt=null,wheelCast=-1;
  function wheel(parent,z,r=.7){
-  const outer=mesh(parent,cylinder,rubber,0,r,z,r,.28,r);
-  outer.rotation.z=Math.PI/2;const hub=mesh(parent,cylinder,steel,0,r,z,r*.35,.32,r*.35);
-  hub.rotation.z=Math.PI/2;return outer;
+  const rotor=new THREE.Group();rotor.name=parent.name+(z>0?'-front-wheel':'-rear-wheel');rotor.position.set(0,r,z);parent.add(rotor);
+  const outer=mesh(rotor,cylinder,rubber,0,0,0,r,.28,r);outer.rotation.z=Math.PI/2;
+  const hub=mesh(rotor,cylinder,steel,0,0,0,r*.35,.32,r*.35);hub.rotation.z=Math.PI/2;
+  for(const angle of [0,Math.PI/3,-Math.PI/3])mesh(rotor,box,steel,0,0,0,.30,r*1.55,.055).rotation.x=angle;
+  rideWheels.push({rotor,r});return rotor;
  }
  wheel(motorcycle,-1.35,.77);wheel(motorcycle,1.35,.77);
  mesh(motorcycle,box,steel,0,1.15,0,.72,.45,2.1);
@@ -345,12 +348,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  function update(g){
   if(disposed)return;
   const e=g?.gyuwon?.years,b=g?.boss,s=g?.gyuwon;
-  if(owned!==g){owned=g;clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();activePileYear=0;}
+  if(owned!==g){owned=g;wheelTravel=0;wheelAt=null;wheelCast=-1;clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();activePileYear=0;}
   if(!e||g.status!=='playing'){root.visible=false;clearWave();removeDynamic();return;}
   root.visible=true;apocalypse.update(g);
   if(activePileYear!==e.year){activePileYear=e.year;bookPiles.clear();piles.length=0;piled.clear();}
   exam.visible=e.mode==='exam';exam.position.set(b.x,0,b.z);exam.rotation.y=b.yaw;
   const mounted=ridePose(e);
+  if(!mounted||wheelCast!==e.castCount){wheelTravel=0;wheelAt=null;wheelCast=e.castCount;}
+  if(mounted){if(wheelAt)wheelTravel+=Math.hypot(mounted.x-wheelAt.x,mounted.z-wheelAt.z);wheelAt={x:mounted.x,z:mounted.z};for(const {rotor,r}of rideWheels)rotor.rotation.x=wheelTravel/r;}
   motorcycle.visible=!!mounted&&mounted.ride==='bike';scooter.visible=!!mounted&&mounted.ride==='scooter';
   gacha.update(g);
   bodyslime.visible=false;
@@ -364,8 +369,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    light.scale.setScalar(1+liveEnergy*.12*Math.sin(g.time*6));
   }
   tentacleRoot.visible=e.mode==='combat'&&(e.year===8||e.cast==='nightmare365'&&e.castT>=9.2&&e.castT<11.2);
-  motorcycle.position.set(b.x,mounted?.y||0,b.z);motorcycle.rotation.y=b.yaw;
-  scooter.position.set(b.x,mounted?.y||0,b.z);scooter.rotation.y=b.yaw;
+  if(mounted){const frame=rideFrame(mounted);for(const vehicle of [motorcycle,scooter]){vehicle.position.set(frame.x,frame.y+(b.floorY||0),frame.z);vehicle.rotation.set(frame.pitch,frame.yaw,frame.bank,'YXZ');}}
   bodyslime.position.set(b.x,0,b.z);
   if(flameAura.visible)for(let i=0;i<auraFlames.length;i++){
    const flame=auraFlames[i],a=i*Math.PI/4;

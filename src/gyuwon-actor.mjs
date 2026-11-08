@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ridePose,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
+import {ridePose,rideFrame,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {createGyuwonHandIk} from './gyuwon-hand-ik.mjs';
 import {createGyuwonMotionDirector} from './gyuwon-motion.mjs';
 import {createGyuwonYearRig} from './gyuwon-year-rig.mjs';
@@ -208,10 +208,11 @@ export function createGyuwonActor(stage,{coarse=false}={}){
     pants.color.copy(originalColors[1]).lerp(tone,.20);}
   }
   const transition=b.state==='transition';
-  root.position.set(b.x,g.status==='won'?death*death*1.5:mounted?.y||0,b.z);
-  root.rotation.y=p.facing;
+  const rider=mounted?rideFrame(mounted):null;
+  root.position.set(rider?.x??b.x,g.status==='won'?death*death*1.5:rider?.y||0,rider?.z??b.z);
+  root.rotation.set(rider?.pitch||0,p.facing,rider?.bank||0,'YXZ');
   const roll=s.years?.dodge;
-  root.rotation.z=roll?Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7:0;
+  if(roll)root.rotation.z=Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
   if(s.years?.year===5&&g.status==='playing')root.scale.set(1+.065*Math.sin(t*3.7),1-.095*Math.sin(t*3.7),1+.05*Math.sin(t*2.8));
   torso.rotation.set(weapon.rifle?0:mounted?.28:p.lean*.42,weapon.rifle?0:p.twist*.28,weapon.rifle?0:p.twist*.10+(p.weightShift||0)*.035);

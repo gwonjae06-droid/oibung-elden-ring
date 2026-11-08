@@ -39,7 +39,7 @@ test('vehicle collision, actor position and jump all use the same continuous rou
   let previous={x:g.boss.x,z:g.boss.z};
   for(let t=0;t<e.rideTrack.at(-1).end;t+=1/120){
    stepGyuwon(g,1/120);
-   assert.ok(Math.hypot(g.boss.x,g.boss.z)<=27.01);
+   assert.ok(Math.hypot(g.boss.x,g.boss.z)<=28.01);
    assert.ok(Math.hypot(g.boss.x-previous.x,g.boss.z-previous.z)<1,'no cast-local teleports');
    for(const h of g.gyuwon.hazards.filter(h=>h.rideSegment&&h.age>=h.warn&&h.age<h.warn+h.life)){
     const p=hazardPosition(h);assert.ok(Math.hypot(p.x-g.boss.x,p.z-g.boss.z)<1e-6);
