@@ -10,6 +10,14 @@ export function rifleRay(g,angle,length=64){
  return {x:muzzleX+Math.sin(angle)*length/2,z:muzzleZ+Math.cos(angle)*length/2,
   yaw:angle,length,muzzleX,muzzleZ};
 }
+// Mirrored wrist origin for the independent repeating bow. The two arms
+// share the same yaw clock while keeping separate physical muzzle positions.
+export const GYUWON_BOW_SOCKET=Object.freeze({side:-.365,forward:1.38,height:2.38});
+export function bowMuzzle(g,angle){
+ const {side,forward}=GYUWON_BOW_SOCKET;
+ return {x:g.boss.x+Math.cos(angle)*side+Math.sin(angle)*forward,
+  z:g.boss.z-Math.sin(angle)*side+Math.cos(angle)*forward};
+}
 export function rifleAimYaw(hazards){
  const shots=hazards.filter(h=>h.visual==='year-bullet');
  const next=shots.find(h=>h.age<h.warn),previous=shots.findLast(h=>h.age>=h.warn);
@@ -90,16 +98,24 @@ export function makeRide(g,{add,ultimate=false,scooter=false}={}){
 export function gyuwonWeaponPose(e,hazards=[]){
  const id=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
  const rifle=id==='sniper'||id==='crossfire'&&t<3.65||id==='ultimateMarksman'||id==='nightmare365'&&t>=4.25&&t<5.9;
- const bow=id==='archery'||id==='crossfire'&&t>=3.65;
+ const dual=id==='ultimateMarksman';
+ const bow=dual||id==='archery'||id==='crossfire'&&t>=3.65;
  const cigarette=id==='smoke';
- const shots=hazards.filter(h=>h.visual===(bow?'year-arrow':'year-bullet'));
- const next=shots.find(h=>h.age<h.warn),recent=shots.findLast(h=>h.age>=h.warn);
- // Each release has its own recoil and reload; a previous arrow never latches
- // the string into its released pose for the rest of a four-shot sequence.
- const since=recent?recent.age-recent.warn:Infinity;
- const recoil=since<.24?Math.sin(Math.PI*since/.24):0;
- const draw=bow&&next?smooth(1-(next.warn-next.age)/.38):0;
- return {rifle,bow,cigarette,recoil,draw,nocked:bow&&!!next&&since>.10};
+ const bulletShots=hazards.filter(h=>h.visual==='year-bullet');
+ const arrowShots=hazards.filter(h=>h.visual==='year-arrow');
+ const latestRifle=bulletShots.findLast(h=>h.age>=h.warn);
+ const nextArrow=arrowShots.find(h=>h.age<h.warn);
+ const latestArrow=arrowShots.findLast(h=>h.age>=h.warn);
+ const sinceRifle=latestRifle?latestRifle.age-latestRifle.warn:Infinity;
+ const sinceArrow=latestArrow?latestArrow.age-latestArrow.warn:Infinity;
+ // Independent beats allow continuous right-hand rifle recoil and
+ // left-hand bow draw. Dual mode uses a self-nocking mechanical bow:
+ // the rifle hand does not teleport across to its string.
+ const recoil=sinceRifle>=0&&sinceRifle<.24?Math.sin(Math.PI*sinceRifle/.24):0;
+ const draw=bow&&nextArrow?smooth(1-(nextArrow.warn-nextArrow.age)/.38):0;
+ return {rifle,bow,dual,cigarette,recoil,draw,
+  nocked:bow&&!dual&&!!nextArrow&&sinceArrow>.10,
+  autoNocked:dual&&!!nextArrow};
 }
 export function ownAnticipation(h,lead=1.05){
  return unit(1-(h.warn-h.age)/Math.min(lead,h.warn));

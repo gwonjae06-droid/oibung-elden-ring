@@ -2,11 +2,28 @@
 // the common hazard stream. No renderer owns a second collision clock.
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardPosition} from './gyuwon-data.mjs';
-import {rifleRay} from './gyuwon-year-choreography.mjs';
+import {rifleRay,bowMuzzle} from './gyuwon-year-choreography.mjs';
 // 210 actual bullets: 30 seven-shot volleys. The rifle snapshots the
 // target at the start of each volley, with readable, real-world preparation.
 export const MARKSMAN_VOLLEYS=30;
 export const MARKSMAN_BURST_ROUNDS=7;
+export const MARKSMAN_BOW_PER_VOLLEY=2;
+export const MARKSMAN_COVER_HP=1800;
+// Aim is locked per volley. The rifle retains its 210 rounds, while a
+// wrist-held repeating bow releases two *real travelling arrows* alongside it.
+export function spawnMarksmanBowVolley(g,add,volley,aim){
+ const b=g.boss;
+ for(let i=0;i<MARKSMAN_BOW_PER_VOLLEY;i++){
+  const angle=aim+(i?1:-1)*.105;
+  const origin=bowMuzzle(g,angle);
+  add(g,'circle',{x:origin.x,z:origin.z,r:.72,
+   vx:Math.sin(angle)*28,vz:Math.cos(angle)*28,
+   warn:1.22+i*.16,life:1.55,damage:24,
+   visual:'year-arrow',signature:'ultimateMarksman',
+   marksmanVolley:volley,marksmanBow:true,
+   originX:origin.x,originZ:origin.z});
+ }
+}
 export function tickMarksmanBarrage(g,add){
  const e=g?.gyuwon?.years;if(e?.cast!=='ultimateMarksman')return;
  e.marksmanVolleys??=1;
@@ -19,6 +36,7 @@ export function tickMarksmanBarrage(g,add){
     width:.7,life:.22,damage:45,visual:'year-bullet',
     signature:'ultimateMarksman',marksmanVolley:burst});
   }
+  spawnMarksmanBowVolley(g,add,burst,aim);
  }
 }
 export function augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim}){
@@ -29,13 +47,14 @@ export function augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim}){
   e.cover=positions.map(([forward,side],index)=>{
    const c={x:b.x+Math.sin(a)*forward+Math.cos(a)*side,
     z:b.z+Math.cos(a)*forward-Math.sin(a)*side,
-    hp:675,maxHp:675,index,hitAt:-1000,brokenAt:null};
+    hp:MARKSMAN_COVER_HP,maxHp:MARKSMAN_COVER_HP,index,hitAt:-1000,brokenAt:null};
    const r=Math.hypot(c.x,c.z);if(r>25){c.x*=25/r;c.z*=25/r;}
    if(Math.hypot(c.x-p.x,c.z-p.z)<2.9){c.x-=Math.sin(a)*3;c.z-=Math.cos(a)*3;}
    return c;
   });
   e.marksmanVolleys=1;
   for(const h of g.gyuwon.hazards)if(h.visual==='year-bullet'){h.damage=45;h.marksmanVolley=0;}
+  spawnMarksmanBowVolley(g,add,0,a);
  }
  if(id==='crossfire')for(let i=0;i<2;i++){const angle=a+(i?-.42:.42);add(g,'circle',{x:b.x,z:b.z,r:.78,vx:Math.sin(angle)*27,vz:Math.cos(angle)*27,warn:4.35+i*.5,life:1.55,damage:24,visual:'year-arrow'});}
  if(id==='archery')for(const h of g.gyuwon.hazards){const angle=a+drawPatternShuffle(g.gyuwon.patternDeck,'gyuwon-arrow-spread',[-.3,-.15,0,.15,.3]);h.vx=Math.sin(angle)*27;h.vz=Math.cos(angle)*27;}
@@ -106,11 +125,42 @@ export function resolveAnnualProjectileCover(g,h,emit){
   h.length=near;h.x=sx+dx*near/2;h.z=sz+dz*near/2;
   emit('gyuwon-cover-hit',{x:hit.x,z:hit.z,broken:hit.hp===0});}
 }
+// A travelling arrow is stopped at the first intact concrete slab it
+// intersects on this simulation step. This is swept collision, so fast arrows
+// cannot jump through cover between 60/120 Hz ticks.
+export function resolveAnnualArrowCover(g,h,dt,emit=()=>{}){
+ const cover=g.gyuwon?.years?.cover;
+ if(!h.marksmanBow||h.coverStopped||!cover?.length||h.age<=h.warn)return false;
+ const before=Math.max(0,h.age-h.warn-dt),after=h.age-h.warn;
+ const ax=h.x+(h.vx||0)*before,az=h.z+(h.vz||0)*before;
+ const dx=(h.vx||0)*(after-before),dz=(h.vz||0)*(after-before);
+ const mag=dx*dx+dz*dz;if(mag<=1e-9)return false;
+ let nearest=null,nearestT=Infinity;
+ for(const c of cover){
+  if(c.hp<=0)continue;
+  const t=Math.max(0,Math.min(1,((c.x-ax)*dx+(c.z-az)*dz)/mag));
+  const cx=ax+dx*t,cz=az+dz*t;
+  const radius=2.15+h.r*.5;
+  if((cx-c.x)**2+(cz-c.z)**2<=radius*radius&&t<nearestT){
+   nearest=c;nearestT=t;
+  }
+ }
+ if(!nearest)return false;
+ nearest.hp=Math.max(0,nearest.hp-h.damage);
+ nearest.hitAt=g.time;
+ if(nearest.hp===0&&nearest.brokenAt===null)nearest.brokenAt=g.time;
+ h.hit=true;h.coverStopped=true;
+ h.age=h.warn+h.life;
+ emit('gyuwon-cover-hit',{x:nearest.x,z:nearest.z,
+  broken:nearest.hp===0,projectile:'arrow'});
+ return true;
+}
 export function tickAnnualMechanics(g,h,dt,add,emit){
  if(h.gapTarget!==undefined&&h.age>=h.shiftAt){const delta=h.gapTarget-h.gap;h.gap+=Math.sign(delta)*Math.min(Math.abs(delta),h.shiftSpeed*dt);}
  if(h.redirectAt&&!h.redirected&&h.age>=h.redirectAt){const p=hazardPosition(h);h.x=p.x;h.z=p.z;const speed=Math.hypot(h.vx,h.vz);h.vx=Math.sin(h.redirectYaw)*speed;h.vz=Math.cos(h.redirectYaw)*speed;h.life=Math.max(.5,h.warn+h.life-h.age);h.warn=h.age;h.redirected=true;}
  if(h.persistent&&h.age>=h.warn&&(h.nextTick||0)<=h.age){h.hit=false;h.nextTick=h.age+1;}
  if(h.visual==='year-workbook'&&!h.opened&&h.age>=h.warn+h.life-.04){h.opened=true;const p=hazardPosition(h);add(g,'ring',{x:p.x,z:p.z,r:.8,width:.5,grow:4,warn:1.05,life:1.2,damage:14,visual:'year-open-workbook',lingering:true});}
+ resolveAnnualArrowCover(g,h,dt,emit);
  if(!h.fired&&h.age>=h.warn){
   resolveAnnualProjectileCover(g,h,emit);
   if(h.visual==='year-sludge'&&!h.persistent&&g.gyuwon.hazards.filter(x=>x.persistent).length<12)add(g,'circle',{x:h.x,z:h.z,r:h.r,damage:5,warn:.8,life:7,visual:'year-sludge',persistent:true,puddle:true});

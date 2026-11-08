@@ -27,7 +27,10 @@ export function createGyuwonHandIk({arms,forearms,wrists,torso}){
  }
  return {update(e,weapon,mounted){
   const blend=smooth((e?.castT||0)/.75);
-  if(weapon.rifle){solve(1,[.35,.40,.55],blend);solve(0,[.10,.38,1.0],blend);}
+  if(weapon.dual){
+   // Rifle in right hand, mechanical repeating bow in left hand.
+   solve(1,[.35,.40,.55],blend);solve(0,[-.28,.35,.85],blend);
+  }else if(weapon.rifle){solve(1,[.35,.40,.55],blend);solve(0,[.10,.38,1.0],blend);}
   else if(weapon.bow){solve(0,[-.22,.40,1.03],blend);solve(1,[-.12,.42,.48-weapon.draw*.20],blend);}
   else if(mounted){
    const bike=mounted.ride==='bike';
