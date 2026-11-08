@@ -88,7 +88,12 @@ try{
  await showYear(5,'sewageWave');
  await page.waitForTimeout(430);await page.screenshot({path:'artifacts/gyuwon-years/osu-sewage-wave.png'});
  await showYear(7,'donation');
- await page.waitForTimeout(420);
+ // Shader warmup may delay the first visible frame after direct QA
+ // state injection. Wait for the actual UI update, not a fixed 420ms.
+ await page.waitForFunction(()=>{
+  const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
+  return root?.querySelector('.gy-dday-chat')?.hidden===false;
+ },{},{timeout:20000});
  const chatState=await page.locator('#gyuwon-battle').evaluate(async el=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const root=el.firstElementChild.shadowRoot,session=readBattleSession(root);
