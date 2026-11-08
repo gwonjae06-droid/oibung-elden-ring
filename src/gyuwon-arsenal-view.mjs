@@ -23,7 +23,7 @@ export function createArsenalFx(stage){
   quake.rotation.x=Math.PI/2;g.add(arrow,deck,quake);root.add(g);const s={g,arrow,deck,quake};slots.push(s);return s;
  }
  return {root,update(g){if(disposed)return;let n=0;
-  for(const h of g.gyuwon.hazards){if(!h.arsenal||h.weaponStrike||h.age<h.warn-1.1)continue;
+  for(const h of g.gyuwon.hazards){if(!h.arsenal||h.weaponStrike||h.age<h.warn-1.1||h.visual==='arsenal-quake'&&h.age<h.warn)continue;
    const s=slots[n++]||slot(),p=hazardPosition(h),fall=h.visual==='arsenal-falling-arrow',q=Math.max(0,Math.min(1,1-(h.warn-h.age)/1.1));
    s.g.visible=true;s.arrow.visible=h.visual.includes('arrow');s.deck.visible=h.visual==='arsenal-card';s.quake.visible=h.visual==='arsenal-quake';
    s.g.position.set(p.x,fall?.2+(1-q)*18:2.35,p.z);s.g.rotation.set(0,h.yaw||0,0);s.g.scale.setScalar(1);
