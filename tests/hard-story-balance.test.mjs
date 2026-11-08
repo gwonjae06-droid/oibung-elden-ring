@@ -7,7 +7,7 @@ import {createClownGame,choosePattern,PATTERNS as CLOWN,LIVE_REPERTOIRE} from '.
 import {createDicePlayerGame} from '../src/dice-player.mjs';
 import {createBloodGame,damageBlood} from '../src/blood-combat.mjs';
 import {createBloodPatternDeck,nextBloodPattern} from '../src/blood-pattern-director.mjs';
-import {bloodPool} from '../src/blood-data.mjs';
+import {bloodPool,BLOOD_PHASE_TWO_ENTRY_RATIO} from '../src/blood-data.mjs';
 import {nextGiantPressureSlot,GIANT_NAMES,FERAL_NAMES} from '../src/dice-giant.mjs';
 import {createPatternShuffle} from '../src/pattern-shuffle.mjs';
 import {actPlayer,tickPlayerAction} from '../src/player-combat.mjs';
@@ -111,7 +111,7 @@ test('story phase thresholds are still based on current max HP',()=>{
  assert.equal(dice.boss.phase,2);
  assert.equal(dice.dice.giant.state,'transition');
  const blood=story(createBloodGame('sword'),3);
- damageBlood(blood,blood.boss.hp-(blood.boss.maxHp*.5-1));
+ damageBlood(blood,blood.boss.hp-(blood.boss.maxHp*BLOOD_PHASE_TWO_ENTRY_RATIO-1));
  assert.equal(blood.blood.phasePending,true);
  assert.equal(blood.boss.phase,1);
 });

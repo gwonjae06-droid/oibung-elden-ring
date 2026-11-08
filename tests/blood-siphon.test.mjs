@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createBloodGame,stepBlood,damageBlood,skipBloodTransition} from '../src/blood-combat.mjs';
-import {BLOOD_RULES} from '../src/blood-data.mjs';
+import {BLOOD_RULES,BLOOD_PHASE_TWO_ENTRY_RATIO} from '../src/blood-data.mjs';
+import {configureJourney,newRun,freshProfile} from '../src/journey-state.mjs';
+import {JOURNEY_BOSS_HP} from '../src/journey-balance.mjs';
 import {BLOOD_SIPHON_RULES,createBloodSiphonState} from '../src/blood-siphon.mjs';
 import {createBloodSiphonFx} from '../src/blood-siphon-fx.mjs';
 import {buildBloodView} from '../src/blood-view.mjs';
@@ -39,15 +41,17 @@ test('blood siphon is a finite 2P-only timed heal with a readable warning, not i
  assert.equal(g.boss.phase,2);
  assert.ok(g.blood.siphon.flash>0);
 });
-test('siphon waits if no HP is missing, cannot heal past half, and cannot revert phases',()=>{
- const g=phaseTwo(BLOOD_RULES.hp*.5);
+test('siphon respects the new 70% second-phase ceiling without reverting phases',()=>{
+ const cap=BLOOD_RULES.hp*BLOOD_PHASE_TWO_ENTRY_RATIO;
+ const g=phaseTwo(cap);
+ assert.equal(BLOOD_SIPHON_RULES.phaseCeiling,BLOOD_PHASE_TWO_ENTRY_RATIO);
  advance(g,BLOOD_SIPHON_RULES.firstDelay+4);
  assert.equal(g.blood.siphon.active,false);
  assert.equal(g.blood.siphon.heals,0);
- g.boss.hp=3182;
+ g.boss.hp=cap-18;
  advance(g,4.8);
  assert.equal(g.blood.siphon.heals,1);
- assert.equal(g.boss.hp,3200);
+ assert.equal(g.boss.hp,cap);
  assert.equal(g.events.filter(e=>e.type==='blood-siphon-heal')[0].amount,18);
  assert.equal(g.boss.phase,2);
 });
@@ -65,7 +69,7 @@ test('only five completed channels can restore blood, preventing an endless boss
 });
 test('phase-one and 2P transformation cannot siphon; pause, defeat and invalid dt never heal',()=>{
  const one=createBloodGame();one.blood.recover=1000;one.player.hp=one.player.maxHp=1e7;
- one.boss.hp=2200; // Phase one below half must still use its normal transition logic, not siphon.
+ one.boss.hp=2200; // Only phase two may siphon, even if manually set below its threshold.
  advance(one,12);
  assert.equal(one.blood.siphon.active,false);assert.equal(one.blood.siphon.heals,0);
  const transitioned=createBloodGame();
@@ -134,4 +138,38 @@ test('full cathedral view attaches siphon visuals, releases them and leaves hit 
  view.clear();assert.equal(view.stats().siphon.active,false);
  view.dispose();view.dispose();
  assert.deepEqual(disposeScene(scene).errors,[]);
+});
+
+test('story boss enters second phase at 70% without raising total HP',()=>{
+ const g=createBloodGame('sword');
+ const run={...newRun('sword'),stage:3};
+ configureJourney(g,run,freshProfile());
+ assert.equal(g.boss.maxHp,JOURNEY_BOSS_HP.blood);
+ const max=g.boss.maxHp,threshold=max*BLOOD_PHASE_TWO_ENTRY_RATIO;
+ assert.ok(threshold>3000,'the existing required wave must remain within phase two');
+ const before=max-(threshold+1);
+ assert.ok(damageBlood(g,before)>0);
+ assert.equal(g.blood.phasePending,false);
+ assert.equal(g.boss.phase,1);
+ damageBlood(g,2);
+ assert.ok(g.boss.hp<=threshold);
+ assert.equal(g.blood.phasePending,true);
+ stepBlood(g,.05);
+ assert.equal(g.boss.phase,2);
+ assert.equal(g.boss.state,'transition');
+ assert.equal(g.boss.maxHp,max);
+ assert.ok(skipBloodTransition(g));
+ stepBlood(g,.05);
+ assert.equal(g.boss.state,'recovery');
+ assert.equal(g.blood.siphon.heals,0);
+ assert.equal(g.blood.requiredTsunamiDone,false);
+ // Preserve the separate mandatory 3000 HP tsunami as a middle-of-2P
+ // showcase, instead of firing it immediately on the earlier transition.
+ damageBlood(g,100000);
+ assert.equal(g.boss.hp,3000);
+ stepBlood(g,.05);
+ assert.equal(g.blood.requiredTsunamiStarted,true);
+ assert.equal(g.blood.pattern,'requiem');
+ assert.equal(damageBlood(g,100000),0,'the tsunami cannot be bypassed');
+ assert.equal(g.status,'playing');
 });

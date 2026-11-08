@@ -8,7 +8,7 @@ import {BOSS_TEMPO} from './boss-tempo.mjs';
 import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bloodFlightPosition} from './blood-footwork.mjs';
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
-import {BLOOD_RULES as R,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
+import {BLOOD_RULES as R,BLOOD_PHASE_TWO_ENTRY_RATIO,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -60,7 +60,7 @@ export function damageBlood(g,amount,impact=null,{dot=false}={}){
  const floor=s.requiredTsunamiDone?(b.phase===1?1:0):Math.min(b.hp,BLOOD_REQUIRED_TSUNAMI_HP);
  const damage=Math.min(amount,Math.max(0,b.hp-floor));b.hp-=damage;
  if(damage&&!dot)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
- if(b.phase===1&&b.hp<=b.maxHp*.5)s.phasePending=true;
+ if(b.phase===1&&b.hp<=b.maxHp*BLOOD_PHASE_TWO_ENTRY_RATIO)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.whip=null;s.slow=0;emit(g,'victory');}
  return damage;
 }
@@ -265,7 +265,7 @@ function tickBoss(g,dt){
   if(s.pattern==='requiem'&&s.requiredTsunamiStarted&&!s.requiredTsunamiDone)s.requiredTsunamiDone=true;
   if(s.pattern==='heartFeast'){
    const alive=s.heartNodes.filter(n=>n.hp>0).length;
-   const heal=Math.max(0,Math.min(b.maxHp*.025*alive/3,b.maxHp*.5-b.hp));
+   const heal=Math.max(0,Math.min(b.maxHp*.025*alive/3,b.maxHp*BLOOD_PHASE_TWO_ENTRY_RATIO-b.hp));
    if(heal>0){b.hp+=heal;emit(g,'blood-siphon-heal',{amount:heal,x:b.x,z:b.z,y:4.7});}
    s.heartNodes=[];
   }

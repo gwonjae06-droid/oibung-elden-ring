@@ -1,4 +1,4 @@
-import {BLOOD_RULES} from './blood-data.mjs';
+import {BLOOD_PHASE_TWO_ENTRY_RATIO} from './blood-data.mjs';
 
 // A deliberately finite second-phase sustain mechanic. The blood sea recharges
 // the boss, but never above the phase-two entry threshold and never indefinitely.
@@ -7,9 +7,9 @@ export const BLOOD_SIPHON_RULES=Object.freeze({
  firstDelay:10.5,
  interval:15,
  channel:2.4,
- healFraction:.05, // 5% of the encounter's configured max HP (250 at 5,000 story HP).
+ healFraction:.05, // 5% of the encounter's configured max HP.
  maxHeals:5,
- phaseCeiling:.5,
+ phaseCeiling:BLOOD_PHASE_TWO_ENTRY_RATIO,
  retryWhenFull:1.25
 });
 
