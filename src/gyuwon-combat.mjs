@@ -35,7 +35,15 @@ export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
 }
 export function actGyuwon(g,type,input={}){
  if(g.status!=='playing'||g.boss.state==='transition'||g.gyuwon.years?.mode==='result')return false;
- if(!g.player.action)g.player.yaw=type==='roll'&&(input.x||input.z)?Math.atan2(input.x||0,input.z||0):Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
+ if(!g.player.action){
+  const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0;
+  const moving=Math.hypot(x,z)>.05;
+  if(type==='roll'&&moving)g.player.yaw=Math.atan2(x,z);
+  else if(input.lock===false){
+   if(moving)g.player.yaw=Math.atan2(x,z);
+   else if(Number.isFinite(input.cameraYaw))g.player.yaw=input.cameraYaw;
+  }else g.player.yaw=Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
+ }
  return actPlayer(g,type);
 }
 export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
@@ -263,7 +271,9 @@ function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
  const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage*(g.gyuwon.years?.attackBuff>0?1.25:1)));
- h.hit=true;p.hp=Math.max(0,p.hp-amount);p.invuln=.65;if(h.slow)g.gyuwon.slow=h.slow;
+ h.hit=true;p.hp=Math.max(0,p.hp-amount);p.invuln=.65;
+ p.action={kind:'hurt',t:0,total:.22};
+ if(h.slow)g.gyuwon.slow=h.slow;
  emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.gyuwon.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
@@ -339,7 +349,9 @@ function tickBoss(g,dt){
  }
 }
 function tickPlayer(g,dt,input){
- const p=g.player,b=g.boss,w=WEAPONS[g.weapon];tickPlayerResources(g,dt);
+ const p=g.player,b=g.boss,w=WEAPONS[g.weapon];
+ const fromX=p.x,fromZ=p.z;
+ tickPlayerResources(g,dt);
  let shapes=null;const bodyShapes=()=>shapes??=gyuwonHurtShapes(g);
  tickPlayerAction(g,dt,w,{
   backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},
@@ -380,9 +392,12 @@ function tickPlayer(g,dt,input){
   const speed=playerRollSpeed(g);p.x+=Math.sin(a.yaw)*speed*dt;p.z+=Math.cos(a.yaw)*speed*dt;
  }else if(!a){const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0,n=Math.max(1,Math.hypot(x,z));
   const speed=playerWalkSpeed(p,(g.gyuwon.slow>0?.65:1)*(p.skill.blue>0?1.5:1));
-  p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);
+  p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;
+  if(input.lock!==false)p.yaw=Math.atan2(b.x-p.x,b.z-p.z);
+  else if(Math.hypot(x,z)>.05)p.yaw=Math.atan2(x,z);
  }
- if(g.gyuwon.years)pushOutAnnualCover(g);clampArena(p);
+ if(g.gyuwon.years)pushOutAnnualCover(g,fromX,fromZ,dt);
+ clampArena(p);
 }
 export function stepGyuwon(g,dt,input={}){
  if(g.status!=='playing'||!Number.isFinite(dt)||dt<=0)return;

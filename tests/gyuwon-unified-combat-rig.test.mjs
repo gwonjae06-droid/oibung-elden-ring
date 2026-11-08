@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createGyuwonGame,actGyuwon,stepGyuwon,startGyuwonPattern} from '../src/gyuwon-combat.mjs';
+import {resolveAnnualCoverMotion} from '../src/gyuwon-nightmare-mechanics.mjs';
 import {GYUWON_PATTERNS,gyuwonPool,hazardContains} from '../src/gyuwon-data.mjs';
 import {createGyuwonActor} from '../src/gyuwon-actor.mjs';
 import {gyuwonHurtShapes} from '../src/boss-hit-regions.mjs';
@@ -119,4 +120,35 @@ test('anatomical shoulder, elbow, wrist, neck and both knee chains stay connecte
  }
  const shoes=[];root.traverse(o=>{if(o.name==='gyuwon-leather-shoe')shoes.push(o)});
  assert.ok(shoes.every(s=>s.position.y>=.15-1e-5),'shoes must not sink through the floor');
+});
+
+test('Gyuwon unlocked movement keeps player aim independent from lock-on',()=>{
+ const g=createGyuwonGame('sword',{yearMode:true});
+ advance(g,.2,{x:1,z:0,lock:false,cameraYaw:.7});
+ assert.ok(Math.abs(g.player.yaw-Math.PI/2)<1e-6);
+ const saved=g.player.yaw;
+ advance(g,.2,{x:0,z:0,lock:false,cameraYaw:-.6});
+ assert.equal(g.player.yaw,saved);
+ assert.ok(actGyuwon(g,'roll',{x:0,z:0,lock:false,cameraYaw:-.6}));
+ assert.ok(Math.abs(g.player.yaw+.6)<1e-6);
+});
+test('Gyuwon player has physical hit recovery without changing iframe duration',()=>{
+ const g=createGyuwonGame('sword',{yearMode:true});
+ g.gyuwon.years.recover=5;
+ g.gyuwon.hazards.push({id:1,shape:'circle',x:g.player.x,z:g.player.z,r:3,warn:.01,life:.3,
+  age:0,damage:22,hit:false,fired:false});
+ stepGyuwon(g,.025);
+ assert.equal(g.player.action?.kind,'hurt');
+ assert.equal(g.player.action.total,.22);
+ assert.ok(g.player.invuln>.6);
+ advance(g,.3);assert.equal(g.player.action,null);
+});
+test('cover movement sweeps against the near side instead of teleporting through',()=>{
+ const cover={x:0,z:0,hp:100};
+ const through=resolveAnnualCoverMotion({x:3,z:0},{x:-3,z:0},cover,.05);
+ assert.ok(through.x>=2.14&&through.x<=3,'near-side collision');
+ const slide=resolveAnnualCoverMotion({x:3,z:.4},{x:1.3,z:2.5},cover,.05);
+ assert.ok(Math.hypot(slide.x,slide.z)>=2.14);
+ const overlap=resolveAnnualCoverMotion({x:0,z:0},{x:0,z:0},cover,1/120);
+ assert.ok(Math.hypot(overlap.x,overlap.z)<.1,'overlap must be eased out');
 });

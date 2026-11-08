@@ -116,4 +116,33 @@ export function tickAnnualMechanics(g,h,dt,add,emit){
  }
 }
 
-export function pushOutAnnualCover(g){for(const c of g.gyuwon.years?.cover||[]){if(c.hp<=0)continue;const dx=g.player.x-c.x,dz=g.player.z-c.z,d=Math.hypot(dx,dz);if(d<2.15){const a=d>1e-6?Math.atan2(dx,dz):0;g.player.x=c.x+Math.sin(a)*2.15;g.player.z=c.z+Math.cos(a)*2.15;}}}
+// Swept barricade collision prevents tunneling; preserve sliding tangent.
+// Resolving only the final overlap caused abrupt player teleports.
+export function resolveAnnualCoverMotion(from,to,cover,dt=1/120){
+ const radius=2.15,sx=from.x-cover.x,sz=from.z-cover.z;
+ const vx=to.x-from.x,vz=to.z-from.z,startDistance=Math.hypot(sx,sz);
+ if(startDistance<radius-1e-6){
+  // Newly spawned props may overlap a player: nudge them over several frames.
+  const nx=startDistance>1e-7?sx/startDistance:1,nz=startDistance>1e-7?sz/startDistance:0;
+  const correction=Math.min(radius-startDistance,9*Math.max(0,dt));
+  return {x:to.x+nx*correction,z:to.z+nz*correction};
+ }
+ const aa=vx*vx+vz*vz;if(aa<1e-12)return to;
+ const bb=2*(sx*vx+sz*vz),cc=sx*sx+sz*sz-radius*radius;
+ const discriminant=bb*bb-4*aa*cc;if(discriminant<0)return to;
+ const t=(-bb-Math.sqrt(discriminant))/(2*aa);
+ if(t<0||t>1)return to;
+ const hitX=from.x+vx*t,hitZ=from.z+vz*t;
+ const nx=(hitX-cover.x)/radius,nz=(hitZ-cover.z)/radius;
+ const remainX=vx*(1-t),remainZ=vz*(1-t);
+ const inward=Math.min(0,remainX*nx+remainZ*nz);
+ let x=hitX+remainX-inward*nx,z=hitZ+remainZ-inward*nz;
+ const distance=Math.hypot(x-cover.x,z-cover.z);
+ if(distance<radius){x=cover.x+(x-cover.x)*radius/Math.max(distance,1e-7);z=cover.z+(z-cover.z)*radius/Math.max(distance,1e-7);}
+ return {x,z};
+}
+export function pushOutAnnualCover(g,fromX=g.player.x,fromZ=g.player.z,dt=1/120){
+ const p=g.player,from={x:fromX,z:fromZ};let to={x:p.x,z:p.z};
+ for(const cover of g.gyuwon.years?.cover||[])if(cover.hp>0)to=resolveAnnualCoverMotion(from,to,cover,dt);
+ p.x=to.x;p.z=to.z;
+}
