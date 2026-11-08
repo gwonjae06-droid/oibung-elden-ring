@@ -75,13 +75,17 @@ test('rifle points horizontally and its physical muzzle matches the authoritativ
  assert.ok(Math.abs(muzzle.y-GYUWON_RIFLE_SOCKET.height)<.02);
  actor.dispose();
 });
-test('all ranged casts have mutually exclusive props and each arrow reloads independently',()=>{
+test('ordinary casts keep separate props; 210-shot ultimate simultaneously dual-wields gun and bow',()=>{
  for(const id of ['sniper','archery','crossfire','ultimateMarksman','nightmare365']){
   const g=make(4);startGyuwonYearCast(g,id);
   for(let t=0;t<GYUWON_YEAR_PATTERNS[id][0];t+=.025){
    g.gyuwon.years.castT=t;for(const h of g.gyuwon.hazards)h.age=t;
    const pose=gyuwonWeaponPose(g.gyuwon.years,g.gyuwon.hazards);
-   assert.ok(!(pose.rifle&&pose.bow),id+'/'+t);
+   if(id==='ultimateMarksman'){
+    assert.equal(pose.rifle,true,id+'/'+t);
+    assert.equal(pose.bow,true,id+'/'+t);
+    assert.equal(pose.dual,true,id+'/'+t);
+   }else assert.ok(!(pose.rifle&&pose.bow),id+'/'+t);
   }
  }
  const g=make(4);startGyuwonYearCast(g,'archery');
