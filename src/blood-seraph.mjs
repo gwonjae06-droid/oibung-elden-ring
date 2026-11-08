@@ -3,6 +3,7 @@ import {BLOOD_SERAPH_TRANSITION,hazardPosition} from './blood-data.mjs';
 import {createBloodHead} from './blood-head.mjs';
 import {SERAPH_EYE_ATTACKS} from './blood-seraph-doctrine.mjs';
 import {createBloodSeraphPillars} from './blood-seraph-pillars.mjs';
+import {sculptBloodSeraph} from './blood-seraph-sculpt.mjs';
 
 // A real, deliberately budgeted 3D seraph rig, NOT a fullscreen image.
 // The enormous seraph is the ONLY visible 3P boss and occupies the real
@@ -67,8 +68,8 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  const socket=makeMesh(root,new THREE.SphereGeometry(1.7,coarse?16:30,coarse?12:22),
   dark,'blood-seraph-crimson-face-vessel',0,1.95,1.05);
  socket.scale.set(1.12,1.12,.70);
- const visage=createBloodHead({coarse,reduced,seraph:true});
- visage.group.name='blood-seraph-baeseojun-photo-visage';
+ const visage=createBloodHead({coarse,reduced,seraph:true,portrait:'3bae.png'});
+ visage.group.name='blood-seraph-3bae-sculpted-visage';
  visage.group.position.set(0,1.92,1.76);visage.group.scale.setScalar(2.25);
  root.add(visage.group);
  const holyFaceRing=makeMesh(root,new THREE.TorusGeometry(2.12,.105,8,coarse?48:84),
@@ -155,8 +156,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   }
   feathers.instanceMatrix.needsUpdate=true;
   if(feathers.instanceColor)feathers.instanceColor.needsUpdate=true;
-  wings.push({pivot,pair,side,feathers});
+  wings.push({pivot,pair,side,feathers,form});
  }
+ const fineSculpt=sculptBloodSeraph(root,{coarse,reduced,wings,featherGeometry:featherGeo});
  for(const side of [-1,1]){
   makeTube(root,[[0,5.3,.8],[side*1.7,3.8,1.2],[side*2.25,1.2,.9],
    [side*.52,-2.6,.85]],.16,pearl,18);
@@ -219,9 +221,10 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    teleportRings.forEach(r=>r.visible=false);return;
   }
   const s=g.blood,b=g.boss,p=g.player;
-  const intro=b.state==='transition'?ease((s.t-.2)/(BLOOD_SERAPH_TRANSITION-.55)):1;
-  const d=clamp(dt,0,.12),k=1-Math.exp(-d*4);
-  shown+=(intro-shown)*k;
+  const intro=b.state==='transition'?(c.seraph??ease((s.t-.2)/(BLOOD_SERAPH_TRANSITION-.55))):1;
+  const d=clamp(dt,0,.12),k=1-Math.exp(-d*6);
+  // All transformation poses obey gameplay time, not a lagging frame timer.
+  shown=b.state==='transition'?intro:shown+(1-shown)*k;
   const dx=p.x-b.x,dz=p.z-b.z,len=Math.hypot(dx,dz)||1,nx=dx/len,nz=dz/len;
   // No trailing ghost model: torso, floor vessel and eye follow actual
   // collision/lock-on position and yaw. LOD does not change world size.
@@ -231,6 +234,12 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
 
   const blink=s.seraphBlink,age=blink?Math.max(0,blink.age||0):0;
   root.scale.setScalar(scale*(blink?Math.max(.14,ease(age/.34)):1));
+  const evolving=b.state==='transition';
+  const wingBirth=evolving?(c.wingUnfold??0):1;
+  const faceBirth=evolving?(c.faceReveal??0):1;
+  const haloBirth=evolving?(c.haloBirth??0):1;
+  visage.group.scale.setScalar(2.25*Math.max(.025,faceBirth));
+  fineSculpt.update(g,c);
   teleportRings.forEach((ring,i)=>{
    ring.visible=!!blink&&age<.62;
    if(!ring.visible)return;
@@ -281,14 +290,17 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
     ['seraphWingCross','seraphBloodRosette'].includes(pattern)?charge*.3:0;
    pivot.rotation.z=(pair===0?.11:pair===1?-.09:.19)+breath+
     side*(slash*.24+flare+featherfall*.16);
+   // The three pairs open in sequence as the 2P body condenses.
+   const pairBirth=evolving?ease((wingBirth*1.25-pair*.12)/.75):1;
    pivot.rotation.y=side*(.06+charge*.085+slash*.15+closing*.85+
-     (pattern==='seraphWingCross'?charge*.95:0));
-   pivot.rotation.x=breath*.5+slash*.09+closing*.18;
+     (pattern==='seraphWingCross'?charge*.95:0)+(1-pairBirth)*1.08);
+   pivot.rotation.z+=side*(1-pairBirth)*.52;
+   pivot.rotation.x=breath*.5+slash*.09+closing*.18+(1-pairBirth)*.43;
    if(pattern==='seraphDescent')pivot.rotation.z-=side*slash*.31;
   });
   rings.forEach((m,i)=>{m.rotation.z=(reduced?0:t*.12*(i%2?-1:1))+i*.24;
    const pulse=1+(reduced?0:Math.sin(t*1.7-i)*.02)+charge*.045;
-   m.scale.setScalar(pulse);
+   m.scale.setScalar(pulse*Math.max(.03,haloBirth));
   });
   visage.update(g,c,d,{cast:charge});
   holyFaceRing.scale.setScalar(1+charge*.18+eyeCharge*.22);
@@ -355,9 +367,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  }
  return {root,update,clear,dispose,stats:()=>({visible:root.visible,
   wingPairs:3,hinges:wings.length,featherInstances:wings.reduce((n,w)=>n+w.feathers.count,0),
-  haloRings:rings.length,hasEye:false,hasFace:true,photoAsset:'assets/baeseojun.png',
+  haloRings:rings.length,hasEye:false,hasFace:true,photoAsset:'assets/'+visage.portraitAsset,
   faceSculpt:!!visage.group,
-  photoLoaded:!!visage.group.getObjectByName('baeseojun-sculpted-head')?.material?.map,
+  photoLoaded:visage.photoLoaded,sculpt:fineSculpt.stats(),
   hasLiveEyeRay:!!beamPivot,
   eyeRayVisible:beamPivot.visible,wingWheelVisible:wingWheel.visible,
   warningGuides:guides.filter(g=>g.visible).length,
