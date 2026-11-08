@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/gyuwon-*.mjs'
       - 'tests/gyuwon-*.test.mjs'
+      - 'scripts/gyuwon-years-browser-smoke.mjs'
       - '.github/workflows/gyuwon-dday-ci.yml'
   pull_request:
     paths:
