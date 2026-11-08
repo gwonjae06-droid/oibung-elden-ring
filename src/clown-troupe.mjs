@@ -327,7 +327,8 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
  if(!g?.clown||!g?.boss||g.status!=='playing')return;
  const t=g.clown.troupe;if(!t)return;
  const c=g.clown,b=g.boss,stage=c.horrorStage||1;
- if(b.state==='transition'||b.state==='dead')return;
+ // Curtain three dismisses the entire corps, including original echo minis.
+ if(b.phase===3||b.state==='transition'||b.state==='dead')return;
  setCircusAct(g,stage);
  const h=clamp(dt,0,1/30);
  t.beat+=h;t.showAge+=h;if(t.showAge>10)t.show='';
