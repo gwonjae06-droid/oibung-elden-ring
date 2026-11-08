@@ -15,8 +15,8 @@ const make=(year=1,seed=42)=>{
  g.gyuwon.years.year=year;g.player.z=9;return g;
 };
 const tick=(g,seconds)=>{for(let i=0;i<Math.round(seconds*120);i++)stepGyuwon(g,1/120);};
-test('authored 30 + 9 + 3 cycle and grade thresholds are exact',()=>{
- assert.equal(GYUWON_YEAR_SECONDS,30);assert.equal(GYUWON_SUBJECT_SECONDS*5,9);
+test('authored 48 + 9 + 3 cycle and grade thresholds are exact',()=>{
+ assert.equal(GYUWON_YEAR_SECONDS,48);assert.equal(GYUWON_SUBJECT_SECONDS*5,9);
  for(const [r,expected]of [[.299999,'great'],[.3,'normal'],[.699999,'normal'],[.7,'failure']]){
   const g=make();resolveGyuwonExamGrade(g,r);assert.equal(g.gyuwon.years.grade,expected);
   assert.equal(g.gyuwon.years.resultScene.duration,3);
@@ -92,9 +92,9 @@ test('all ranged casts have mutually exclusive props and each arrow reloads inde
 });
 test('breaking every ward cancels each shrine projectile and earns a full groggy window',()=>{
  const g=make(6),e=g.gyuwon.years;startGyuwonYearCast(g,'ultimateShrine');
- const cards=g.gyuwon.hazards.filter(h=>h.visual==='year-photocard');
+ const cards=g.gyuwon.hazards.filter(h=>h.wardIndex!==undefined);
  assert.equal(new Set(cards.map(h=>h.wardIndex)).size,6);
- for(const ward of e.wards)assert.equal(strikeGyuwonWard(g,ward.x,ward.z,42),true);
+ for(const ward of e.wards)assert.equal(strikeGyuwonWard(g,ward.x,ward.z,52),true);
  assert.equal(e.cast,null);assert.equal(g.gyuwon.hazards.length,0);
  assert.equal(g.gyuwon.stun,3);assert.equal(g.boss.state,'recovery');
  tick(g,1);assert.equal(e.cast,null);assert.ok(g.gyuwon.stun>1.9);
@@ -103,9 +103,9 @@ test('inquiry grants three actual bounded benefits without invisible attack haza
  const seen=new Set();
  for(let seed=1;seed<=40;seed++){
   const g=make(2,seed*1234567),e=g.gyuwon.years;g.boss.hp=g.boss.maxHp*.5;
-  e.season=30;e.recover=0;stepGyuwon(g,.01);
+  e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;e.recover=0;stepGyuwon(g,.01);
   for(let i=0;i<4;i++){e.subjectT=1.79;stepGyuwon(g,.02);}
-  assert.equal(e.subject,4);assert.equal(g.gyuwon.hazards.length,0);seen.add(e.inquiry);
+  assert.equal(e.subject,4);assert.ok(g.gyuwon.hazards.every(h=>h.examShot));seen.add(e.inquiry);
   if(e.inquiry==='attack')assert.equal(e.attackBuff,5);
   if(e.inquiry==='speed')assert.equal(e.speedBuff,3);
   if(e.inquiry==='heal')assert.ok(Math.abs(g.boss.hp/g.boss.maxHp-.51)<1e-9);
@@ -126,7 +126,7 @@ test('nightmare has the requested textbook beat, non-overlapping strikes and a b
  assert.equal(GYUWON_NIGHTMARE_BEATS[2],'bookfall');
  assert.equal(g.gyuwon.hazards[2].visual,'year-bookfall');
  for(let i=1;i<11;i++)assert.ok(g.gyuwon.hazards[i].warn>=g.gyuwon.hazards[i-1].warn+g.gyuwon.hazards[i-1].life);
- const last=g.gyuwon.hazards.at(-1);assert.ok(last.r+last.grow*last.life>25);
+ const last=g.gyuwon.hazards.findLast(h=>h.shape==='ring');assert.ok(last.r+last.grow*last.life>25);assert.equal(g.gyuwon.hazards.at(-1).visual,'year-final-omr');
 });
 test('year-mode keeps the visible human head targetable after year nine',()=>{
  for(const year of [9,10,11,18]){const g=make(year);g.boss.phase=3;

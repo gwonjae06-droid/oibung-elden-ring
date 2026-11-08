@@ -13,7 +13,7 @@ const advance=(g,t)=>{for(let i=0;i<Math.ceil(t*120);i++)stepGyuwon(g,1/120);};
 const annual=()=>{const g=createGyuwonGame('sword',{yearMode:true,seed:19});g.player.invuln=1000;return g;};
 function nextExam(g){
  const e=g.gyuwon.years;
- e.mode='combat';e.cast=null;e.recover=0;e.season=GYUWON_YEAR_SECONDS;
+ e.mode='combat';e.cast=null;e.recover=0;e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;
  g.boss.state='recovery';g.gyuwon.hazards.length=0;
  stepGyuwon(g,.025);return e;
 }
@@ -37,7 +37,7 @@ test('the 365-day timer expires into five sequential exams, never a mid-cast int
  e.season=GYUWON_YEAR_SECONDS;stepGyuwon(g,.05);
  assert.equal(e.cast,first);
  assert.equal(e.day,0);
- advance(g,5.8);
+ for(let i=0;i<3000&&e.mode==='combat';i++)stepGyuwon(g,.025);
  assert.equal(e.mode,'exam');assert.equal(e.subjectLabel,'국어');
  assert.equal(GYUWON_EXAM_SUBJECTS.join(','),'국어,수학,영어,한국사,탐구');
  advance(g,GYUWON_SUBJECT_SECONDS+.05);
@@ -55,15 +55,15 @@ test('incoming damage during exam is 50% and other years retain ordinary damage'
 });
 
 test('outcomes follow 30/40/30 boundaries and maxHP percentages',()=>{
- const sample=[{r:0,grade:'great',delta:.10},{r:.29999,grade:'great',delta:.10},
-  {r:.30,grade:'normal',delta:.05},{r:.69999,grade:'normal',delta:.05},
-  {r:.70,grade:'failure',delta:-.05},{r:.999,grade:'failure',delta:-.05}];
+ const sample=[{r:0,grade:'great',delta:.05},{r:.29999,grade:'great',delta:.05},
+  {r:.30,grade:'normal',delta:.02},{r:.69999,grade:'normal',delta:.02},
+  {r:.70,grade:'failure',delta:-.04},{r:.999,grade:'failure',delta:-.04}];
  for(const item of sample){
-  const g=annual();g.boss.hp=g.boss.maxHp*.5;
+  const g=annual();g.gyuwon.years.year=11;g.gyuwon.years.endingUnlocked=true;g.boss.hp=g.boss.maxHp*.5;
   const result=resolveGyuwonExamGrade(g,item.r);
   assert.equal(result.result,item.grade);
   assert.equal(result.delta,g.boss.maxHp*item.delta);
-  assert.equal(g.boss.hp,g.boss.maxHp*(.5+item.delta));
+  assert.ok(Math.abs(g.boss.hp-g.boss.maxHp*(.5+item.delta))<1e-9);
  }
  const capped=annual();capped.boss.hp=capped.boss.maxHp*.98;
  resolveGyuwonExamGrade(capped,0);

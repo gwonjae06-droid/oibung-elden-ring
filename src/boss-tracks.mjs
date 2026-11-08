@@ -1,13 +1,16 @@
+import {gyuwonMusicSection} from './gyuwon-music.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
 // External MP3 boss tracks. Sound effects keep using their own audio buses.
 export const BOSS_TRACKS=Object.freeze({
   kwon:Object.freeze(['swordbgm.mp3','swordbgm2.mp3']),
   clown:Object.freeze(['clown1.mp3','clown2.mp3']),
   dice:Object.freeze(['dicebgm.mp3','dicebgm2.mp3']),
-  blood:Object.freeze(['bloodbgm1.mp3','bloodbgm2.mp3'])
+  blood:Object.freeze(['bloodbgm1.mp3','bloodbgm2.mp3']),
+  gyuwon:Object.freeze([null,null,null,null,null,null])
 });
 export function bossTrack(state){
   if(!state||!Object.hasOwn(BOSS_TRACKS,state.boss))return null;
+  if(state.boss==='gyuwon'){const section=gyuwonMusicSection(state.year),asset=BOSS_TRACKS.gyuwon[section];return asset?{key:'gyuwon:'+section,url:new URL('../assets/music/'+asset,import.meta.url).href}:null;}
   const phase=state.phase>=2?2:1;
   // Phase three reuses the second dice MP3 at a faster tempo, never the phase-one track.
   const keyPhase=state.boss==='dice'&&state.phase===3?3:phase;

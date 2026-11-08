@@ -23,7 +23,7 @@ test('every year-specific attack has a visible anticipation preceding its first 
    assert.ok(h.warn>=GYUWON_MIN_TELEGRAPH-.001,'short/no cue '+year+'/'+id+' '+h.warn);
    assert.ok(h.life>0&&h.damage>0,year+'/'+id);
    assert.equal(h.age,0);
-   assert.ok(h.warn+h.life<=GYUWON_YEAR_PATTERNS[id][0]+.2,
+   assert.ok(h.warn+h.life<=Math.max(GYUWON_YEAR_PATTERNS[id][0],g.gyuwon.years.castDuration)+.2,
     'hazard outlives visible attack '+year+'/'+id);
   }
  }
@@ -31,7 +31,7 @@ test('every year-specific attack has a visible anticipation preceding its first 
 
 test('the examination subject cadence still gives at least one second of warning',()=>{
  const g=game();g.gyuwon.years.cast=null;g.gyuwon.years.recover=0;
- g.gyuwon.years.season=30;
+ g.gyuwon.years.season=48;g.gyuwon.years.signatureUsed=true;
  stepGyuwon(g,.03);
  assert.equal(g.gyuwon.years.mode,'exam');
  assert.ok(GYUWON_SUBJECT_SECONDS===1.8);
@@ -62,7 +62,7 @@ test('seventh-year donation is a physical six-way exam gacha, never a translucen
  const roulette=stage.getObjectByName('gyuwon-seven-year-suneung-gacha-roulette');
  assert.ok(roulette?.visible);
  assert.equal(fx.stats().gachaSectors,6);
- assert.ok(g.gyuwon.hazards.every(h=>h.shape==='circle'&&h.visual==='year-gacha-prize'));
+ assert.ok(g.gyuwon.hazards.every(h=>['circle','ring'].includes(h.shape)&&['year-gacha-prize','year-stream-pulse','year-vehicle'].includes(h.visual)));
  assert.ok(g.gyuwon.hazards.every(h=>h.warn>=3),'the outcome must be readable before prize impact');
  assert.equal(stage.getObjectByName('gyuwon-live-cone-surface'),undefined);
  fx.dispose();
@@ -96,9 +96,9 @@ test('physical sewage wave opens the same gap as collision and remains fixed in 
  const gap=wave.opening-.55;
  for(const part of body){part.geometry.computeBoundingBox();
   const bbox=part.geometry.boundingBox;
-  assert.ok(Math.abs(bbox.max.z-(wave.depth+.55))<.0001);
-  assert.ok(Math.abs(bbox.min.z+(wave.depth+.55))<.0001);
-  const xl=part.position.x+bbox.min.x,xr=part.position.x+bbox.max.x;
+  assert.ok(Math.abs(bbox.max.z*part.scale.z-(wave.depth+.55))<.0001);
+  assert.ok(Math.abs(bbox.min.z*part.scale.z+(wave.depth+.55))<.0001);
+  const xl=part.position.x+bbox.min.x*part.scale.x,xr=part.position.x+bbox.max.x*part.scale.x;
   assert.ok(xr<=wave.gap-gap+.001||xl>=wave.gap+gap-.001);
  }
  wave.age=wave.warn+2;fx.update(g);

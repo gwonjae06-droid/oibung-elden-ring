@@ -46,12 +46,12 @@ test('the shared Gyuwon renderer never draws a pointed triangular hazard panel i
 test('all five examination rounds retain bounded, readable solid hazards',()=>{
  const stage=new THREE.Group(),fx=createGyuwonHazardFx(stage,{coarse:true});
  const g=game(1),e=g.gyuwon.years;
- e.season=30;e.cast=null;e.recover=0;
+ e.season=48;e.signatureUsed=true;e.cast=null;e.recover=0;
  stepGyuwon(g,.03);
  assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
   fx.update(g);
-  assert.ok(i===4?fx.stats().liveHazards===0:fx.stats().liveHazards>0);
+  assert.ok(i===4?g.gyuwon.hazards.every(h=>h.examShot):fx.stats().liveHazards>0);
   assert.ok(fx.root.children.every(m=>m.geometry.userData.silhouette==='capped-rounded-stone-no-triangle-warnings'));
   if(i<4){e.subjectT=GYUWON_SUBJECT_SECONDS-.01;stepGyuwon(g,.03);}
  }

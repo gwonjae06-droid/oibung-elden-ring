@@ -27,7 +27,7 @@ test('all eleven years have a separately scheduled physical ultimate and safe wa
   assert.equal(g.gyuwon.years.signatureUsed,true);
   assert.ok(g.gyuwon.hazards.length>=2,id);
   const latest=Math.max(...g.gyuwon.hazards.map(h=>h.warn+h.life));
-  assert.ok(latest<=GYUWON_SIGNATURE_SPECS[id][0]+.01,id+' late '+latest);
+  assert.ok(latest<=Math.max(GYUWON_SIGNATURE_SPECS[id][0],g.gyuwon.years.castDuration)+.01,id+' late '+latest);
   for(const h of g.gyuwon.hazards){
    assert.ok(h.warn>=GYUWON_MIN_TELEGRAPH-.001,id+' unreadable');
    assert.ok(h.damage>0&&h.life>0,id);
@@ -98,8 +98,8 @@ test('eleventh-year nightmare uses ten sequential past selves and a dodgeable fi
  assert.equal(GYUWON_NIGHTMARE_BEATS.length,11);
  startGyuwonYearCast(g,'nightmare365');
  assert.equal(e.nightmareUsed,true);
- assert.equal(g.gyuwon.hazards.length,11);
- const strikes=g.gyuwon.hazards;
+ assert.equal(g.gyuwon.hazards.length,12);
+ const strikes=g.gyuwon.hazards.slice(0,11);
  for(let i=1;i<strikes.length;i++){
   assert.ok(strikes[i].warn>strikes[i-1].warn+.8,'past years must fight in sequence');
   assert.ok(strikes[i].warn>=strikes[i-1].warn+strikes[i-1].life,

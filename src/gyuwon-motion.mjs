@@ -69,6 +69,7 @@ function annualExamMotion(g){
   const beat=(e.castT||0);
   const strike=Math.exp(-Math.pow((beat%1.3-.9)/.18,2));
   const lift=ease(beat/2),last=ease((beat-14.0)/.7);
+  if(beat>20.1){const collapse=ease((beat-20.1)/1.2);return {...NEUTRAL,lean:.25+collapse*.88,headPitch:.2+collapse*.6,leftArm:-1.9+collapse*1.5,rightArm:-1.9+collapse*1.5,leftElbow:-.7,rightElbow:-.7,weightShift:collapse*.3};}
   return {lean:-.24-strike*.38+last*.37,twist:Math.sin(beat*4)*.24,
    headPitch:-.35+strike*.23-last*.20,headYaw:Math.sin(beat*2)*.17,
    leftArm:-.6-lift*.7-strike*.57,rightArm:-.55-lift*.82-strike*.7-last*.5,

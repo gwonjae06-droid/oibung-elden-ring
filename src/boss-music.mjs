@@ -13,7 +13,7 @@ export function musicState(doc,focused=true){
  if(modal&&!modal.open||!modal&&doc.getElementById('boss-transition')?.open||!root)return null;
  const session=readBattleSession(root);
  if(session){const g=session.game;if(!session.active||g.status!=='playing'||g.boss.hp<=0)return null;const selection={boss:g.clown?'clown':selectedBoss,phase:g.boss.phase,busy:!!g.clown&&g.clown.state==='pattern'&&['laughBomb','tripleBomb','lastClap'].includes(g.clown.name)};
- if(g.clown){const hush=circusHorrorMusicGain(g);if(hush<.999)selection.gain=hush;}if(selectedBoss==='blood'&&g.blood?.transitioned){selection.cinematic=true;if(g.boss.phase===2)selection.offset=1.8;}if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===1?c.musicGain:Math.min(1,(c.t-3.8)/.55);selection.cinematic=true;}return selection;}
+ if(selectedBoss==='gyuwon'&&g.gyuwon?.years){const e=g.gyuwon.years;selection.year=e.year;selection.exam=e.mode==='exam';selection.grade=e.grade;selection.gain=selection.exam?.27:1;}if(g.clown){const hush=circusHorrorMusicGain(g);if(hush<.999)selection.gain=hush;}if(selectedBoss==='blood'&&g.blood?.transitioned){selection.cinematic=true;if(g.boss.phase===2)selection.offset=1.8;}if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===1?c.musicGain:Math.min(1,(c.t-3.8)/.55);selection.cinematic=true;}return selection;}
  const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;
  const menu=get('menu');if(menu&&!menu.hidden)return null;

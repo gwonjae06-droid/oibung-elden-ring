@@ -18,8 +18,9 @@ export function createGyuwonSoftTentacle(parent,material,{coarse=false,index=0}=
  geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));geometry.setIndex(indices);
  const mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;
  mesh.name='gyuwon-seamless-soft-octopus-tentacle';parent.add(mesh);
- const axis=new THREE.Vector3(),normal=new THREE.Vector3(),binormal=new THREE.Vector3(),curve=null;
+ const axis=new THREE.Vector3(),normal=new THREE.Vector3(),binormal=new THREE.Vector3(),center=new THREE.Vector3();
  const pts=[new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()];
+ const spline=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.38);
  const up=new THREE.Vector3(0,1,0),right=new THREE.Vector3(1,0,0);
  let lastTime=0,lastReady=0;
  function pose({x=0,z=0,yaw=0,reach=14.5,ready=0,time=0,attacking=false}={}){
@@ -34,10 +35,9 @@ export function createGyuwonSoftTentacle(parent,material,{coarse=false,index=0}=
    const offset=(sway*t+.38*arc*Math.sin(time*1.25+index+t*3))*(1-easing);
    pts[i].set(x+side*d+lateralX*offset,height,z+forward*d+lateralZ*offset);
   }
-  const spline=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.38);
   const v=geometry.getAttribute('position');
   for(let j=0;j<=bands;j++){
-   const t=j/bands,c=spline.getPoint(t),next=spline.getTangent(t).normalize();
+   const t=j/bands,c=spline.getPoint(t,center),next=spline.getTangent(t,axis).normalize();
    const n=normal.copy(up).cross(next);
    if(n.lengthSq()<.0001)n.copy(right).cross(next);
    n.normalize();binormal.copy(next).cross(n).normalize();

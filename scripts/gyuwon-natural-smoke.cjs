@@ -16,9 +16,10 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{
   browser=await chromium.launch({executablePath:process.env.EDGE_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':'/usr/bin/google-chrome'),headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  const page=await browser.newPage({viewport:{width:1280,height:800}});
+  const page=await browser.newPage({viewport:{width:1280,height:800},...(process.env.GYUWON_TOUCH?{isMobile:true,hasTouch:true}:{})});
   page.on('pageerror',e=>errors.push(e.stack||e.message));
   page.on('console',m=>{
+   if(m.type()==='warning')console.log('QA_WARN',m.text());
    if(m.text().startsWith('QA_PATTERN'))console.log(m.text());
    if(m.type()==='error'&&/Gyuwon frame failed|WebGL.*(error|failed)/i.test(m.text()))errors.push(m.text());
   });
@@ -34,9 +35,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
    const renderer=new T.WebGLRenderer({canvas:document.querySelector('canvas'),antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);
    const camera=new T.PerspectiveCamera(48,innerWidth/innerHeight,.1,500);
    const actor=createGyuwonActor(scene,{coarse:false}),fx=createGyuwonYearsFx(scene,{coarse:false});
-   window.qa={T,scene,renderer,camera,actor,fx};
+   await fx.ready;window.qa={T,scene,renderer,camera,actor,fx};
   });
-  const captures=[[1,'ultimateBike',2.8],[2,'ultimateScooter',3.0],[3,'ultimateSmoke',2.1],[4,'sniper',1.55],[4,'archery',1.15],[4,'ultimateMarksman',2.0],[5,'sewageThrow',1.18],[5,'ultimateSewage',4.6],[6,'ultimateShrine',4.5],[7,'dance',1.2],[8,'octoStrike',1.1],[9,'recall',1.25],[11,'nightmare365',15.12]];
+  const captures=[[1,'ultimateBike',2.8],[2,'ultimateScooter',3.0],[3,'ultimateSmoke',2.1],[4,'sniper',1.55],[4,'archery',1.15],[4,'ultimateMarksman',2.0],[5,'sewageThrow',1.18],[5,'ultimateSewage',4.6],[6,'ultimateShrine',4.5],[7,'dance',1.2],[8,'octoStrike',1.1],[9,'recall',1.25],[11,'nightmare365',19.5]];
   for(const [year,id,time]of captures){
    const stats=await page.evaluate(async({year,id,time})=>{
     const {createGyuwonGame,stepGyuwon}=await import('/src/gyuwon-combat.mjs'),{startGyuwonYearCast}=await import('/src/gyuwon-years.mjs');
@@ -89,7 +90,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
   await page.setViewportSize({width:1280,height:800});
   console.log('QA_LIVE navigating');
   await page.goto(`http://127.0.0.1:${server.address().port}/spider-combat.html`,{waitUntil:'domcontentloaded'});
-  await page.waitForSelector('#journey[open]',{timeout:60000});
+  await page.waitForSelector('[data-j="new"]',{timeout:60000});await page.waitForTimeout(200);
   console.log('QA_LIVE menu ready');
   await page.evaluate(async()=>{
    localStorage.setItem('oibung-muted','1');
@@ -98,11 +99,12 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
    window.liveQa=launchGyuwonBattle({weapon:'sword',diagnostics:true,configure(g){g.player.invuln=1e5;}});
    if(!window.liveQa)throw Error('real battle startup failed');
   });
-  await page.waitForFunction(async()=>{
-   const {readBattleSession}=await import('/src/battle-session.mjs');
+  await page.evaluate(async()=>{window.readLiveSession=(await import('/src/battle-session.mjs')).readBattleSession;});
+  await page.waitForFunction(()=>{
+   const readBattleSession=window.readLiveSession;
    const root=document.querySelector('#gyuwon-battle')?.firstElementChild?.shadowRoot;
-   return !!(root&&readBattleSession(root)?.active);
-  },{},{timeout:60000});
+   return !!(root&&readBattleSession(root)?.active&&readBattleSession(root)?.diagnostics()?.view.recall.prewarmed);
+  },{},{timeout:120000});
   console.log('QA_LIVE battle ready');
   await page.screenshot({path:path.join(out,'live-desktop.png')});
   const live=await page.evaluate(async()=>{
@@ -114,11 +116,32 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
   });
   assert.match(live.clock,/D-\d+/);
   assert.equal(await page.evaluate(()=>document.querySelector('dialog:modal')?.id),'gyuwon-battle');
+  const transitions=[];
+  for(const [index,map]of ['sword','circus','gamble','tsunami'].entries()){
+   await page.evaluate(async({index,map})=>{
+    const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot),g=s.game,e=g.gyuwon.years;
+    e.year=9;e.mode='combat';e.season=0;e.cast=null;e.recover=100;e.mapClock=0;e.mapPending=false;g.boss.phase=3;g.boss.x=0;g.boss.z=-5;g.player.x=0;g.player.z=14;g.gyuwon.hazards=[];g.gyuwon.stageMemory=map;g.gyuwon.stageTime=0;
+   },{index,map});
+   await page.waitForTimeout(2200);
+   transitions.push(await page.evaluate(()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);return {map:s.game.gyuwon.stageMemory,time:s.game.time,diagnostics:s.diagnostics()};}));
+   await page.screenshot({path:path.join(out,'live-map-'+map+'.png')});
+  }
+  await page.evaluate(async()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot),g=s.game;g.gyuwon.years.year=11;g.gyuwon.years.season=0;g.gyuwon.years.recover=0;const {startGyuwonYearCast}=await import('/src/gyuwon-years.mjs');startGyuwonYearCast(g,'nightmare365');g.gyuwon.years.castT=18.4;g.gyuwon.t=18.4;g.gyuwon.hazards.forEach(h=>h.age=18.4);});
+  await page.waitForTimeout(250);await page.screenshot({path:path.join(out,'live-last-answer.png')});
+  live.transitions=transitions;
+  live.webgl=await page.evaluate(()=>{const root=document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot,gl=root.querySelector('canvas').getContext('webgl2'),ext=gl?.getExtension('WEBGL_debug_renderer_info');return ext?{vendor:gl.getParameter(ext.UNMASKED_VENDOR_WEBGL),renderer:gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}:null;});
   await page.setViewportSize({width:844,height:390});
   await page.waitForTimeout(250);await page.screenshot({path:path.join(out,'live-mobile.png')});
+  await page.evaluate(()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);s.game.status='lost';s.game.player.hp=0;});
+  await page.waitForFunction(()=>!document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot.getElementById('result').hidden,{},{timeout:30000});
+  await page.locator('#gyuwon-battle').locator('#retry').click();
+  await page.waitForFunction(()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);return s.active&&s.game.time>0;},{},{timeout:30000});
+  live.retry=await page.evaluate(()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);return {year:s.game.gyuwon.years.year,status:s.game.status,builds:s.diagnostics().view.recall.builds};});
+  assert.equal(live.retry.year,1);assert.equal(live.retry.status,'playing');assert.equal(live.retry.builds,4);
+  if(process.env.GYUWON_TOUCH){await page.locator('#gyuwon-battle').locator('[data-act="light"]').tap();await page.locator('#gyuwon-battle').locator('[data-act="roll"]').tap();live.touch=await page.evaluate(()=>{const s=readLiveSession(document.querySelector('#gyuwon-battle').firstElementChild.shadowRoot);return {coarse:matchMedia('(pointer:coarse)').matches,stamina:s.game.player.stamina};});assert.ok(live.touch.coarse);assert.ok(live.touch.stamina<100);}
   const closed=await page.evaluate(async()=>{await liveQa.close();return document.querySelectorAll('#gyuwon-battle').length;});
-  assert.equal(closed,0);assert.deepEqual(errors,[]);
-  await fs.writeFile(path.join(out,process.env.GYUWON_LIVE_ONLY?'report-live.json':'report.json'),JSON.stringify({reports,all,live,errors},null,2));
+  assert.equal(closed,0);assert.deepEqual(errors,[]);for(const item of transitions)assert.ok(item.diagnostics.view.recall.originalRoot,'real remembered scenery must be active');
+  await fs.writeFile(path.join(out,process.env.GYUWON_TOUCH?'report-touch.json':process.env.GYUWON_LIVE_ONLY?'report-live.json':'report.json'),JSON.stringify({reports,all,live,errors},null,2));
   console.log(JSON.stringify({reports,all,live,errors}));
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

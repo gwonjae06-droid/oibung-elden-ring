@@ -10,7 +10,7 @@ const palettes=[
  ['#5ba99f','#2d5957','#f8dccb','#e1fff1'],
  ['#cc8b71','#6b3a48','#ffe0ca','#fff0e8']
 ];
-export function createGyuwonAnimeIllustration(index=0){
+function createFallbackIllustration(index=0){
  const [accent,hair,skin,light]=palettes[((index%6)+6)%6];
  if(typeof document==='undefined'||typeof document.createElement!=='function'){
   const t=new THREE.DataTexture(new Uint8Array([241,215,230,255]),1,1);
@@ -79,3 +79,13 @@ export function createGyuwonAnimeIllustration(index=0){
  tex.userData.artStyle='gyuwon-original-2d-anime-girl-portrait';return tex;
 }
 function TAU(){return Math.PI*2;}
+
+// Six independently authored adult-character paintings; fallback stays local to
+// non-browser tests or image decode failure, never a shared palette swap.
+export function createGyuwonAnimeIllustration(index=0){
+ const texture=createFallbackIllustration(index),i=((index%6)+6)%6;
+ if(typeof Image==='undefined')return texture;
+ let dead=false;texture.addEventListener('dispose',()=>{dead=true;});
+ texture.userData.ready=new Promise(resolve=>{const image=new Image();image.onload=()=>{if(!dead){texture.image=image;texture.needsUpdate=true;}resolve(!dead);};image.onerror=()=>resolve(false);image.src=new URL('../assets/art/gyuwon-collectibles/collectible-'+(i+1)+'.png',import.meta.url).href;});
+ texture.userData.collectible=i;return texture;
+}

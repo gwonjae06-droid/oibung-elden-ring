@@ -13,7 +13,7 @@ export const GYUWON_SIGNATURE_SPECS=Object.freeze({
  ultimateSewage:[9.8,2.2],ultimateShrine:[18.8,2.2],
  ultimateGacha:[9.0,2.3],ultimateOctopus:[9.1,2.4],
  ultimateMemory:[9.8,2.6],ultimateParadox:[11.1,2.7],
- nightmare365:[17.8,3.2]
+ nightmare365:[23.5,5.5]
 });
 export const GYUWON_NIGHTMARE_BEATS=Object.freeze([
  'bike','scooter','bookfall','marksman','sewage','shrine',

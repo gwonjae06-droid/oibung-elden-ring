@@ -107,6 +107,14 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
  for(let i=0;i<6;i++)add(memory,curve([[Math.sin(i)*.47,-.60,.25],
    [Math.sin(i+1.3)*.40,-.11,.44],[Math.sin(i+2.1)*.38,.41,.31]],.012),
   gild,0,0,0,'gyuwon-memory-scar');
+ const nightmare=yearGroup(11);nightmare.name='gyuwon-eleventh-year-accumulated-nightmare';
+ add(nightmare,torus(.51,.09),metal,0,-.15,-.65,'gyuwon-nightmare-broken-motorcycle-rim').rotation.y=.6;
+ for(let i=0;i<5;i++){const piece=add(nightmare,box(.24,.45,.12),i%2?leather:ember,-.55+i*.27,.45,-.48,'gyuwon-nightmare-embedded-textbook');piece.rotation.z=(i-2)*.17;}
+ for(const side of [-1,1]){
+  add(nightmare,curve([[side*.3,.4,-.4],[side*.9,.15,-.65],[side*.75,-.7,-.7],[side*1.2,-1.1,-.25]],.085),olive,0,0,0,'gyuwon-nightmare-fused-tentacle');
+  add(nightmare,box(.15,.8,.12),metal,side*.62,.32,-.35,'gyuwon-nightmare-broken-rifle-fragment').rotation.z=side*.3;
+  add(nightmare,sphere(.13,18),purple,side*.47,-.2,.57,'gyuwon-nightmare-collectible-remnant');
+ }
  const yearTints=new Map(Object.entries({
   1:0xc5ced5,2:0xb4b5b2,3:0x7b8189,4:0x667179,5:0x53594f,
   6:0x85739a,7:0x384651,8:0x555a60,9:0x777080
@@ -118,7 +126,7 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
   activeYear=stage;
   handProps.update(g);
   for(const [n,groups]of perYear)for(const group of groups)
-   group.visible=!!e&&(stage===n||n===9&&stage>=9);
+   group.visible=!!e&&(stage===n||n===9&&stage>=9||n===11&&y>=11);
   helmet.visible=!!e&&stage===1&&e.cast==='bike';
   for(const lid of eyelids){
    const blinkPhase=(t*(e?.mode==='exam'?.74:1.08)+y*.31)%3.35;
