@@ -35,7 +35,7 @@ export function createGyuwonYears(){
  return {mode:'combat',year:1,day:365,season:0,cast:null,castT:0,castCount:0,
   recover:1.8,subject:0,subjectT:0,grade:null,gradeT:0,gradeAt:-100,
   bannerUntil:2.8,subjectLabel:null,scoreFlash:0,from:null,aim:0,
-  mapClock:0,mapIndex:0,chat:[],lastCast:null};
+  mapClock:0,mapIndex:0,chat:[],lastCast:null,dodge:null};
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function add(g,shape,opts={}){
@@ -123,7 +123,7 @@ function pickMemoryMap(g){
 function startNextYear(g,emit){
  const e=g.gyuwon.years;
  e.year++;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
- e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;
+ e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
  e.mapClock=0;e.mapIndex=0;e.chat=[];g.gyuwon.hazards.length=0;
  g.boss.state='recovery';g.gyuwon.pattern=null;g.gyuwon.space='white';
  pickMemoryMap(g);
@@ -131,7 +131,7 @@ function startNextYear(g,emit){
 }
 function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
- e.cast=id;e.lastCast=id;e.castT=0;e.castCount++;e.from={x:b.x,z:b.z};
+ e.cast=id;e.lastCast=id;e.castT=0;e.castCount++;e.from={x:b.x,z:b.z};e.dodge=null;
  e.aim=a;g.gyuwon.t=0;g.gyuwon.pattern='year-'+id;
  g.boss.state='pattern';b.yaw=a;g.gyuwon.hazards.length=0;
  const dx=Math.sin(a),dz=Math.cos(a);
@@ -238,7 +238,7 @@ function tickHazards(g,dt,hurt,emit){
 }
 export function tickGyuwonYears(g,dt,{hurt,emit}){
  const b=g.boss,s=g.gyuwon,e=s.years;
- s.elevation=0;s.slow=Math.max(0,s.slow-dt);s.stun=0;
+ s.elevation=0;s.slow=Math.max(0,s.slow-dt);s.stun=Math.max(0,s.stun-dt);
  if(g.status!=='playing')return;
  if(e.year>=9&&e.mode==='combat'){
   e.mapClock+=dt;s.stageTime+=dt;
@@ -259,6 +259,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  }
  e.season=Math.min(GYUWON_YEAR_SECONDS,e.season+dt);
  e.day=Math.max(0,Math.ceil(365*(1-e.season/GYUWON_YEAR_SECONDS)));
+ if(s.stun>0)return;
  if(e.cast){
   e.castT+=dt;s.t=e.castT;
   if(e.year===5&&e.cast!=='sewageWave'){
@@ -269,15 +270,24 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   const spec=GYUWON_YEAR_PATTERNS[e.cast];
   if(e.castT>=spec[0]){
    e.cast=null;s.pattern=null;s.hazards.length=0;b.state='recovery';
-   e.recover=spec[1];emit('gyuwon-land');
+   e.recover=spec[1];
+   if(e.year===4&&e.castCount%3===0){
+    const side=e.castCount%2?-1:1;
+    e.dodge={t:0,fromX:b.x,fromZ:b.z,toX:clamp(b.x+side*4.4,-26,26),
+     toZ:clamp(b.z+(b.z>=0?-1:1)*1.5,-26,26)};
+   }
+   emit('gyuwon-land');
   }
   return;
  }
  b.state='recovery';e.recover-=dt;
- // Year four mainly uses stationary ranged attacks but occasionally
- // performs a visible short defensive sidestep between casts.
- if(e.year===4&&e.recover>.6&&e.castCount%3===0){
-  b.x=clamp(b.x+Math.sin(g.time*7)*dt*2.4,-28,28);
+ // Every third ranged cast, roll sideways with a complete .72s travel arc.
+ // Roll position and actor rig share one state; no invisible teleport.
+ if(e.dodge){
+  const d=e.dodge;d.t=Math.min(.72,d.t+dt);
+  const q=d.t/.72,k=q*q*(3-2*q);
+  b.x=d.fromX+(d.toX-d.fromX)*k;b.z=d.fromZ+(d.toZ-d.fromZ)*k;
+  if(d.t>=.72)e.dodge=null;
  }
  if(e.recover>0)return;
  if(e.day===0){beginExam(g,emit);return;}
