@@ -6,6 +6,7 @@ import {createGyuwonPhilosophyFx} from './gyuwon-philosophy-fx.mjs';
 import {createGyuwonHazardFx} from './gyuwon-hazard-vfx.mjs';
 import {createGyuwonShadowHand} from './gyuwon-shadow-hand.mjs';
 import {createGyuwonAbsorbFx} from './gyuwon-absorb-fx.mjs';
+import {createGyuwonExamView} from './gyuwon-exam-view.mjs';
 import {GYUWON_RULES as R} from './gyuwon-data.mjs';
 
 export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
@@ -39,6 +40,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  // All attack warnings are 3D material fractures bound to authoritative collision footprints.
  const hazardFx=createGyuwonHazardFx(stage,{coarse});
+ const examView=createGyuwonExamView(stage,{coarse,reduced});
  const shadowHand=createGyuwonShadowHand(stage,{coarse});
  const absorbFx=createGyuwonAbsorbFx(stage,{coarse,reduced});
  // Ending: the exam hall returns for a moment, recedes desk by desk, and only the small
@@ -56,7 +58,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const studyTint=new THREE.Color(0x111b28),whiteTint=new THREE.Color(0xffffff),voidTint=new THREE.Color(0x010105);
  const studyFloor=new THREE.Color(0x354252),whiteFloor=new THREE.Color(0xe9e7e4),darkFloor=new THREE.Color(0x090810);
  let deathElapsed=0;
- function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();hazardFx.clear();absorbFx.clear();}
+ function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();hazardFx.clear();examView.clear();absorbFx.clear();}
  function update(g,dt=0){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
   const white=b.phase>=2&&(b.phase===3||s.space==='white')||won;
@@ -78,7 +80,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
    floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);
   spectacle.update(g,dt,deathElapsed);recall.update(g,dt);philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
-  hazardFx.update(g);shadowHand.update(g);absorbFx.update(g);
+  hazardFx.update(g);examView.update(g);shadowHand.update(g);absorbFx.update(g);
  }
- return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),exam:examView.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();examView.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
