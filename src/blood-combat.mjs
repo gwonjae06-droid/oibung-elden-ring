@@ -25,6 +25,7 @@ import {bloodHurtShapes} from './boss-hit-regions.mjs';
 // bosses retain their original projectile trajectories and aerial hit rules.
 export const BLOOD_AIRBORNE_HEIGHT=.45;
 export const BLOOD_PROJECTILE_GROUND_HEIGHT=.38;
+export const BLOOD_REQUIRED_TSUNAMI_HP=3000;
 export function bloodBossAirborne(g){
  return (g?.blood?.elevation||0)>BLOOD_AIRBORNE_HEIGHT;
 }
@@ -37,7 +38,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'blood',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  blood:{deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
+  blood:{requiredTsunamiStarted:false,requiredTsunamiDone:false,deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
    const dealt=damageBlood(game,amount,null,{dot});
@@ -53,7 +54,11 @@ export function actBlood(g,type,input={}){
 }
 export function damageBlood(g,amount,impact=null,{dot=false}={}){
  if(g.status!=='playing'||g.boss.state==='transition'||bloodBossAirborne(g)||!Number.isFinite(amount)||amount<=0)return 0;
- const b=g.boss,s=g.blood,damage=Math.min(amount,b.phase===1?Math.max(0,b.hp-1):b.hp);b.hp-=damage;
+ const b=g.boss,s=g.blood;
+ // Hold at the threshold until the mandatory wave finishes, including DoT
+ // and overkill hits. Do not heal a game whose HP was externally set lower.
+ const floor=s.requiredTsunamiDone?(b.phase===1?1:0):Math.min(b.hp,BLOOD_REQUIRED_TSUNAMI_HP);
+ const damage=Math.min(amount,Math.max(0,b.hp-floor));b.hp-=damage;
  if(damage&&!dot)emit(g,'boss-hit',{amount:damage,...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
  if(b.phase===1&&b.hp<=b.maxHp*.5)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.whip=null;s.slow=0;emit(g,'victory');}
@@ -82,6 +87,8 @@ export function severHeartNode(g,amount,point){
 }
 export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
+ // A public/manual pattern request must not replace the mandatory wave.
+ if(g.blood.requiredTsunamiStarted&&!g.blood.requiredTsunamiDone)return false;
  const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false;s.pattern=id;s.patternDuration=spec.duration;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
@@ -200,6 +207,13 @@ function tickBoss(g,dt){
   if(s.t>=2.65&&!s.cathedralShattered){s.cathedralShattered=true;emit(g,'blood-cathedral-shatter');}
   if(s.t>=3.85&&!s.seaCrashed){s.seaCrashed=true;emit(g,'blood-sea-crash');}
   s.elevation=Math.min(4,Math.max(0,s.t-2)*2)*Math.max(0,Math.min(1,(R.transition-s.t)/.55));if(s.t>=R.transition){beginRecovery(g,Math.max(2.2,2.8*BOSS_TEMPO.recovery));s.t=0;emit(g,'blood-land');}return;}
+ // Interrupt the previous attack cleanly, but retain the existing phase
+ // transition, full requiem warning/camera, wave hazards and approach sound.
+ if(b.phase===2&&b.hp<=BLOOD_REQUIRED_TSUNAMI_HP&&!s.requiredTsunamiStarted){
+  s.whip=null;s.whipCooldown=1.65;s.elevation=0;s.stun=0;
+  if(startBloodPattern(g,'requiem'))s.requiredTsunamiStarted=true;
+  return;
+ }
  if(s.stun>0){s.stun=Math.max(0,s.stun-dt);s.whip=null;return;}
  // A telegraphed, fixed-angle counter to distant ranged camping.
  // It cannot overlap the 2P camera-only spectacles or a real wide-area hit.
@@ -248,6 +262,7 @@ function tickBoss(g,dt){
  for(const h of s.hazards){h.age+=dt;if(!h.fired&&h.age>=h.warn){h.fired=true;emit(g,'blood-impact',{pattern:s.pattern});}if(bloodHazardContactReady(h)&&h.age<=h.warn+h.life&&!h.hit&&hazardContains(h,g.player))hurt(g,h);if(g.status!=='playing')return;}
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
  if(s.t>=spec.duration){
+  if(s.pattern==='requiem'&&s.requiredTsunamiStarted&&!s.requiredTsunamiDone)s.requiredTsunamiDone=true;
   if(s.pattern==='heartFeast'){
    const alive=s.heartNodes.filter(n=>n.hp>0).length;
    const heal=Math.max(0,Math.min(b.maxHp*.025*alive/3,b.maxHp*.5-b.hp));
