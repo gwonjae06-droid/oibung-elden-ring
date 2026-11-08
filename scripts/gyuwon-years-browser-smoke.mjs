@@ -49,15 +49,47 @@ try{
  assert.equal(snap.year,1);
  assert.match(snap.clock,/수능까지 D-\d+/);
  await page.screenshot({path:'artifacts/gyuwon-years/hyeonyeok-desktop.png'});
+ // Verify that the actual live battle input, not just the shared free-look
+ // helper, changes the camera when Q unlocks target tracking.
+ const beforeFreeLook=await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  return window.readYearSession(root).diagnostics().camera;
+ });
+ await page.keyboard.press('q');
+ await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
+  ?.firstElementChild?.shadowRoot?.getElementById('lock-label')?.textContent?.includes('카메라 자유'));
+ await page.evaluate(()=>{
+  const canvas=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot.getElementById('world');
+  canvas.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,composed:true,movementX:175,movementY:0}));
+ });
+ await page.waitForFunction(before=>{
+  const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
+  const now=window.readYearSession(root)?.diagnostics()?.camera;
+  return now&&Math.hypot(now.x-before.x,now.z-before.z)>1;
+ },beforeFreeLook,{timeout:12000});
+ await page.keyboard.press('q');
+ await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
+  ?.firstElementChild?.shadowRoot?.getElementById('lock-label')?.textContent?.includes('카메라 록온'));
  // QA-only deterministic state injection: no cutscene skip is exposed to players.
  await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
+  const {damageGyuwon}=await import('./src/gyuwon-combat.mjs');
   const g=readBattleSession(document.getElementById('gyuwon-battle').firstElementChild.shadowRoot).game;
-  const e=g.gyuwon.years;e.mode='combat';e.season=48;e.signatureUsed=true;e.day=0;e.cast=null;e.recover=0;
+  g.boss.maxHp=7000;g.boss.hp=7000;
+  damageGyuwon(g,5000);
+  const e=g.gyuwon.years;
+  if(!(e.damageBank>0))throw Error('Exam carry QA did not produce deferred damage');
+  e.mode='combat';e.season=48;e.signatureUsed=true;e.day=0;e.cast=null;e.recover=0;
   g.boss.state='recovery';g.gyuwon.hazards.length=0;
  });
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
   ?.firstElementChild?.shadowRoot?.querySelector('.gy-dday-clock')?.textContent==='수능 당일',{},{timeout:15000});
+ const examHp=await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  const g=window.readYearSession(root).game;
+  return {hp:g.boss.hp,bank:g.gyuwon.years.damageBank};
+ });
+ assert.equal(examHp.bank,0,'prior damage must be settled before the exam reward');
  await page.screenshot({path:'artifacts/gyuwon-years/suneung-exam.png'});
  await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
@@ -67,7 +99,24 @@ try{
  });
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
   ?.firstElementChild?.shadowRoot?.querySelector('.gy-dday-hero')?.textContent==='수능 대성공',{},{timeout:12000});
+ const gradeHp=await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  return window.readYearSession(root).game.boss.hp;
+ });
+ assert.ok(Math.abs(gradeHp-(examHp.hp+350))<.001,
+  'a successful Suneung must visibly restore 5% of the actual 7000 boss HP');
  await page.screenshot({path:'artifacts/gyuwon-years/grade-great.png'});
+ await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
+  ?.firstElementChild?.shadowRoot&&window.readYearSession(document.getElementById('gyuwon-battle')
+   .firstElementChild.shadowRoot)?.game?.gyuwon?.years?.year===2,{},{timeout:20000});
+ const carriedHp=await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  const g=window.readYearSession(root).game;
+  return {hp:g.boss.hp,visible:root.getElementById('boss-value').textContent};
+ });
+ assert.ok(Math.abs(carriedHp.hp-gradeHp)<.001,
+  'the next-year transition cannot erase a successful examination recovery');
+ assert.match(carriedHp.visible,/\d/,'the rendered boss HP value must be visible');
  async function showYear(year,cast,memory='sword'){
   return page.evaluate(async({year,cast,memory})=>{
    const {readBattleSession}=await import('./src/battle-session.mjs');
