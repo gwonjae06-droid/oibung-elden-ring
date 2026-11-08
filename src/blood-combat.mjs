@@ -228,7 +228,7 @@ export function startBloodPattern(g,id){
   circle(b.x,b.z,4.34,3.9,{life:.48,damage:31});
  }
  if(id==='seraphFinale'){
-  for(let i=0;i<4;i>hazard(g,'cone',{x:b.x,z:b.z,
+  for(let i=0;i<4;i++)hazard(g,'cone',{x:b.x,z:b.z,
    yaw:aim+[-.95,.95,-.38,.38][i],arc:.34,innerR:3.5,r:24,
    warn:1.48+i*.85,life:.48,damage:34});
   for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:1.32,grow:14,
