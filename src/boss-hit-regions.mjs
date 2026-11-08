@@ -5,6 +5,7 @@ import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance} from './clown-ringmaster-pose.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
+import {ridePose,rideFrame} from './gyuwon-year-choreography.mjs';
 
 const CLOWN_SCALE=1.25;
 const PHASE_MOUNT_SCALE=Math.cbrt(2)*1.5;
@@ -86,8 +87,17 @@ export const bloodAimPart=g=>bloodHurtShapes(g).find(x=>x.id==='seraph-chest'||x
 // targetable; actual rig proportions are the source of these dimensions.
 export function gyuwonHurtShapes(g){
  if(!g?.gyuwon||!g?.boss)return [];
- const b=g.boss,at=(id,x,y,z,rx,ry,rz)=>
-  ellipsoid(b,id,{x,y:y+(g.gyuwon.years?b.floorY||0:0),z},rx,ry,rz);
+ const b=g.boss,mounted=ridePose(g.gyuwon.years),frame=mounted?rideFrame(mounted):null;
+ const at=(id,x,y,z,rx,ry,rz)=>{
+  if(frame){
+   const c=Math.cos(frame.bank),s=Math.sin(frame.bank),cp=Math.cos(frame.pitch),sp=Math.sin(frame.pitch);
+   y+=.35;const bx=x*c-y*s,by=x*s+y*c;
+   const shape=ellipsoid({...b,x:frame.x,z:frame.z,yaw:frame.yaw},id,
+    {x:bx,y:by*cp-z*sp+frame.y+(b.floorY||0),z:by*sp+z*cp},rx,Math.abs(cp)*ry+Math.abs(sp)*rz,Math.abs(sp)*ry+Math.abs(cp)*rz);
+   return shape;
+  }
+  return ellipsoid(b,id,{x,y:y+(g.gyuwon.years?b.floorY||0:0),z},rx,ry,rz);
+ };
  const parts=[
   at('tailored-torso',0,1.96,0,.63,.88,.53),
   at('left-upper-arm',-.74,2.17,.01,.29,.53,.29),

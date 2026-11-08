@@ -28,17 +28,31 @@ export function rifleAimYaw(hazards){
 }
 export function sampleRide(segment,time){
  const q=unit((time-segment.start)/(segment.end-segment.start)),u=smooth(q);
- let x,z,yaw;
+ let x,z,yaw,bank=0,wheelie=0;
  if(segment.orbit){
-  const a=segment.a+(segment.b-segment.a)*u;
+  const progress=segment.cruise?q:segment.brake?(2*q-q*q):u;
+  const a=segment.a+(segment.b-segment.a)*progress;
   x=Math.sin(a)*segment.radius;z=Math.cos(a)*segment.radius;
   yaw=a+(segment.b>segment.a?Math.PI/2:-Math.PI/2);
+  if(segment.cruise||segment.brake)bank=.22*(segment.b>segment.a?1:-1)*(segment.brake?1-u:1);
+ }else if(segment.curve){
+  const [a,b]=segment.curve,v=1-q;
+  x=v*v*v*segment.from.x+3*v*v*q*a.x+3*v*q*q*b.x+q*q*q*segment.to.x;
+  z=v*v*v*segment.from.z+3*v*v*q*a.z+3*v*q*q*b.z+q*q*q*segment.to.z;
+  const dx=3*v*v*(a.x-segment.from.x)+6*v*q*(b.x-a.x)+3*q*q*(segment.to.x-b.x);
+  const dz=3*v*v*(a.z-segment.from.z)+6*v*q*(b.z-a.z)+3*q*q*(segment.to.z-b.z);
+  yaw=Math.atan2(dx,dz);bank=.22*smooth(q/.3);
  }else{
   x=segment.from.x+(segment.to.x-segment.from.x)*u;
   z=segment.from.z+(segment.to.z-segment.from.z)*u;
   yaw=Math.atan2(segment.to.x-segment.from.x,segment.to.z-segment.from.z);
  }
- return {x,z,yaw,y:segment.jump?Math.sin(Math.PI*q)*4.2:0,r:segment.r||1.85};
+ if(segment.stage==='windup'){
+  const turn=Math.atan2(Math.sin((segment.aimYaw??yaw)-yaw),Math.cos((segment.aimYaw??yaw)-yaw));
+  yaw+=turn*smooth((q-.25)/.75);wheelie=segment.lift*smooth((q-.2)/.8);
+ }
+ if(segment.stage==='rush')wheelie=segment.lift*(1-smooth((q-.45)/.55));
+ return {x,z,yaw,y:segment.jump?Math.sin(Math.PI*q)*4.2:0,r:segment.r||1.85,bank,wheelie,stage:segment.stage};
 }
 export function ridePose(e){
  if(!e?.rideTrack?.length||!e.cast||e.mode!=='combat')return null;
@@ -50,50 +64,56 @@ export function ridePose(e){
  pose.yaw=previous+delta*smooth((e.castT-segment.start)/.28);
  return {...pose,ride:segment.ride||e.rideKind};
 }
-export function makeRide(g,{add,ultimate=false,scooter=false}={}){
- const e=g.gyuwon.years,b=g.boss,p=g.player,track=[];
- const r=scooter?1.42:1.85;
- let pos={x:b.x,z:b.z},time=0;
- const move=(to,duration,damaging=false,jump=false)=>{
-  const segment={from:{...pos},to:{...to},start:time,end:time+duration,jump,r};
-  track.push(segment);
-  if(damaging)add(g,'circle',{x:pos.x,z:pos.z,r,warn:time,life:duration,
-   visual:'year-vehicle',damage:scooter?25:32,ride:scooter?'scooter':'bike',rideSegment:segment});
-  time+=duration;pos={...to};return segment;
- };
- if(!ultimate){
-  // Mount and brake before moving; the route ends inside the round arena.
-  move(pos,1.08);
-  const a=Math.atan2(p.x-pos.x,p.z-pos.z),distance=scooter?14:20;
-  let to={x:pos.x+Math.sin(a)*distance,z:pos.z+Math.cos(a)*distance};
-  const d=Math.hypot(to.x,to.z);if(d>27){to.x*=27/d;to.z*=27/d;}
-  move(to,1.12,true);
- }else if(scooter){
-  move(pos,1.2);
-  for(let i=0;i<5;i++){
-   const to={x:i%2?18:-18,z:Math.max(-19,Math.min(19,p.z+(i-2)*3))};
-   if(i)move(pos,.65); // visible brake, reverse and coil before the next rush
-   move(to,.85,true);
+// Rotate actor and vehicle about the same rear axle; planted shoes and hands
+// remain attached while the front wheel lifts. No separate FX movement clock.
+export function rideFrame(pose){
+ const pitch=pose.wheelie||0,rear=pose.ride==='scooter'?1.1:1.35,axle=pose.ride==='scooter'?.35:.77;
+ const forward=rear*(Math.cos(pitch)-1)+axle*Math.sin(pitch);
+ return {x:pose.x+Math.sin(pose.yaw)*forward,z:pose.z+Math.cos(pose.yaw)*forward,
+  y:(pose.y||0)+axle*(1-Math.cos(pitch))+rear*Math.sin(pitch),pitch:-pitch,bank:pose.bank||0,yaw:pose.yaw};
+}
+function lockRideTarget(prep,target){
+ const rush=prep.rush,escape=prep.escape,from=rush.from;
+ const yaw=Math.atan2(target.x-from.x,target.z-from.z),dx=Math.sin(yaw),dz=Math.cos(yaw),dot=from.x*dx+from.z*dz;
+ const distance=Math.max(0,-dot+Math.sqrt(Math.max(0,dot*dot+25*25-from.x*from.x-from.z*from.z)));
+ rush.to={x:from.x+dx*distance,z:from.z+dz*distance};prep.aimYaw=yaw;
+ escape.from={...rush.to};escape.curve[0]={...rush.to};
+ prep.target={x:target.x,z:target.z};
+}
+export function updateRideAim(g){
+ const e=g.gyuwon.years;
+ for(const segment of e.rideTrack||[]){
+  if(segment.stage==='windup'&&!segment.locked&&e.castT>=segment.start){
+   lockRideTarget(segment,g.player);segment.locked=true;
   }
- }else{
-  const radius=26,initial=Math.atan2(pos.x,pos.z);
-  move({x:Math.sin(initial)*radius,z:Math.cos(initial)*radius},1.5);
-  let angle=initial;
-  for(let i=0;i<4;i++){
-   const next=angle+.70;
-   const orbit={orbit:true,radius,a:angle,b:next,start:time,end:time+1.05,r};
-   track.push(orbit);time=orbit.end;pos=sampleRide(orbit,time);angle=next;
-   const aim=Math.atan2(p.x-pos.x,p.z-pos.z),dx=Math.sin(aim),dz=Math.cos(aim);
-   // Intersect the ray through the snapshotted target with the far arena edge.
-   const dot=pos.x*dx+pos.z*dz;
-   const distance=-dot+Math.sqrt(Math.max(0,dot*dot+radius*radius-pos.x*pos.x-pos.z*pos.z));
-   move({x:pos.x+dx*distance,z:pos.z+dz*distance},1.1,true);
-   angle=Math.atan2(pos.x,pos.z);
-  }
-  move({...p},1.25,false,true);
  }
+}
+export function makeRide(g,{add,ultimate=false,scooter=false}={}){
+ const e=g.gyuwon.years,b=g.boss,track=[],radius=25,r=scooter?1.42:1.85;
+ const angular=scooter?2.15:1.95,lift=scooter?.50:.62;
+ let pos={x:b.x,z:b.z},time=0,angle=Math.atan2(pos.x,pos.z);
+ const point=a=>({x:Math.sin(a)*radius,z:Math.cos(a)*radius});
+ const tangent=(a,scale)=>({x:Math.cos(a)*scale,z:-Math.sin(a)*scale});
+ const push=(segment,duration)=>{Object.assign(segment,{start:time,end:time+duration,r});track.push(segment);time+=duration;pos=sampleRide(segment,time);return segment;};
+ const curveTo=(to,a,duration)=>{const v=tangent(a,6);return push({from:{...pos},to:{...to},curve:[{...pos},{x:to.x-v.x,z:to.z-v.z}],stage:'return'},duration);};
+ const orbit=(sweep,brake=false)=>{const segment=push({orbit:true,cruise:!brake,brake,radius,a:angle,b:angle+sweep,stage:brake?'windup':'orbit',lift:brake?lift:0},brake?.78:sweep/angular);angle+=sweep;return segment;};
+ // Fast continuous perimeter travel, with a complete lap before the first rush.
+ curveTo(point(angle),angle,.95);
+ const count=ultimate?(scooter?5:4):1;
+ for(let i=0;i<count;i++){
+  orbit(i===0?Math.PI*2:2.65);
+  const prep=orbit(angular*.78/2,true);
+  const rush=push({from:{...pos},to:point(angle+Math.PI),stage:'rush',lift},.98);
+  const rejoin=angle+Math.PI+.65,escape=curveTo(point(rejoin),rejoin,.72);
+  angle=rejoin;Object.assign(prep,{rush,escape,locked:false});lockRideTarget(prep,g.player);
+  add(g,'circle',{x:rush.from.x,z:rush.from.z,r,warn:rush.start,life:rush.end-rush.start,
+   visual:'year-vehicle',damage:scooter?25:32,ride:scooter?'scooter':'bike',rideSegment:rush});
+ }
+ orbit(2.35);
+ // Settle both wheels and bleed speed before dismounting; the cast owns this tail.
+ push({orbit:true,brake:true,radius,a:angle,b:angle+.4,stage:'brake'},.48);
  e.rideTrack=track;e.rideKind=scooter?'scooter':'bike';e.rideInitialYaw=b.yaw;
- return {end:time,position:pos};
+ return {end:time,position:{x:pos.x,z:pos.z}};
 }
 export function gyuwonWeaponPose(e,hazards=[]){
  const id=e?.mode==='combat'?e.cast:null,t=e?.castT||0;

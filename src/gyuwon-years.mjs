@@ -1,6 +1,6 @@
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
 import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
-import {makeRide,ridePose,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
+import {makeRide,ridePose,updateRideAim,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
 import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
@@ -266,6 +266,7 @@ function beginCast(g,id,emit){
   }
  }
  augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim});
+ e.castDuration=Math.max(e.castDuration||0,(e.rideTrack.at(-1)?.end||0)+.3);
  g.gyuwon.motionBeats=[...new Set(g.gyuwon.hazards.map(h=>h.warn))].sort((x,y)=>x-y);
  emit('gyuwon-warning',{pattern:'year-'+id});
 }
@@ -315,6 +316,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  if(e.cast){
   e.castT+=dt;s.t=e.castT;
   if(e.cast==='ultimateMarksman')tickMarksmanBarrage(g,add);
+  updateRideAim(g);
   const mounted=ridePose(e);
   if(mounted){b.x=mounted.x;b.z=mounted.z;b.yaw=mounted.yaw;}
   tickHazards(g,dt,hurt,emit);
