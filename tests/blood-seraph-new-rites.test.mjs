@@ -36,6 +36,7 @@ test('the crimson face cannon really rotates left-to-right and only damages its 
  const g=sample('seraphSweep'),h=g.blood.hazards[0];
  assert.equal(g.blood.hazards.length,1);
  assert.equal(h.seraphAngularSweep,true);
+ assert.ok(h.width>=2.1&&h.length>=60,'sweep must be enormous and thick');
  assert.ok(h.warn>=1&&h.life>=3);
  const start=hazardPosition(h);
  assert.ok(Math.abs(start.yaw-h.yawStart)<1e-6);
@@ -57,6 +58,7 @@ test('the wing-disc leaves the map and crosses FOUR distinct warned lanes',()=>{
  assert.equal(hs.length,4);
  assert.deepEqual(hs.map(h=>h.pass),[0,1,2,3]);
  assert.ok(hs.every(h=>Math.abs(h.x)>32&&h.shape==='lane'));
+ assert.ok(hs.every(h=>h.width>=3.4&&h.length>=11),'wider ring needs a wider visible hit volume');
  assert.ok(hs.every(h=>h.warn>=1.2&&h.life>.7));
  assert.ok(hs.every((h,i)=>i===0||h.warn-hs[i-1].warn>.75));
  const scene=new THREE.Scene(),rig=createBloodSeraph(scene,{coarse:true,reduced:true});
@@ -78,7 +80,7 @@ test('the blood pillars converge in four ordered ranks but STOP outside the cast
  const g=sample('seraphInwardPillars'),hs=g.blood.hazards;
  assert.equal(hs.length,12);
  assert.deepEqual([...new Set(hs.map(h=>h.rank))],[0,1,2,3]);
- assert.ok(hs.every(h=>h.shape==='circle'&&h.damage>0&&h.warn>=1));
+ assert.ok(hs.every(h=>h.shape==='circle'&&h.damage>0&&h.warn>=1&&h.r>=3.4));
  for(let rank=0;rank<4;rank++){
   const group=hs.filter(h=>h.rank===rank),avg=group.reduce((s,h)=>s+Math.hypot(h.x-g.boss.x,h.z-g.boss.z),0)/3;
   assert.equal(group.length,3);
@@ -93,7 +95,7 @@ test('the blood pillars converge in four ordered ranks but STOP outside the cast
 test('the frantic face cannon fires eleven distinct warned rays, without all warning at once',()=>{
  const g=sample('seraphFrenzy'),hs=g.blood.hazards;
  assert.equal(hs.length,11);
- assert.ok(hs.every(h=>h.shape==='lane'&&h.seraphCue==='frenzy'&&h.warn>1));
+ assert.ok(hs.every(h=>h.shape==='lane'&&h.seraphCue==='frenzy'&&h.warn>1&&h.width>=1.75));
  assert.equal(bloodFloorField(g),null,
   'the floor must not display eleven future shots simultaneously');
  hs[0].age=hs[0].warn-.65;
@@ -106,9 +108,32 @@ test('the frantic face cannon fires eleven distinct warned rays, without all war
 test('celestial wheels and martyr-rose have different movement and hitbox geometries',()=>{
  const halos=sample('seraphHaloProcession').blood.hazards;
  assert.equal(halos.length,4);
- assert.ok(halos.every(h=>h.shape==='ring'&&Math.abs(h.vx)>0));
+ assert.ok(halos.every(h=>h.shape==='ring'&&Math.abs(h.vx)>0&&h.r>=4.5&&h.width>=1.95));
  const petals=sample('seraphBloodRosette').blood.hazards;
  assert.equal(petals.length,6);
- assert.ok(petals.every(h=>h.shape==='cone'&&h.innerR>6&&h.arc<.3));
+ assert.ok(petals.every(h=>h.shape==='cone'&&h.innerR>=5&&h.arc>=.32&&h.r>=29));
  assert.ok(petals.every((h,i)=>i===0||h.warn>petals[i-1].warn));
+});
+
+// A harder attack must remain readable. The safest gap cannot be deleted
+// by indiscriminately increasing angular sectors and simultaneous beams.
+test('larger blood-angel spells still have valid gaps and visible warning budgets',()=>{
+ for(const id of [...SERAPH_CANONICAL_PATTERNS,'seraphFinale']){
+  const g=sample(id),spec=BLOOD_PATTERNS[id];
+  assert.ok(g.blood.hazards.every(h=>h.warn>=1.2),id+' has an instant unfair strike');
+  assert.ok(g.blood.hazards.every(h=>h.damage>0),id);
+  for(let time=0;time<spec.duration;time+=.20){
+   const active=g.blood.hazards.filter(h=>h.age>=h.warn&&h.age<h.warn+h.life);
+   if(active.length){
+    let safe=false;
+    for(let x=-26;x<=26&&!safe;x+=2.6)for(let z=-26;z<=26;z+=2.6){
+     if(Math.hypot(x,z)<28&&active.every(h=>!hazardContains(h,{x,z}))){safe=true;break;}
+    }
+    assert.ok(safe,id+' erased all evasive space at t='+time.toFixed(2));
+   }
+   stepBlood(g,.05);
+   // Deterministic timing independent of player action, 4 subsamples.
+   for(let i=0;i<3;i++)stepBlood(g,.05);
+  }
+ }
 });

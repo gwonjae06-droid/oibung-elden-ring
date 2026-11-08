@@ -13,6 +13,7 @@ import {bloodTransformation} from '../src/blood-transformation.mjs';
 import {bloodHurtShapes,bloodAimPart} from '../src/boss-hit-regions.mjs';
 import {createBloodTransformationAudio} from '../src/blood-transformation-audio.mjs';
 import {bossTrack,createBossTracks} from '../src/boss-tracks.mjs';
+import {BLOOD_SERAPH_MUSIC_START_SECONDS} from '../src/boss-music.mjs';
 
 const advance=(g,t)=>{for(let left=t;left>1e-7;left-=.05)stepBlood(g,Math.min(.05,left));};
 const p3=()=>{
@@ -195,9 +196,10 @@ test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged 
  const tracks=createBossTracks({Audio},{fadeMs:100});
  tracks.update({boss:'blood',phase:2,offset:1.8});
  assert.equal(clips[0].currentTime,1.8);
- tracks.update({boss:'blood',phase:3,offset:180});
+ assert.equal(BLOOD_SERAPH_MUSIC_START_SECONDS,142);
+ tracks.update({boss:'blood',phase:3,offset:BLOOD_SERAPH_MUSIC_START_SECONDS});
  assert.equal(tracks.playingKey,'blood:3');
- assert.equal(clips[1].currentTime,180);
+ assert.equal(clips[1].currentTime,142);
  assert.equal(clips[1].playbackRate,1);
  tracks.dispose();
  const effects=[];class EffectAudio extends Audio{constructor(url){super(url);effects.push(this);}}

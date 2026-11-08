@@ -1,4 +1,5 @@
 import {readBattleSession} from './battle-session.mjs';
+export const BLOOD_SERAPH_MUSIC_START_SECONDS=142;
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 import {createBossTracks} from './boss-tracks.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
@@ -18,7 +19,7 @@ export function musicState(doc,focused=true){
   if(g.boss.phase===2)selection.offset=1.8;
   // A distinct key plays the SAME phase-two recording from its late movement,
   // preserving its original timbre/tempo instead of generating a new BGM.
-  if(g.boss.phase===3)selection.offset=180;
+  if(g.boss.phase===3)selection.offset=BLOOD_SERAPH_MUSIC_START_SECONDS;
  }if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===3?
    Math.max(0,Math.min(1,(c.t-1.35)/1.05)):
    c.musicPhase===1?c.musicGain:Math.min(1,(c.t-3.8)/.55);selection.cinematic=true;}return selection;}
