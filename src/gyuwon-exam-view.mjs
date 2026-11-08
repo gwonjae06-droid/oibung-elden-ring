@@ -23,9 +23,9 @@ export function createGyuwonExamView(stage,{coarse=false,reduced=false}={}){
  const sheets=new THREE.Group();sheets.name='gyuwon-exam-papers';root.add(sheets);
  for(let i=0;i<7;i++){
   const p=add(sheets,new THREE.PlaneGeometry(1.55,2.1),paperMat,Math.sin(i*2.4)*2,2+i*.25,Math.cos(i*2.4)*1.6);
-  p.rotation.set(-.55,i*.43,i*.06);
+  p.rotation.set(-.55,i*.43,i*.06);p.userData.examBaseY=p.position.y;
   const stroke=add(sheets,new THREE.BoxGeometry(.92,.018,.01),red,p.position.x,p.position.y+.17,p.position.z+.024);
-  stroke.rotation.y=p.rotation.y;
+  stroke.rotation.y=p.rotation.y;stroke.userData.examBaseY=stroke.position.y;
  }
  const options=new THREE.Group();options.name='gyuwon-three-answer-stands';root.add(options);
  const optionPads=[];
@@ -47,7 +47,7 @@ export function createGyuwonExamView(stage,{coarse=false,reduced=false}={}){
   const beam=add(gun,new THREE.BoxGeometry(.045,.05,23),red,0,1.67,12.6);
   beam.material=red;guns.push({gun,beam});
  }
- const bulletGeo=new THREE.SphereGeometry(.32,coarse?8:16,coarse?6:12);
+ const bulletGeo=new THREE.SphereGeometry(.65,coarse?8:16,coarse?6:12);
  const bullets=Array.from({length:4},()=>add(root,bulletGeo,red));
  const dolls=new THREE.Group();dolls.name='gyuwon-six-figurines';root.add(dolls);
  const figures=[];
@@ -82,7 +82,7 @@ export function createGyuwonExamView(stage,{coarse=false,reduced=false}={}){
    const left=Math.max(-RANGE,a),right=Math.min(RANGE,b),width=right-left;
    if(width<=.1)continue;
    const geo=new THREE.BoxGeometry(width,5.4,h.depth*2,coarse?10:24,4,2);
-   const mesh=add(sewage,geo,sludge,(left+right)/2,2.8,0);
+   const mesh=add(sewage,geo,sludge,(left+right)/2,2.8,0);mesh.name='gyuwon-exam-physical-sewage-front';
    const original=geo.attributes.position.array.slice();
    wavePieces.push({mesh,original,geo});
   }
@@ -100,14 +100,14 @@ export function createGyuwonExamView(stage,{coarse=false,reduced=false}={}){
   sheets.position.set(b.x,0,b.z);
   sheets.rotation.y=Math.sin(clock*.28)*.22;
   for(let i=0;i<sheets.children.length;i++){
-   const m=sheets.children[i];m.position.y+=(Math.sin(clock*1.8+i*.9)*.002);
+   const m=sheets.children[i];m.position.y=m.userData.examBaseY+Math.sin(clock*1.8+i*.9)*.09;
   }
   options.visible=stageId===2&&t<3.6;
   if(options.visible){
    const origin=s.exam.choiceOrigin;
    for(let i=0;i<3;i++){
     const pad=optionPads[i];
-    pad.stand.position.set(Math.max(-27,Math.min(27,origin.x+(i-1)*5)),0,Math.max(-27,Math.min(27,origin.z)));
+    pad.stand.position.set(Math.max(-27,Math.min(27,origin.x+(i-1)*3.5)),0,Math.max(-27,Math.min(27,origin.z)));
     pad.stand.visible=!s.exam.choiceLocked||s.exam.choice===i;
     pad.cone.rotation.y=clock*.8+i;
    }
