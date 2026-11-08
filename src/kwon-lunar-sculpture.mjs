@@ -4,7 +4,7 @@
 const TAU=Math.PI*2;
 const hash=(n)=>{const v=Math.sin(n*127.1+78.233)*43758.5453;return v-Math.floor(v);};
 function build(T,outer,interior){
- const data=[...outer.flat(),...interior.flat()],geometry=new T.BufferGeometry();
+ const data=[...outer.flat(2),...interior.flat(2)],geometry=new T.BufferGeometry();
  geometry.setAttribute('position',new T.Float32BufferAttribute(data,3));
  geometry.clearGroups();
  geometry.addGroup(0,outer.length*3,0);
