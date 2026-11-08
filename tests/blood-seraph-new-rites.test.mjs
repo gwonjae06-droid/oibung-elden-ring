@@ -94,7 +94,7 @@ test('the frantic face cannon fires eleven distinct warned rays, without all war
  const g=sample('seraphFrenzy'),hs=g.blood.hazards;
  assert.equal(hs.length,11);
  assert.ok(hs.every(h=>h.shape==='lane'&&h.seraphCue==='frenzy'&&h.warn>1));
- assert.equal(bloodFloorField(g)?.hazards.length,0,
+ assert.equal(bloodFloorField(g),null,
   'the floor must not display eleven future shots simultaneously');
  hs[0].age=hs[0].warn-.65;
  const field=bloodFloorField(g);
