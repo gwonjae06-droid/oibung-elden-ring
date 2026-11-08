@@ -142,3 +142,40 @@ test('visual cues activate on and only after the scheduled collision clock',()=>
  assert.equal(gyuwonYearCuePhase({warn:1.6,age:1.6,life:.22}).impact,true);
  assert.equal(gyuwonYearCuePhase({warn:1.6,age:1.9,life:.22}).live,false);
 });
+
+
+test('third-year physical flame ring and social-science exam symbols follow live expanding radius',()=>{
+ const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
+ const burning=game(3);startGyuwonYearCast(burning,'flame');
+ fx.update(burning);
+ const flames=stage.getObjectByName('gyuwon-live-ring-crests');
+ assert.ok(flames?.isInstancedMesh);
+ assert.equal(flames.count,54);
+ const h=burning.gyuwon.hazards[0];h.age=h.warn+.25;fx.update(burning);
+ const m=new THREE.Matrix4();flames.getMatrixAt(0,m);
+ const c=new THREE.Vector3(),q=new THREE.Quaternion(),scale=new THREE.Vector3();m.decompose(c,q,scale);
+ assert.ok(Math.abs(c.z-(h.r+(h.grow||0)*.25))<.01,'physical crest must follow live hazard radius');
+ const examined=game();examined.gyuwon.years.season=26;examined.gyuwon.years.recover=0;
+ stepGyuwon(examined,.03);
+ for(let i=0;i<4;i++){
+  examined.gyuwon.years.subjectT=GYUWON_SUBJECT_SECONDS-.01;
+  stepGyuwon(examined,.03);
+ }
+ assert.equal(examined.gyuwon.years.subjectLabel,'탐구');
+ fx.update(examined);
+ assert.ok(stage.getObjectByName('gyuwon-social-law-object'));
+ assert.ok(stage.getObjectByName('gyuwon-live-ring-crests'));
+ fx.dispose();
+});
+
+test('rider IK plants both character shoes on raised vehicle pegs, then blends out',()=>{
+ const stage=new THREE.Group(),actor=createGyuwonActor(stage,{coarse:true});
+ const g=game(1);startGyuwonYearCast(g,'bike');
+ actor.update(g,0,.05);actor.update(g,0,.05);actor.update(g,0,.05);
+ const shoe=stage.getObjectByName('gyuwon-leather-shoe');
+ assert.ok(shoe?.position.y>.30,'bike rider boots must not stay planted on the arena floor');
+ g.gyuwon.years.cast=null;
+ for(let i=0;i<12;i++)actor.update(g,0,.05);
+ assert.ok(shoe.position.y<.26,'shoes should settle back onto the floor after dismounting');
+ actor.dispose();
+});
