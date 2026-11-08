@@ -6,7 +6,7 @@ export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseN
 export const BLOOD_PHASE_TWO_ENTRY_RATIO=.70;
 export const BLOOD_PHASE_THREE_ENTRY_RATIO=.25;
 export const BLOOD_FINAL_HYMN_RATIO=.10;
-export const BLOOD_SERAPH_TRANSITION=4.65;
+export const BLOOD_SERAPH_TRANSITION=6.25;
 // One rebirth pulse during the 3P cinematic, not recurring regeneration.
 export const BLOOD_SERAPH_REBIRTH_HEAL=1000;
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.

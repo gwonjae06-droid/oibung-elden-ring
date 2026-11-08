@@ -59,9 +59,13 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   if(disposed)return;focusGame=g;const s=g.blood,b=g.boss,c=bloodTransformation(g),stage=bloodStage(g),motion=motionDirector.update(g,dt),dead=g.status==='won';visualTime+=dt;if(dead)deathTime+=dt;const fade=dead?Math.max(.01,1-deathTime/2.8):1;
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
   const energyGoal=(({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0)+(s.siphon?.active?0.7:0);energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
-  root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
-  // The final form replaces, rather than overlaps, the old 2P humanoid.
-  root.visible=b.phase!==3;
+  root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;
+  // Keep the existing phase-two body/wings on stage DURING the cinematic,
+  // gradually contracting them into the forming Seraph. No first-frame pop.
+  const oldForm=b.phase===3?(b.state==='transition'?(c.oldForm??0):0):1;
+  root.visible=b.phase!==3||oldForm>.015;
+  root.scale.setScalar(fade*1.25*(b.phase===3?Math.max(.001,oldForm):1));
+  root.position.y+=b.phase===3&&c.active?c.haloBirth*2.2:0;
   // Choreography is tied to the actual spell clock, never an independent visual timer.
   const walk=s.walk&&['recovery','maneuver'].includes(b.state)?sampleBloodWalk(s.walk):null;
   actor.position.y=(s.elevation>.45&&!reduced?Math.sin(g.time*1.8)*.035:0)+motion.body.bob+(walk?.moving?walk.bob:0);
@@ -86,8 +90,12 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   heart.visible=b.phase>=2||c.active;
   heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));
   scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight&&o.name!=='cinematic-boss-silhouette-fill')o.intensity=1.45*env.light+.35;});
-  if(c.active&&c.t>=1.8&&lastBirth<1.8)particles.burst(b.x,4+s.elevation,b.z,{count:20,power:4});
-  if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,4+s.elevation,b.z,{count:quality.low?28:64,power:10});
+  if(c.active&&c.t>=1.8&&lastBirth<1.8)particles.burst(b.x,4+s.elevation,b.z,
+   {count:b.phase===3?(reduced?18:56):20,power:b.phase===3?6:4,lift:1.9});
+  if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,5+s.elevation,b.z,
+   {count:quality.low?28:84,power:b.phase===3?11:10,lift:2.8});
+  if(b.phase===3&&c.active&&c.t>=4.8&&lastBirth<4.8)
+   particles.burst(b.x,9+s.elevation,b.z,{count:reduced?16:68,power:9,lift:3.5});
   lastBirth=c.active?c.t:0;dripTime+=dt;if(c.wings>.9&&dripTime>.2&&!dead){dripTime=0;const a=b.yaw;for(const side of [-1,1])particles.burst(b.x+Math.cos(a)*side*5.8,5+s.elevation,b.z-Math.sin(a)*side*5.8,{count:reduced?1:2,power:.5});}
   birthWave.visible=c.active&&c.wave>0&&c.wave<1;birthWave.position.set(b.x,.35,b.z);birthWave.scale.setScalar(.1+c.wave*28);birthWave.material.opacity=(1-c.wave)*.28;
   if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});if(root.visible)surfaceFlow.streakBoss(reduced?3:6);hitRoll=reduced?0:.055;}

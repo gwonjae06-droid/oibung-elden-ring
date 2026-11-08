@@ -53,7 +53,9 @@ function skinTexture(THREE,coarse){
  }
  ctx.putImageData(img,0,0);const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(3,3);return tex;
 }
-export function createBloodHead({coarse=false,reduced=false,seraph=false}={}){
+export function createBloodHead({coarse=false,reduced=false,seraph=false,portrait='baeseojun.png'}={}){
+ // Explicitly allow only the two authored portrait assets, never arbitrary URL input.
+ const portraitAsset=portrait==='3bae.png'?'3bae.png':'baeseojun.png';
  const group=new THREE.Group();
  const mat=new THREE.MeshPhysicalMaterial({color:0xc39b8c,roughness:seraph?.58:.8,metalness:0,
   emissive:seraph?0x541024:0x000000,emissiveIntensity:seraph?.36:0,
@@ -127,7 +129,7 @@ export function createBloodHead({coarse=false,reduced=false,seraph=false}={}){
    texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
    mat.map=texture;mat.color.setHex(0xffffff);mat.needsUpdate=true;
   };
-  image.onerror=()=>{};image.src=new URL('../assets/baeseojun.png',import.meta.url).href;
+  image.onerror=()=>{};image.src=new URL('../assets/'+portraitAsset,import.meta.url).href;
  }
  function update(g,c,dt,{cast=0,pose={}}={}){
   const t=Math.max(0,Number.isFinite(dt)?dt:0),b=g.boss;
@@ -147,5 +149,5 @@ export function createBloodHead({coarse=false,reduced=false,seraph=false}={}){
   group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)materials.add(o.material);});
   for(const g of geometries)g.dispose();for(const m of materials)m.dispose();
  }
- return {group,update,clear,dispose};
+ return {group,update,clear,dispose,portraitAsset,get photoLoaded(){return !!mat.map;}};
 }

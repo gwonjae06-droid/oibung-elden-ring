@@ -3,10 +3,22 @@ export const smooth=(a,b,t)=>{const u=Math.max(0,Math.min(1,(t-a)/(b-a)));return
 export function bloodTransformation(g){
  const active=g.boss.state==='transition',t=active?g.blood.t:0,
   seraph=g.boss.phase===3;
- if(seraph)return {active,t,seraph:active?smooth(.2,4.45,t):1,
-  prayer:0,bell:0,veins:1,bones:1,membrane:1,wings:1,dissolve:1,
-  darkness:0,wave:0,camera:0,rupture:1,seaRise:1,sky:1,storm:1,
-  musicGain:1,musicPhase:3};
+ if(seraph){
+  // One continuous anatomical rebirth: the original winged body remains
+  // tangible until the new sculpt grows out of its blood-soaked silhouette.
+  // All tracks use the same gameplay clock, so pause/retry stays deterministic.
+  const oldForm=active?1-smooth(2.15,5.80,t):0,
+   newForm=active?smooth(1.05,5.65,t):1,
+   wingUnfold=active?smooth(1.55,5.30,t):1,
+   faceReveal=active?smooth(2.30,5.72,t):1,
+   haloBirth=active?smooth(.95,4.60,t):1,
+   sanctum=active?smooth(1.05,3.35,t)*(1-smooth(5.70,6.25,t)):0;
+  return {active,t,seraph:newForm,oldForm,wingUnfold,faceReveal,haloBirth,sanctum,
+   prayer:active?smooth(.35,1.6,t):0,bell:0,veins:1,bones:1,
+   membrane:1,wings:1,dissolve:1,darkness:0,
+   wave:active?smooth(3.7,5.9,t):0,camera:0,
+   rupture:1,seaRise:1,sky:1,storm:1,musicGain:1,musicPhase:3};
+ }
  const settled=g.boss.phase===2&&!active;
  return {active,t,prayer:active?smooth(.6,1.8,t):0,bell:active?Math.max(0,1-Math.abs(t-1.92)/.22):0,
   veins:settled?1:active?smooth(.8,2.6,t):0,bones:settled?1:active?smooth(1.8,2.9,t):0,

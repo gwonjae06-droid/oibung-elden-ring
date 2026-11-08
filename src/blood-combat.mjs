@@ -307,7 +307,7 @@ function tickBoss(g,dt){
  }
  if(b.state==='transition'){s.t+=dt;
   if(s.transitionKind==='seraph'){
-   if(s.t>=2.65&&!s.seraphHealDone){
+   if(s.t>=3.65&&!s.seraphHealDone){
     s.seraphHealDone=true;
     const amount=Math.max(0,Math.min(BLOOD_SERAPH_REBIRTH_HEAL,b.maxHp-b.hp));
     if(amount>0){b.hp+=amount;emit(g,'blood-seraph-heal',{amount,x:b.x,z:b.z,y:6.7});}
