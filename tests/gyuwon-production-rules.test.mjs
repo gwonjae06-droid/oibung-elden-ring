@@ -16,7 +16,7 @@ test('every named Gyuwon gesture is defined exactly once, including the five cou
  const definitions=s.slice(s.indexOf('GYUWON_MOTION_STYLE='),s.indexOf('});',s.indexOf('GYUWON_MOTION_STYLE=')));
  assert.deepEqual(Object.keys(GYUWON_MOTION_STYLE).sort(),Object.keys(GYUWON_PATTERNS).sort());
  for(const id of Object.keys(GYUWON_PATTERNS)){
-  assert.equal(definitions.split(id+':[').length-1,1,'duplicate / missing '+id);
+  assert.equal(definitions.split(id.includes('-')?"'"+id+"':[":id+':[').length-1,1,'duplicate / missing '+id);
  }
  assert.doesNotMatch(source('gyuwon-combat.mjs'),/export function skipGyuwonTransition/);
 });
