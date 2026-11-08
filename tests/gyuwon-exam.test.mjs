@@ -49,7 +49,7 @@ test('white-space proof recording is never interrupted by an exam',()=>{
  assert.equal(dueGyuwonExam(g),'exam-first');
 });
 
-test('three-answer exam locks the player's selected region then gives a fresh telegraph',()=>{
+test("three-answer exam locks the player's selected region then gives a fresh telegraph",()=>{
  const g=createGyuwonGame();g.player.invuln=100;g.gyuwon.exam.due=true;
  assert.ok(startGyuwonPattern(g,'exam-third'));
  assert.equal(g.gyuwon.hazards.length,0,'selection phase is non-damaging');
