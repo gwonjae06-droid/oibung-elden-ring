@@ -26,7 +26,16 @@ test('escape search models real circle/lane/cone hitboxes and respects arena bou
  const detected=clownThreatCovers(lane,lanePoint);
  if(!detected)console.log('CLOWN ESCAPE LANE DEBUG',JSON.stringify({
   lane,lanePoint,detected,margin:.34,
-  forward:lanePoint.z,lateral:lanePoint.x,source:clownThreatCovers.toString().slice(0,900)
+  forward:lanePoint.x*Math.sin(lane.yaw)+(lanePoint.z-lane.z)*Math.cos(lane.yaw),
+  lateral:(lanePoint.x-lane.x)*Math.cos(lane.yaw)-(lanePoint.z-lane.z)*Math.sin(lane.yaw),
+  components:[
+   4>=-.34,4<=9+.34,.3<=2/2+.34
+  ],
+  math:{cos0:Math.cos(0),sin0:Math.sin(0),abs:.3,
+   actual:clownThreatCovers(lane,lanePoint,.34),
+   negativeMargin:clownThreatCovers(lane,lanePoint,-.34)
+  },
+  source:clownThreatCovers.toString().slice(0,900)
  }));
  assert.ok(detected,'a player inside the actual lane geometry must be threatened');
  assert.ok(!clownThreatCovers({shape:'lane',x:0,z:0,yaw:0,len:9,w:2},
