@@ -9,6 +9,8 @@ export const GRAND_BLOOD_PATTERNS=Object.freeze({
  heartCage:'heartbeat',rosary:'procession',bloodScissors:'cross',requiem:'cataclysm',
   seraphWings:'cross',seraphPulse:'heartbeat',seraphLances:'martyrs',
   seraphCrown:'mass',seraphFinale:'cataclysm',
+  seraphGaze:'judgement',seraphFeathers:'downpour',
+  seraphEmbrace:'cross',seraphDescent:'heartbeat',
  reverseFlow:'whirlpool',bloodStatues:'martyrs',wingGenesis:'cataclysm',heartFeast:'mass'
 });
 const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:a));

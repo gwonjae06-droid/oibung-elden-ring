@@ -42,6 +42,10 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  seraphPulse:{name:'성당의 심장',phase:3,duration:4.2,recover:2.1},
  seraphLances:{name:'순교자의 검무',phase:3,duration:4.5,recover:2.2},
  seraphCrown:{name:'진홍의 후광',phase:3,duration:5.2,recover:2.1},
+ seraphGaze:{name:'천상의 시선',phase:3,duration:5.3,recover:1.9},
+ seraphFeathers:{name:'순교의 깃털비',phase:3,duration:5.3,recover:1.85},
+ seraphEmbrace:{name:'여섯 날개의 포옹',phase:3,duration:6.2,recover:1.85},
+ seraphDescent:{name:'세라프의 강림',phase:3,duration:5.0,recover:1.95},
  seraphFinale:{name:'최후의 성가',phase:3,duration:8.0,recover:2.5}
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
@@ -54,7 +58,8 @@ export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
 export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
  'burst','vortex','dive','eclipse','tide','ritual','judgement',
  'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross','requiem',
- 'seraphWings','seraphPulse','seraphLances','seraphCrown','seraphFinale'
+ 'seraphWings','seraphPulse','seraphLances','seraphCrown',
+ 'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale'
 ]);
 export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}

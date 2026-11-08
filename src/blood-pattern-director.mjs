@@ -17,8 +17,14 @@ export function nextBloodPattern(state,phase,{distance=null}={}){
    const rest=shuffle(state,bloodPool(1).filter(id=>!signature.includes(id)&&!rare.includes(id)));
    state.queue=[signature[0],rest[0],rare[0],signature[1],rest[1],rare[1],...rest.slice(2)];
   }else if(phase===3){
-   const rest=shuffle(state,bloodPool(3).filter(id=>id!=='seraphWings'&&id!=='seraphFinale'));
-   state.queue=['seraphWings',...rest];
+   // Unlike the former four-attack loop, each cycle contains every 3P
+   // movement exactly once, with a signature wing/eye opening only on
+   // the FIRST cycle. Later cycles reshuffle to avoid scripted repetition.
+   const catalogue=bloodPool(3).filter(id=>id!=='seraphFinale');
+   if(state.cycles===0){
+    state.queue=['seraphWings','seraphGaze',
+     ...shuffle(state,catalogue.filter(id=>id!=='seraphWings'&&id!=='seraphGaze'))];
+   }else state.queue=shuffle(state,catalogue);
   }else{
    const signature=shuffle(state,['judgement','ritual']),ground=shuffle(state,['wing','pulse']);
    const showcase=['heartFeast','wingGenesis'];

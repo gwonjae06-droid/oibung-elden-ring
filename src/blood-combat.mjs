@@ -200,8 +200,35 @@ export function startBloodPattern(g,id){
   hazard(g,'ring',{x:b.x,z:b.z,r:6,width:1.35,grow:10,
    warn:4.05,life:1.06,damage:28});
  }
+ // The eye fixes three independent beam directions at cast start; after
+ // each visible charge, the corresponding 3D ray and the ground hitbox agree.
+ if(id==='seraphGaze')for(let i=0;i<3;i++){
+  const angle=aim+[0,.38,-.38][i],q=point(b.x+Math.sin(angle)*12,b.z+Math.cos(angle)*12);
+  hazard(g,'lane',{x:q.x,z:q.z,yaw:angle,width:1.7,length:24,
+   warn:1.62+i*1.09,life:.52,damage:36});
+ }
+ // Many separate falling feathers: read each delayed landing, then dodge.
+ if(id==='seraphFeathers')for(let i=0;i<12;i++){
+  const angle=i*2.399963+aim,radius=2.3*Math.sqrt(i+1),
+   q=point(p.x+Math.sin(angle)*radius,p.z+Math.cos(angle)*radius);
+  circle(q.x,q.z,1.05+i*.31,2.4+(i%3)*.36,{life:.52,damage:26});
+ }
+ // Closing feather walls leave the middle open initially, then the wing
+ // tips converge on the boss. No full-arena instant kill.
+ if(id==='seraphEmbrace'){
+  for(let i=0;i<3;i++)hazard(g,'ring',{x:b.x,z:b.z,
+   r:22-i*4.2,width:1.6,grow:-7.8,warn:1.52+i*1.04,life:1.42,damage:28});
+  circle(b.x,b.z,4.7,4.8,{life:.56,damage:33});
+ }
+ // A real grounded impact ON the seraph, then a radial wake.
+ if(id==='seraphDescent'){
+  circle(b.x,b.z,1.9,8,{life:.57,damage:37});
+  hazard(g,'ring',{x:b.x,z:b.z,r:4,width:1.15,grow:12,
+   warn:3.14,life:1.2,damage:28});
+  circle(b.x,b.z,4.34,3.9,{life:.48,damage:31});
+ }
  if(id==='seraphFinale'){
-  for(let i=0;i<4;i++)hazard(g,'cone',{x:b.x,z:b.z,
+  for(let i=0;i<4;i>hazard(g,'cone',{x:b.x,z:b.z,
    yaw:aim+[-.95,.95,-.38,.38][i],arc:.34,innerR:3.5,r:24,
    warn:1.48+i*.85,life:.48,damage:34});
   for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:1.32,grow:14,
