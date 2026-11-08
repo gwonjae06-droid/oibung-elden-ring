@@ -67,6 +67,8 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
   const active=new Set();
   for(const h of s.hazards){
    if(!YEAR_PHYSICAL_CUES.includes(h.visual))continue;
+   // Only construct tracer meshes inside their live 1.55s anticipation.
+   if(h.visual==='year-bullet'&&h.warn-h.age>1.55)continue;
    active.add(h.id);let obj=items.get(h.id);
    if(!obj){obj=make(h);items.set(h.id,obj);}
    const {parent,meshes}=obj,{windup,impact}=gyuwonYearCuePhase(h);

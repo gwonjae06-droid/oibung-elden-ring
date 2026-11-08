@@ -43,30 +43,23 @@ test('the shared Gyuwon renderer never draws a pointed triangular hazard panel i
  fx.dispose();
  assert.equal(stage.getObjectByName('gyuwon-physical-rupture-cues'),undefined);
 });
-test('all five examination rounds retain bounded, readable solid hazards',()=>{
+test('all five exam subjects cause no attack warnings or damage',()=>{
  const stage=new THREE.Group(),fx=createGyuwonHazardFx(stage,{coarse:true});
  const g=game(1),e=g.gyuwon.years;
  e.season=48;e.signatureUsed=true;e.cast=null;e.recover=0;
- stepGyuwon(g,.03);
- assert.equal(e.mode,'exam');
+ stepGyuwon(g,.03);assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
-  fx.update(g);
-  assert.ok(i===4?g.gyuwon.hazards.every(h=>h.examShot):fx.stats().liveHazards>0);
-  assert.ok(fx.root.children.every(m=>m.geometry.userData.silhouette==='capped-rounded-stone-no-triangle-warnings'));
+  fx.update(g);assert.equal(g.gyuwon.hazards.length,0);
+  assert.equal(fx.stats().liveHazards,0);
   if(i<4){e.subjectT=GYUWON_SUBJECT_SECONDS-.01;stepGyuwon(g,.03);}
  }
  fx.dispose();
 });
-test('third-year fire and remembered spotlights have no giant cone geometry',()=>{
- const years=readFileSync(new URL('../src/gyuwon-years-fx.mjs',import.meta.url),'utf8');
- const spectacle=readFileSync(new URL('../src/gyuwon-spectacle.mjs',import.meta.url),'utf8');
- assert.doesNotMatch(years,/new THREE\.ConeGeometry\(/);
- assert.doesNotMatch(spectacle,/new THREE\.ConeGeometry\(/);
+test('third-year fire is no longer part of the roster',()=>{
  const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
- const g=game(3);startGyuwonYearCast(g,'flame');fx.update(g);
- const flames=stage.getObjectByName('gyuwon-third-year-burning-student');
- assert.ok(flames?.children.length>=8);
- assert.ok(flames.children.every(m=>m.geometry.type==='CapsuleGeometry'));
+ const g=game(3);startGyuwonYearCast(g,'letters');fx.update(g);
+ assert.ok(!gyuwonYearRoster(3).includes('flame'));
+ assert.equal(startGyuwonYearCast(g,'flame'),false);
  fx.dispose();
 });
 test('retrying with a different game never reuses the previous hazard silhouette',()=>{

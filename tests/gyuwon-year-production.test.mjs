@@ -29,15 +29,12 @@ test('every year-specific attack has a visible anticipation preceding its first 
  }
 });
 
-test('the examination subject cadence still gives at least one second of warning',()=>{
+test('the exam is a short five-subject rest with no hazards',()=>{
  const g=game();g.gyuwon.years.cast=null;g.gyuwon.years.recover=0;
  g.gyuwon.years.season=48;g.gyuwon.years.signatureUsed=true;
- stepGyuwon(g,.03);
- assert.equal(g.gyuwon.years.mode,'exam');
- assert.ok(GYUWON_SUBJECT_SECONDS===1.8);
- for(const h of g.gyuwon.hazards)assert.ok(h.warn>=GYUWON_MIN_TELEGRAPH-.001);
+ stepGyuwon(g,.03);assert.equal(g.gyuwon.years.mode,'exam');
+ assert.equal(GYUWON_SUBJECT_SECONDS,.9);assert.equal(g.gyuwon.hazards.length,0);
 });
-
 test('rifle warning, ballistics and physical muzzle center share one aim vector',()=>{
  const g=game(4);startGyuwonYearCast(g,'sniper');
  const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
@@ -147,20 +144,11 @@ test('visual cues activate on and only after the scheduled collision clock',()=>
 });
 
 
-test('third-year flame uses a continuous crest at its authoritative radius',()=>{
- const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
- const g=game(3);startGyuwonYearCast(g,'flame');fx.update(g);
- const crest=stage.getObjectByName('gyuwon-continuous-physical-pressure-crest');
- assert.ok(crest?.isMesh);assert.equal(crest.isInstancedMesh,undefined);
- const h=g.gyuwon.hazards[0];h.age=h.warn+.25;fx.update(g);
- const attr=crest.geometry.attributes.position,r=h.r+h.grow*.25;
- for(let i=0;i<attr.count;i++){
-  const d=Math.hypot(attr.getX(i),attr.getZ(i));
-  assert.ok(d>=r-h.width*.72-.001&&d<=r+h.width*.72+.001);
- }
- fx.dispose();
+test('third year no longer selects its fire attack',()=>{
+ const g=game(3);
+ assert.ok(!gyuwonYearRoster(3).includes('flame'));
+ assert.equal(startGyuwonYearCast(g,'flame'),false);
 });
-
 test('rider IK plants both character shoes on raised vehicle pegs, then blends out',()=>{
  const stage=new THREE.Group(),actor=createGyuwonActor(stage,{coarse:true});
  const g=game(1);startGyuwonYearCast(g,'bike');

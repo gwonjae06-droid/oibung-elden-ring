@@ -2,11 +2,40 @@
 // the common hazard stream. No renderer owns a second collision clock.
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardPosition} from './gyuwon-data.mjs';
+import {rifleRay} from './gyuwon-year-choreography.mjs';
+// 210 actual bullets: 30 seven-shot volleys. The rifle snapshots the
+// target at the start of each volley, with readable, real-world preparation.
+export const MARKSMAN_VOLLEYS=30;
+export const MARKSMAN_BURST_ROUNDS=7;
+export function tickMarksmanBarrage(g,add){
+ const e=g?.gyuwon?.years;if(e?.cast!=='ultimateMarksman')return;
+ e.marksmanVolleys??=1;
+ while(e.marksmanVolleys<MARKSMAN_VOLLEYS&&e.castT>=e.marksmanVolleys*.62){
+  const burst=e.marksmanVolleys++,b=g.boss,p=g.player;
+  const aim=Math.atan2(p.x-b.x,p.z-b.z)+Math.sin(burst*1.47)*.09;
+  for(let i=0;i<MARKSMAN_BURST_ROUNDS;i++){
+   const angle=aim+(i-3)*.105;
+   add(g,'lane',{...rifleRay(g,angle),warn:1.05+i*.075,
+    width:.7,life:.22,damage:45,visual:'year-bullet',
+    signature:'ultimateMarksman',marksmanVolley:burst});
+  }
+ }
+}
 export function augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim}){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);e.castDuration=0;e.cover=[];
  if(id==='ultimateMarksman'){
-  e.cover=[-1,0,1].map((side,index)=>{const c={x:b.x+Math.sin(a)*8+Math.cos(a)*side*6,z:b.z+Math.cos(a)*8-Math.sin(a)*side*6,hp:140,maxHp:140,index};const contain=()=>{const r=Math.hypot(c.x,c.z);if(r>24){c.x*=24/r;c.z*=24/r;}};contain();if(Math.hypot(c.x-p.x,c.z-p.z)<3.5){c.x=b.x-Math.sin(a)*6+Math.cos(a)*side*6;c.z=b.z-Math.cos(a)*6-Math.sin(a)*side*6;contain();}return c;});
-  for(const h of g.gyuwon.hazards)if(h.visual==='year-bullet')h.damage=45;
+  // Staggered physical school barricades force a zigzag escape.
+  const positions=[[10,0],[14,-6.5],[14,6.5],[19,-4.7],[19,4.7]];
+  e.cover=positions.map(([forward,side],index)=>{
+   const c={x:b.x+Math.sin(a)*forward+Math.cos(a)*side,
+    z:b.z+Math.cos(a)*forward-Math.sin(a)*side,
+    hp:675,maxHp:675,index,hitAt:-1000,brokenAt:null};
+   const r=Math.hypot(c.x,c.z);if(r>25){c.x*=25/r;c.z*=25/r;}
+   if(Math.hypot(c.x-p.x,c.z-p.z)<2.9){c.x-=Math.sin(a)*3;c.z-=Math.cos(a)*3;}
+   return c;
+  });
+  e.marksmanVolleys=1;
+  for(const h of g.gyuwon.hazards)if(h.visual==='year-bullet'){h.damage=45;h.marksmanVolley=0;}
  }
  if(id==='crossfire')for(let i=0;i<2;i++){const angle=a+(i?-.42:.42);add(g,'circle',{x:b.x,z:b.z,r:.78,vx:Math.sin(angle)*27,vz:Math.cos(angle)*27,warn:4.35+i*.5,life:1.55,damage:24,visual:'year-arrow'});}
  if(id==='archery')for(const h of g.gyuwon.hazards){const angle=a+drawPatternShuffle(g.gyuwon.patternDeck,'gyuwon-arrow-spread',[-.3,-.15,0,.15,.3]);h.vx=Math.sin(angle)*27;h.vz=Math.cos(angle)*27;}
@@ -71,7 +100,10 @@ export function resolveAnnualProjectileCover(g,h,emit){
  const e=g.gyuwon.years;if(h.visual!=='year-bullet'||!e.cover?.length)return;
  const sx=h.muzzleX,sz=h.muzzleZ,dx=Math.sin(h.yaw),dz=Math.cos(h.yaw);let hit=null,near=Infinity;
  for(const c of e.cover){const x=c.x-sx,z=c.z-sz,along=x*dx+z*dz,across=Math.abs(x*dz-z*dx);if(c.hp>0&&along>0&&along<h.length&&across<2.1&&along<near){near=along;hit=c;}}
- if(hit){hit.hp=Math.max(0,hit.hp-h.damage);h.length=near;h.x=sx+dx*near/2;h.z=sz+dz*near/2;emit('gyuwon-cover-hit',{x:hit.x,z:hit.z,broken:hit.hp===0});}
+ if(hit){hit.hp=Math.max(0,hit.hp-h.damage);hit.hitAt=g.time;
+  if(hit.hp===0&&hit.brokenAt===null)hit.brokenAt=g.time;
+  h.length=near;h.x=sx+dx*near/2;h.z=sz+dz*near/2;
+  emit('gyuwon-cover-hit',{x:hit.x,z:hit.z,broken:hit.hp===0});}
 }
 export function tickAnnualMechanics(g,h,dt,add,emit){
  if(h.gapTarget!==undefined&&h.age>=h.shiftAt){const delta=h.gapTarget-h.gap;h.gap+=Math.sign(delta)*Math.min(Math.abs(delta),h.shiftSpeed*dt);}

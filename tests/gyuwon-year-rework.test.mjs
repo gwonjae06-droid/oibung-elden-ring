@@ -12,20 +12,13 @@ const game=(year=1)=>{
  g.gyuwon.years.year=year;g.gyuwon.years.mode='combat';
  g.player.invuln=1000;return g;
 };
-test('exam attacks start near the boss and ranged shots physically travel toward the player',()=>{
+test('five short exam rounds are nonviolent',()=>{
  const g=game(1),e=g.gyuwon.years;
  g.player.x=21;g.player.z=19;g.boss.x=-3;g.boss.z=-2;
  e.cast=null;e.recover=0;e.season=48;e.signatureUsed=true;
- stepGyuwon(g,.03);
- assert.equal(e.mode,'exam');
+ stepGyuwon(g,.03);assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
-  assert.equal(e.subject,i);
-  assert.ok(i===4?g.gyuwon.hazards.every(h=>h.examShot):g.gyuwon.hazards.length>0);
-  for(const h of g.gyuwon.hazards){
-   assert.ok(['circle','ring'].includes(h.shape),h.shape);
-   assert.ok(Math.hypot(h.x-g.boss.x,h.z-g.boss.z)+h.r<=GYUWON_EXAM_MAX_REACH);
-   assert.ok(Math.hypot(h.x-g.player.x,h.z-g.player.z)>9);
-  }
+  assert.equal(e.subject,i);assert.equal(g.gyuwon.hazards.length,0);
   if(i<4){e.subjectT=GYUWON_SUBJECT_SECONDS-.012;stepGyuwon(g,.023);}
  }
 });

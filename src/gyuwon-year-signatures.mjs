@@ -9,7 +9,7 @@ export const GYUWON_YEAR_SIGNATURES=Object.freeze({
 });
 export const GYUWON_SIGNATURE_SPECS=Object.freeze({
  ultimateBike:[13.4,1.9],ultimateScooter:[9.8,2],
- ultimateSmoke:[8.5,2.1],ultimateMarksman:[7.6,2.2],
+ ultimateSmoke:[8.5,2.1],ultimateMarksman:[22.2,2.5],
  ultimateSewage:[9.8,2.2],ultimateShrine:[18.8,2.2],
  ultimateGacha:[9.0,2.3],ultimateOctopus:[9.1,2.4],
  ultimateMemory:[9.8,2.6],ultimateParadox:[11.1,2.7],
@@ -63,12 +63,9 @@ export function spawnGyuwonSignature(g,id,{add,mark,line,mapHazards,playerAim,ma
     life:.35,damage:34,visual:'year-toppling-book',topple:true,signature:id});
   }
  }else if(id==='ultimateMarksman'){
-  // One rifle throughout; fixed rays visibly fan to the arena edge. Each
-  // sweep has a full anticipation before that sweep's first bullet.
-  for(let pass=0;pass<3;pass++)for(let i=0;i<7;i++){
-   const angle=a+(i-3)*.16;
-   bullet(angle,1.75+pass*1.8+i*.16,25);
-  }
+  // Seven first rounds; 203 additional rounds are streamed by the live
+  // combat clock to prevent enormous simultaneous FX allocations.
+  for(let i=0;i<7;i++)bullet(a+(i-3)*.105,1.05+i*.075,45);
  }else if(id==='ultimateSewage'){
   for(let i=0;i<5;i++)put(p.x+Math.sin(i*2.3)*6,p.z+Math.cos(i*2.3)*5,
    1.15+i*.46,2.65,29,'year-sludge');

@@ -42,7 +42,7 @@ test('the 365-day timer expires into five sequential exams, never a mid-cast int
  assert.equal(GYUWON_EXAM_SUBJECTS.join(','),'국어,수학,영어,한국사,탐구');
  advance(g,GYUWON_SUBJECT_SECONDS+.05);
  assert.equal(e.subjectLabel,'수학');
- assert.ok(g.gyuwon.hazards.every(h=>h.warn>=.5));
+ assert.equal(g.gyuwon.hazards.length,0);
 });
 
 test('incoming damage during exam is 50% and other years retain ordinary damage',()=>{
@@ -84,7 +84,7 @@ test('retake rosters match each requested distinct transformation',()=>{
  assert.deepEqual(gyuwonYearRoster(1),['bike','scooter','smoke']);
  assert.ok(gyuwonYearRoster(2).includes('workbook'));
  assert.ok(gyuwonYearRoster(2).includes('scooter'));
- assert.deepEqual(gyuwonYearRoster(3),['letters','bookfall','flame']);
+ assert.deepEqual(gyuwonYearRoster(3),['letters','bookfall']);
  assert.deepEqual(gyuwonYearRoster(4),['sniper','archery','crossfire']);
  assert.deepEqual(gyuwonYearRoster(5),['sewageThrow','sewageWave','sewageBomb']);
  assert.ok(gyuwonYearRoster(6).includes('figures'));

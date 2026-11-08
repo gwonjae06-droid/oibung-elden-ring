@@ -70,23 +70,17 @@ test('memory time accumulates during attacks and switches only after the live ca
  assert.equal(e.mapPending,false);assert.ok(e.mapClock<.1);
 });
 
-test('exam projectiles physically cross the ranged gap from the boss before contact',()=>{
+test('exam countdown is shorter and has no incoming attacks',()=>{
  const g=make(),e=g.gyuwon.years;
  g.boss.x=0;g.boss.z=0;g.player.x=0;g.player.z=25;
  e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;e.recover=0;
  stepGyuwon(g,.025);assert.equal(e.mode,'exam');
- const shot=g.gyuwon.hazards.find(h=>h.examShot);
- assert.equal(shot.x,0);assert.equal(shot.z,0);assert.ok(shot.warn>=1.05);
- shot.age=shot.warn;assert.equal(hazardContains(shot,g.player),false);
- shot.age=shot.warn+25/24;
- const p=hazardPosition(shot);assert.ok(p.z>24);assert.ok(Math.abs(p.x)<2.1);assert.equal(hazardContains(shot,g.player),true);
- assert.ok(shot.warn+shot.life>shot.age);
- shot.age=0;advance(g,1.9);assert.ok(g.gyuwon.hazards.some(h=>h.id===shot.id&&h.age>=1.89),'subject change must not erase a travelling attack');
+ assert.equal(g.gyuwon.hazards.length,0);advance(g,1.1);
+ assert.equal(e.subject,1);assert.equal(g.gyuwon.hazards.length,0);
 });
-
 test('cover stops actual bullets, loses health, and then lets subsequent shots through',()=>{
  const g=make(4),e=g.gyuwon.years;
- startGyuwonYearCast(g,'ultimateMarksman');assert.equal(e.cover.length,3);
+ startGyuwonYearCast(g,'ultimateMarksman');assert.equal(e.cover.length,5);
  const base=g.gyuwon.hazards.find(h=>h.visual==='year-bullet'),sx=base.muzzleX,sz=base.muzzleZ;
  e.cover=[{x:sx+Math.sin(base.yaw)*8,z:sz+Math.cos(base.yaw)*8,hp:90,maxHp:90}];
  for(let i=0;i<2;i++){const h={...base};resolveAnnualProjectileCover(g,h,()=>{});assert.ok(h.length<9);assert.equal(hazardContains(h,{x:sx+Math.sin(h.yaw)*16,z:sz+Math.cos(h.yaw)*16}),false);}
@@ -165,4 +159,15 @@ test('display distortion never changes combat state and music uses years without
   assert.equal(gyuwonMusicSection(year),Math.min(5,Math.floor((year-1)/2)));
   assert.equal(bossTrack({boss:'gyuwon',year,phase:3}),null);
  }
+});
+
+test('210 real bullets arrive in 30 warned groups of seven',()=>{
+ const g=make(4);startGyuwonYearCast(g,'ultimateMarksman');
+ const shots=new Set();
+ for(let i=0;i<1380&&g.gyuwon.years.cast;i++){
+  for(const h of g.gyuwon.hazards)if(h.visual==='year-bullet')shots.add(h.id);
+  stepGyuwon(g,1/60);
+ }
+ assert.equal(shots.size,210);assert.equal(g.gyuwon.years.marksmanVolleys,30);
+ assert.equal(g.gyuwon.years.cover.length,5);
 });

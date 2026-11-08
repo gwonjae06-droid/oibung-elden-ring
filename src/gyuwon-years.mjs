@@ -1,4 +1,4 @@
-import {augmentAnnualCast,tickAnnualMechanics} from './gyuwon-nightmare-mechanics.mjs';
+import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
 import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,applyAnnualCarry} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
@@ -10,14 +10,14 @@ import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
 // code for old tools/tests and are not selected by the published year-mode fight.
 export const GYUWON_YEAR_SECONDS=GYUWON_CALENDAR_SECONDS;
 export const GYUWON_EXAM_SUBJECTS=Object.freeze(['국어','수학','영어','한국사','탐구']);
-export const GYUWON_SUBJECT_SECONDS=1.8;
+export const GYUWON_SUBJECT_SECONDS=.9;
 export const GYUWON_RESULT_SECONDS=3;
 export const GYUWON_MIN_TELEGRAPH=1.05;
 export const GYUWON_EXAM_MAX_REACH=6.2;
 export const GYUWON_YEAR_PATTERNS=Object.freeze({
  bike:[3.4,1.3],scooter:[3.6,1.3],smoke:[3.2,1.3],
  workbook:[3.8,1.2],pencil:[3.5,1.2],
- letters:[4.65,1.2],bookfall:[4.1,1.45],flame:[4.3,1.5],
+ letters:[4.65,1.2],bookfall:[4.1,1.45],
  sniper:[3.7,1.65],archery:[4.1,1.6],crossfire:[4.45,1.75],
  sewageThrow:[3.8,1.4],sewageWave:[7.4,2],sewageBomb:[4.4,1.6],
  figures:[5.2,1.5],photocard:[4.55,1.4],merch:[4.8,1.7],
@@ -29,7 +29,7 @@ export const GYUWON_YEAR_PATTERNS=Object.freeze({
 const YEAR_ROSTERS=Object.freeze({
  1:['bike','scooter','smoke'],
  2:['workbook','pencil','scooter'],
- 3:['letters','bookfall','flame'],
+ 3:['letters','bookfall'],
  4:['sniper','archery','crossfire'],
  5:['sewageThrow','sewageWave','sewageBomb'],
  6:['figures','photocard','merch'],
@@ -88,37 +88,18 @@ function mapHazards(g,key,offset=0){
  }
 }
 function spawnExamSubject(g,index){
- const e=g.gyuwon.years,b=g.boss;g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>h.examShot&&h.age<h.warn+h.life);
+ const e=g.gyuwon.years;
+ // The exam is a short peaceful interlude, with a desk and physical OMR.
+ g.gyuwon.hazards.length=0;
  e.subject=index;e.subjectT=0;e.subjectLabel=GYUWON_EXAM_SUBJECTS[index];
- // During the Suneung all attacks originate around the seated boss. Never
- // spawn a player-centered long-range strike or map-wide exam diagram.
- const x=b.x,z=b.z;
- if(index===0){
-  mark(g,x-2.45,z+1.1,1.08,2.0,21,'year-korean');
-  mark(g,x+2.45,z+1.1,1.42,2.0,21,'year-korean');
- }else if(index===1){
-  mark(g,x,z+2.3,1.08,2.15,20,'year-math');
-  mark(g,x-2.5,z-1.0,1.42,2.05,20,'year-math');
- }else if(index===2){
-  mark(g,x+2.6,z,1.08,2.15,22,'year-english');
-  mark(g,x-2.6,z,1.42,2.15,22,'year-english');
- }else if(index===3){
-  mark(g,x,z-2.5,1.08,2.25,22,'year-history');
-  mark(g,x+2.45,z+1.0,1.42,2.05,22,'year-history');
- }else{
-  // Inquiry studies the world and grants one bounded, timed benefit.
+ if(index===4){
   const benefit=drawPatternShuffle(g.gyuwon.patternDeck,'gyuwon-inquiry',['attack','heal','speed']);
   e.inquiry=benefit;
   if(benefit==='attack')e.attackBuff=5;
   else if(benefit==='speed')e.speedBuff=3;
   else g.boss.hp=Math.min(g.boss.maxHp,g.boss.hp+g.boss.maxHp*.01);
  }
- if(index<4){
-  const angle=playerAim(g),distance=Math.hypot(g.player.x-b.x,g.player.z-b.z);
-  for(let i=0;i<2;i++){const yaw=angle+(i?(index%2?-.08:.08):0);add(g,'circle',{x:b.x,z:b.z,r:.8,warn:1.05+i*.35,life:Math.min(3.8,(distance+8)/24),vx:Math.sin(yaw)*24,vz:Math.cos(yaw)*24,damage:19,visual:['year-korean','year-math','year-english','year-history'][index],examShot:true});}
- }
- g.gyuwon.pattern='year-exam';g.gyuwon.t=0;
- g.gyuwon.motionBeats=g.gyuwon.hazards.map(h=>h.warn);
+ g.gyuwon.pattern='year-exam';g.gyuwon.t=0;g.gyuwon.motionBeats=[];
 }
 function beginExam(g,emit){
  const e=g.gyuwon.years;
@@ -195,9 +176,6 @@ function beginCast(g,id,emit){
  }else if(id==='bookfall'){
   for(let i=0;i<5;i++)mark(g,p.x+(i%3-1)*4,p.z+(Math.floor(i/3)-.5)*4,
    1.1+i*.52,2.5,24,'year-bookfall');
- }else if(id==='flame'){
-  for(let i=0;i<3;i++)add(g,'ring',{x:b.x,z:b.z,r:2,width:1,grow:7,
-   warn:1.1+i*.88,life:.77,damage:26,visual:'year-fire'});
  }else if(id==='sniper'||id==='crossfire'){
   const shots=id==='sniper'?2:3;
   for(let i=0;i<shots;i++){
@@ -327,6 +305,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  if(s.stun>0)return;
  if(e.cast){
   e.castT+=dt;s.t=e.castT;
+  if(e.cast==='ultimateMarksman')tickMarksmanBarrage(g,add);
   const mounted=ridePose(e);
   if(mounted){b.x=mounted.x;b.z=mounted.z;b.yaw=mounted.yaw;}
   tickHazards(g,dt,hurt,emit);

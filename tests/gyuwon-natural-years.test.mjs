@@ -15,8 +15,8 @@ const make=(year=1,seed=42)=>{
  g.gyuwon.years.year=year;g.player.z=9;return g;
 };
 const tick=(g,seconds)=>{for(let i=0;i<Math.round(seconds*120);i++)stepGyuwon(g,1/120);};
-test('authored 48 + 9 + 3 cycle and grade thresholds are exact',()=>{
- assert.equal(GYUWON_YEAR_SECONDS,48);assert.equal(GYUWON_SUBJECT_SECONDS*5,9);
+test('authored 48 + 4.5 + 3 cycle and grade thresholds are exact',()=>{
+ assert.equal(GYUWON_YEAR_SECONDS,48);assert.equal(GYUWON_SUBJECT_SECONDS*5,4.5);
  for(const [r,expected]of [[.299999,'great'],[.3,'normal'],[.699999,'normal'],[.7,'failure']]){
   const g=make();resolveGyuwonExamGrade(g,r);assert.equal(g.gyuwon.years.grade,expected);
   assert.equal(g.gyuwon.years.resultScene.duration,3);
@@ -104,8 +104,8 @@ test('inquiry grants three actual bounded benefits without invisible attack haza
  for(let seed=1;seed<=40;seed++){
   const g=make(2,seed*1234567),e=g.gyuwon.years;g.boss.hp=g.boss.maxHp*.5;
   e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;e.recover=0;stepGyuwon(g,.01);
-  for(let i=0;i<4;i++){e.subjectT=1.79;stepGyuwon(g,.02);}
-  assert.equal(e.subject,4);assert.ok(g.gyuwon.hazards.every(h=>h.examShot));seen.add(e.inquiry);
+  for(let i=0;i<4;i++){e.subjectT=GYUWON_SUBJECT_SECONDS-.01;stepGyuwon(g,.02);}
+  assert.equal(e.subject,4);assert.equal(g.gyuwon.hazards.length,0);seen.add(e.inquiry);
   if(e.inquiry==='attack')assert.equal(e.attackBuff,5);
   if(e.inquiry==='speed')assert.equal(e.speedBuff,3);
   if(e.inquiry==='heal')assert.ok(Math.abs(g.boss.hp/g.boss.maxHp-.51)<1e-9);

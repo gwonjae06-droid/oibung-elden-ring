@@ -92,10 +92,13 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
  const finale=mesh(nightmareRoot,ring,red,0,.18,0,5,5,5,
   'gyuwon-nightmare-final-circular-shockwave');finale.rotation.x=Math.PI/2;
  const coverRoot=new THREE.Group();coverRoot.name='gyuwon-fourth-year-destructible-cover';root.add(coverRoot);
- const coverPieces=[];for(let i=0;i<3;i++){
+ const coverPieces=[];for(let i=0;i<5;i++){
   const group=new THREE.Group();coverRoot.add(group);const slab=mesh(group,box,wall,0,1.4,0,3.4,2.8,1.4,'gyuwon-rifle-physical-cover');
   const shards=[];for(let j=0;j<6;j++)shards.push(mesh(group,box,desk,(j%3-1)*.8,.5,0,.7,.7,.9,'gyuwon-rifle-cover-fragment'));
-  coverPieces.push({group,slab,shards});
+  const sparks=mesh(group,ball,gold,0,1.9,1,.3,.3,.3,'gyuwon-barrage-barrier-sparks');
+  const dust=mesh(group,ring,ghostMat,0,.12,0,.2,.2,.2,'gyuwon-barrage-barrier-collapse-dust');
+  dust.rotation.x=Math.PI/2;
+  coverPieces.push({group,slab,shards,sparks,dust});
  }
  const dummy=new THREE.Object3D();
  let owner=null,disposed=false,breakLevel=0;
@@ -148,7 +151,24 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
    splits.visible=worldStrength>.2;
   }
   coverRoot.visible=e.cast==='ultimateMarksman';
-  coverPieces.forEach(({group,slab,shards},i)=>{const c=e.cover?.[i];group.visible=!!c;if(!c)return;group.position.set(c.x,0,c.z);group.rotation.y=b.yaw;slab.visible=c.hp>0;slab.scale.y=2.8*(.65+.35*c.hp/c.maxHp);for(let j=0;j<shards.length;j++){shards[j].visible=c.hp<c.maxHp;shards[j].position.set((j%3-1)*1.3,.25,Math.floor(j/3)*1.8-1);shards[j].rotation.set(j*.4,j*.7,j*.25);}});
+  coverPieces.forEach(({group,slab,shards,sparks,dust},i)=>{
+   const c=e.cover?.[i];group.visible=!!c;if(!c)return;
+   group.position.set(c.x,0,c.z);group.rotation.y=b.yaw;
+   const strength=clamp(c.hp/c.maxHp),hitAge=t-(c.hitAt??-1000);
+   const collapse=c.brokenAt===null?-1:t-c.brokenAt;
+   slab.visible=c.hp>0;slab.scale.y=2.8*(.72+.28*strength);
+   slab.rotation.z=(1-strength)*.10*Math.sin(t*13+i);
+   sparks.visible=hitAge>=0&&hitAge<.22;
+   sparks.scale.setScalar(sparks.visible?.3+(1-hitAge/.22)*.6:.01);
+   dust.visible=collapse>=0&&collapse<2.1;
+   dust.scale.setScalar(dust.visible?1+collapse*4:.01);
+   for(let j=0;j<shards.length;j++){
+    const shard=shards[j],u=collapse<0?1-strength:Math.min(2,collapse*1.3);
+    shard.visible=strength<1;
+    shard.position.set((j%3-1)*(.8+u*.8),Math.max(.15,.5+u*.8-u*u*.4),Math.floor(j/3)*1.3-.6+u*.2);
+    shard.rotation.set(u*(j+1)*.5,u*(j+2)*.3,u*(j%3-1));
+   }
+  });
   const grade=e.mode==='result',gt=e.gradeT||0,choice=e.grade;
   scoreScene.visible=grade;
   if(grade){
