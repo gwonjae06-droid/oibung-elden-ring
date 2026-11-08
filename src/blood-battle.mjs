@@ -10,7 +10,7 @@ import {createCinematicWorld} from './cinematic-graphics.mjs';
 import {createCinematicImpactFx} from './cinematic-impact-fx.mjs';
 import {createBossAtmosphere} from './boss-atmosphere.mjs';
 import {createBloodGame,actBlood,stepBlood} from './blood-combat.mjs';
-import {BLOOD_RULES as R} from './blood-data.mjs';
+import {BLOOD_RULES as R,BLOOD_SERAPH_TRANSITION} from './blood-data.mjs';
 import {createBloodUi} from './blood-ui.mjs';
 import {buildBloodView} from './blood-view.mjs';
 import {WEAPONS,skillView} from './combat.mjs';
@@ -126,7 +126,7 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
  camera.position.lerp(desired,1-Math.exp(-6*dt));
  target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseBloodCamera(camera,target,g,{reduced});epic.pose(camera,target,g);
   if(g.boss.phase===3&&g.boss.state==='transition'&&!reduced){
-   const t=g.blood.t,weight=.82*Math.sin(Math.min(1,t/4.65)*Math.PI)**2;
+   const t=g.blood.t,weight=.86*Math.sin(Math.min(1,t/BLOOD_SERAPH_TRANSITION)*Math.PI)**2;
    const vx=p.x-g.boss.x,vz=p.z-g.boss.z,n=Math.hypot(vx,vz)||1,nx=vx/n,nz=vz/n;
    camera.position.lerp({x:g.boss.x+nx*24+nz*4,y:20,z:g.boss.z+nz*24-nx*4},weight);
    target.lerp({x:g.boss.x-nx*12,y:16,z:g.boss.z-nz*12},weight);

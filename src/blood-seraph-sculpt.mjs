@@ -96,7 +96,7 @@ export function sculptBloodSeraph(root,{coarse=false,reduced=false,wings=[],feat
   heart.rotation.y=clock*.37;
   heart.scale.setScalar((.42+.58*sanctity)*pulse);
   rings.forEach((ring,i)=>{
-   const t=(active?.15+.85*sanctity:1)*pulse;
+   const t=(active ? .15+.85*sanctity : 1)*pulse;
    ring.scale.setScalar(t);
    ring.rotation.z=clock*(i%2?-.22:.24)+i*.18;
   });

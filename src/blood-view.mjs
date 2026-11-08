@@ -12,6 +12,7 @@ import {createGrandBloodRites} from './blood-grand-rites.mjs';
 import {createBloodSiphonFx} from './blood-siphon-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
 import {createBloodSeraph} from './blood-seraph.mjs';
+import {createBloodSeraphAscension} from './blood-seraph-ascension.mjs';
 import {createBloodMotionDirector} from './blood-attack-motion.mjs';
 import {createBloodWhipView} from './blood-whip-view.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
@@ -50,6 +51,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const halo=mesh(new THREE.TorusGeometry(1.65,.045,6,56),fluid.material,0,4.7,-.2,actor);
  const wings=createBloodWings(regalia.torso,fluid,quality,{reduced});
  const seraph=createBloodSeraph(scene,{coarse,reduced});
+ const ascension=createBloodSeraphAscension(scene,{coarse,reduced});
  const motionDirector=createBloodMotionDirector();
  const birthWave=mesh(new THREE.TorusGeometry(1,.06,5,64),new THREE.MeshBasicMaterial({color:0xf04e65,transparent:true,opacity:.3,depthWrite:false}),0,.35,0,fxRoot);birthWave.rotation.x=Math.PI/2;birthWave.visible=false;
  const projectiles=createPlayerProjectileView(THREE,scene);
@@ -85,6 +87,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings)*(b.phase===3?1.32:1));halo.rotation.z=reduced?0:g.time*.35;
   wings.update(g,c,dt,motion);
   seraph.update(g,c,dt);
+  ascension.update(g,c);
   const env=cathedral.update(g,c,dt);architecture.update(g,c,env);
   apocalypse.update(g,c);
   heart.visible=b.phase>=2||c.active;
@@ -109,8 +112,9 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   shake*=Math.exp(-dt*14);
  }
  function occlude(camera,g){focusGame=g;}
- function clear(){projectiles.clear();spells.clear();grandRites.clear();bloodWhip.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();seraph.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,storm:apocalypse.stats(),siphon:siphonFx.stats(),whip:bloodWhip.stats(),seraph:seraph.stats()}),
+ function clear(){projectiles.clear();spells.clear();grandRites.clear();bloodWhip.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();seraph.clear();ascension.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,storm:apocalypse.stats(),siphon:siphonFx.stats(),whip:bloodWhip.stats(),seraph:seraph.stats(),
+  ascension:ascension.stats(),oldFormVisible:root.visible,oldFormScale:root.scale.x}),
   event(e,g){if(e.type==='blood-impact'){
    shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2,reverseFlow:.12,wingGenesis:.16,heartFeast:.22})[g.blood.pattern]||.025);
    // Heavy phase-two blood waves throw a small secondary spray out toward
@@ -146,5 +150,5 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
      camera.position.z+=Math.sin(visualTime*19)*amplitude*.13;
     }
    }},
-  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();bloodWhip.dispose();portrait.dispose();wings.dispose();seraph.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();bloodWhip.dispose();portrait.dispose();wings.dispose();seraph.dispose();ascension.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }
