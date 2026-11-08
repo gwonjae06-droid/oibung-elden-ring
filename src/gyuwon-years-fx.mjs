@@ -176,20 +176,56 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    parts.push(mesh(group,box,paper,0,0,0,
      v==='year-bookfall'?h.r*1.45:1.35,.26,v==='year-bookfall'?h.r*1.52:1.75));
    mesh(group,box,hot,0,.15,0,1.05,.03,1.47);
+   if(v==='year-merch'){
+    const art=mesh(group,new THREE.PlaneGeometry(1.25,1.45),
+     animeMaterials[h.id%6],0,.24,.94,1,1,1,'gyuwon-anime-2d-merch-portrait');
+    geometries.push(art.geometry);art.rotation.x=-Math.PI/2;
+   }
+  }else if(v==='year-gacha-prize'){
+   mesh(group,sphere,neon,0,.62,0,h.r*.70,h.r*.94,h.r*.70,
+    'gyuwon-gacha-falling-prize-capsule');
+   mesh(group,box,steel,0,1,0,1.0,.25,1.0,'gyuwon-gacha-capsule-impact-core');
+   for(let i=0;i<7;i++){
+    const theta=i*2.399963;
+    mesh(group,sphere,i%2?neon:purple,
+     Math.sin(theta)*h.r*.65,.18+i%3*.4,Math.cos(theta)*h.r*.65,
+     .25,.24,.25,'gyuwon-gacha-falling-sparks');
+   }
+  }else if(v==='year-stream-pulse'){
+   const beat=mesh(group,ring,neon,0,-.58,0,h.r,h.r,h.r,
+    'gyuwon-broadcast-bass-wave-physical-ring');beat.rotation.x=Math.PI/2;
+   for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    mesh(group,sphere,i%2?hot:purple,
+     Math.sin(a)*h.r*.56,.12,Math.cos(a)*h.r*.56,
+     .3,.30,.3,'gyuwon-stream-vibration-particles');
+   }
   }else if(v==='year-pencil'||v==='year-arrow'){
    mesh(group,cylinder,v==='year-arrow'?hot:graphite,0,0,0,.09,2.1,.09).rotation.z=Math.PI*.45;
    mesh(group,sphere,steel,0,-1.05,0,.18,.23,.18);
   }else if(v==='year-sludge'||v==='year-ink'){
-   // The mesh's horizontal surface is the collision disk (including .28 tolerance).
    const diameter=2*(h.r+.28);
-   mesh(group,sphere,slime,0,0,0,diameter,2.2,diameter,'gyuwon-physical-sludge-projectile');
+   mesh(group,sphere,slime,0,.25,0,diameter,1.55,diameter,
+    'gyuwon-contorted-3d-sewage-mass');
+   for(let i=0;i<11;i++){
+    const a=i*2.399963,r=h.r*(.34+.56*((i*7)%5)/5);
+    const blob=mesh(group,sphere,i%4?slime:froth,
+     Math.cos(a)*r,.07+((i%3)*.17),Math.sin(a)*r,
+     .48+(i%3)*.33,.26+(i%4)*.17,.48+(i%3)*.33,
+     'gyuwon-sewage-physical-scattered-waste');
+    blob.rotation.set(i*.7,i*.2,i*.4);
+   }
+   const spill=mesh(group,ring,slime,0,-.46,0,
+    h.r+.18,h.r+.18,h.r+.18,'gyuwon-sewage-ground-spreading-spill');
+   spill.rotation.x=Math.PI/2;
   }else if(v==='year-bullet'){
    // The muzzle-aligned tracer lives in gyuwon-year-cues.mjs, not here.
   }else if(v==='year-photocard'){
-   mesh(group,box,paper,0,0,0,1.5,1.95,.075);
-   mesh(group,box,purple,0,0,.045,1.18,1.55,.015);
-   mesh(group,box,neon,0,-.68,.075,.83,.085,.035);
-   mesh(group,sphere,wax,0,.16,.10,.38,.56,.045);
+   mesh(group,box,paper,0,0,0,1.65,2.15,.075,'gyuwon-anime-photocard-cardstock');
+   const art=mesh(group,new THREE.PlaneGeometry(1.46,1.95),
+    animeMaterials[h.id%6],0,0,.046,1,1,1,'gyuwon-anime-photocard-2d-illustration');
+   geometries.push(art.geometry);
+   mesh(group,box,neon,0,-.89,.075,1.2,.09,.035);
   }else if(glyphSets[v]&&v!=='year-social'){
    const tex=wordTexture(v,h.id%4);
    const key=v+(h.id%4);
