@@ -26,9 +26,46 @@ export const GYUWON_GESTURES=Object.freeze({
 });
 // Phase one is the frightened student, not yet a god: trembling wrists, hurried
 // page-flicks and nervous glances. Purely cosmetic; ramps in from t=0 so idle poses are unchanged.
+function annualExamMotion(g){
+ const e=g?.gyuwon?.years,b=g?.boss;if(!e||!b)return null;
+ const t=e.castT||0,charge=e.cast?Math.min(1,t/1.15):0;
+ if(e.mode==='exam'){
+  const hand=Math.sin(g.time*17)*.14;
+  return {lean:-.64,twist:-.05,headPitch:.45,headYaw:Math.sin(g.time*2)*.035,
+   leftArm:-1.45,rightArm:-1.34+hand,leftElbow:-.84,rightElbow:-.65+hand*.35,
+   leftWrist:.13,rightWrist:.18+hand*.7,weightShift:0,book:-.23};
+ }
+ if(e.mode==='result')return {lean:-.25,twist:Math.sin(e.gradeT*5)*.12,
+  headPitch:e.grade==='failure'?.6:-.28,headYaw:0,leftArm:-.6,rightArm:-.25,
+  leftElbow:-.28,rightElbow:-.18,leftWrist:0,rightWrist:0,weightShift:0,book:-.6};
+ const id=e.cast||'',dance=e.year===7,floppy=e.year===5,octo=e.year===8;
+ const beat=Math.sin(g.time*(dance?8:4)),power=charge*(1-Math.min(1,Math.max(0,t-3)*.5));
+ if(id==='bike'||id==='scooter')return {lean:-.86,twist:0,headPitch:.34,headYaw:0,
+  leftArm:-1.06,rightArm:-1.06,leftElbow:-.43,rightElbow:-.43,
+  leftWrist:.2,rightWrist:.2,weightShift:0,book:-.75};
+ if(dance)return {lean:beat*.28,twist:Math.sin(g.time*5)*.58,headPitch:-.15+beat*.17,
+  headYaw:Math.cos(g.time*6)*.22,leftArm:-.9-beat*.7,rightArm:-.9+beat*.7,
+  leftElbow:-.45,rightElbow:-.45,leftWrist:.2,rightWrist:-.2,
+  weightShift:beat*.85,book:-.6};
+ if(floppy)return {lean:beat*.4,twist:Math.sin(g.time*2.3)*.47,headPitch:beat*.3,
+  headYaw:Math.sin(g.time*.9)*.3,leftArm:-.8-power*.52,rightArm:-.7-power*.8,
+  leftElbow:-.8,rightElbow:-.72,leftWrist:.38,rightWrist:-.32,
+  weightShift:beat*.32,book:-.65};
+ if(octo)return {lean:-.22,twist:beat*.14,headPitch:-.25,headYaw:0,
+  leftArm:-1.6,rightArm:-1.6,leftElbow:-.9,rightElbow:-.9,
+  leftWrist:.34,rightWrist:-.34,weightShift:beat*.18,book:-.6};
+ if(e.year===4)return {lean:-.17,twist:.15*power,headPitch:.26,
+  headYaw:0,leftArm:-1.45*power-.43,rightArm:-1.5*power-.2,
+  leftElbow:-.6,rightElbow:-.6,leftWrist:.08,rightWrist:0,
+  weightShift:0,book:-.6};
+ return {lean:-.14-power*.3,twist:beat*.12,headPitch:power*.17,headYaw:0,
+  leftArm:-.5-power*1.05,rightArm:-power*.95,leftElbow:-.16-power*.42,
+  rightElbow:-.16-power*.55,leftWrist:.04,rightWrist:power*.2,
+  weightShift:beat*.06,book:-.6+power*.23};
+}
 function anxiety(g,m){
  const b=g?.boss,s=g?.gyuwon,t=g?.time;
- if(!b||!s||b.phase!==1||b.state==='dead'||b.state==='transition'||!Number.isFinite(t))return m;
+ if(!b||!s||s.years||b.phase!==1||b.state==='dead'||b.state==='transition'||!Number.isFinite(t))return m;
  const ramp=Math.min(1,t/.5),calm=(b.state==='pattern'?.45:1)*ramp;
  const tremor=(Math.sin(t*37)+Math.sin(t*23.3+1.3))*.5*.022*calm;
  const flip=Math.pow(Math.max(0,Math.sin(t*5.2)),3)*.14*calm;
@@ -39,6 +76,7 @@ function anxiety(g,m){
 }
 function baseMotion(g){
  const b=g?.boss,s=g?.gyuwon;if(!b||!s||b.state==='dead')return {...NEUTRAL};
+ if(s.years)return annualExamMotion(g);
  if(b.state==='transition'){
   const r=ease((s.t||0)/2.8);
   return {lean:-.18*r,twist:.15*r,headPitch:-.25*r,headYaw:0,
