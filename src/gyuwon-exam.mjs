@@ -57,9 +57,9 @@ export function buildGyuwonExam(g,id,add){
  }else if(index===4){
   // The preceding firing line determines which way the sewage drainage corridor bends.
   // Bound the displacement so it remains reachable with the common 4.7 m/s walk speed.
-  const gap=clamp(p.x+clamp(e.gunGap-p.x,-4,4),-20,20);
-  add('wave',{x:0,z:-155,gap,opening:4.25,depth:2.2,speed:43,
-   warn:1.65,life:6.25,damage:43,visual:'exam-sewage'});
+  const gap=clamp(p.x+clamp(e.gunGap-p.x,-3,3),-25,25);
+  add('wave',{x:0,z:-72,gap,opening:4.25,depth:2.2,speed:30,
+   warn:1.65,life:4.25,damage:43,visual:'exam-sewage'});
  }else if(index===5){
   for(let i=0;i<6;i++){
    const angle=i*Math.PI/3,fx=Math.sin(angle)*15,fz=Math.cos(angle)*15;
@@ -76,7 +76,7 @@ export function updateGyuwonExamPattern(g,add){
  const s=g.gyuwon,e=s.exam;
  if(s.pattern!=='exam-third'||g.boss.state!=='pattern'||e.choiceLocked||s.t<2)return;
  const x=g.player.x-e.choiceOrigin.x;
- const choice=x< -1.6?0:x>1.6?2:1;
+ const choice=x< -2.4?0:x>2.4?2:1;
  e.choice=choice;e.choiceLocked=true;
  const px=g.player.x,pz=g.player.z;
  if(choice===0){
