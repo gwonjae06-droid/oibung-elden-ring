@@ -13,7 +13,7 @@ export const GYUWON_YEAR_PATTERNS=Object.freeze({
  letters:[4,1.2],bookfall:[4.1,1.45],flame:[4.3,1.5],
  sniper:[3.7,1.65],archery:[4.1,1.6],crossfire:[4.45,1.75],
  sewageThrow:[3.8,1.4],sewageWave:[7.4,2],sewageBomb:[4.4,1.6],
- figures:[5.2,1.5],photocard:[3.7,1.4],merch:[4.8,1.7],
+ figures:[5.2,1.5],photocard:[4.55,1.4],merch:[4.8,1.7],
  dance:[4.2,1.5],donation:[4.1,1.55],chatstorm:[4.3,1.4],
  octoStrike:[4.8,1.6],octoSweep:[5.1,1.7],octoInk:[4.5,1.5],
  recall:[5.9,1.8],recallMix:[7.0,2.0],recallAll:[8.6,2.2]
