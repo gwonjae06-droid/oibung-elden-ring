@@ -70,9 +70,9 @@ export function createClownNightmareTheatre(scene,{coarse=false,reduced=false}={
   const h=sat(dt/.05)*.05;
   clock+=h;pulse=Math.max(0,pulse-h*1.2);
   const c=g.clown||{},b=g.boss||{},name=c.name||'',age=Math.max(0,c.pt-(c.state==='pattern'? .7:0)),
-   stage=c.horrorStage||1,live=g.status==='playing',evil=stage===3;
-  const ghostShow=live&&(name==='wrongTwin'||name==='foldedCrawl'||name==='mouthOfTheAudience'),maskShow=live&&(name==='porcelainRain'||name==='clockOfTeeth'||name==='hatchingBalloons'||name==='stolenFace'),
-   seatShow=live&&(name==='emptyAudience'||name==='mouthOfTheAudience'||name==='synchronizedHush'||name==='mouthlessLament'||evil),shadowShow=live&&(name==='livingShadow'||name==='wrongTwin'||name==='stageRupture'||name==='corpseMarionetteReprise');
+   stage=c.horrorStage||1,live=g.status==='playing',evil=stage===3&&b.phase!==3;
+  const ghostShow=live&&b.phase!==3&&(name='wrongTwin'||name==='foldedCrawl'||name==='mouthOfTheAudience'),maskShow=live&&b.phase!==3&&(name='porcelainRain'||name==='clockOfTeeth'||name==='hatchingBalloons'||name==='stolenFace'),
+   seatShow=live&&b.phase!==3&&(name='emptyAudience'||name==='mouthOfTheAudience'||name==='synchronizedHush'||name==='mouthlessLament'||evil),shadowShow=live&&b.phase!==3&&(name='livingShadow'||name==='wrongTwin'||name==='stageRupture'||name==='corpseMarionetteReprise');
   const active=live?(evil?1:stage===2?.7:.35):0;
   phantomMat.opacity=(ghostShow?.34:seatShow?.28:0)*active;
   porcelain.opacity=(maskShow?.72:ghostShow?.36:0)*active;
