@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSS_TRACKS,bossTrack,createBossTracks} from '../src/boss-tracks.mjs';
+import {BOSS_TRACKS,bossTrack,createBossTracks,BLOOD_MUSIC_REPRISE_SECONDS} from '../src/boss-tracks.mjs';
 
 test('uploaded MP3 filenames map to the correct boss and phase',()=>{
   assert.deepEqual(BOSS_TRACKS.kwon,['swordbgm.mp3','swordbgm2.mp3']);
@@ -9,6 +9,7 @@ test('uploaded MP3 filenames map to the correct boss and phase',()=>{
   assert.deepEqual(BOSS_TRACKS.blood,['bloodbgm1.mp3','bloodbgm2.mp3']);
   assert.match(bossTrack({boss:'blood',phase:1}).url,/assets\/music\/bloodbgm1\.mp3$/);
   assert.match(bossTrack({boss:'blood',phase:2}).url,/assets\/music\/bloodbgm2\.mp3$/);
+  assert.equal(bossTrack({boss:'blood',phase:3}).key,bossTrack({boss:'blood',phase:2}).key);
   assert.equal(bossTrack({boss:'dice',phase:2}).key,'dice:2');
   assert.equal(bossTrack({boss:'dice',phase:3}).key,'dice:3');
   assert.match(bossTrack({boss:'dice',phase:3}).url,/dicebgm2\.mp3$/);
@@ -67,4 +68,28 @@ test('blood boss phase switch crossfades uploaded files and can reset on retry',
   time=2000;assert.equal(tracks.update({boss:'blood',phase:1}),true);
   assert.match(FakeAudio.instances.at(-1).src,/bloodbgm1\.mp3$/);
   tracks.dispose();
+});
+
+test('Blood 2P music continues over Seraph metamorphosis, then reprises from the middle after the entire ending',()=>{
+ FakeAudio.instances=[];let t=0;
+ const tracks=createBossTracks({Audio:FakeAudio},{now:()=>t,fadeMs:500});
+ tracks.update({boss:'blood',phase:2,offset:1.8});
+ const same=FakeAudio.instances[0];
+ assert.equal(same.loop,false);
+ assert.equal(BLOOD_MUSIC_REPRISE_SECONDS,130);
+ same.currentTime=198.4;t=1000;
+ tracks.update({boss:'blood',phase:3,cinematic:true});
+ assert.equal(FakeAudio.instances.length,1,'3P must never create a new music player');
+ assert.equal(tracks.playingKey,'blood:2');
+ assert.equal(same.currentTime,198.4,'3P must retain the exact currently playing time');
+ assert.equal(same.playbackRate,1);
+ same.duration=263.23;same.paused=true;same.currentTime=same.duration;
+ same.onended();
+ assert.equal(same.currentTime,130,'only after the full ending do we replay the middle');
+ assert.equal(same.paused,false);
+ tracks.update({boss:'blood',phase:3});
+ assert.equal(FakeAudio.instances.length,1);
+ tracks.reset();
+ assert.equal(same.onended,null,'reset must detach stale replay handlers');
+ tracks.dispose();
 });

@@ -1,4 +1,5 @@
 import {readBattleSession} from './battle-session.mjs';
+// Backwards-compatible legacy constant; 3P no longer seeks to this offset.
 export const BLOOD_SERAPH_MUSIC_START_SECONDS=142;
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 import {createBossTracks} from './boss-tracks.mjs';
@@ -17,11 +18,9 @@ export function musicState(doc,focused=true){
  if(selectedBoss==='gyuwon'&&g.gyuwon?.years){const e=g.gyuwon.years;selection.year=e.year;selection.exam=e.mode==='exam';selection.grade=e.grade;selection.gain=selection.exam?.27:1;}if(g.clown){const hush=circusHorrorMusicGain(g);if(hush<.999)selection.gain=hush;}if(selectedBoss==='blood'&&g.blood?.transitioned){
   selection.cinematic=true;
   if(g.boss.phase===2)selection.offset=1.8;
-  // A distinct key plays the SAME phase-two recording from its late movement,
-  // preserving its original timbre/tempo instead of generating a new BGM.
-  if(g.boss.phase===3)selection.offset=BLOOD_SERAPH_MUSIC_START_SECONDS;
- }if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===3?
-   Math.max(0,Math.min(1,(c.t-1.35)/1.05)):
+  // Phase 3 continues the active phase-two MP3 at exactly its current point.
+  // Its complete ending reprises from the middle inside createBossTracks.
+ }if(selectedBoss==='blood'&&g.boss.state==='transition'){const c=bloodTransformation(g);selection.phase=c.musicPhase;selection.gain=c.musicPhase===3?1:
    c.musicPhase===1?c.musicGain:Math.min(1,(c.t-3.8)/.55);selection.cinematic=true;}return selection;}
  const get=id=>root.getElementById(id),hud=get('boss-hud');
  if(!hud||hud.hidden||!get('pause-screen')?.hidden||!get('result')?.hidden)return null;

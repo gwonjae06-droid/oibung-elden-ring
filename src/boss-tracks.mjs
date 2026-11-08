@@ -1,5 +1,8 @@
 import {gyuwonMusicSection} from './gyuwon-music.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
+// The original 4m23s phase-two recording plays through its final measure.
+// After it finishes, reprise a musical midsection rather than the intro.
+export const BLOOD_MUSIC_REPRISE_SECONDS=130;
 // External MP3 boss tracks. Sound effects keep using their own audio buses.
 export const BOSS_TRACKS=Object.freeze({
   kwon:Object.freeze(['swordbgm.mp3','swordbgm2.mp3']),
@@ -12,8 +15,9 @@ export function bossTrack(state){
   if(!state||!Object.hasOwn(BOSS_TRACKS,state.boss))return null;
   if(state.boss==='gyuwon'){const section=gyuwonMusicSection(state.year),asset=BOSS_TRACKS.gyuwon[section];return asset?{key:'gyuwon:'+section,url:new URL('../assets/music/'+asset,import.meta.url).href}:null;}
   const phase=state.phase>=2?2:1;
-  // Phase three reuses the second dice MP3 at a faster tempo, never the phase-one track.
-  const keyPhase=(state.boss==='dice'||state.boss==='blood')&&state.phase===3?3:phase;
+  // The Blood Seraph never swaps/restarts bloodbgm2.mp3 during the phase change.
+  // Only the Dice boss uses a separate phase-three playback key.
+  const keyPhase=state.boss==='dice'&&state.phase===3?3:phase;
   return {key:state.boss+':'+keyPhase,url:new URL('../assets/music/'+BOSS_TRACKS[state.boss][phase-1],import.meta.url).href};
 }
 export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,now=()=>win?.performance?.now?.()??Date.now(),fadeMs=1200,volume=.5}={}){
@@ -22,7 +26,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
   const entries=()=>[current,outgoing].filter(Boolean);
   function release(entry){
     if(!entry||!entry.alive)return;
-    entry.alive=false;entry.audio.onerror=null;
+    entry.alive=false;entry.audio.onerror=null;entry.audio.onended=null;
     try{entry.audio.pause();entry.audio.currentTime=0;entry.audio.removeAttribute?.('src');entry.audio.load?.();}catch{}
   }
   function fail(entry){
@@ -67,9 +71,25 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
       if(state.boss==='blood'&&state.cinematic&&track.key==='blood:2'){release(outgoing);outgoing=null;}
       try{
         const audio=new AudioClass(track.url);
-        audio.loop=true;audio.preload='auto';audio.volume=0;audio.playbackRate=state.boss==='dice'&&state.phase===3?1.12:1;if(state.offset)audio.currentTime=state.offset;
+        // Native looping always seeks to 0; bloodbgm2 needs a mid-song reprise.
+        const bloodReprise=track.key==='blood:2';
+        audio.loop=!bloodReprise;audio.preload='auto';audio.volume=0;
+        audio.playbackRate=state.boss==='dice'&&state.phase===3?1.12:1;
+        if(state.offset)audio.currentTime=state.offset;
         const entry={key:track.key,audio,started:time,alive:true,blocked:false,from:outgoing?.audio.volume??0};
-        audio.onerror=()=>fail(entry);current=entry;
+        audio.onerror=()=>fail(entry);
+        if(bloodReprise)audio.onended=()=>{
+          if(!entry.alive||disposed||current!==entry)return;
+          // The recorded ending is heard in full. A new uninterrupted
+          // playback cycle resumes from the middle of the SAME Audio node.
+          const duration=Number.isFinite(audio.duration)?audio.duration:Infinity;
+          const seek=Math.min(BLOOD_MUSIC_REPRISE_SECONDS,Math.max(0,duration-1));
+          try{audio.currentTime=seek;audio.play()?.catch?.(error=>{
+            if(error?.name==='NotAllowedError'){entry.blocked=true;return;}
+            if(error?.name!=='AbortError')fail(entry);
+          });}catch(error){if(error?.name==='NotAllowedError')entry.blocked=true;else fail(entry);}
+        };
+        current=entry;
       }catch{if(outgoing){current=outgoing;outgoing=null;}return false;}
     }
     for(const entry of entries())play(entry);

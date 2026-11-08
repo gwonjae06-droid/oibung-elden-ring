@@ -184,7 +184,7 @@ test('real cathedral draws 3P warnings, hands and eye without creating hitboxes 
 test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged tempo',()=>{
  const phaseTwo=bossTrack({boss:'blood',phase:2});
  const third=bossTrack({boss:'blood',phase:3});
- assert.equal(third.key,'blood:3');
+ assert.equal(third.key,'blood:2');
  assert.equal(third.url,phaseTwo.url);
  const clips=[];
  class Audio{
@@ -196,11 +196,13 @@ test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged 
  const tracks=createBossTracks({Audio},{fadeMs:100});
  tracks.update({boss:'blood',phase:2,offset:1.8});
  assert.equal(clips[0].currentTime,1.8);
- assert.equal(BLOOD_SERAPH_MUSIC_START_SECONDS,142);
- tracks.update({boss:'blood',phase:3,offset:BLOOD_SERAPH_MUSIC_START_SECONDS});
- assert.equal(tracks.playingKey,'blood:3');
- assert.equal(clips[1].currentTime,142);
- assert.equal(clips[1].playbackRate,1);
+ assert.equal(BLOOD_SERAPH_MUSIC_START_SECONDS,142,'legacy constant is retained but ignored by the new seamless phase change');
+ const resumedAt=clips[0].currentTime=193.7;
+ tracks.update({boss:'blood',phase:3});
+ assert.equal(tracks.playingKey,'blood:2');
+ assert.equal(clips.length,1);
+ assert.equal(clips[0].currentTime,resumedAt);
+ assert.equal(clips[0].playbackRate,1);
  tracks.dispose();
  const effects=[];class EffectAudio extends Audio{constructor(url){super(url);effects.push(this);}}
  const transition=createBloodTransformationAudio({AudioClass:EffectAudio}),g=p3();
