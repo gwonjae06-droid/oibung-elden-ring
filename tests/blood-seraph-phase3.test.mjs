@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createBloodGame,damageBlood,stepBlood,skipBloodTransition,startBloodPattern} from '../src/blood-combat.mjs';
 import {BLOOD_RULES,BLOOD_PHASE_TWO_ENTRY_RATIO,BLOOD_PHASE_THREE_ENTRY_RATIO,
- BLOOD_SERAPH_TRANSITION,BLOOD_FINAL_HYMN_RATIO,BLOOD_PATTERNS,bloodPool,hazardContains} from '../src/blood-data.mjs';
+ BLOOD_SERAPH_TRANSITION,BLOOD_SERAPH_REBIRTH_HEAL,BLOOD_FINAL_HYMN_RATIO,
+ BLOOD_PATTERNS,bloodPool,hazardContains} from '../src/blood-data.mjs';
 import {createBloodSeraph} from '../src/blood-seraph.mjs';
 import {buildBloodView} from '../src/blood-view.mjs';
 import {nextBloodPattern,createBloodPatternDeck} from '../src/blood-pattern-director.mjs';
 import {BLOOD_SIPHON_RULES,tickBloodSiphon} from '../src/blood-siphon.mjs';
 import {bloodTransformation} from '../src/blood-transformation.mjs';
+import {bloodHurtShapes,bloodAimPart} from '../src/boss-hit-regions.mjs';
 import {createBloodTransformationAudio} from '../src/blood-transformation-audio.mjs';
 import {bossTrack,createBossTracks} from '../src/boss-tracks.mjs';
 
@@ -61,12 +63,19 @@ test('Blood King keeps original total health and enters true third phase at 25%'
  skipBloodTransition(g);stepBlood(g,.02);
  assert.equal(g.boss.state,'recovery');
  assert.equal(g.blood.seraphAwakened,true);
- assert.equal(g.boss.hp,max*.25);
+ assert.equal(g.boss.hp,max*.25+BLOOD_SERAPH_REBIRTH_HEAL);
+ assert.equal(g.blood.seraphHealDone,true);
+ assert.equal(g.events.filter(e=>e.type==='blood-seraph-heal').length,1);
+ assert.equal(g.events.find(e=>e.type==='blood-seraph-heal').amount,1000);
+ const healed=g.boss.hp;advance(g,1.5);
+ assert.equal(g.boss.hp,healed,'rebirth must never repeat after the cinematic');
+ assert.equal(g.events.filter(e=>e.type==='blood-seraph-heal').length,1);
  assert.equal(g.boss.maxHp,max);
  assert.ok(g.events.filter(e=>e.type==='phase').length===2);
 });
 test('distinct 3P wing, heart, lance, halo and last hymn attacks are all telegraphed and finite',()=>{
- const patterns=['seraphWings','seraphPulse','seraphLances','seraphCrown','seraphFinale'];
+ const patterns=['seraphWings','seraphPulse','seraphLances','seraphCrown',
+  'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale'];
  assert.deepEqual(bloodPool(3),patterns);
  for(const id of patterns){
   const g=p3(),spec=BLOOD_PATTERNS[id];
@@ -108,18 +117,24 @@ test('finale is selected on low HP without looping or reintroducing healing',()=
  assert.equal(g.boss.hp,hp,'phase-three healing must be disabled');
  assert.equal(g.blood.siphon.heals,0);
 });
-test('3P pattern shuffler cycles four attacks, reserving last hymn for critical HP',()=>{
- const deck=createBloodPatternDeck(473);
- for(let cycle=0;cycle<4;cycle++){
-  const picks=Array.from({length:4},()=>nextBloodPattern(deck,3));
-  assert.deepEqual(picks.slice().sort(),['seraphWings','seraphPulse','seraphLances','seraphCrown'].sort());
+test('3P pattern shuffler exhausts eight UNIQUE attacks before repeating, reserving last hymn',()=>{
+ const deck=createBloodPatternDeck(473),expected=bloodPool(3).filter(p=>p!=='seraphFinale');
+ let previous=null;
+ for(let cycle=0;cycle<5;cycle++){
+  const picks=Array.from({length:expected.length},()=>nextBloodPattern(deck,3));
+  assert.deepEqual(picks.slice().sort(),expected.slice().sort());
   assert.ok(!picks.includes('seraphFinale'));
+  if(cycle===0)assert.deepEqual(picks.slice(0,2),['seraphWings','seraphGaze']);
+  if(previous)assert.notEqual(picks[0],previous,'avoid back-to-back duplicates across deck boundaries');
+  previous=picks.at(-1);
  }
 });
 test('colossal angel rig consists of six 3D feather joints and a real eye, and disposes cleanly',()=>{
  const scene=new THREE.Scene(),seraph=createBloodSeraph(scene,{coarse:true,reduced:true});
  const first=seraph.stats();
- assert.equal(first.decorativeOnly,true);
+ assert.equal(first.decorativeOnly,false,'the angel itself must be the combat model');
+ assert.equal(first.ownsHurtSilhouette,true);
+ assert.equal(first.hasLiveEyeRay,true);
  assert.equal(first.hinges,6);
  assert.equal(first.haloRings,3);
  assert.ok(first.featherInstances>=60);
@@ -147,8 +162,12 @@ test('real cathedral draws 3P warnings, hands and eye without creating hitboxes 
   assert.ok(view.stats().hazards>=3);
   const floor=scene.getObjectByName('blood-hazard-dark-and-safe-liquid');
   assert.ok(floor?.visible,'new patterns need visible geometry for their exact footprints');
-  assert.equal(scene.getObjectByName('blood-third-phase-crimson-seraph').userData.decorativeOnly,true);
-  for(const id of ['seraphPulse','seraphLances','seraphCrown','seraphFinale']){
+  assert.equal(scene.getObjectByName('blood-third-phase-crimson-seraph').userData.decorativeOnly,false);
+  assert.equal(view.root.visible,false,'the old 2P humanoid MUST be hidden in phase three');
+  assert.ok(bloodHurtShapes(g).every(h=>h.id.startsWith('seraph-')));
+  assert.equal(bloodAimPart(g).id,'seraph-chest');
+  for(const id of ['seraphPulse','seraphLances','seraphCrown',
+   'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale']){
    g.boss.state='recovery';g.blood.hazards.length=0;
    assert.ok(startBloodPattern(g,id));
    view.update(g,.025);
@@ -182,4 +201,40 @@ test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged 
  transition.update(g);
  assert.equal(transition.fired.length,0,'womanvoice and bell must not repeat during the seraph cutscene');
  transition.dispose();
+});
+
+// Game damage should use the 3P silhouette, never the invisible 2P human.
+test('seraph lower robe is targetable at ground height; its eye owns the upper lock-on region',()=>{
+ const g=p3(),shapes=bloodHurtShapes(g);
+ assert.deepEqual(shapes.map(s=>s.id),['seraph-hem','seraph-vessel','seraph-chest','seraph-eye']);
+ assert.ok(shapes[0].y-shapes[0].ry<=.38,'ground-skimming cards should contact the visible blood robe');
+ assert.equal(bloodAimPart(g).id,'seraph-chest');
+ const y=shapes.find(s=>s.id==='seraph-eye').y;
+ assert.ok(y>5&&y<8);
+});
+test('eye laser uses each real impact clock and is invisible in safe windup and recovery',()=>{
+ const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true,reduced:true}),g=p3();
+ try{
+  assert.ok(startBloodPattern(g,'seraphGaze'));
+  view.update(g,.025);
+  assert.equal(view.stats().seraph.eyeRayVisible,false);
+  const warning=g.blood.hazards[0].warn;
+  advance(g,warning+.04);view.update(g,.025);
+  assert.equal(view.stats().seraph.eyeRayVisible,true);
+  advance(g,.62);view.update(g,.025);
+  assert.equal(view.stats().seraph.eyeRayVisible,false);
+  const first=g.blood.hazards[0];
+  assert.equal(first.shape,'lane');
+  assert.ok(first.damage>0);
+ }finally{view.dispose();}
+});
+test('rebirth pulse is exactly one thousand in story-scale HP and never stacks',()=>{
+ const g=p3(),max=g.boss.maxHp;
+ g.boss.hp=max*.25;g.boss.state='transition';g.blood.seraphHealDone=false;g.blood.t=2.64;
+ advance(g,.04);
+ assert.equal(g.boss.hp,max*.25+1000);
+ assert.equal(g.events.filter(e=>e.type==='blood-seraph-heal').length,1);
+ advance(g,1.95);
+ assert.equal(g.boss.hp,max*.25+1000);
+ assert.equal(g.blood.seraphHealDone,true);
 });

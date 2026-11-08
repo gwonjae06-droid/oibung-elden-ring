@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'src/blood-*.mjs'
+      - 'src/boss-hit-regions.mjs'
       - 'src/boss-music.mjs'
       - 'src/boss-tracks.mjs'
       - 'tests/blood-seraph-phase3.test.mjs'

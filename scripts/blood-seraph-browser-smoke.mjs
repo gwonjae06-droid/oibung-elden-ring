@@ -58,6 +58,10 @@ try{
  assert.equal(cinematic.view.seraph.visible,true);
  assert.equal(cinematic.view.seraph.hinges,6);
  assert.ok(cinematic.view.seraph.featherInstances>=60);
+ assert.equal(cinematic.view.seraph.ownsHurtSilhouette,true);
+ assert.equal(cinematic.view.seraph.decorativeOnly,false);
+ const afterHeal=await page.evaluate(()=>window.__seraphSession().game.boss.hp);
+ assert.equal(afterHeal,third.hp+1000,'one-time 1000 HP rebirth must happen in the transformation');
  await page.screenshot({path:'artifacts/blood-seraph/seraph-formation-desktop.png'});
  const fight=await page.evaluate(async()=>{
   const {skipBloodTransition,stepBlood,startBloodPattern}=await import('./src/blood-combat.mjs');
@@ -82,6 +86,20 @@ try{
  assert.ok(live.view.hazards>=3);
  assert.match(live.phaseLabel,/세 번째/);
  await page.screenshot({path:'artifacts/blood-seraph/seraph-six-wing-attack.png'});
+ // Render a distinct eye attack from the boss's own eye, not from its
+ // former humanoid's invisible core or an unrelated billboard.
+ const ray=await page.evaluate(async()=>{
+  const {stepBlood,startBloodPattern}=await import('./src/blood-combat.mjs');
+  const g=window.__seraphSession().game;
+  g.boss.state='recovery';g.blood.hazards.length=0;
+  if(!startBloodPattern(g,'seraphGaze'))throw Error('eye phase pattern unavailable');
+  const first=g.blood.hazards[0].warn;
+  for(let left=first+.08;left>1e-7;left-=.04)stepBlood(g,Math.min(.04,left));
+  return {pattern:g.blood.pattern,warn:first,phase:g.boss.phase};
+ });
+ await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.eyeRayVisible,
+  {},{timeout:15000});
+ await page.screenshot({path:'artifacts/blood-seraph/seraph-eye-attack.png'});
  await page.setViewportSize({width:844,height:390});
  await page.waitForTimeout(350);
  const mobile=await page.evaluate(()=>{
