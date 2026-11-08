@@ -142,8 +142,11 @@ test('colossal Blood Seraph uses sculpted Baeseojun photo-face and six independe
  assert.equal(first.damageSources,0);
  assert.equal(first.hasFace,true);
  assert.equal(first.hasEye,false);
- assert.equal(first.photoAsset,'assets/baeseojun.png');
- assert.ok(scene.getObjectByName('blood-seraph-baeseojun-photo-visage')?.isGroup);
+ assert.equal(first.photoAsset,'assets/3bae.png');
+ assert.ok(scene.getObjectByName('blood-seraph-3bae-sculpted-visage')?.isGroup);
+ assert.equal(first.sculpt.robeLayers,3);
+ assert.equal(first.sculpt.crownProngs,6);
+ assert.ok(first.sculpt.secondaryFeathers>=48);
  assert.ok(scene.getObjectByName('baeseojun-sculpted-head')?.isMesh);
  assert.equal(scene.getObjectByName('blood-seraph-eye-pupil'),undefined);
  assert.ok(scene.getObjectByName('blood-seraph-sacred-face-ring')?.isMesh);
@@ -244,7 +247,7 @@ test('eye laser uses each real impact clock and is invisible in safe windup and 
 });
 test('rebirth pulse is exactly one thousand in story-scale HP and never stacks',()=>{
  const g=p3(),max=g.boss.maxHp;
- g.boss.hp=max*.25;g.boss.state='transition';g.blood.seraphHealDone=false;g.blood.t=2.64;
+ g.boss.hp=max*.25;g.boss.state='transition';g.blood.seraphHealDone=false;g.blood.t=3.64;
  advance(g,.04);
  assert.equal(g.boss.hp,max*.25+1000);
  assert.equal(g.events.filter(e=>e.type==='blood-seraph-heal').length,1);

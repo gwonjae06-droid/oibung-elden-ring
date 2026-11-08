@@ -43,12 +43,21 @@ try{
   g.boss.hp=g.boss.maxHp*.25+1;g.blood.recover=10;
   damageBlood(g,2);stepBlood(g,.025);
   if(g.boss.phase!==3||g.boss.state!=='transition')throw Error('Seraph phase transition did not start');
-  g.blood.t=3.15;
+  g.blood.t=1.45;
   return {hp:g.boss.hp,phase:g.boss.phase,state:g.boss.state,hasAwakening:g.events.some(e=>e.type==='blood-seraph-awakening')};
  });
+ // Phase two must still be physically present while the new Seraph forms.
+ await page.waitForFunction(()=>{
+  const s=window.__seraphSession?.(),v=s?.diagnostics()?.view;
+  return v?.seraph?.visible&&v?.oldFormVisible&&v?.ascension?.visible;
+ },{},{timeout:18000});
+ await page.screenshot({path:'artifacts/blood-seraph/2p-body-evolving-to-3p.png'});
+ // Advance into the late part of the unskippable anatomical transition.
+ await page.evaluate(()=>{window.__seraphSession().game.blood.t=4.15;});
  await page.waitForFunction(()=>{
   const s=window.__seraphSession?.();
-  return s?.diagnostics()?.view?.seraph?.visible===true;
+  return s?.diagnostics()?.view?.seraph?.visible===true&&
+   s?.game?.blood?.seraphHealDone===true;
  },{},{timeout:18000});
  const cinematic=await page.evaluate(()=>{
   const s=window.__seraphSession();
@@ -63,8 +72,11 @@ try{
  await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.photoLoaded===true,
   {},{timeout:45000});
  assert.equal((await page.evaluate(()=>window.__seraphSession().diagnostics().view.seraph.photoAsset)),
-  'assets/baeseojun.png');
+  'assets/3bae.png');
  assert.equal(cinematic.view.seraph.ownsHurtSilhouette,true);
+ assert.ok(cinematic.view.seraph.sculpt.secondaryFeathers>=48);
+ assert.equal(cinematic.view.seraph.sculpt.robeLayers,3);
+ assert.equal(cinematic.view.seraph.sculpt.crownProngs,6);
  assert.equal(cinematic.view.seraph.decorativeOnly,false);
  const afterHeal=await page.evaluate(()=>window.__seraphSession().game.boss.hp);
  assert.equal(afterHeal,third.hp+1000,'one-time 1000 HP rebirth must happen in the transformation');

@@ -27,7 +27,7 @@ export function createBloodSeraphAscension(scene,{coarse=false,reduced=false}={}
    points.push(new THREE.Vector3(Math.sin(angle)*radius,y,Math.cos(angle)*radius));
   }
   const path=new THREE.CatmullRomCurve3(points);
-  const line=new THREE.Mesh(new THREE.TubeGeometry(path,18,coarse?.022:.031,4,false),
+  const line=new THREE.Mesh(new THREE.TubeGeometry(path,18,coarse ? .022 : .031,4,false),
    i%3?crimson:bright);
   line.name='blood-seraph-blood-to-feather-lifelines-'+i;
   root.add(line);threads.push(line);
