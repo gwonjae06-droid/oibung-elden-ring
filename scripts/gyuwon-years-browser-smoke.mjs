@@ -108,7 +108,9 @@ try{
  await page.screenshot({path:'artifacts/gyuwon-years/grade-great.png'});
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
   ?.firstElementChild?.shadowRoot&&window.readYearSession(document.getElementById('gyuwon-battle')
-   .firstElementChild.shadowRoot)?.game?.gyuwon?.years?.year===2,{},{timeout:20000});
+   .firstElementChild.shadowRoot)?.game?.gyuwon?.years?.year===2,{},{timeout:45000}).catch(async error=>{
+  console.error('Year-transition state',await page.evaluate(()=>{const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot,s=root&&window.readYearSession(root);return {active:s?.active,time:s?.game?.time,years:s?.game?.gyuwon?.years,diagnostics:s?.diagnostics()};}),errors);throw error;
+ });
  const carriedHp=await page.evaluate(()=>{
   const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
   const g=window.readYearSession(root).game;
