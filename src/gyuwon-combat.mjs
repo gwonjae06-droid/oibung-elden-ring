@@ -11,6 +11,7 @@ import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
 import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
+import {createGyuwonExam,tickGyuwonExamClock,dueGyuwonExam,isGyuwonExamId,buildGyuwonExam,updateGyuwonExamPattern} from './gyuwon-exam.mjs';
 
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
@@ -18,7 +19,7 @@ export function createGyuwonGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
  const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
-  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null,memoryVariant:0,memoryRun:0,memoryRunTarget:2,proofQueue:[],proofIndex:0,whiteQuota:2,whiteCycle:0,casts:0,lastWarpCast:-1,teleport:null}};
+  gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null,memoryVariant:0,memoryRun:0,memoryRunTarget:2,proofQueue:[],proofIndex:0,whiteQuota:2,whiteCycle:0,casts:0,lastWarpCast:-1,teleport:null,exam:createGyuwonExam()}};
  // All weapon skills (card sigils, burning arrows, hammer guard and throw)
  // settle through the shared player combat manager, including DoT statistics.
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
@@ -72,6 +73,7 @@ export function startGyuwonPattern(g,id,{replay=null}={}){
   s.memoryVariant=drawPatternShuffle(s.patternDeck,'gyuwon-memory-'+id,[0,1,2]);
  }
  const lane=(x,z,yaw,warn,extra={})=>hazard(g,'lane',{x,z,yaw,warn,width:1.15,length:42,life:.3,damage:24,...extra});
+ if(isGyuwonExamId(id))buildGyuwonExam(g,id,(shape,opts)=>hazard(g,shape,opts));
  if(id==='line')for(let i=-1;i<=1;i++)lane(p.x+i*5,p.z,0,1.35+Math.abs(i)*.22);
  if(id==='mark')for(let i=0;i<3;i++)hazard(g,'circle',{x:p.x+(i-1)*4,z:p.z,r:2.5,warn:1.35+i*.5,damage:22});
  if(id==='repeat'){
@@ -172,9 +174,9 @@ export function startGyuwonPattern(g,id,{replay=null}={}){
   lane(p.x,p.z,.78,3.5,{length:26,visual:'cross'});lane(p.x,p.z,-.78,4,{length:26,visual:'cross'});
   hazard(g,'ring',{x:0,z:0,r:3,width:.8,grow:9,warn:4.5,life:1.8,visual:'chalk-ring'});
  }
- if(!['repeat','reverse','stop'].includes(id))s.memory=s.hazards.map(({shape,x,z,yaw,width,length,r,arc,grow})=>({shape,x,z,yaw,width,length,r,arc,grow}));
+ if(!['repeat','reverse','stop'].includes(id)&&!isGyuwonExamId(id))s.memory=s.hazards.map(({shape,x,z,yaw,width,length,r,arc,grow})=>({shape,x,z,yaw,width,length,r,arc,grow}));
  // Animation uses this stable damage timeline after one-shot hazards have expired.
- if(b.phase===2&&s.space==='white'){
+ if(b.phase===2&&s.space==='white'&&!isGyuwonExamId(id)){
   const frozen=s.hazards.map(h=>({...h,originalDamage:h.damage}));
   s.proofQueue.push({id,hazards:frozen,duration:spec.duration});
   for(const h of s.hazards){h.originalDamage=h.damage;h.damage=0;h.preview=true;}
@@ -242,6 +244,12 @@ function tickBoss(g,dt){
     emit(g,'gyuwon-teleport-charge',{x:b.x,z:b.z,to});return;
    }
    if(b.phase===2){
+    // Finish already recorded proofs before inserting the periodic examination.
+    // The white recorder is never interrupted by a damaging exam.
+    const queuedExam=dueGyuwonExam(g);
+    if(queuedExam&&s.space==='dark'&&s.proofIndex>=s.proofQueue.length){
+     s.index++;startGyuwonPattern(g,queuedExam);return;
+    }
     if(s.space==='white'&&s.proofQueue.length>=s.whiteQuota){
      s.space='dark';s.proofIndex=0;s.spaceTime=0;emit(g,'space');
     }else if(s.space==='dark'&&s.proofIndex>=s.proofQueue.length){
@@ -258,12 +266,14 @@ function tickBoss(g,dt){
     startGyuwonPattern(g,id);return;
    }
    s.index++;
-   const id=b.phase===3&&s.stageMemory&&s.memoryRun<s.memoryRunTarget
-    ?s.stageMemory:chooseGyuwonPattern(g);
+   const examId=dueGyuwonExam(g);
+   const id=examId||(b.phase===3&&s.stageMemory&&s.memoryRun<s.memoryRunTarget
+    ?s.stageMemory:chooseGyuwonPattern(g));
    startGyuwonPattern(g,id);
   }return;
  }
  s.t+=dt;const spec=GYUWON_PATTERNS[s.pattern];s.elevation=0;
+ if(isGyuwonExamId(s.pattern))updateGyuwonExamPattern(g,(shape,opts)=>hazard(g,shape,opts));
  for(const h of s.hazards){h.age+=dt;
   // The remembered cleave slides the tsunami's corridor; collision and the mesh both read h.gap.
   if(h.gapTarget!==undefined&&h.age>=h.shiftAt){const gd=h.gapTarget-h.gap;h.gap+=Math.sign(gd)*Math.min(Math.abs(gd),h.shiftSpeed*dt);}
@@ -308,7 +318,7 @@ function tickPlayer(g,dt,input){
 export function stepGyuwon(g,dt,input={}){
  if(g.status!=='playing'||!Number.isFinite(dt)||dt<=0)return;
  let left=Math.min(.05,dt);while(left>1e-9&&g.status==='playing'){
-  const h=Math.min(1/120,left);g.time+=h;
+  const h=Math.min(1/120,left);g.time+=h;tickGyuwonExamClock(g,h);
   if(g.boss.state==='transition'){g.player.action=null;g.projectiles.length=0;tickBoss(g,h);}
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
   left-=h;
