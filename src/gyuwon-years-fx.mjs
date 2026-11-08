@@ -121,6 +121,9 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   const angle=i*Math.PI/3,fig=new THREE.Group();
   fig.position.set(Math.sin(angle)*14,0,Math.cos(angle)*14);
   fig.userData.index=i;dollRoot.add(fig);mobiles.push(fig);
+  // The impact is visible across the same 2.9m radius as the figurine's contact.
+  const dust=mesh(fig,ring,froth,0,.13,0,3.18,3.18,3.18,'gyuwon-figurine-ground-impact');
+  dust.rotation.x=Math.PI/2;dust.visible=false;fig.userData.impactDust=dust;
   const suit=dollOutfits[i];
   mesh(fig,cylinder,steel,0,.12,0,1.3,.25,1.3);
   mesh(fig,skirtGeometry,suit,0,1.18,0,1,1,1,'gyuwon-figurine-dress-skirt');
@@ -313,11 +316,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   if(dollRoot.visible)mobiles.forEach((fig,i)=>{
     const a=i*Math.PI/3,h=s.hazards.find(x=>x.visual==='year-figure'&&Math.abs(x.x-Math.sin(a)*14)<.1&&Math.abs(x.z-Math.cos(a)*14)<.1);
     fig.position.set(Math.sin(a)*14,0,Math.cos(a)*14);
+    const impactDust=fig.userData.impactDust;
+    impactDust.visible=!!h&&h.age>=h.warn&&h.age<=h.warn+h.life;
     if(h){
      const ready=Math.min(1,h.age/Math.max(.1,h.warn));
      // The model itself falls and contacts the identical center as the hit.
      fig.position.y=6*(1-ready)+(h.age>=h.warn?-.15*Math.sin(Math.min(1,(h.age-h.warn)/.35)*Math.PI):0);
      fig.rotation.y=i*.3+(1-ready)*.75;
+     impactDust.scale.setScalar(h.r+.28);
     }else{
      fig.position.y=.14*Math.sin(g.time*2.5+i);fig.rotation.y=g.time*.30+i*.20;
     }
