@@ -84,6 +84,17 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
  }
- return {root,update,clear,prewarmProgressive:async(renderer,camera,{companions=[]}={})=>{await yearsFx.ready;if(disposed)return;const textures=new Set();yearsFx.root.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.map)textures.add(m.map);});for(const t of textures){if(disposed)return;renderer.initTexture?.(t);await new Promise(resolve=>setTimeout(resolve,0));}if(!disposed){const proxy=annualWorld.createWarmCompanion();scene.add(proxy);try{await recall.prewarmProgressive(renderer,camera,{companions:[proxy,stage,...companions]});}finally{proxy.removeFromParent();proxy.dispose();}}if(!disposed)await annualWorld.prewarmProgressive(renderer,camera);},prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(camera,g){annualWorld.setCamera(camera);yearsFx.occlude(camera,g);},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),world:annualWorld.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){if(disposed)return;disposed=true;clear();annualWorld.dispose();hazardFx.dispose();yearsFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ async function prewarmProgressive(renderer,camera,{companions=[]}={}){
+  await yearsFx.ready;if(disposed)return;
+  const textures=new Set();yearsFx.root.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.map)textures.add(m.map);});
+  for(const t of textures){if(disposed)return;renderer.initTexture?.(t);await new Promise(resolve=>setTimeout(resolve,0));}
+  if(disposed)return;
+  const proxy=annualWorld.createWarmCompanion(),memory=annualWorld.prepare(9),visible=annualWorld.root.children.map(o=>[o,o.visible]),rootVisible=annualWorld.root.visible;
+  scene.add(proxy);annualWorld.root.visible=true;for(const [o]of visible)o.visible=false;memory.group.visible=true;
+  try{await recall.prewarmProgressive(renderer,camera,{companions:[proxy,stage,annualWorld.root,...companions],preparePrograms:()=>annualWorld.precompileVisibility(renderer,camera)});}
+  finally{proxy.removeFromParent();proxy.dispose();if(!disposed){annualWorld.root.visible=rootVisible;for(const [o,v]of visible)o.visible=v;}}
+  if(!disposed)await annualWorld.prewarmProgressive(renderer,camera);
+ }
+ return {root,update,clear,prewarmProgressive,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(camera,g){annualWorld.setCamera(camera);yearsFx.occlude(camera,g);},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),world:annualWorld.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){if(disposed)return;disposed=true;clear();annualWorld.dispose();hazardFx.dispose();yearsFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
 

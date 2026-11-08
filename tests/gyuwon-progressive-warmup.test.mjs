@@ -14,7 +14,7 @@ async function fixture(run){
 test('map warmup yields bounded mesh batches and restores visibility and render target every time',async()=>{
  await fixture(async maps=>{
   const camera=new THREE.PerspectiveCamera(),original={name:'original-target'};let target=original,compiles=0,renders=0,yields=0;
-  const renderer={getRenderTarget:()=>target,setRenderTarget:t=>target=t,compile(){compiles++;assert.equal(maps.root.children.filter(x=>x.visible).length,compiles===1?0:1);},render(){renders++;},initTexture(){}};
+  const renderer={getRenderTarget:()=>target,setRenderTarget:t=>target=t,compile(){compiles++;assert.equal(target,original);assert.equal(maps.root.children.filter(x=>x.visible).length,compiles===1?0:1);},render(){renders++;},initTexture(){}};
   await maps.prewarmProgressive(renderer,camera,{yieldFrame:async()=>{yields++;assert.equal(target,original);assert.equal(maps.root.children.filter(x=>x.visible).length,0);}});
   assert.ok(yields>4);assert.ok(renders>4);assert.equal(compiles,renders);
   assert.equal(maps.stats().compiled,4);assert.equal(maps.stats().prewarmed,true);

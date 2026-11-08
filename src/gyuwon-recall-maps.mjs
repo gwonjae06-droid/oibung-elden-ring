@@ -109,7 +109,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
  }
 
  let warming=null;
- function prewarmProgressive(renderer,camera,{yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0)),companions=[]}={}){
+ function prewarmProgressive(renderer,camera,{yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0)),companions=[],preparePrograms=()=>{}}={}){
   if(warming)return warming;
   if(disposed||warmed||!renderer?.compile||!camera)return Promise.resolve();
   warming=(async()=>{
@@ -127,7 +127,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
    }
    try{
     // Warm the starting actor/floor with the same output colour space as the canvas.
-    if(target){chunk(null,()=>{renderer.setRenderTarget(target);renderer.compile(scene,camera);renderer.render(scene,camera);});await yieldFrame();}
+    if(target){chunk(null,()=>{renderer.compile(scene,camera);preparePrograms();renderer.setRenderTarget(target);renderer.render(scene,camera);});await yieldFrame();}
     for(const entry of maps.values()){
      if(disposed)return;
      const objects=[];entry.group.traverse(o=>{
@@ -139,7 +139,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
       if(disposed)return;
       chunk(entry,()=>{
        const culling=objects.map(o=>o.frustumCulled);objects.forEach((o,i)=>{o.visible=i>=offset&&i<offset+16;o.frustumCulled=false;});
-       try{renderer.setRenderTarget(target);renderer.compile(scene,camera);renderer.render(scene,camera);preRendered++;}
+       try{renderer.compile(scene,camera);preparePrograms();renderer.setRenderTarget(target);renderer.render(scene,camera);preRendered++;}
        finally{objects.forEach((o,i)=>{o.visible=true;o.frustumCulled=culling[i];});}
       });
       await yieldFrame();

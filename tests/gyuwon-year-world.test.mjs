@@ -76,7 +76,7 @@ test('ranged weapons release at the actual height of the folded floor',()=>{
 });
 test('progressive preparation yields, preserves scene state, and leaves no active world',async()=>{
  const s=scene(),world=createGyuwonYearWorld(s,{coarse:true}),camera=new THREE.PerspectiveCamera();let target=null,yields=0;
- const renderer={getRenderTarget:()=>target,setRenderTarget:t=>target=t,compile(){},render(){},outputColorSpace:THREE.SRGBColorSpace};
+ const renderer={getRenderTarget:()=>target,setRenderTarget:t=>target=t,compile(){assert.equal(target,null);},render(){},outputColorSpace:THREE.SRGBColorSpace};
  try{await world.prewarmProgressive(renderer,camera,{yieldFrame:async()=>{yields++;assert.equal(target,null);}});assert.ok(yields>11);assert.equal(world.stats().built,11);assert.equal(world.stats().prewarmed,true);assert.equal(world.stats().layers.length,0);}
  finally{world.dispose();}
 });
