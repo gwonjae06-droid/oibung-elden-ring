@@ -53,9 +53,11 @@ function skinTexture(THREE,coarse){
  }
  ctx.putImageData(img,0,0);const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(3,3);return tex;
 }
-export function createBloodHead({coarse=false,reduced=false}={}){
+export function createBloodHead({coarse=false,reduced=false,seraph=false}={}){
  const group=new THREE.Group();
- const mat=new THREE.MeshPhysicalMaterial({color:0xc39b8c,roughness:.8,metalness:0,clearcoat:.09,clearcoatRoughness:.68});
+ const mat=new THREE.MeshPhysicalMaterial({color:0xc39b8c,roughness:seraph?.58:.8,metalness:0,
+  emissive:seraph?0x541024:0x000000,emissiveIntensity:seraph?.36:0,
+  clearcoat:seraph?.55:.09,clearcoatRoughness:seraph?.22:.68});
  const skull=mesh(group,bloodHeadGeometry({coarse}),mat);skull.name='baeseojun-sculpted-head';
  const throat=new THREE.MeshStandardMaterial({color:0x96736a,roughness:.89});
  const neck=mesh(group,new THREE.CylinderGeometry(.235,.31,.52,coarse?10:20),throat,0,-.84,-.06);

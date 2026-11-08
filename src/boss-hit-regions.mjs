@@ -52,10 +52,10 @@ export function bloodHurtShapes(g){
  if(g.boss.phase===3){
   const b=g.boss,at=(id,x,y,z,rx,ry,rz)=>ellipsoid(b,id,{x,y,z},rx,ry,rz);
   return [
-   at('seraph-hem',0,1.02,-.2,.82,.85,.72),
-   at('seraph-vessel',0,3.2,-.2,1.05,2.35,.87),
-   at('seraph-chest',0,5.5,-.28,1.55,2.1,1.18),
-   at('seraph-eye',0,6.7,1.2,1.13,.68,.48)
+   at('seraph-hem',0,1.02,-.2,1.08,.9,.82),
+   at('seraph-vessel',0,3.15,-.2,1.35,2.52,1.05),
+   at('seraph-chest',0,5.55,-.36,1.93,2.8,1.45),
+   at('seraph-eye',0,7.22,1.72,1.40,1.65,.8)
   ];
  }
  const b=g.boss,scale=1.25,elevation=g.blood.elevation||0,
