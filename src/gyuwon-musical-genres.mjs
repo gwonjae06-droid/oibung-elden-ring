@@ -275,7 +275,7 @@ function tickShooter(g,m,dt,input,emit){
  const p=g.player,b=g.boss;
  p.x=clamp(p.x+clamp(input.x,-1,1)*8*dt,-19,19);
  p.z=clamp(p.z+clamp(input.z,-1,1)*8*dt,-14,14);
- b.z=Math.sin(m.time*.85)*6;b.x=10+Math.sin(m.time*.5)*2;
+ b.z=Math.sin(m.time*.85)*3.8;b.x=10+Math.sin(m.time*.5)*1.1;
  m.enemyWind-=dt;
  if(m.enemyWind<=0){
   const a=angle(b,p);m.enemyTarget={x:p.x,z:p.z,wind:1.05,age:0,a};
@@ -293,7 +293,7 @@ function tickShooter(g,m,dt,input,emit){
  }
  for(const shot of m.bullets){
   shot.x+=shot.vx*dt;shot.z+=shot.vz*dt;shot.life-=dt;
-  if(near(shot,b,2.1)){shot.life=0;deal(g,shot.damage,emit);}
+  if(near(shot,b,2.3)){shot.life=0;deal(g,shot.damage,emit);}
  }
  m.bullets=m.bullets.filter(s=>s.life>0&&Math.abs(s.x)<25&&Math.abs(s.z)<25);
  for(const shot of m.enemyShots){

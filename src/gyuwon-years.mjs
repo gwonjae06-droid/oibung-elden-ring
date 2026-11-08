@@ -147,9 +147,9 @@ function startNextYear(g,emit){
  e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);e.resultScene=null;
  g.gyuwon.hazards.length=0;
  g.boss.state='recovery';g.gyuwon.pattern=null;g.gyuwon.space='white';
- if(!isGyuwonMusicalYear(e.year))pickMemoryMap(g);
+ if(e.legacyAnnual||!isGyuwonMusicalYear(e.year))pickMemoryMap(g);
  emit('gyuwon-year',{year:e.year});
- if(isGyuwonMusicalYear(e.year))enterGyuwonMusical(g,emit);
+ if(!e.legacyAnnual&&isGyuwonMusicalYear(e.year))enterGyuwonMusical(g,emit);
 }
 function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
@@ -289,7 +289,7 @@ function tickHazards(g,dt,hurt,emit){
 }
 export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
  const b=g.boss,s=g.gyuwon,e=s.years;
- if(isGyuwonMusicalYear(e.year)&&e.mode==='combat'&&!e.musical)enterGyuwonMusical(g,emit);
+ if(!e.legacyAnnual&&isGyuwonMusicalYear(e.year)&&e.mode==='combat'&&!e.musical)enterGyuwonMusical(g,emit);
  if(e.mode==='musical'||e.mode==='curtain'){
   tickGyuwonMusical(g,dt,{emit,input,advance:()=>startNextYear(g,emit)});
   return;
@@ -356,7 +356,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
   b.x=d.fromX+(d.toX-d.fromX)*k;b.z=d.fromZ+(d.toZ-d.fromZ)*k;
   if(d.t>=.72)e.dodge=null;
  }
- if(e.day===0&&b.hp<=annualFloor(g)+1e-7){if(e.year===4)startNextYear(g,emit);else beginExam(g,emit);return;}
+ if(e.day===0&&b.hp<=annualFloor(g)+1e-7){if(e.year===4&&!e.legacyAnnual)startNextYear(g,emit);else beginExam(g,emit);return;}
  if(e.recover>0)return;
  if(!e.signatureUsed&&e.season>=GYUWON_YEAR_SECONDS*.55){
   beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;

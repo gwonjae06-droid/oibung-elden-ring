@@ -1,3 +1,4 @@
+// Legacy-mode regression for retired annual mechanics; the live encounter uses musical genres after year four.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -11,7 +12,7 @@ import {createGyuwonYearsFx} from '../src/gyuwon-years-fx.mjs';
 import {gyuwonMusicSection} from '../src/gyuwon-music.mjs';
 import {bossTrack} from '../src/boss-tracks.mjs';
 
-const make=(year=1,weapon='sword')=>{const g=createGyuwonGame(weapon,{yearMode:true,seed:811});g.gyuwon.years.year=year;g.player.invuln=1e7;return g;};
+const make=(year=1,weapon='sword')=>{const g=createGyuwonGame(weapon,{yearMode:true,seed:811});g.gyuwon.years.legacyAnnual=true;g.gyuwon.years.year=year;g.player.invuln=1e7;return g;};
 const advance=(g,t)=>{for(let i=0;i<Math.ceil(t*60);i++)stepGyuwon(g,1/60);};
 
 test('HP milestones preserve the eleven years without forcing signatures or a last-answer wait',()=>{

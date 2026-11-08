@@ -1,3 +1,4 @@
+// Legacy-mode regression for retired annual mechanics; the live encounter uses musical genres after year four.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -10,7 +11,7 @@ import {spawnPlayerProjectiles} from '../src/player-combat.mjs';
 import {gyuwonHurtShapes} from '../src/boss-hit-regions.mjs';
 import {createGyuwonYearsFx} from '../src/gyuwon-years-fx.mjs';
 
-const game=year=>{const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.year=year;g.player.invuln=1e6;return g;};
+const game=year=>{const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.legacyAnnual=true;g.gyuwon.years.year=year;g.player.invuln=1e6;return g;};
 const scene=()=>{const s=new THREE.Scene();s.background=new THREE.Color();s.fog=new THREE.FogExp2();s.add(new THREE.DirectionalLight());return s;};
 test('eleven years contain different real architecture and cache each world once',()=>{
  const s=scene(),art=Array.from({length:6},()=>new THREE.MeshBasicMaterial()),world=createGyuwonYearWorld(s,{coarse:true,artMaterials:art});

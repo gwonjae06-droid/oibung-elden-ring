@@ -1,3 +1,4 @@
+// Legacy-mode regression for retired annual mechanics; the live encounter uses musical genres after year four.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -8,7 +9,7 @@ import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,ARSENAL_SIGNATURES,arsenalKind} from '.
 import {hazardPosition,hazardContains} from '../src/gyuwon-data.mjs';
 import {createGyuwonActor} from '../src/gyuwon-actor.mjs';
 import {createArsenalFx} from '../src/gyuwon-arsenal-view.mjs';
-const game=year=>{const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.year=year;g.boss.hp=g.boss.maxHp*(1-.065*(year-1));g.gyuwon.years.yearStartHp=g.boss.hp;g.player.invuln=1e6;return g;};
+const game=year=>{const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.gyuwon.years.legacyAnnual=true;g.gyuwon.years.year=year;g.boss.hp=g.boss.maxHp*(1-.065*(year-1));g.gyuwon.years.yearStartHp=g.boss.hp;g.player.invuln=1e6;return g;};
 const advance=(g,time)=>{for(let t=0;t<time-1e-8;t+=1/120)stepGyuwon(g,1/120);};
 test('waiting without damage never advances the HP display or starts an examination',()=>{
  for(const year of [1,5,6,7,8,9,11]){const g=game(year),e=g.gyuwon.years,hp=g.boss.hp;advance(g,90);assert.equal(g.boss.hp,hp);assert.equal(e.year,year);assert.equal(e.day,365);assert.equal(e.season,0);assert.equal(e.mode,'combat');assert.equal(e.signatureUsed,false);}

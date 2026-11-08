@@ -1,3 +1,4 @@
+// Legacy-mode regression for retired annual mechanics; the live encounter uses musical genres after year four.
 import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ import {createGyuwonYearsFx} from '../src/gyuwon-years-fx.mjs';
 import {gyuwonHurtShapes} from '../src/boss-hit-regions.mjs';
 import {GYUWON_RIFLE_SOCKET,gyuwonWeaponPose,tentacleYaw} from '../src/gyuwon-year-choreography.mjs';
 const make=(year=1,seed=42)=>{
- const g=createGyuwonGame('sword',{yearMode:true,seed});g.player.invuln=1e5;
+ const g=createGyuwonGame('sword',{yearMode:true,seed});g.gyuwon.years.legacyAnnual=true;g.player.invuln=1e5;
  g.gyuwon.years.year=year;g.player.z=9;return g;
 };
 const tick=(g,seconds)=>{for(let i=0;i<Math.round(seconds*120);i++)stepGyuwon(g,1/120);};
