@@ -20,6 +20,8 @@ try{
  });
  await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});
  await page.waitForSelector('[data-j="new"]',{timeout:60000});
+ const cdp=await page.context().newCDPSession(page);
+ await cdp.send('Emulation.setFocusEmulationEnabled',{enabled:true});
  await page.evaluate(()=>document.getElementById('journey')?.close());
  await page.evaluate(async()=>{
   const {launchBloodBattle}=await import('./src/blood-battle.mjs');
@@ -44,7 +46,10 @@ try{
   g.blood.t=3.15;
   return {hp:g.boss.hp,phase:g.boss.phase,state:g.boss.state,hasAwakening:g.events.some(e=>e.type==='blood-seraph-awakening')};
  });
- await page.waitForTimeout(600);
+ await page.waitForFunction(()=>{
+  const s=window.__seraphSession?.();
+  return s?.diagnostics()?.view?.seraph?.visible===true;
+ },{},{timeout:18000});
  const cinematic=await page.evaluate(()=>{
   const s=window.__seraphSession();
   return {view:s.diagnostics().view,phase:s.game.boss.phase,stage:s.game.boss.state};
@@ -62,7 +67,10 @@ try{
   if(!startBloodPattern(g,'seraphWings'))throw Error('3P first wing pattern unavailable');
   return {phase:g.boss.phase,pattern:g.blood.pattern,warnings:g.blood.hazards.map(h=>h.warn)};
  });
- await page.waitForTimeout(600);
+ await page.waitForFunction(()=>{
+  const s=window.__seraphSession?.();
+  return s?.diagnostics()?.view?.seraph?.visible===true&&s?.diagnostics()?.view?.hazards>=3;
+ },{},{timeout:18000});
  const live=await page.evaluate(()=>{
   const s=window.__seraphSession(),root=document.getElementById('blood-battle').firstElementChild.shadowRoot;
   return {view:s.diagnostics().view,phase:s.game.boss.phase,state:s.game.boss.state,
