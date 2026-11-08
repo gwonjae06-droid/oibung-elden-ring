@@ -1,5 +1,5 @@
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
-import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,applyAnnualCarry} from './gyuwon-annual-progress.mjs';
+import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
@@ -113,6 +113,9 @@ export function resolveGyuwonExamGrade(g,random=Math.random(),emit=()=>{}){
  const r=clamp(Number.isFinite(random)?random:.5,0,1-Number.EPSILON);
  const result=r<.30?'great':r<.70?'normal':'failure';
  const max=g.boss.maxHp,delta=max*(result==='great'?.05:result==='normal'?.02:-.04);
+ // Apply any earlier overflow before success/normal/failure adjustments.
+ // The HP shown during the result cinematic must match the next-year HP.
+ settleAnnualCarryBeforeGrade(g);
  g.boss.hp=clamp(g.boss.hp+delta,Math.min(g.boss.hp,annualFloor(g)),max);
  e.grade=result;e.gradeT=0;e.gradeAt=g.time;e.scoreFlash=1;e.mode='result';e.subjectLabel=null;
  e.cast=null;g.gyuwon.pattern=null;g.gyuwon.hazards.length=0;

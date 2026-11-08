@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createGyuwonGame,damageGyuwon,stepGyuwon,actGyuwon,strikeGyuwonWard} from '../src/gyuwon-combat.mjs';
 import {annualFloor,annualBudget,applyAnnualCarry,annualDisplay} from '../src/gyuwon-annual-progress.mjs';
-import {startGyuwonYearCast,GYUWON_YEAR_SECONDS,gyuwonMapInterval} from '../src/gyuwon-years.mjs';
+import {startGyuwonYearCast,resolveGyuwonExamGrade,GYUWON_YEAR_SECONDS,gyuwonMapInterval} from '../src/gyuwon-years.mjs';
 import {GYUWON_YEAR_SIGNATURES} from '../src/gyuwon-year-signatures.mjs';
 import {resolveAnnualProjectileCover} from '../src/gyuwon-nightmare-mechanics.mjs';
 import {hazardPosition,hazardContains} from '../src/gyuwon-data.mjs';
@@ -188,4 +188,23 @@ test('210 real bullets arrive in 30 warned groups of seven',()=>{
  }
  assert.equal(shots.size,210);assert.equal(g.gyuwon.years.marksmanVolleys,30);
  assert.equal(g.gyuwon.years.cover.length,5);
+});
+
+test('successful and normal exam HP gains persist unchanged into the next year',()=>{
+ for(const [roll,grade,delta] of [[.05,'great',.05],[.5,'normal',.02],[.9,'failure',-.04]]){
+  const g=make(1),e=g.gyuwon.years;
+  g.boss.maxHp=7000;g.boss.hp=7000;
+  damageGyuwon(g,5000);
+  const bank=e.damageBank,before=g.boss.hp;
+  assert.ok(bank>0);
+  e.mode='exam';e.subject=4;
+  const gradeResult=resolveGyuwonExamGrade(g,roll);
+  assert.equal(gradeResult.result,grade);
+  const expected=Math.min(7000,before-bank+7000*delta);
+  assert.ok(Math.abs(g.boss.hp-expected)<1e-7,'grade must pay overflow before HP recovery');
+  assert.equal(e.damageBank,0);
+  advance(g,3.05);
+  assert.equal(e.year,2);
+  assert.ok(Math.abs(g.boss.hp-expected)<1e-7,'next year must not erase the displayed recovery');
+ }
 });

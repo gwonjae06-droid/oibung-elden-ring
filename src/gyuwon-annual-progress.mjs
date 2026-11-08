@@ -38,6 +38,17 @@ export function acceptAnnualDamage(g,amount,{dot=false}={}){
  const pressure=calendarSeconds>0?Math.min(surplus,budget*.25):0;
  return {health,credit,pressure,calendarSeconds,accepted:health+credit+pressure};
 }
+// Previously, this carry was paid AFTER the visible grade recovery, making
+// a successful exam appear to lose HP upon entering the next school year.
+// Settle last year's earned overflow first, against the next-year floor.
+export function settleAnnualCarryBeforeGrade(g){
+ const e=g.gyuwon.years,b=g.boss,nextYear=e.year+1;
+ const nextFloor=nextYear>=11?(e.endingUnlocked||nextYear>11?0:b.maxHp*.015):
+  b.maxHp*(1-.065*nextYear);
+ const amount=Math.max(0,Math.min(e.damageBank||0,b.hp-nextFloor));
+ b.hp-=amount;e.damageBank=0;e.yearDamage=amount;
+ return amount;
+}
 export function applyAnnualCarry(g){
  const e=g.gyuwon.years,bank=e.damageBank||0;
  const amount=Math.max(0,Math.min(bank,g.boss.hp-annualFloor(g)));
