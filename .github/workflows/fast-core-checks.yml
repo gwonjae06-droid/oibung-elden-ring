@@ -58,5 +58,6 @@ jobs:
           tests/gyuwon-years.test.mjs
           tests/gyuwon-year-production.test.mjs
           tests/gyuwon-year-rework.test.mjs
+          tests/gyuwon-no-triangle-vfx.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs

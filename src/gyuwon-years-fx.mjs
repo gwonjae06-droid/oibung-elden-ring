@@ -108,7 +108,8 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   gameParts.push(m);
  }
  const flameAura=new THREE.Group();flameAura.name='gyuwon-third-year-burning-student';root.add(flameAura);
- const flameGeo=geo(new THREE.ConeGeometry(.65,2.1,coarse?8:13));
+ // Rounded, soft organic tongues of fire: no triangular polygon cones.
+ const flameGeo=geo(new THREE.CapsuleGeometry(.39,1.24,coarse?4:9,coarse?9:18));
  const auraFlames=Array.from({length:8},(_,i)=>{
   const flame=mesh(flameAura,flameGeo,hot,0,1.4,0);
   flame.userData.index=i;return flame;

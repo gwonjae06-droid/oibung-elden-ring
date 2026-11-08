@@ -178,7 +178,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
  function update(g){
   if(disposed)return;
   const active=g?.status==='playing',s=g?.gyuwon,b=g?.boss;
-  if(owner!==g){owner=g;lastCasts=0;clearGhosts();clearCorridors();}
+  if(owner!==g){clear();owner=g;lastCasts=0;}
   // A new cast takes over from any lingering trace; leaving phase one or ending also clears them.
   if(!active||!s||!b||b.phase!==1||s.casts!==lastCasts){clearGhosts();lastCasts=s?.casts||0;}
   const live=new Set(),liveCorridors=new Set();
