@@ -202,5 +202,7 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
   for(const [id,v] of ribbons)if(!seen.has(id)){stage.remove(v);disposeScene(v);ribbons.delete(id);}
  }
  function dispose(){if(disposed)return;disposed=true;reset();root.parent?.remove(root);disposeScene(root);}
- return {root,update,reset,dispose};
+ return {root,update,reset,dispose,
+  prepareGpuWarmup:()=>{root.visible=true;lead.group.visible=true;partner.group.visible=true;},
+  finishGpuWarmup:()=>{root.visible=false;}};
 }
