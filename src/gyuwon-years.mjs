@@ -5,7 +5,8 @@ import {hazardContains} from './gyuwon-data.mjs';
 // code for old tools/tests and are not selected by the published year-mode fight.
 export const GYUWON_YEAR_SECONDS=26;
 export const GYUWON_EXAM_SUBJECTS=Object.freeze(['국어','수학','영어','한국사','탐구']);
-export const GYUWON_SUBJECT_SECONDS=2.1;
+export const GYUWON_SUBJECT_SECONDS=2.5;
+export const GYUWON_MIN_TELEGRAPH=1.05;
 export const GYUWON_YEAR_PATTERNS=Object.freeze({
  bike:[3.4,1.3],scooter:[3.6,1.3],smoke:[3.2,1.3],
  workbook:[3.8,1.2],pencil:[3.5,1.2],
@@ -39,7 +40,7 @@ export function createGyuwonYears(){
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function add(g,shape,opts={}){
- const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:.85,
+ const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:GYUWON_MIN_TELEGRAPH,
   life:.34,age:0,damage:22,hit:false,fired:false,...opts};
  g.gyuwon.hazards.push(h);return h;
 }
@@ -67,7 +68,7 @@ function mapHazards(g,key,offset=0){
  if(key==='tsunami'){
   const gap=clamp(p.x,-22,22);
   add(g,'wave',{x:0,z:-79,gap,opening:4.3,depth:2.05,speed:32,
-   warn:.85+offset,life:4.3,damage:36,visual:'year-water-wave'});
+   warn:1.15+offset,life:4.3,damage:36,visual:'year-water-wave'});
  }
 }
 function spawnExamSubject(g,index){
@@ -75,20 +76,20 @@ function spawnExamSubject(g,index){
  e.subject=index;e.subjectT=0;e.subjectLabel=GYUWON_EXAM_SUBJECTS[index];
  // Five distinct forms, all with an authored >0.5 s physical preparation.
  if(index===0){
-  line(g,p.x,p.z,.25,.65,{width:1.25,visual:'year-korean'});
-  line(g,p.x,p.z,-.8,1.34,{width:1.15,visual:'year-korean'});
+  line(g,p.x,p.z,.25,1.07,{width:1.25,visual:'year-korean'});
+  line(g,p.x,p.z,-.8,1.86,{width:1.15,visual:'year-korean'});
  }else if(index===1){
-  mark(g,p.x+3,p.z,.65,2.1,19,'year-math');
-  mark(g,p.x-3,p.z,1.35,2.1,19,'year-math');
+  mark(g,p.x+3,p.z,1.06,2.1,19,'year-math');
+  mark(g,p.x-3,p.z,1.87,2.1,19,'year-math');
  }else if(index===2){
-  line(g,p.x,p.z,Math.PI/2,.7,{width:1.45,visual:'year-english'});
-  line(g,p.x,p.z,0,1.35,{width:1.45,visual:'year-english'});
+  line(g,p.x,p.z,Math.PI/2,1.06,{width:1.45,visual:'year-english'});
+  line(g,p.x,p.z,0,1.87,{width:1.45,visual:'year-english'});
  }else if(index===3){
-  for(let i=0;i<2;i++)mark(g,p.x+(i?3.8:-3.8),p.z,.72+i*.65,2.4,21,'year-history');
+  for(let i=0;i<2;i++)mark(g,p.x+(i?3.8:-3.8),p.z,1.06+i*.8,2.4,21,'year-history');
  }else{
-  add(g,'ring',{x:b.x,z:b.z,r:3.3,width:.8,grow:11,warn:.7,
+  add(g,'ring',{x:b.x,z:b.z,r:3.3,width:.8,grow:11,warn:1.07,
    life:.8,damage:20,visual:'year-social'});
-  line(g,p.x,p.z,Math.PI*.75,1.4,{width:1.2,visual:'year-social'});
+  line(g,p.x,p.z,Math.PI*.75,1.86,{width:1.2,visual:'year-social'});
  }
  g.gyuwon.pattern='year-exam';g.gyuwon.t=0;
  g.gyuwon.motionBeats=g.gyuwon.hazards.map(h=>h.warn);
@@ -161,8 +162,15 @@ function beginCast(g,id,emit){
    warn:1.1+i*.88,life:.77,damage:26,visual:'year-fire'});
  }else if(id==='sniper'||id==='crossfire'){
   const shots=id==='sniper'?2:3;
-  for(let i=0;i<shots;i++)line(g,p.x,p.z,a+(i-(shots-1)/2)*.25,1.6+i*.88,
-   {width:.7,length:55,life:.22,damage:32,visual:'year-bullet'});
+  for(let i=0;i<shots;i++){
+   // Rifle muzzle, aim line and damage all use the same fixed ray.
+   const shotAngle=a+(i-(shots-1)/2)*.25;
+   const distance=Math.max(30,Math.hypot(p.x-b.x,p.z-b.z)+5);
+   line(g,b.x+Math.sin(shotAngle)*distance*.5,
+    b.z+Math.cos(shotAngle)*distance*.5,shotAngle,1.6+i*.88,
+    {width:.7,length:distance,life:.22,damage:32,visual:'year-bullet',shotIndex:i,
+     muzzleX:b.x,muzzleZ:b.z});
+  }
  }else if(id==='archery'){
   for(let i=0;i<4;i++){
    const angle=a+(i-1.5)*.12;
@@ -182,8 +190,11 @@ function beginCast(g,id,emit){
    mark(g,Math.sin(angle)*14,Math.cos(angle)*14,1.05+i*.5,2.9,25,'year-figure');
   }
  }else if(id==='photocard'){
-  for(let i=0;i<5;i++)line(g,p.x,p.z,a+(i-2)*.22,1.1+i*.42,
-   {width:.9,life:.33,damage:21,visual:'year-photocard'});
+  for(let i=0;i<5;i++){
+   const angle=a+(i-2)*.15;
+   add(g,'circle',{x:b.x,z:b.z,r:.87,vx:Math.sin(angle)*25,vz:Math.cos(angle)*25,
+    warn:1.1+i*.42,life:1.45,damage:21,visual:'year-photocard'});
+  }
  }else if(id==='merch'){
   for(let i=0;i<4;i++)mark(g,p.x+(i-1.5)*4,p.z+Math.sin(i*2)*4,
    1.2+i*.77,2.5,27,'year-merch');
@@ -199,8 +210,9 @@ function beginCast(g,id,emit){
    const angle=i*Math.PI/4+(id==='octoSweep'?.18:0);
    if(id==='octoInk')mark(g,b.x+Math.sin(angle)*13,b.z+Math.cos(angle)*13,
     1.2+i*.32,2.5,24,'year-ink');
-   else line(g,b.x+Math.sin(angle)*10,b.z+Math.cos(angle)*10,angle,
-    1.1+i*.40,{width:id==='octoSweep'?1.6:1.15,length:25,damage:25,visual:'year-tentacle'});
+   else line(g,b.x+Math.sin(angle)*7.5,b.z+Math.cos(angle)*7.5,angle,
+    1.1+i*.40,{width:id==='octoSweep'?1.35:1.05,length:14.5,damage:25,
+     visual:'year-tentacle',armIndex:i});
   }
  }else if(id.startsWith('recall')){
   const map=g.gyuwon.stageMemory||locations[0];
