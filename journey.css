@@ -19,6 +19,7 @@ body[data-motion='reduced'] .j-seal{animation:none}
 /* Sanctuary mural: the five seals surround, rather than sit behind, the title. */
 #journey .j-temple:after{background:radial-gradient(ellipse at center,transparent 22%,#060b0e55 95%)}
 #journey .j-temple svg{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:1;vertical-align:top;overflow:hidden;object-fit:fill}
+.journey-transition .j-temple svg{position:absolute;inset:0;width:100%;height:100%;margin:0;overflow:hidden;opacity:1}
 #journey[data-screen='home'] .j-main{justify-content:center;text-align:center;padding:70px 0 20px}
 #journey[data-screen='home'] .j-copy{max-width:440px}
 #journey[data-screen='home'] .j-title{font-size:clamp(62px,6vw,86px);letter-spacing:14px}
@@ -40,10 +41,14 @@ body[data-motion='reduced'] .j-rune{animation:none}
 .jt-half{position:absolute;inset:0;will-change:transform}.jt-left{clip-path:polygon(0 0,52% 0,48% 100%,0 100%)}.jt-right{clip-path:polygon(52% 0,100% 0,100% 100%,48% 100%)}
 .jt-slash{position:absolute;left:50%;top:-20%;height:140%;width:3px;background:#fff8dd;box-shadow:0 0 18px 8px #d5eaff88,0 0 60px 20px #eaf5ff55;transform:rotate(8deg);pointer-events:none}
 .jt-title{position:absolute;inset:auto 10% 15%;text-align:center;font:600 clamp(26px,5vw,60px) 'Noto Serif KR',serif;letter-spacing:8px;text-shadow:0 3px 24px #000;pointer-events:none}.jt-ending{height:100%;display:grid;place-items:center;font-size:clamp(40px,9vw,120px);color:#e2c888;text-shadow:0 0 40px #e2c88888}
-@media(max-width:650px){#journey[data-screen='home'] .j-main{min-height:650px;padding-top:110px;padding-bottom:110px}#journey[data-screen='home'] .j-copy{max-width:300px}#journey .j-temple svg{width:100%;height:100%;margin:0;overflow:hidden}#journey .j-temple svg{object-fit:fill}#journey[data-screen='home'] .j-temple{opacity:.65}#journey[data-screen='home'] .j-prose{font-size:11px}#journey[data-screen='home'] .j-title{font-size:62px}#journey .j-temple{min-height:820px}}
+@media(max-width:650px){#journey[data-screen='home'] .j-main{min-height:650px;padding-top:110px;padding-bottom:110px}#journey[data-screen='home'] .j-copy{max-width:300px}#journey .j-temple svg{width:100%;height:100%;margin:0;overflow:hidden}#journey .j-temple svg{object-fit:fill}#journey[data-screen='home'] .j-temple{opacity:.65}#journey[data-screen='home'] .j-prose{font-size:11px}#journey[data-screen='home'] .j-title{font-size:62px}#journey .j-temple{min-height:0}}
 @media(prefers-reduced-motion:reduce){.j-rune{animation:none}}
-#journey .j-wall-tall{display:none}
-@media(max-width:650px){#journey .j-wall-wide{display:none}#journey .j-wall-tall{display:block}#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,135px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,285px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,285px) scale(.55)}#journey .j-wall-tall [data-emblem='blood']{transform:translate(620px,850px) scale(.55)}#journey .j-wall-tall [data-emblem='dice']{transform:translate(980px,850px) scale(.55)}}
+#journey .j-wall-tall,#journey .j-backdrop-tall,.journey-transition .j-wall-tall,.journey-transition .j-backdrop-tall{display:none}
+/* Use portrait artwork only on narrow portrait windows, not on short landscape phones. */
+@media(max-width:900px) and (orientation:portrait){
+ #journey .j-wall-wide,#journey .j-backdrop-wide,.journey-transition .j-wall-wide,.journey-transition .j-backdrop-wide{display:none}
+ #journey .j-wall-tall,#journey .j-backdrop-tall,.journey-transition .j-wall-tall,.journey-transition .j-backdrop-tall{display:block}
+}
 .j-memory{max-width:700px;margin:auto}.j-memory-last{font-family:'Noto Serif KR',serif!important;color:#dfcba1!important;font-size:clamp(18px,2.5vw,25px)!important;line-height:2!important;border-top:1px solid #b09b5d55;border-bottom:1px solid #b09b5d55;padding:22px 0}.j-memory h2{color:#d5bf91;font-size:20px}
 .reward-chains{position:absolute;inset:0;pointer-events:none;z-index:100}.reward-chain{position:absolute;bottom:15%;height:200vh;width:34px;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 4px #000)}.reward-chain.left{left:12%}.reward-chain.right{right:12%}.reward-chain i{display:block;flex-shrink:0;width:28px;height:42px;margin-top:-7px;border:5px solid #9d916f;border-radius:40%;background:#0b101055;box-shadow:inset 2px 1px #eee1ad88}.reward-chain i:nth-child(even){width:14px;border-color:#6e685b}
 #journey .j-evolutions{grid-template-columns:repeat(2,1fr)}.j-votive,.j-votive-bowl{display:none}#journey[data-defeated~='kwon'] [data-emblem='spider'] .j-votive,#journey[data-defeated~='clown'] [data-emblem='clown'] .j-votive,#journey[data-defeated~='dice'] [data-emblem='dice'] .j-votive{display:block;filter:drop-shadow(0 0 6px #ffc264) drop-shadow(0 0 18px #ffb54c);animation:seal-fire 1.7s ease-in-out infinite alternate}
@@ -60,7 +65,7 @@ body[data-motion='reduced'] .j-rune{animation:none}
 #journey[data-screen='home'] .j-title{color:#ede0bf;text-shadow:0 2px 2px #000,0 -1px 0 #f3e5bb55,0 0 24px #000;letter-spacing:16px}
 #journey .j-top{border-bottom-color:transparent}#journey .j-footer{border-top-color:#b19b6833}
 #journey[data-screen='home'] .j-primary{background:linear-gradient(110deg,#77613eeb,#b8995fe8);color:#fff0cd;border-color:#c5ab78;box-shadow:inset 0 1px #edd29944,0 3px 16px #0008}
-@media(max-width:650px){#journey .j-wall-tall [data-emblem='spider']{transform:translate(800px,120px) scale(.65)}#journey .j-wall-tall [data-emblem='mirror']{transform:translate(620px,280px) scale(.55)}#journey .j-wall-tall [data-emblem='clown']{transform:translate(980px,280px) scale(.55)}}
+/* Portrait seal anchors are authored once in journey-art.mjs, not overridden by CSS. */
 /* Cleared boss reliefs gradually fill bottom-to-top with crimson extracted
    from the original photo. No floating sparkles or full-width sweep rectangle. */
 .j-photographic .j-relief .groove-inlay{opacity:.94;mix-blend-mode:screen}
@@ -318,3 +323,6 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
  #journey .j-select .j-stat-radar-frame{padding:0 5px 6px}
  #journey .j-select .j-stat-fact{padding-bottom:3px}
 }
+
+/* Wall photographs may crop to fill; independent emblems never crop. */
+#journey .j-wall-backdrop,#journey .j-relief-layer,.journey-transition .j-wall-backdrop,.journey-transition .j-relief-layer{pointer-events:none}

@@ -1,4 +1,4 @@
-import {renderJourneyArt} from './journey-art.mjs?art=home-seam-v2-20261107';
+import {renderJourneyArt} from './journey-art.mjs?art=home-mural-fit-v1-20261108';
 import {playDiceCrushEntrance} from './dice-entrance-view.mjs';
 
 import {playBossCue,stopBossCue} from './boss-cues.mjs';

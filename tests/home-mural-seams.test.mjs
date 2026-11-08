@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MURAL_SEALS,renderJourneyArt,JOURNEY_ART} from '../src/journey-art.mjs';
+import {MURAL_SEALS,MURAL_PORTRAIT_SEALS,renderJourneyArt,JOURNEY_ART} from '../src/journey-art.mjs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
@@ -37,9 +37,9 @@ test('view-specific clipping IDs do not collide between SVG variants or cutscene
 });
 test('browser receives cache-busted CSS and new mural module instead of stale page assets',()=>{
  const html=read('spider-combat.html'),journey=read('src/journey.mjs');
- assert.match(html,/journey\.css\?art=blood-boss-v1&v=weapon-radar-v1-20261107/);
- assert.match(html,/src\/journey\.mjs\?v=weapon-radar-v1-20261107/);
- assert.match(journey,/journey-art\.mjs\?art=home-crimson-fill-20261107/);
+ assert.match(html,/journey\.css\?art=blood-boss-v1&v=home-mural-fit-v1-20261108/);
+ assert.match(html,/src\/journey\.mjs\?v=home-mural-fit-v1-20261108/);
+ assert.match(journey,/journey-art\.mjs\?art=home-mural-fit-v1-20261108/);
 });
 
 test('defeated bosses glow crimson, undefeated bosses stay dark, and mirror uses saved gyuwon ID',()=>{
@@ -50,4 +50,27 @@ test('defeated bosses glow crimson, undefeated bosses stay dark, and mirror uses
  assert.match(css,/\.j-relief \.j-relief-photo\{filter:brightness\(\.78\) saturate\(\.7\)\}/);
  assert.match(css,/\.j-relief \.groove-inlay\{opacity:\.94;mix-blend-mode:screen\}/);
  assert.doesNotMatch(css,/#journey\[data-screen='home'\] \.groove-inlay\{animation:temple-fire/);
+});
+
+test('the five photographic seals fit at once while their stone wall covers the whole viewport',()=>{
+ const markup=renderJourneyArt('home'),css=read('journey.css');
+ assert.equal((markup.match(/class="j-stone-wall"/g)||[]).length,2);
+ assert.equal((markup.match(/class="j-wall-wide j-relief-layer"/g)||[]).length,1);
+ assert.equal((markup.match(/class="j-wall-tall j-relief-layer"/g)||[]).length,1);
+ assert.equal((markup.match(/preserveAspectRatio="xMidYMid meet"/g)||[]).length,2);
+ assert.equal((markup.match(/preserveAspectRatio="xMidYMid slice"/g)||[]).length,2);
+ assert.match(css,/@media\(max-width:900px\) and \(orientation:portrait\)/);
+ assert.doesNotMatch(css,/j-wall-tall \[data-emblem=.*?\]\{transform:/);
+ assert.match(css,/#journey \.j-temple\{min-height:0\}/);
+ assert.deepEqual(Object.keys(MURAL_PORTRAIT_SEALS).sort(),MURAL_SEALS.map(x=>x.id).sort());
+ for(const [width,height] of [[1920,1080],[1366,768],[2560,1080],[844,390],[640,360],[390,844],[375,667],[320,568],[768,1024]]){
+  const tall=width<=900&&height>width,box=tall?{x:560,y:0,w:480,h:1000}:{x:0,y:0,w:1600,h:1000};
+  const factor=Math.min(width/box.w,height/box.h),ox=(width-box.w*factor)/2,oy=(height-box.h*factor)/2;
+  for(const seal of MURAL_SEALS){
+   const anchor=tall?MURAL_PORTRAIT_SEALS[seal.id]:seal,r=105*(anchor.scale??1)*factor;
+   const cx=ox+(anchor.x-box.x)*factor,cy=oy+(anchor.y-box.y)*factor;
+   assert.ok(cx-r>0&&cx+r<width&&cy-r>0&&cy+r<height,
+    seal.id+' clipped at '+width+'x'+height+': '+JSON.stringify({cx,cy,r}));
+  }
+ }
 });
