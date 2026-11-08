@@ -155,7 +155,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const suctionDummy=new THREE.Object3D(),armUp=new THREE.Vector3(0,1,0);
  const armStart=new THREE.Vector3(),armEnd=new THREE.Vector3(),armSegment=new THREE.Vector3(),armDirection=new THREE.Vector3();
  const armNormal=new THREE.Vector3(0,-1,0),cupRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
- const dynamic=new Map();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
+ const dynamic=new Map();const ringDummy=new THREE.Object3D();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
  const portrait=["청산별곡","관동별곡","어즈버","사미인곡"];
  const glyphSets={
   'year-korean':portrait,
@@ -184,15 +184,18 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   root.add(group);
   const v=h.visual||'',parts=[];
   if(v==='year-workbook'||v==='year-bookfall'||v==='year-merch'){
-   parts.push(mesh(group,box,paper,0,0,0,1.35,.26,1.75));
+   parts.push(mesh(group,box,paper,0,0,0,
+     v==='year-bookfall'?h.r*1.45:1.35,.26,v==='year-bookfall'?h.r*1.52:1.75));
    mesh(group,box,hot,0,.15,0,1.05,.03,1.47);
   }else if(v==='year-pencil'||v==='year-arrow'){
    mesh(group,cylinder,v==='year-arrow'?hot:graphite,0,0,0,.09,2.1,.09).rotation.z=Math.PI*.45;
    mesh(group,sphere,steel,0,-1.05,0,.18,.23,.18);
   }else if(v==='year-sludge'||v==='year-ink'){
-   mesh(group,sphere,slime,0,0,0,3.2,1.65,3.2);
+   // The mesh's horizontal surface is the collision disk (including .28 tolerance).
+   const diameter=2*(h.r+.28);
+   mesh(group,sphere,slime,0,0,0,diameter,2.2,diameter,'gyuwon-physical-sludge-projectile');
   }else if(v==='year-bullet'){
-   mesh(group,sphere,hot,0,0,0,.35,.35,1.5);
+   // The muzzle-aligned tracer lives in gyuwon-year-cues.mjs, not here.
   }else if(v==='year-photocard'){
    mesh(group,box,paper,0,0,0,1.5,1.95,.075);
    mesh(group,box,purple,0,0,.045,1.18,1.55,.015);
@@ -205,12 +208,30 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     wordMats.set(key,m);if(m!==paper)materials.push(m);}
    mesh(group,glyphBacking,paper,0,0,-.082,1,1,1,'gyuwon-3d-letter-block');
    parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,.006,1,1,1,'gyuwon-letter-ink-face'));
+   if(h.shape==='lane'){
+    // Exam writing occupies the complete warning/hit lane, not just one
+    // card floating at its midpoint.
+    mesh(group,box,paper,0,-.55,0,(h.width+.28)*2,.13,h.length,'gyuwon-3d-ink-line-body');
+    for(let i=-3;i<=3;i++){
+     if(i===0)continue;
+     const glyph=mesh(group,glyphPlane,wordMats.get(key),0,.05,
+      i*h.length/8,1,1,1,'gyuwon-repeated-exam-glyph');
+     glyph.scale.x=Math.min(1,(h.width+.28)*2/3.6);
+    }
+   }
   }else if(v==='year-figure'){
    // Figurine attack bodies are handled by the actual posed models.
   }else if(v==='year-circus'){
    mesh(group,sphere,hot,0,0,0,h.r*2,h.r*2,h.r*2);
-  }else if(v==='year-fire'){
-   mesh(group,geo(new THREE.ConeGeometry(1.3,5,coarse?9:16)),hot,0,1.8,0);
+   }else if(v==='year-fire'||v==='year-social'){
+   // A single instanced physical crest expands at the collision radius.
+   // At max radius, every angular segment overlaps (no invisible hit gaps).
+   const count=coarse?54:80;
+   const inst=new THREE.InstancedMesh(sphere,v==='year-fire'?hot:purple,count);
+   inst.name='gyuwon-live-ring-crests';inst.frustumCulled=false;
+   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);group.add(inst);
+   group.userData.ringCreasts=inst;
+  }
   }
   return {group,v,parts};
  }
@@ -238,7 +259,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const score=new THREE.Group();score.name='gyuwon-score-energy';root.add(score);
  const scoreRing=mesh(score,ring,neon,0,.2,0,3.5,.1,3.5);scoreRing.rotation.x=Math.PI/2;
  function removeDynamic(){
-  for(const obj of dynamic.values())obj.group.removeFromParent();
+  for(const obj of dynamic.values()){obj.group.userData.ringCreasts?.dispose?.();obj.group.removeFromParent();}
   dynamic.clear();
  }
  function update(g){
@@ -367,7 +388,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     book.rotation.y=(h.id%7)*.14;piles.push(book);
     if(piles.length>26)bookPiles.remove(piles.shift());
    }
-   if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||
+   if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||v==='year-bullet'||
     v==='sword'||v==='dice'||v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
    if(!item){item=makeItem(h);dynamic.set(h.id,item);}
@@ -375,14 +396,27 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    item.group.position.set(p.x,1.45,p.z);
    if(v==='year-bookfall'||v==='year-merch')item.group.position.y=.45+17*rise;
    if(v==='year-photocard')item.group.position.y=2.3;
-   if(v==='year-sludge'||v==='year-ink')item.group.position.y=.55;
+   if(v==='year-sludge'||v==='year-ink')item.group.position.y=1.05;
    if(v==='year-fire')item.group.position.y=1.1;
    if(v==='year-circus')item.group.position.y=h.r;
    if(v==='year-figure')item.group.visible=false;
+    if(glyphSets[v]&&h.shape==='circle')item.group.scale.setScalar(1.18);
+    if(v==='year-fire'||v==='year-social'){
+     const inst=item.group.userData.ringCreasts,center=hazardPosition(h),num=inst.count;
+     const dummy=ringDummy;
+     for(let i=0;i<num;i++){
+      const a=i*Math.PI*2/num;
+      dummy.position.set(Math.sin(a)*center.r,0,Math.cos(a)*center.r);
+      dummy.scale.setScalar(1.5);
+      dummy.rotation.set(0,g.time*3+i*.3,0);dummy.updateMatrix();
+      inst.setMatrixAt(i,dummy.matrix);
+     }
+     inst.instanceMatrix.needsUpdate=true;
+    }
    if(v.startsWith('year-')&&v!=='year-bookfall')item.group.rotation.y=h.yaw||g.time*.14;
    item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
   }
-  for(const [id,item]of dynamic)if(!live.has(id)){item.group.removeFromParent();dynamic.delete(id);}
+  for(const [id,item]of dynamic)if(!live.has(id)){item.group.userData.ringCreasts?.dispose?.();item.group.removeFromParent();dynamic.delete(id);}
   attackCues.update(g);
  }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
