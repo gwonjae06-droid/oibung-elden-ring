@@ -45,7 +45,7 @@ test('new 3-4s troupe hit adapts to a reachable physical corridor instead of flo
  const planned=balanceClownTroupeWarning(g,member);
  assert.ok(clownEscapeRoutes(g,{additional:[planned]}).length>0,
   'independent cast must leave a walkable safe destination');
- assert.equal(boss.damage,18,'director's signature cannot be nerfed');
+ assert.equal(boss.damage,18,"director signature cannot be nerfed");
  assert.equal(boss.x,3.8,'director danger is never silently moved');
  assert.equal(planned.warn,1.42,'telegraph and attack cadence are unchanged');
  assert.equal(planned.source,'troupe');
