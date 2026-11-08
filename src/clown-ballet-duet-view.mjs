@@ -118,7 +118,9 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
    group.position.set(position.x,0,position.z);
    group.scale.setScalar(1.25*(.82+.18*intro));
    group.rotation.y=position.yaw;
-   const beat=Math.max(0,time),expression=phase?1:0;
+   // Motion starts as a quiet adagio, swells through the long readable
+   // windup, and softens through recovery instead of changing poses abruptly.
+   const beat=Math.max(0,time),expression=phase?(.26+.74*(position.pulse||0)):0;
    const balletKick=expression*Math.sin(beat*3.9+(lead?0:Math.PI));
    const lifted=Math.max(0,balletKick)*.23;
    body.position.y=lifted+(phase?Math.sin(beat*2.2)*.06:0);
