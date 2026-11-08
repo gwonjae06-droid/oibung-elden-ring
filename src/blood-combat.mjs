@@ -9,7 +9,7 @@ import {createBloodWalk,createBloodManeuver,sampleBloodWalk,bloodFlightHeight,bl
 import {applyBossHitTrait,tickBossHitTraits} from './boss-hit-traits.mjs';
 import {journeyWeaknessMultiplier} from './journey-balance.mjs';
 import {BLOOD_RULES as R,BLOOD_PHASE_TWO_ENTRY_RATIO,BLOOD_PHASE_THREE_ENTRY_RATIO,
- BLOOD_FINAL_HYMN_RATIO,BLOOD_SERAPH_TRANSITION,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
+ BLOOD_FINAL_HYMN_RATIO,BLOOD_SERAPH_TRANSITION,BLOOD_SERAPH_REBIRTH_HEAL,BLOOD_PATTERNS,hazardContains,bloodHazardContactReady} from './blood-data.mjs';
 import {createBloodSiphonState,tickBloodSiphon} from './blood-siphon.mjs';
 import {WEAPONS} from './weapon-data.mjs';
 import {createPlayerState,actPlayer,tickPlayerAction,advancePlayerProjectile} from './player-combat.mjs';
@@ -41,7 +41,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   blood:{requiredTsunamiStarted:false,requiredTsunamiDone:false,
     seraphArmed:false,seraphPending:false,seraphAwakened:false,
-    seraphFinaleStarted:false,seraphFinaleDone:false,transitionKind:null,
+    seraphFinaleStarted:false,seraphFinaleDone:false,seraphHealDone:false,transitionKind:null,
     deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
@@ -225,7 +225,7 @@ function beginPhase(g){const s=g.blood;g.boss.phase=2;g.boss.state='transition';
 function beginSeraph(g){
  const s=g.blood,b=g.boss;
  b.phase=3;b.state='transition';s.transitionKind='seraph';s.seraphPending=false;
- s.seraphArmed=false;s.seraphAwakened=false;s.t=0;s.pattern=null;
+ s.seraphArmed=false;s.seraphAwakened=false;s.seraphHealDone=false;s.t=0;s.pattern=null;
  s.walk=null;s.hazards.length=0;s.heartNodes=[];s.whip=null;
  s.whipCooldown=Infinity;s.stun=0;s.slow=0;s.elevation=0;
  if(s.siphon)s.siphon.active=false;
@@ -248,6 +248,11 @@ function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
  if(b.state==='transition'){s.t+=dt;
   if(s.transitionKind==='seraph'){
+   if(s.t>=2.65&&!s.seraphHealDone){
+    s.seraphHealDone=true;
+    const amount=Math.max(0,Math.min(BLOOD_SERAPH_REBIRTH_HEAL,b.maxHp-b.hp));
+    if(amount>0){b.hp+=amount;emit(g,'blood-seraph-heal',{amount,x:b.x,z:b.z,y:6.7});}
+   }
    const progress=Math.min(1,s.t/BLOOD_SERAPH_TRANSITION);
    s.elevation=Math.max(0,Math.sin(progress*Math.PI))*2;
    if(s.t>=BLOOD_SERAPH_TRANSITION){

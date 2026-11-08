@@ -60,6 +60,8 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   // The surface swell follows the readable stage: calm while charging, strongest at onset, slack while returning.
   const energyGoal=(({ready:.45,start:1.5,run:1,done:.5,return:.25})[stage.id]??0)+(s.siphon?.active?0.7:0);energy+=(energyGoal-energy)*(1-Math.exp(-dt*3));fluid.update(g.time,energy);
   root.position.set(b.x,s.elevation,b.z);root.rotation.y=b.yaw;root.scale.setScalar(fade*1.25);
+  // The final form replaces, rather than overlaps, the old 2P humanoid.
+  root.visible=b.phase!==3;
   // Choreography is tied to the actual spell clock, never an independent visual timer.
   const walk=s.walk&&['recovery','maneuver'].includes(b.state)?sampleBloodWalk(s.walk):null;
   actor.position.y=(s.elevation>.45&&!reduced?Math.sin(g.time*1.8)*.035:0)+motion.body.bob+(walk?.moving?walk.bob:0);
@@ -72,7 +74,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   // Thin streaks remain attached to the actual animated torso and shoulders.
   // The normal blood spell and hurtbox positions remain in world space.
   rivuletTime+=Math.max(0,dt);
-  if(!dead&&rivuletTime>.52&&(b.phase===2||b.state==='pattern')){
+  if(!dead&&root.visible&&rivuletTime>.52&&(b.phase===2||b.state==='pattern')){
    rivuletTime=0;surfaceFlow.streakBoss(reduced?1:3);
   }
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
@@ -88,7 +90,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   if(c.active&&c.t>=2.6&&lastBirth<2.6)particles.burst(b.x,4+s.elevation,b.z,{count:quality.low?28:64,power:10});
   lastBirth=c.active?c.t:0;dripTime+=dt;if(c.wings>.9&&dripTime>.2&&!dead){dripTime=0;const a=b.yaw;for(const side of [-1,1])particles.burst(b.x+Math.cos(a)*side*5.8,5+s.elevation,b.z-Math.sin(a)*side*5.8,{count:reduced?1:2,power:.5});}
   birthWave.visible=c.active&&c.wave>0&&c.wave<1;birthWave.position.set(b.x,.35,b.z);birthWave.scale.setScalar(.1+c.wave*28);birthWave.material.opacity=(1-c.wave)*.28;
-  if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});surfaceFlow.streakBoss(reduced?3:6);hitRoll=reduced?0:.055;}
+  if(b.hp<lastHp&&dt>0){particles.burst(b.x,3+s.elevation,b.z,{count:8,power:4});if(root.visible)surfaceFlow.streakBoss(reduced?3:6);hitRoll=reduced?0:.055;}
   else hitRoll*=Math.exp(-dt*13);
   actor.rotation.z=motion.body.roll+hitRoll;lastHp=b.hp;
   regalia.plantFeet(g,fade*1.25);
@@ -114,7 +116,10 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
      bays=[-35,-21,-7,7,21,35],z=bays.reduce((best,q)=>Math.abs(q-g.boss.z)<Math.abs(best-g.boss.z)?q:best,bays[0]);
     particles.burst(side*32.4,4.2,z,{count:5,power:7,lift:.15,gravity:.6,direction:{x:side*9,z:0}});
    }
-  }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
+  }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-seraph-heal'){
+   particles.burst(g.boss.x,6.7,g.boss.z,{count:reduced?22:70,power:6,lift:2});
+   particles.ripple(g.boss.x,g.boss.z,{from:12,to:.6,duration:1.6,power:1.2});
+  }if(e.type==='blood-siphon-heal'){particles.burst(g.boss.x,4+g.blood.elevation,g.boss.z,{count:reduced?14:36,power:3.4,lift:.4});particles.ripple(g.boss.x,g.boss.z,{from:3.5,to:.45,duration:1,power:1});}},
   shake(camera){if(!reduced){
     // Tremor begins as a distant rumble and peaks only when the same wall
     // that owns the real damage footprint reaches the viewer. Never jitter

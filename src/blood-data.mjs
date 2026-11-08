@@ -6,6 +6,8 @@ export const BLOOD_PHASE_TWO_ENTRY_RATIO=.70;
 export const BLOOD_PHASE_THREE_ENTRY_RATIO=.25;
 export const BLOOD_FINAL_HYMN_RATIO=.10;
 export const BLOOD_SERAPH_TRANSITION=4.65;
+// One rebirth pulse during the 3P cinematic, not recurring regeneration.
+export const BLOOD_SERAPH_REBIRTH_HEAL=1000;
 // Every damaging shape is also consumed by the renderer. Delays use simulation time.
 const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  wave:{name:'피의 파도',phase:1,duration:3.8,recover:2.2},

@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import {BLOOD_SERAPH_TRANSITION} from './blood-data.mjs';
 
 // A real, deliberately budgeted 3D seraph rig, NOT a fullscreen image.
-// The enormous apparition stays behind the existing reachable Blood King.
-// It is decorative only: the ordinary actor owns every player hitbox.
+// The enormous seraph is the ONLY visible 3P boss and occupies the real
+// combat origin. The authored vessel/eye hurt shapes share its transform.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
 const ease=v=>{const t=clamp(v);return t*t*(3-2*t);};
 const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
@@ -36,7 +36,7 @@ const WING_FORMS=[
  {y:.7,span:8.7,rise:-6.8,depth:.3,count:20}
 ];
 export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
- const root=new THREE.Group();root.name='blood-third-phase-crimson-seraph';root.userData.decorativeOnly=true;
+ const root=new THREE.Group();root.name='blood-third-phase-crimson-seraph';root.userData.decorativeOnly=false;root.userData.bossCombatRig=true;
  scene.add(root);root.visible=false;
  const ruby=new THREE.MeshStandardMaterial({color:0x6a0a21,emissive:0x480718,emissiveIntensity:.52,metalness:.18,roughness:.33,side:THREE.DoubleSide});
  const pearl=new THREE.MeshStandardMaterial({color:0xe6a5a9,emissive:0x6f1a31,emissiveIntensity:.28,metalness:.14,roughness:.47});
@@ -46,6 +46,10 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  const glow=new THREE.MeshBasicMaterial({color:0xfa496c,transparent:true,opacity:.75,depthWrite:false});
  const dark=new THREE.MeshStandardMaterial({color:0x13050c,metalness:.13,roughness:.22});
  // An anatomically continuous crown, breastplate and downward taper.
+ // A physical, floor-reaching robe replaces the invisible old humanoid.
+ const vessel=makeMesh(root,new THREE.CylinderGeometry(1.15,.58,8.6,coarse?12:20),ruby,
+  'blood-seraph-floor-reaching-vessel',0,-1.35,-.35);
+ vessel.scale.z=.83;
  const thorax=makeMesh(root,new THREE.IcosahedronGeometry(1,coarse?1:2),ruby,'blood-seraph-vestment',0,.5,-.35);
  thorax.scale.set(2.05,3.2,1.25);
  const throat=makeMesh(root,new THREE.CylinderGeometry(.74,1.05,3,coarse?10:16),pearl,
@@ -146,13 +150,11 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   const d=clamp(dt,0,.12),k=1-Math.exp(-d*4);
   shown+=(intro-shown)*k;
   const dx=p.x-b.x,dz=p.z-b.z,len=Math.hypot(dx,dz)||1,nx=dx/len,nz=dz/len;
-  const targetX=b.x-nx*12,targetZ=b.z-nz*12;
-  root.position.x+=(targetX-root.position.x)*(1-Math.exp(-d*3.2));
-  root.position.z+=(targetZ-root.position.z)*(1-Math.exp(-d*3.2));
-  root.position.y=12+(reduced?0:Math.sin(g.time*.66)*.25);
-  const targetYaw=Math.atan2(nx,nz),turn=Math.atan2(Math.sin(targetYaw-root.rotation.y),Math.cos(targetYaw-root.rotation.y));
-  root.rotation.y+=turn*(1-Math.exp(-d*2.8));
-  const scale=Math.max(.001,shown)*(coarse?.84:1);
+  // No trailing ghost model: torso, floor vessel and eye follow actual
+  // collision/lock-on position and yaw. LOD does not change world size.
+  root.position.set(b.x,5.1+(reduced?0:Math.sin(g.time*.66)*.08),b.z);
+  root.rotation.y=b.yaw||0;
+  const scale=Math.max(.001,shown)*.82;
   root.scale.setScalar(scale);
   const t=g.time||0,pattern=b.state==='pattern'?s.pattern:null;
   const first=s.hazards?.length?Math.min(...s.hazards.map(h=>h.warn)):1.2;
@@ -187,5 +189,6 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  }
  return {root,update,clear,dispose,stats:()=>({visible:root.visible,
   wingPairs:3,hinges:wings.length,featherInstances:wings.reduce((n,w)=>n+w.feathers.count,0),
-  haloRings:rings.length,hasEye:!!pupil,decorativeOnly:true,damageSources:0})};
+  haloRings:rings.length,hasEye:!!pupil,decorativeOnly:false,
+  ownsHurtSilhouette:true,damageSources:0})};
 }

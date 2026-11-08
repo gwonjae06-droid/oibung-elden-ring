@@ -48,6 +48,15 @@ export function clownAimPart(g){
 
 export function bloodHurtShapes(g){
  if(!g?.blood||!g.boss)return [];
+ if(g.boss.phase===3){
+  const b=g.boss,at=(id,x,y,z,rx,ry,rz)=>ellipsoid(b,id,{x,y,z},rx,ry,rz);
+  return [
+   at('seraph-hem',0,1.02,-.2,.82,.85,.72),
+   at('seraph-vessel',0,3.2,-.2,1.05,2.35,.87),
+   at('seraph-chest',0,5.5,-.28,1.55,2.1,1.18),
+   at('seraph-eye',0,6.7,1.2,1.13,.68,.48)
+  ];
+ }
  const b=g.boss,scale=1.25,elevation=g.blood.elevation||0,
   postureY=(b.state==='pattern'?.08:0),headDissolve=bloodTransformation(g).dissolve;
  const at=(id,x,y,z,rx,ry,rz)=>ellipsoid(b,id,{x:x*scale,y:elevation+y*scale,z:z*scale},rx*scale,ry*scale,rz*scale);
@@ -70,7 +79,7 @@ export function bloodHurtShapes(g){
  }
  return parts;
 }
-export const bloodAimPart=g=>bloodHurtShapes(g).find(x=>x.id==='chest')||g?.boss;
+export const bloodAimPart=g=>bloodHurtShapes(g).find(x=>x.id==='seraph-chest'||x.id==='chest')||g?.boss;
 
 // Gyuwon's hit volume follows his authored suit/limbs rather than the old
 // arbitrary 1.6m invisible circle. The absent second-phase head is *never*
