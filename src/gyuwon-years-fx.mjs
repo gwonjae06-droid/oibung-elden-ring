@@ -201,7 +201,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  }
  const WAVE_LIMIT=34;
  function clearWave(){
-  for(const w of waves){w.mesh.removeFromParent();w.geometry.dispose();}
+  for(const w of waves){w.mesh.removeFromParent();w.crest.removeFromParent();w.geometry.dispose();}
   waves=[];waveId=null;
  }
  function makeWave(h){
@@ -210,10 +210,12 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   for(const [lo,hi] of [[-WAVE_LIMIT,Math.max(-WAVE_LIMIT,h.gap-gap)],
    [Math.min(WAVE_LIMIT,h.gap+gap),WAVE_LIMIT]]){
    if(hi-lo<.2)continue;
-   const geometry=new THREE.BoxGeometry(hi-lo,7,h.depth*2,coarse?8:20,4,2);
+   const geometry=new THREE.BoxGeometry(hi-lo,7,(h.depth+.55)*2,coarse?8:20,4,2);
    const m=mesh(root,geometry,h.visual==='year-sludge-wave'?slime:wavewater,
     (lo+hi)/2,3.55,0,1,1,1,'gyuwon-dday-wave-body');
-   waves.push({mesh:m,geometry,base:geometry.attributes.position.array.slice()});
+   const crest=mesh(root,box,h.visual==='year-sludge-wave'?froth:paper,
+     (lo+hi)/2,6.75,0,hi-lo,.29,.48,'gyuwon-3d-water-physical-crest');
+    waves.push({mesh:m,geometry,base:geometry.attributes.position.array.slice(),crest,sideWidth:hi-lo});
   }
  }
  const cues=new THREE.Group();cues.name='gyuwon-exam-wave-passages';root.add(cues);
@@ -309,19 +311,21 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   }
   const waveHazard=s.hazards.find(h=>h.shape==='wave'&&(h.visual==='year-sludge-wave'||h.visual==='year-water-wave'));
   if(waveHazard?.id!==waveId){if(waveHazard)makeWave(waveHazard);else clearWave();}
-  cues.visible=!!waveHazard;
+  // Only the actual split in the wave marks the safe passage; no artificial guide.
+   cues.visible=false;
   if(waveHazard){
    const half=waveHazard.opening-.55;
    cueL.position.x=waveHazard.gap-half;cueR.position.x=waveHazard.gap+half;
-   cues.children.forEach(c=>{c.material.opacity=.3;});
+   // Timing and gap edges are read from the live authoritative hazard.
    const z=waveHazard.z+Math.max(0,waveHazard.age-waveHazard.warn)*waveHazard.speed;
    for(const w of waves){
-    w.mesh.position.z=z;
+    w.mesh.position.z=z;w.crest.position.z=z+(waveHazard.depth+.55)*.82;
+    w.crest.position.y=6.65+.15*Math.sin(g.time*3.5+w.sideWidth);
     const attr=w.geometry.attributes.position,arr=w.base;
     if(!reduced)for(let i=0;i<attr.count;i++){
      const j=i*3;
      attr.setY(i,arr[j+1]+Math.sin(arr[j]*.32+g.time*2.8+arr[j+1]*.7)*.42);
-     attr.setZ(i,arr[j+2]+Math.sin(arr[j]*.29+g.time*2.5+arr[j+1])*.22);
+     // Never displace the crest Z outside its authoritative collision depth.
     }
     attr.needsUpdate=true;if(!reduced)w.geometry.computeVertexNormals();
    }
