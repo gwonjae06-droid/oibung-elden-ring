@@ -75,9 +75,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
    }
    fx.clear();renderer.render(scene,camera);memory.push(renderer.info.memory.geometries);
    }
-   return {patterns:results.length,geometries:renderer.info.memory.geometries,memory};
+   return {patterns:results.length,expectedPatterns:ids.length,geometries:renderer.info.memory.geometries,memory};
   });
-  assert.equal(all.patterns,37);assert.deepEqual(errors,[]);
+  assert.equal(all.patterns,all.expectedPatterns);assert.deepEqual(errors,[]);
   assert.equal(all.memory[1],all.memory[2],'repeated attack geometry must remain bounded');
   await page.setViewportSize({width:844,height:390});
   await page.evaluate(()=>{const {renderer,camera,scene}=qa;renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.render(scene,camera);});
