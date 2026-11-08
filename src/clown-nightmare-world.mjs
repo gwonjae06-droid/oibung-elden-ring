@@ -12,12 +12,14 @@ export const NIGHTMARE_PALETTES=Object.freeze({
  inversion: Object.freeze({sky:0x111721,fog:0x292e43,glow:0x9a8aac}),
  flesh: Object.freeze({sky:0x2a111e,fog:0x40202b,glow:0xbb6e7a}),
  void: Object.freeze({sky:0x090a12,fog:0x201827,glow:0xa08caa}),
+ ballet: Object.freeze({sky:0x15141f,fog:0x30252c,glow:0xe3bfaa}),
 });
 export function nightmareWorldState(game){
  const c=game?.clown||{},b=game?.boss||{},stage=clamp(c.horrorStage||1,1,3);
  const pattern=c.state==='pattern'?c.name:null, t=Number.isFinite(c.time)?c.time:0;
  let mode='carnival';
- if(['wrongTwin','mirrorStage','facePeelHunt','vanishingAct','directorVelvetStep'].includes(pattern))mode='mirror';
+ if(b.phase===3)mode='ballet';
+ else if(['wrongTwin','mirrorStage','facePeelHunt','vanishingAct','directorVelvetStep'].includes(pattern))mode='mirror';
  else if(pattern==='directorBatonRake')mode='carnival';
  else if(pattern==='directorStringLash'||pattern==='directorStalkingRush')mode='flesh';
  else if(pattern==='directorCackle')mode='audience';
