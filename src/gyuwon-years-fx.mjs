@@ -201,7 +201,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    mesh(group,box,purple,0,0,.045,1.18,1.55,.015);
    mesh(group,box,neon,0,-.68,.075,.83,.085,.035);
    mesh(group,sphere,wax,0,.16,.10,.38,.56,.045);
-  }else if(glyphSets[v]){
+  }else if(glyphSets[v]&&v!=='year-social'){
    const tex=wordTexture(v,h.id%4);
    const key=v+(h.id%4);
    if(!wordMats.has(key)){const m=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
@@ -231,6 +231,15 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    inst.name='gyuwon-live-ring-crests';inst.frustumCulled=false;
    inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);group.add(inst);
    group.userData.ringCreasts=inst;
+   if(v==='year-social'){
+    const key='year-social'+h.id%4,tex=wordTexture('year-social',h.id%4);
+    if(!wordMats.has(key)){
+     const ink=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
+     if(ink!==paper)materials.push(ink);wordMats.set(key,ink);
+    }
+    mesh(group,glyphBacking,paper,0,.45,-.06,1,1,1,'gyuwon-social-law-object');
+    mesh(group,glyphPlane,wordMats.get(key),0,.45,.03,1,1,1,'gyuwon-social-symbol-face');
+   }
   }
   }
   return {group,v,parts};
