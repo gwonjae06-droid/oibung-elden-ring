@@ -7,7 +7,10 @@ import {bloodWaveVisualPose} from './blood-volumetric-wave.mjs';
 
 export const BLOOD_SPELL_FORMS=Object.freeze({wave:'crest',fountain:'fountain',burst:'implosion',orbs:'comet',chain:'braid',orbit:'orbit',vortex:'vortex',dive:'landing',eclipse:'corona',rain:'rain',wing:'blade',pulse:'heartbeat',pursuit:'wake',tide:'tide',lances:'martyr-lance',cross:'crossing-walls',judgement:'heavenly-sword',ritual:'cathedral-rite',bloodScissors:'crisscross-sanguine',heartCage:'caged-heart',wingShear:'winged-shears',rosary:'rosary-procession',reverseFlow:'undertow',bloodStatues:'living-statues',wingGenesis:'scarlet-unfurl',heartFeast:'heart-sacrament',requiem:'sea-requiem-tsunami',seraphWings:'six-wing-sweep',seraphPulse:'seraph-heartbeat',seraphLances:'seraph-crimson-lances',seraphCrown:'seraph-halo',seraphFinale:'last-seraph-hymn',
  seraphGaze:'seraph-ocular-ray',seraphFeathers:'falling-blood-feathers',
- seraphEmbrace:'folded-six-wings',seraphDescent:'seraph-ground-strike'});
+ seraphEmbrace:'folded-six-wings',seraphDescent:'seraph-ground-strike',
+ seraphSweep:'left-to-right-seraph-eye-sweep',seraphWingCross:'detached-horizontal-blood-wing',
+ seraphInwardPillars:'approaching-blood-columns',seraphFrenzy:'blood-cannon-barrage',
+ seraphHaloProcession:'traveling-celestial-wheels',seraphBloodRosette:'six-petal-blood-rose'});
 // Visual-only settle time after a hazard stops dealing damage: blood sinks and spreads instead of vanishing.
 const TAIL=1.4;
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -21,7 +24,10 @@ export const BLOOD_FLOOR_MAX_HAZARDS=12;
 // target, and every live hazard in a combination contributes to the dark union.
 export function bloodFloorField(g){
  if(g?.status!=='playing'||g?.boss?.state!=='pattern'||!g?.blood?.hazards?.length)return null;
- const hazards=g.blood.hazards.filter(h=>h.damage>0&&h.age<h.warn+h.life);
+ // Only show imminent paths for the rapid Seraph barrage. Without this
+ // filter all eleven future shots flash simultaneously and hide every exit.
+ const seraphSeries=g.boss.phase===3&&['seraphFrenzy','seraphWingCross','seraphInwardPillars','seraphHaloProcession','seraphBloodRosette'].includes(g.blood.pattern);
+ const hazards=g.blood.hazards.filter(h=>h.damage>0&&h.age<h.warn+h.life&&(!seraphSeries||h.age>=h.warn-1.05));
  if(!hazards.length)return null;
  return {safety:BLOOD_SAFE_GROUND_PATTERNS.has(g.blood.pattern),
   hazards:hazards.slice(0,BLOOD_FLOOR_MAX_HAZARDS).map(h=>({
@@ -87,7 +93,11 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
       seraphGaze:['sheet','column'],
       seraphFeathers:['lance','torus','tendril'],
       seraphEmbrace:['torus','torus','sphere'],
-      seraphDescent:['torus','column','column']}[pattern];
+      seraphDescent:['torus','column','column'],
+      seraphSweep:['sheet','column'],seraphWingCross:['sheet','blade'],
+      seraphInwardPillars:['column','column','sphere'],seraphFrenzy:['sheet','column'],
+      seraphHaloProcession:['torus','torus','sphere'],
+      seraphBloodRosette:['ritual','torus','tendril','tendril']}[pattern];
    for(const form of forms)parts.push(mesh(fluid[form],group));
     const omens=Array.from({length:3},()=>mesh(fluid.tendril,group));
     const liquidWave=['wave','tide','requiem','cross','bloodScissors'].includes(pattern);
@@ -167,7 +177,7 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     }
     break;
    }
-   case 'fountain':case 'rain':case 'rosary':{
+   case 'fountain':case 'rain':case 'rosary':case 'seraphInwardPillars':{
     const height=active?Math.max(.2,Math.sin(Math.min(1,t/h.life)*Math.PI)*24):smooth(charge)*1.1;
     parts[0].scale.set(c.r*.8,height,c.r*.8);parts[0].position.y=height*.5;
     parts[1].scale.set(c.r*.6,(pattern==='rain'||pattern==='rosary')?1:height*.8,c.r*.6);parts[1].position.set(c.r*.25,(pattern==='rain'||pattern==='rosary')?(1-charge)*15:height*.65,0);parts[1].rotation.z=.18;
@@ -176,12 +186,12 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
    case 'burst':{const r=active?c.r:Math.max(1.8,c.r)*charge*.93;parts[0].position.y=active?.45:2;parts[0].scale.set(r,active?.4:r*.8,r);parts[1].rotation.x=Math.PI/2;parts[1].scale.setScalar(active?r:charge*2);break;}
    case 'orbs':{parts[0].position.y=1.25;parts[0].scale.set(c.r*p,c.r*p*(1+Math.sin(swirl)*.08),c.r*p);parts[1].position.set(0,1.1,-c.r*1.4);parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.6,3*p,.6);break;}
    case 'chain':case 'heartCage':case 'bloodStatues':case 'heartFeast':{for(let i=0;i<2;i++){const m=parts[i];m.position.set(Math.sin(swirl+i*Math.PI)*c.r*.4,1.2,Math.cos(swirl+i*Math.PI)*c.r*.4);m.rotation.z=Math.sin(swirl+i)*.4;m.scale.set(.35,3.5*p,.35);}parts[2].rotation.x=Math.PI/2;parts[2].scale.set(c.r*.8,c.r*.8,1);break;}
-   case 'orbit':case 'pulse':case 'seraphPulse':case 'seraphEmbrace':{for(let i=0;i<2;i++){parts[i].rotation.set(Math.PI/2+i*.08,0,swirl*(i?-1:1));parts[i].position.y=.25+i*.35;parts[i].scale.set(c.r,c.r,h.width*3);}if(parts[2]){parts[2].position.y=.45;parts[2].scale.set(.7,.2,.7);}break;}
+   case 'orbit':case 'pulse':case 'seraphPulse':case 'seraphEmbrace':case 'seraphHaloProcession':{for(let i=0;i<2;i++){parts[i].rotation.set(Math.PI/2+i*.08,0,swirl*(i?-1:1));parts[i].position.y=.25+i*.35;parts[i].scale.set(c.r,c.r,h.width*3);}if(parts[2]){parts[2].position.y=.45;parts[2].scale.set(.7,.2,.7);}break;}
    case 'vortex':case 'reverseFlow':{for(let i=0;i<2;i++){parts[i].rotation.y=swirl*(i?-1:1);parts[i].position.y=.12+i*.3;parts[i].scale.set(c.r*(1-i*.2)*p,1,c.r*(1-i*.2)*p);}parts[2].scale.set(c.r*.45,.05,c.r*.45);break;}
    case 'dive':case 'seraphDescent':{parts[0].rotation.x=Math.PI/2;parts[0].scale.setScalar(active?c.r:c.r*charge);for(let i=1;i<3;i++){parts[i].position.set((i===1?-1:1)*c.r*.5,active?1.5:.1,0);parts[i].rotation.z=(i===1?-1:1)*.65;parts[i].scale.set(.8,active?4:charge*.5,.8);}break;}
    case 'eclipse':{const grow=smooth(charge);parts[0].position.y=19;parts[0].scale.setScalar(8*grow);parts[1].position.y=19;parts[1].scale.setScalar(9*grow);parts[1].rotation.z=swirl*.25;parts[2].rotation.x=Math.PI/2;parts[2].position.y=.25;parts[2].scale.set(c.r,c.r,h.width*5);break;}
    case 'wing':case 'wingShear':case 'wingGenesis':case 'seraphWings':{for(let i=0;i<2;i++){parts[i].position.y=1.2+i*.35;parts[i].rotation.y=active?Math.sin(t/h.life*Math.PI)*.08:0;parts[i].scale.set(c.r*(1-i*.08),active?1:.35,c.r*(1-i*.08));}break;}
-   case 'pursuit':case 'seraphGaze':{if(h.shape==='circle'){parts[0].rotation.x=-Math.PI/2;parts[0].scale.set(c.r*1.5,c.r*1.5,1);parts[1].scale.set(c.r*.3,active?3:.3,c.r*.3);break;}parts[0].position.set(0,.65,0);parts[0].rotation.x=Math.PI/2;parts[0].scale.set(h.width*1.7,h.length,1);parts[1].position.y=.8;parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.8,h.length*.8,.8);break;}
+   case 'pursuit':case 'seraphGaze':case 'seraphSweep':case 'seraphWingCross':case 'seraphFrenzy':{if(h.shape==='circle'){parts[0].rotation.x=-Math.PI/2;parts[0].scale.set(c.r*1.5,c.r*1.5,1);parts[1].scale.set(c.r*.3,active?3:.3,c.r*.3);break;}parts[0].position.set(0,.65,0);parts[0].rotation.x=Math.PI/2;parts[0].scale.set(h.width*1.7,h.length,1);parts[1].position.y=.8;parts[1].rotation.x=Math.PI/2;parts[1].scale.set(.8,h.length*.8,.8);break;}
    case 'lances':case 'seraphLances':case 'seraphFeathers':{
     parts[0].position.y=active?0:8+(1-charge)*15;parts[0].rotation.z=active?0:.12*(1-charge);parts[0].scale.set(c.r*.4,active?25:18,c.r*.4);
     parts[1].rotation.x=Math.PI/2;parts[1].scale.setScalar(c.r*(active?1:.35+.65*charge));parts[1].position.y=.2;
@@ -191,7 +201,7 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
     parts[0].position.set(0,active?1:14,0);parts[0].rotation.x=active?Math.PI/2:-.25;parts[0].scale.set(1.3,c.r,1.3);
     for(let i=1;i<3;i++){parts[i].visible=active;parts[i].position.y=.2+i*.35;parts[i].scale.setScalar(c.r);}break;
    }
-   case 'ritual':case 'seraphCrown':case 'seraphFinale':{
+   case 'ritual':case 'seraphCrown':case 'seraphFinale':case 'seraphBloodRosette':{
     const ring=h.shape==='ring';parts[0].visible=!ring&&active;parts[1].visible=ring;
     if(!ring){parts[0].scale.set(c.r,active?4:.4,c.r);parts[0].position.y=.2;}
     else{parts[1].rotation.x=Math.PI/2;parts[1].scale.set(c.r,c.r,h.width*3);parts[1].position.y=.25;}
