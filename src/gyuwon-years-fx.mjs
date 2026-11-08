@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
+import {buildGyuwonYearAttackCues} from './gyuwon-year-cues.mjs';
 
 // Reusable scenery/props for the D-day encounter. Never owns gameplay damage.
 // Existing battle hazards are the sole source of collision shapes and timing.
 export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='gyuwon-dday-examination-world';root.visible=false;stage.add(root);
+ const attackCues=buildGyuwonYearAttackCues(root,{coarse});
  const materials=[],geometries=[],textures=[];
  function geo(g){geometries.push(g);return g;}
  function mat(color,extra={}){const m=new THREE.MeshPhysicalMaterial({
@@ -19,6 +21,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const purple=mat(0xb19eb9,{roughness:.29,clearcoat:.8});
  const neon=mat(0xe5bf61,{roughness:.34,emissive:0x5b351a,emissiveIntensity:.8});
  const glyphPlane=geo(new THREE.PlaneGeometry(3.6,1.8));
+ const glyphBacking=geo(new THREE.BoxGeometry(3.55,1.76,.16));
  const box=geo(new THREE.BoxGeometry(1,1,1)),cylinder=geo(new THREE.CylinderGeometry(.5,.5,1,coarse?10:18)),
   sphere=geo(new THREE.SphereGeometry(.5,coarse?10:18,coarse?8:12)),
   ring=geo(new THREE.TorusGeometry(1,.09,6,coarse?18:36));
@@ -144,9 +147,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    const key=v+(h.id%4);
    if(!wordMats.has(key)){const m=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
     wordMats.set(key,m);if(m!==paper)materials.push(m);}
-   parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,0));
+   mesh(group,glyphBacking,paper,0,0,-.082,1,1,1,'gyuwon-3d-letter-block');
+   parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,.006,1,1,1,'gyuwon-letter-ink-face'));
   }else if(v==='year-figure'){
-   mesh(group,sphere,purple,0,0,0,2.1,2.1,2.1);
+   // Figurine attack bodies are handled by the actual posed models.
   }else if(v==='year-circus'){
    mesh(group,sphere,hot,0,0,0,h.r*2,h.r*2,h.r*2);
   }else if(v==='year-fire'){
@@ -275,16 +279,18 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    if(v==='year-sludge'||v==='year-ink')item.group.position.y=.55;
    if(v==='year-fire')item.group.position.y=1.1;
    if(v==='year-circus')item.group.position.y=h.r;
+   if(v==='year-figure')item.group.visible=false;
    if(v.startsWith('year-')&&v!=='year-bookfall')item.group.rotation.y=h.yaw||g.time*.14;
    item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
   }
   for(const [id,item]of dynamic)if(!live.has(id)){item.group.removeFromParent();dynamic.delete(id);}
+  attackCues.update(g);
  }
- function clear(){clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
+ function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
-  for(const m of new Set(materials))m.dispose();
+  attackCues.dispose();for(const m of new Set(materials))m.dispose();
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,stackedBooks:piles.length})};
+ return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
