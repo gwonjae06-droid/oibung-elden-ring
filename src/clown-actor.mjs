@@ -146,6 +146,8 @@ export function createClownActor({coarse=false}={}){
   }
   nightmare.update(g,time,reduced);
  }
- return {root,update,head};
+ // Old balance-ball physique is reused by tiny summoned versions. Expose
+ // its actual torso anchor so the original suit can sit ABOVE the ball.
+ return {root,body,update,head};
  });
 }

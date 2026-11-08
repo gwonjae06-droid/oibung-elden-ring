@@ -125,6 +125,15 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
    const actorRoot=x.actor.root;
    if(x.accumulated>=1/30||!x.initialized){
     x.actor.update(proxy,x.accumulated);
+    // The retired original was a BALANCE-BALL clown. Modern stage physics
+    // lowers the torso to the ground, which puts his little entire body
+    // INSIDE the ball so players saw only the rolling sphere. Raise the
+    // complete articulated vintage suit back onto the physical ball top.
+    if(x.actor.body){
+     const float=.075*Math.sin(clock*2.3+m.id);
+     x.actor.body.position.y=5.2+float;
+     x.actor.body.rotation.z=.045*Math.sin(clock*1.6+m.id);
+    }
     x.initialized=true;x.accumulated=0;
    }else actorRoot.position.set(m.x,0,m.z);
    // src/clown-actor owns its animated world position; this is a scale
@@ -182,5 +191,6 @@ export function createLegacyEchoView(scene,{coarse=false,onActorCreated=null}={}
  }
  return {root,update,clear,prewarm,prepareGpuWarmup,finishGpuWarmup,dispose,
   stats:()=>({miniMidbosses:actors.size,originalRigs:actors.size,
-   pooledOriginals:standby.length,projectileRigs:[...actors.values()].filter(x=>x.bullets.length===2).length})};
+   pooledOriginals:standby.length,projectileRigs:[...actors.values()].filter(x=>x.bullets.length===2).length,
+   mountedVintageBodies:[...actors.values()].filter(x=>!x.actor.body||x.actor.body.position.y>=5.0).length})};
 }
