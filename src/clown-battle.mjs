@@ -162,7 +162,10 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   // During the non-skippable transformation scenery runs at a bounded 20Hz,
   // while actor, hurtboxes, player and cutscene beats remain full-rate.
   sceneryElapsed+=Math.max(0,dt);
-  const sceneryTick=b.state!=='transition'||sceneryElapsed>=.05;
+  // All expensive ensemble, echo-face morphs and nightmare scenery run at a
+  // predictable 30Hz (20Hz during the already bounded cutscene), while boss,
+  // collision and player inputs remain on the original full-rate timeline.
+  const sceneryTick=sceneryElapsed>=(b.state==='transition'?.05:1/30);
   const sceneryDt=sceneryElapsed;
   if(sceneryTick)sceneryElapsed=0;
   actor.update(g,impact.frozen?0:dt);
@@ -203,10 +206,32 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   quality.sample(realDt,ready&&!introGate.blocked&&!paused&&g.status==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);width=viewport.width;height=viewport.height;atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&!paused&&g.status==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.clown.name,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
  }
  const cameraVisibility=createCameraVisibility(scene,{roots:[circus.root,atmosphere.root,livingWorld.root],targets:()=>[{x:g.player.x,y:1.4,z:g.player.z},{x:g.boss.x,y:clownBeastPose(g).active?2.8:4.5,z:g.boss.z,radius:5}]});startup.own('Clown camera visibility',()=>cameraVisibility.dispose());eventScope.add(()=>cameraVisibility.dispose());
- installChargeInput(shadow,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&!paused&&g.status==='playing',listen:(...args)=>eventScope.listen(...args),act:actPlayer});eventScope.ownHandlers(shadow);eventScope.add(()=>{clearMovement(keys,stick);queued=null;drag=false;releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickId);});eventScope.listen(window,'pagehide',event=>{if(!event.persisted)close();});reset();warmup=createBattleVisualWarmup({renderer,scene,camera,assets:[actor.head.ready,headPool.ready],container:d});startup.own('Clown visual warmup',()=>warmup.dispose());const battleLoop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Battle frame failed',error);close();}});startup.own('Battle loop',()=>battleLoop.dispose());const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!introGate.blocked&&!paused&&g.status==='playing',intro:introGate.begin,pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),close}));startup.own('Battle session',unbindSession);battleLoop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);warmup.start().then(()=>{
+ installChargeInput(shadow,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&!paused&&g.status==='playing',listen:(...args)=>eventScope.listen(...args),act:actPlayer});eventScope.ownHandlers(shadow);eventScope.add(()=>{clearMovement(keys,stick);queued=null;drag=false;releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickId);});eventScope.listen(window,'pagehide',event=>{if(!event.persisted)close();});reset();
+ // Previously the first stage-1 performer and the old mini bosses allocated
+ // dozens of new geometries and texture/shader programs INSIDE live combat.
+ // Build the complete roster and both original mini rigs while loading.
+ troupeView.prewarm();
+ const legacyAssets=legacyEchoes.prewarm();
+ warmup=createBattleVisualWarmup({renderer,scene,camera,
+  assets:[actor.head.ready,headPool.ready,legacyAssets],container:d});
+ startup.own('Clown visual warmup',()=>warmup.dispose());const battleLoop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Battle frame failed',error);close();}});startup.own('Battle loop',()=>battleLoop.dispose());const unbindSession=bindBattleSession(shadow,()=>({game:g,active:ready&&!introGate.blocked&&!paused&&g.status==='playing',intro:introGate.begin,pause:()=>pauseControl.pause(),resume:()=>pauseControl.resume(),close}));startup.own('Battle session',unbindSession);battleLoop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);
+ // Render the already-allocated second-act scenery, crossed puppet control,
+ // original mini bodies and stage ensembles behind the visual loading veil.
+ // They return to hidden standby before the player can move or see a cutscene.
+ troupeView.prepareGpuWarmup();legacyEchoes.prepareGpuWarmup();
+ coronation.prepareGpuWarmup();actor.prewarmMarionette();
+ try{coronation.prewarm(renderer,camera);}
+ catch(error){console.warn('Clown coronation shader prewarm failed',error);}
+ warmup.start().then(()=>{
+  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();
+  coronation.finishGpuWarmup();actor.finishPrewarmMarionette();
   if(closed)return;
-  try{coronation.prewarm(renderer,camera);}catch(error){console.warn('Clown coronation shader prewarm failed',error);}
   introGate.whenReady(!g.introControlled);
+ }).catch(error=>{
+  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();
+  coronation.finishGpuWarmup();actor.finishPrewarmMarionette();
+  console.warn('Optional clown GPU warmup failed',error);
+  if(!closed)introGate.whenReady(!g.introControlled);
  });return {close,dispose:close,get closed(){return closed;}};
  });
 }

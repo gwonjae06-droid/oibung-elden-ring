@@ -127,5 +127,8 @@ export function createClownPhase2Performance(scene,{coarse=false,reduced=false}=
   finally{root.visible=visible;}
  }
  function dispose(){if(disposed)return;disposed=true;reset();root.parent?.remove(root);disposeScene(root);}
- return {root,update,reset,prewarm,dispose,stats:()=>({active:root.visible,prewarmed:warmed,maskCount:masks.length,strings:strands})};
+ return {root,update,reset,prewarm,dispose,
+  prepareGpuWarmup:()=>{root.visible=true;},
+  finishGpuWarmup:()=>{root.visible=false;},
+  stats:()=>({active:root.visible,prewarmed:warmed,maskCount:masks.length,strings:strands})};
 }

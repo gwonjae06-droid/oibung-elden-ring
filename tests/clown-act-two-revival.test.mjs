@@ -40,7 +40,8 @@ test('the old Seulwoo enters AFTER phase transition as one or two small targetab
   setCircusAct(g,2);
   assert.deepEqual(g.clown.troupe.members.filter(m=>m.legacy).map(e=>e.id),once,'no repeated summon');
   setCircusAct(g,3);
-  assert.equal(g.clown.troupe.members.filter(m=>m.legacy).length,0,'no miniature in final director climax');
+  assert.deepEqual(g.clown.troupe.members.filter(m=>m.legacy).map(e=>e.id),once,
+   'the final director stage must ADD cast members without deleting surviving original minis');
  }
 });
 test('original retro model module is truly reused, has circus ball and is tiny in visual scene',()=>{
@@ -55,7 +56,8 @@ test('original retro model module is truly reused, has circus ball and is tiny i
  assert.ok(view.root.getObjectByName('original-circus-balance-ball')||
   view.root.getObjectByName('actual-legacy-circus-ball'),'old roller prop required in fallback');
  g.clown.horrorStage=3;setCircusAct(g,3);
- view.update(g,1/60);assert.equal(view.stats().miniMidbosses,0);
+ view.update(g,1/60);assert.equal(view.stats().miniMidbosses,count);
+ assert.ok(view.stats().pooledOriginals<=LEGACY_ECHO_CONFIG.max);
  view.dispose();assert.equal(scene.children.length,0);
 });
 test('head bombs, glove clap, old rolling ball and juggling are reduced-damage fully warned mini attacks',()=>{

@@ -11,7 +11,7 @@ export const LEGACY_ECHO_CONFIG=Object.freeze({
  damage:Object.freeze({headBomb:9,clap:10,roll:11,juggle:8}),
  telegraph:1.42,travel:.42,cooldown:6.4
 });
-export const LEGACY_ECHO_MOVES=Object.freeze(['headBomb','clap','roll','juggle']);
+export const LEGACY_ECHO_MOVES=Object.freeze(['headBomb','juggle','clap','roll']);
 export const legacyEchoCount=g=>{
  const seed=Number.isFinite(g?.patternShuffle?.seed)?g.patternShuffle.seed:(g?.nextId||1);
  return 1+(Math.floor(Math.abs(seed))%2);

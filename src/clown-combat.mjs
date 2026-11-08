@@ -1,6 +1,6 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
-import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe} from './clown-troupe.mjs';
+import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe,prepareCircusPhaseTransition} from './clown-troupe.mjs';
 import {REMASTERED_CIRCUS_RUN} from './clown-ensemble-repertoire.mjs';
 import {RINGMASTER_ATTACK_DEFINITIONS} from './clown-ringmaster-attacks.mjs';
 import {createClownStageBall,stepClownStageBall} from './clown-grounded-physics.mjs';
@@ -1343,7 +1343,7 @@ export function stepClown(g, dt, input = {}) {
     const e = g.events[i];
     if (e.type === 'skill-stun') c.stunT = 1;
     else if (e.type === 'phase') {
-      clearCircusTroupe(g);
+      prepareCircusPhaseTransition(g);
       Object.assign(c, {
         zones: [],
         bombs: [],

@@ -7,6 +7,7 @@ import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance,ringmasterGesture} from './clown-ringmaster-pose.mjs';
 import {createClownGait} from './clown-gait.mjs';
+import {createClownMarionetteCross} from './clown-marionette-cross.mjs';
 import {solveFixedLimb,smoothYaw,stageFootTarget} from './clown-performance-rig.mjs';
 import {createSpringBank} from './secondary-physics.mjs';
 // The original *recognizable O Seulwoo portrait* belongs on the real
@@ -210,6 +211,7 @@ export function createClownActor({coarse=false}={}){
   const thread=makeCurve(body,[[side*.75,3.62,-.15],[side*1.05,3.8,-.36],[side*1.1,2.95,-.55]],
     .014,metal,'living-marionette-string');threads.push(thread);
  }
+ const puppetCross=createClownMarionetteCross({root,body,head,arms,legs,coarse});
  const gait=createClownGait(),springs=createSpringBank();
  const down=new T.Vector3(),wristWorld=new T.Vector3();
  let previousGame=null,lastTime=-1,previousYaw=null;
@@ -372,6 +374,7 @@ export function createClownActor({coarse=false}={}){
    wireGeo.attributes.position.needsUpdate=true;
   }
   for(const t of threads)t.visible=phase||perf.puppets||perf.director>.2||livingLash.visible;
+  puppetCross.update(g);
   eyeMat.emissiveIntensity=phase?1.9:1.1;
   velvet.color.setHex(phase?0x200e17:0x32111e);
   crimson.color.setHex(phase?0x591425:0x7d2433);
@@ -381,8 +384,12 @@ export function createClownActor({coarse=false}={}){
   portraitDisposed=true;
   portraitTexture?.dispose();portraitTexture=null;
   portrait.visible=false;portraitMaterial.map=null;
+  puppetCross.dispose();
  }
  return {root,update,disposePortrait,
+  prewarmMarionette:()=>{puppetCross.root.visible=true;},
+  finishPrewarmMarionette:()=>{puppetCross.root.visible=false;},
+  marionette:puppetCross,
   head:{ready:portraitReady,portrait,source:'clown-face.mjs'},
   maskStyle:'sculpted-with-original-face',isRebuiltRingmaster:true};
  });

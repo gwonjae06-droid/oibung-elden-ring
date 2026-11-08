@@ -39,13 +39,41 @@ export function setCircusAct(g,stage){
  if(stage<=t.stage)return;
  // After the unskippable transformation, a different corps enters from
  // the perimeter; corpses do not instant-respawn in the middle of a hit.
- t.stage=stage;t.members=[];t.cycle=0;t.attackBeat=0;t.globalCooldown=1.4;
- t.reprise=null;t.hush=null;t.faceSync=null;
- for(let i=0;i<targetCount(stage);i++)t.members.push(spawn(g,i));
- // One or two small original ringmasters emerge AFTER the main director's
- // unskippable transformation, without their own transition cutscene.
- if(stage===2)for(let i=0;i<Math.min(LEGACY_ECHO_CONFIG.max,legacyEchoCount(g));i++)
-  t.members.push(createLegacyEcho(g,i));
+ // Escalation is a REINFORCEMENT, not a replacement of existing performers.
+ // Alive actors, their HP, positions, cast timers and original mini-bosses
+ // retain the same identities through all lower-health stages.
+ const previous=t.stage;
+ t.stage=stage;t.globalCooldown=Math.max(t.globalCooldown,1.4);
+ const activeOrdinary=t.members.filter(m=>!m.legacy&&!m.down).length;
+ const additions=Math.max(0,targetCount(stage)-activeOrdinary);
+ for(let i=0;i<additions;i++){
+  const serial=t.cycle++,guest=spawn(g,serial);
+  // Reinforcements visibly enter near the outside rim, away from the player.
+  const angle=(serial+stage*3)*TAU/13;
+  guest.x=g.boss.x+Math.sin(angle)*19;guest.z=g.boss.z+Math.cos(angle)*19;
+  const safe=away(guest);guest.x=safe.x;guest.z=safe.z;
+  guest.cooldown=2.1+((serial%3)*.45);
+  t.members.push(guest);
+ }
+ // The old original Seulwoo minis debut only AFTER the unskippable
+ // transformation, and are never silently deleted at the low-HP threshold.
+ if(stage>=2&&previous<2){
+  const existing=t.members.filter(m=>m.legacy).length;
+  for(let i=existing;i<Math.min(LEGACY_ECHO_CONFIG.max,legacyEchoCount(g));i++)
+   t.members.push(createLegacyEcho(g,i));
+ }
+}
+// The scene change suspends attacks but NEVER resurrects or replaces a live
+// performer. The director's new corps simply joins the existing troupe.
+export function prepareCircusPhaseTransition(g){
+ const t=g?.clown?.troupe;if(!t)return;
+ t.globalCooldown=Math.max(t.globalCooldown,3.0);
+ t.show='';t.showAge=0;t.hush=null;t.faceSync=null;t.reprise=null;
+ for(const m of t.members){
+  m.melee=null;m.legacyAttack=null;m.routine=null;m.showCue=null;
+  m.cast=0;m.cooldown=Math.max(m.cooldown,3.2);
+  m.vx=0;m.vz=0;
+ }
 }
 export function clearCircusTroupe(g){
  const t=g?.clown?.troupe;if(!t)return;
@@ -294,7 +322,7 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
  // Small retired-O-Seulwoo bosses must take turns instead of being starved
  // by the faster-indexed ordinary NPCs. At most one mini cast begins every
  // three solo turns; the main ringmaster still owns the authored shows.
- const miniReady=stage===2&&t.members.some(m=>m.legacy&&!m.down&&m.cast<=0&&m.cooldown<=h);
+ const miniReady=stage>=2&&t.members.some(m=>m.legacy&&!m.down&&m.cast<=0&&m.cooldown<=h);
  const miniTurn=miniReady&&t.attackBeat%3===0;
  for(let i=0;i<t.members.length;i++){
   const m=t.members[i],s=CIRCUS_ROLES[m.role];

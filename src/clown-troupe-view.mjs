@@ -11,6 +11,8 @@ import {troupeBeatMotion,ENSEMBLE_DISPLAY_STYLE} from './clown-ensemble-poses.mj
 export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActorCreated=null}={}){
  const root=new THREE.Group();root.name='seulwoo-living-circus-troupe';scene.add(root);
  const live=new Map(),hoops=new Map(),puppetGhosts=new Map();
+ const standby=new Map(),prewarmRoles=['chorister','strongman','acrobat','bladeDancer','puppeteer','firekeeper','mimic','chorister'];
+ let prepared=false,preview=false;
  const theatreCues=createClownTheatreCues(root,{coarse,reduced});
  const direction=new THREE.Vector3(),from=new THREE.Vector3(),to=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
  function bone(mesh,a,b){from.set(...a);to.set(...b);direction.copy(to).sub(from);
@@ -194,6 +196,31 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   if(typeof onActorCreated==='function')onActorCreated(group);
   return {group,body,head,jaw,mask,seal,cracks,unisonMask,torso,shoulders,legs,fire,strings,skirt,springs,props,yaw:null,role};
  }
+ // Build the anticipated stage-one and stage-two cast while the loading veil
+ // is present. Never create a full performer rig on the first attack frame.
+ function prewarm(){
+  if(prepared)return;
+  prepared=true;
+  for(const role of prewarmRoles){
+   const v=actor(role);v.group.visible=false;
+   if(!standby.has(role))standby.set(role,[]);
+   standby.get(role).push(v);
+  }
+ }
+ function prepareGpuWarmup(){
+  prewarm();preview=true;
+  for(const stack of standby.values())for(const v of stack){
+   v.group.visible=true;v.group.position.set(0,0,0);v.group.scale.setScalar(.85);
+  }
+ }
+ function finishGpuWarmup(){
+  preview=false;
+  for(const stack of standby.values())for(const v of stack)v.group.visible=false;
+ }
+ function take(role){
+  const stack=standby.get(role);
+  return stack?.length?stack.pop():actor(role);
+ }
  function createHoop(z){
   const group=new THREE.Group();group.name='real-infernal-hoop-performance-cue';root.add(group);
   const material=new THREE.MeshBasicMaterial({color:0xf08145,transparent:true,opacity:.64,side:THREE.DoubleSide,depthWrite:false});
@@ -297,7 +324,7 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   const troupe=g?.clown?.troupe,alive=(troupe?.members||[]).filter(m=>!m.legacy),seen=new Set(),time=g?.time||0,
    uncanny=circusUncannyFrame(g),h=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
   for(const m of alive){
-   seen.add(m.id);let v=live.get(m.id);if(!v){v=actor(m.role);live.set(m.id,v);}
+   seen.add(m.id);let v=live.get(m.id);if(!v){v=take(m.role);live.set(m.id,v);}
    const sway=(reduced?0:Math.sin(time*2.5+m.id*.9))*.06,
     routine=troupeBeatMotion(m,g.clown?.time||0),style=ENSEMBLE_DISPLAY_STYLE[routine.pose]||{lift:0,lean:0},
     choirRise=m.role==='chorister'&&routine.pose==='sing'?routine.weight:0;
@@ -411,9 +438,12 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
    if(v.props.hoop){v.props.hoop.visible=pose==='hoop';
     v.props.hoop.rotation.z=Math.sin(time*2.5)*.11*routine.weight;}
   }
-  for(const [id,v] of live)if(!seen.has(id)){root.remove(v.group); // Shared mesh geometry/material survive; private parts are reclaimed.
-   v.group.traverse(o=>{if(o.geometry&&o.geometry!==geo&&o.geometry!==cylinder)o.geometry.dispose();});
-   live.delete(id);
+  for(const [id,v] of live)if(!seen.has(id)){
+   v.group.visible=false;live.delete(id);
+   if(!standby.has(v.role))standby.set(v.role,[]);
+   // Reuse the whole rig and its GPU resources when the next actor enters.
+   // Pool size is bounded by the live/reinforcement cap, no per-phase remesh.
+   standby.get(v.role).push(v);
   }
   const hoopSet=new Set();
   for(const z of g?.clown?.zones||[]){
@@ -432,8 +462,12 @@ export function createCircusTroupeView(scene,{coarse=false,reduced=false,onActor
   updateRepriseGhosts(g);
   theatreCues.update(g,h);
  }
- function dispose(){for(const v of live.values())v.group.traverse(o=>{if(o.geometry&&o.geometry!==geo&&o.geometry!==cylinder)o.geometry.dispose();});
-  live.clear();hoops.clear();puppetGhosts.clear();theatreCues.dispose();root.parent?.remove(root);disposeScene(root);
-  geo.dispose();cylinder.dispose();for(const x of Object.values(mat))x.dispose();}
- return {root,update,dispose,stats:()=>({performers:live.size,ghostPuppets:puppetGhosts.size,hoops:hoops.size,airCues:theatreCues.stats().active})};
+ function dispose(){
+  live.clear();standby.clear();hoops.clear();puppetGhosts.clear();
+  theatreCues.dispose();root.parent?.remove(root);disposeScene(root);
+  geo.dispose();cylinder.dispose();for(const x of Object.values(mat))x.dispose();
+ }
+ return {root,update,prewarm,prepareGpuWarmup,finishGpuWarmup,dispose,
+  stats:()=>({performers:live.size,pooled:[...standby.values()].reduce((n,a)=>n+a.length,0),
+   ghostPuppets:puppetGhosts.size,hoops:hoops.size,airCues:theatreCues.stats().active})};
 }
