@@ -1,5 +1,5 @@
 import {BOSS_TEMPO} from './boss-tempo.mjs';
-import {SERAPH_CANONICAL_PATTERNS} from './blood-seraph-doctrine.mjs';
+import {SERAPH_CANONICAL_PATTERNS,seraphHazardTarget} from './blood-seraph-doctrine.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:32,hp:6400,transition:4.6});
  // The normal-journey HP pool stays unchanged. Only the 1P/2P split moves.
@@ -73,7 +73,8 @@ export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
 // choose original seraph movements in actual phase-three combat.
 export const bloodPool=phase=>phase===3?[...SERAPH_CANONICAL_PATTERNS,'seraphFinale']:
  Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
-export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
+export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);
+ return {...seraphHazardTarget(h),r:h.r+(h.grow||0)*t};}
 // Rendered warning blood and authoritative collision share the same footprint.
 // Reduced padding is deliberately forgiving for evasive melee play.
 export const BLOOD_CONTACT_MARGIN=.28;
@@ -87,7 +88,7 @@ export function bloodHazardFootprint(h){
   const moving=Math.hypot(h.vx||0,h.vz||0)>.01;
   return {kind:3,x:c.x,z:c.z,r:0,halfWidth:h.width+pad,
     halfLength:(moving?Math.min(h.length/2,3.0):h.length/2)+pad,
-    yaw:h.yaw,inner:0,arc:0};
+    yaw:c.yaw??h.yaw,inner:0,arc:0};
  }
  if(h.shape==='cone')return {kind:4,x:c.x,z:c.z,r:h.r+pad,halfWidth:0,halfLength:0,yaw:h.yaw,inner:Math.max(0,(h.innerR||0)-pad),arc:h.arc};
  return {kind:1,x:c.x,z:c.z,r:c.r+pad,halfWidth:0,halfLength:0,yaw:0,inner:0,arc:0};
