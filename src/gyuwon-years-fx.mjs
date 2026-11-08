@@ -68,6 +68,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   const a=i*Math.PI/4;const m=mesh(bodyslime,sphere,slime,Math.sin(a)*1.4,.28,Math.cos(a)*1.4,1,.5,.72);
   gameParts.push(m);
  }
+ const flameAura=new THREE.Group();flameAura.name='gyuwon-third-year-burning-student';root.add(flameAura);
+ const flameGeo=geo(new THREE.ConeGeometry(.65,2.1,coarse?8:13));
+ const auraFlames=Array.from({length:8},(_,i)=>{
+  const flame=mesh(flameAura,flameGeo,hot,0,1.4,0);
+  flame.userData.index=i;return flame;
+ });
+ const bookPiles=new THREE.Group();bookPiles.name='gyuwon-bookfall-stacks';root.add(bookPiles);
+ const piles=[],piled=new Set();let activePileYear=0;
  const dollRoot=new THREE.Group();dollRoot.name='gyuwon-figurines-and-photocards';root.add(dollRoot);
  for(let i=0;i<6;i++){
   const angle=i*Math.PI/3,fig=new THREE.Group();fig.position.set(Math.sin(angle)*13,0,Math.cos(angle)*13);
@@ -174,15 +182,18 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  function update(g){
   if(disposed)return;
   const e=g?.gyuwon?.years,b=g?.boss,s=g?.gyuwon;
-  if(owned!==g){owned=g;clearWave();removeDynamic();}
+  if(owned!==g){owned=g;clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();activePileYear=0;}
   if(!e||g.status!=='playing'){root.visible=false;clearWave();removeDynamic();return;}
   root.visible=true;
+  if(activePileYear!==e.year){activePileYear=e.year;bookPiles.clear();piles.length=0;piled.clear();}
   exam.visible=e.mode==='exam';exam.position.set(b.x,0,b.z);exam.rotation.y=b.yaw;
   motorcycle.visible=e.mode==='combat'&&e.cast==='bike';
   scooter.visible=e.mode==='combat'&&e.cast==='scooter';
   cigarette.visible=e.mode==='combat'&&e.cast==='smoke';
   weapon.visible=e.mode==='combat'&&e.year===4;
   bodyslime.visible=e.mode==='combat'&&e.year===5;
+  flameAura.visible=e.mode==='combat'&&e.year===3;
+  flameAura.position.set(b.x,0,b.z);
   dollRoot.visible=e.mode==='combat'&&e.year===6;
   tentacleRoot.visible=e.mode==='combat'&&e.year===8;
   motorcycle.position.set(b.x,0,b.z);motorcycle.rotation.y=b.yaw;
@@ -193,6 +204,11 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   for(let i=0;i<smokePuffs.length;i++){
    const puff=smokePuffs[i];puff.position.y=2.2+i*.34+Math.sin(g.time*3+i)*.15;
    puff.material.opacity=1;
+  }
+  if(flameAura.visible)for(let i=0;i<auraFlames.length;i++){
+   const flame=auraFlames[i],a=i*Math.PI/4;
+   flame.position.set(Math.sin(a)*.95,1.4+Math.sin(g.time*6+i)*.34,Math.cos(a)*.95);
+   flame.scale.y=.7+.45*Math.sin(g.time*7+i);
   }
   if(bodyslime.visible)for(let i=0;i<gameParts.length;i++){
    gameParts[i].scale.y=.5+.3*Math.sin(g.time*4+i);
@@ -241,6 +257,13 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   const live=new Set();
   for(const h of s.hazards){
    const v=h.visual||'';
+   if(e.year===3&&v==='year-bookfall'&&h.age>=h.warn&&!piled.has(h.id)){
+    piled.add(h.id);
+    const stack=piles.filter(m=>Math.hypot(m.position.x-h.x,m.position.z-h.z)<2).length;
+    const book=mesh(bookPiles,box,paper,h.x,.16+stack*.3,h.z,1.43,.28,1.82);
+    book.rotation.y=(h.id%7)*.14;piles.push(book);
+    if(piles.length>26)bookPiles.remove(piles.shift());
+   }
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||
     v==='sword'||v==='dice'||v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
@@ -257,11 +280,11 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   }
   for(const [id,item]of dynamic)if(!live.has(id)){item.group.removeFromParent();dynamic.delete(id);}
  }
- function clear(){clearWave();removeDynamic();root.visible=false;}
+ function clear(){clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
   for(const m of new Set(materials))m.dispose();
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8})};
+ return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,stackedBooks:piles.length})};
 }
