@@ -23,5 +23,8 @@ test('real Three meshes cover every blood hazard and release transient geometry'
   g.boss.phase=spec.phase;startBloodPattern(g,id);for(let t=0;t<spec.duration+.1;t+=.05){stepBlood(g,.05);view.update(g,.05);view.occlude(camera,g);scene.traverse(o=>{assert.ok(Number.isFinite(o.position.x)&&Number.isFinite(o.scale.y));});}
   assert.equal(scene.children.length,base,id+' leaked a hazard mesh');
  }
+ // The mandatory tsunami is validated separately; here only teardown after
+ // an already-completed wave is relevant to the visual-resource test.
+ g.blood.requiredTsunamiStarted=g.blood.requiredTsunamiDone=true;
  damageBlood(g,1e7);view.update(g,.1);assert.equal(g.status,'won');view.dispose();assert.deepEqual(disposeScene(scene).errors,[]);
 });

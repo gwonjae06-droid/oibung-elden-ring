@@ -15,7 +15,9 @@ function phaseTwo(hp=2000){
  const g=createBloodGame();
  g.boss.phase=2;g.boss.state='recovery';g.boss.hp=hp;
  g.blood.transitioned=true;g.blood.phasePending=false;g.blood.recover=1e6;
- // Isolate the scheduled blood-sea siphon from the separate ranged whip.
+ // Isolate scheduled siphon checks from the already-tested mandatory tsunami
+ // and the separate ranged whip, without weakening either live mechanic.
+ g.blood.requiredTsunamiStarted=true;g.blood.requiredTsunamiDone=true;
  // The whip damages the player and legitimately restores additional HP via boss-drain.
  g.blood.whipCooldown=Infinity;
  g.player.hp=g.player.maxHp=1e8;return g;
@@ -73,7 +75,7 @@ test('phase-one and 2P transformation cannot siphon; pause, defeat and invalid d
  advance(one,12);
  assert.equal(one.blood.siphon.active,false);assert.equal(one.blood.siphon.heals,0);
  const transitioned=createBloodGame();
- damageBlood(transitioned,3400);
+ damageBlood(transitioned,2400); // Enter 2P above the separate 3000-HP tsunami.
  stepBlood(transitioned,.04);
  assert.equal(transitioned.boss.state,'transition');
  assert.equal(transitioned.boss.phase,2);
