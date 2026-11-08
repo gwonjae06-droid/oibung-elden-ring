@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createBloodGame,startBloodPattern,stepBlood} from '../src/blood-combat.mjs';
+import {createBloodGame,startBloodPattern,stepBlood,seraphFlankDestination} from '../src/blood-combat.mjs';
 import {BLOOD_PATTERNS,bloodPool,hazardPosition,bloodHazardFootprint,hazardContains} from '../src/blood-data.mjs';
 import {SERAPH_CANONICAL_PATTERNS} from '../src/blood-seraph-doctrine.mjs';
 import {createBloodSeraph} from '../src/blood-seraph.mjs';
@@ -76,20 +76,35 @@ test('the wing-disc leaves the map and crosses FOUR distinct warned lanes',()=>{
  }finally{rig.dispose();}
 });
 
-test('the blood pillars converge in four ordered ranks but STOP outside the caster',()=>{
+test('four concentric blood-pillar rings encircle the entire map but stop before the caster',()=>{
  const g=sample('seraphInwardPillars'),hs=g.blood.hazards;
- assert.equal(hs.length,12);
- assert.deepEqual([...new Set(hs.map(h=>h.rank))],[0,1,2,3]);
- assert.ok(hs.every(h=>h.shape==='circle'&&h.damage>0&&h.warn>=1&&h.r>=3.4));
+ assert.equal(hs.length,4);
+ assert.deepEqual(hs.map(h=>h.rank),[0,1,2,3]);
+ assert.ok(hs.every(h=>h.shape==='ring'&&h.seraphCue==='blood-pillar-ring'));
  for(let rank=0;rank<4;rank++){
-  const group=hs.filter(h=>h.rank===rank),avg=group.reduce((s,h)=>s+Math.hypot(h.x-g.boss.x,h.z-g.boss.z),0)/3;
-  assert.equal(group.length,3);
-  if(rank){const prev=hs.filter(h=>h.rank===rank-1),last=prev.reduce((s,h)=>s+Math.hypot(h.x-g.boss.x,h.z-g.boss.z),0)/3;
-   assert.ok(avg<last,rank+' must get closer to Baeseojun');
-   assert.ok(group[0].warn>prev[0].warn);
-  }
-  assert.ok(avg>8,'no column should erupt directly on his body');
+  const h=hs[rank];assert.equal(h.x,0);assert.equal(h.z,0);
+  assert.ok(h.width>=3.4&&h.warn>=1.3);
+  if(rank){assert.ok(h.r<hs[rank-1].r);assert.ok(h.warn>hs[rank-1].warn);}
+  assert.ok(h.r-h.width*.72>=5,'inner sanctuary must remain open');
+  h.age=h.warn+.03;
+  for(let a=0;a<Math.PI*2;a+=Math.PI/8)
+   assert.ok(hazardContains(h,{x:Math.sin(a)*h.r,z:Math.cos(a)*h.r}),
+    'blood pillars must reach every arena angle');
+  h.age=0;
  }
+ const scene=new THREE.Scene(),rig=createBloodSeraph(scene,{coarse:true,reduced:true});
+ try{
+  hs[0].age=hs[0].warn-.3;
+  rig.update(g,bloodTransformation(g),.05);
+  assert.equal(rig.stats().columns.visible,true);
+  assert.equal(rig.stats().columns.columns,24);
+  const mesh=scene.getObjectByName('blood-seraph-concentric-3d-blood-pillars');
+  assert.ok(mesh?.isInstancedMesh);
+  const matrix=new THREE.Matrix4(),world=new THREE.Vector3();
+  mesh.getMatrixAt(0,matrix);world.setFromMatrixPosition(matrix);
+  assert.ok(Math.abs(Math.hypot(world.x,world.z)-hs[0].r)<.01);
+  rig.clear();assert.equal(rig.stats().columns.columns,0);
+ }finally{rig.dispose();}
 });
 
 test('the frantic face cannon fires eleven distinct warned rays, without all warning at once',()=>{
@@ -136,4 +151,40 @@ test('larger blood-angel spells still have valid gaps and visible warning budget
    for(let i=0;i<3;i++)stepBlood(g,.05);
   }
  }
+});
+
+test('sweeping cannon visibly charges its face but has no odd horizontal blood bar below',()=>{
+ const g=sample('seraphSweep');assert.equal(bloodFloorField(g),null);
+ const h=g.blood.hazards[0];h.age=h.warn*.65;g.blood.t=h.age;
+ const scene=new THREE.Scene(),rig=createBloodSeraph(scene,{coarse:true,reduced:true});
+ try{
+  rig.update(g,bloodTransformation(g),.045);
+  assert.equal(rig.stats().sacredChargeVisible,true);
+  assert.equal(rig.stats().eyeRayVisible,false);
+  h.age=h.warn+.06;g.blood.t=h.age;
+  rig.update(g,bloodTransformation(g),.045);
+  assert.equal(rig.stats().eyeRayVisible,true);
+  assert.equal(bloodFloorField(g),null);
+ }finally{rig.dispose();}
+});
+
+test('blood seraph stops walking, teleports to a flank, and returns to centre for each cast',()=>{
+ const g=sample('seraphSweep'),spec=BLOOD_PATTERNS.seraphSweep;
+ const step=t=>{for(let left=t;left>1e-8;left-=.05)stepBlood(g,Math.min(.05,left));};
+ assert.deepEqual([g.boss.x,g.boss.z],[0,0]);
+ step(spec.duration+.08);
+ assert.equal(g.boss.state,'recovery');
+ assert.equal(g.blood.walk,null);
+ step(g.blood.recover+.04);
+ assert.equal(g.boss.state,'maneuver');
+ assert.equal(g.blood.walk,null);
+ assert.ok(Math.hypot(...Object.values(seraphFlankDestination(g.boss,g.player,g.blood.index)))>=11);
+ step(.36);
+ assert.ok(Math.hypot(g.boss.x,g.boss.z)>=10);
+ assert.ok(g.events.some(e=>e.type==='blood-seraph-teleport'&&e.reason==='holy-flank'));
+ assert.ok(g.blood.seraphBlink);
+ step(1.45);
+ assert.equal(g.boss.state,'pattern');
+ assert.equal(g.boss.x,0);assert.equal(g.boss.z,0);
+ assert.ok(g.events.some(e=>e.type==='blood-seraph-teleport'&&e.reason==='central-cast'));
 });

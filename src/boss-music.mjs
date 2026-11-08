@@ -1,6 +1,4 @@
 import {readBattleSession} from './battle-session.mjs';
-// Backwards-compatible legacy constant; 3P no longer seeks to this offset.
-export const BLOOD_SERAPH_MUSIC_START_SECONDS=142;
 import {score,musicTempo,MUSIC_LOOP} from './boss-score.mjs';
 import {createBossTracks} from './boss-tracks.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
