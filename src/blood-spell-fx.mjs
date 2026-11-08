@@ -24,6 +24,9 @@ export const BLOOD_FLOOR_MAX_HAZARDS=12;
 // target, and every live hazard in a combination contributes to the dark union.
 export function bloodFloorField(g){
  if(g?.status!=='playing'||g?.boss?.state!=='pattern'||!g?.blood?.hazards?.length)return null;
+ // Remove the flat, horizontal blood bar from beneath the 3D face-cannon.
+ // Its windup is communicated by the face/halo charge instead.
+ if(g.blood.pattern==='seraphSweep')return null;
  // Only show imminent paths for the rapid Seraph barrage. Without this
  // filter all eleven future shots flash simultaneously and hide every exit.
  const seraphSeries=g.boss.phase===3&&['seraphFrenzy','seraphWingCross','seraphInwardPillars','seraphHaloProcession','seraphBloodRosette'].includes(g.blood.pattern);
@@ -119,6 +122,10 @@ export function createBloodSpellFx(parent,fluid,particles,{reduced=false,coarse=
  // Stages: ready (age<warn) -> start (first onset) -> run (spreading) -> done (post>0, sinking); recovery is drained by the particle system.
  function pose(item,h,g,post){
   const {group,parts,pattern}=item,c=hazardPosition(h),active=h.age>=h.warn,t=Math.max(0,h.age-h.warn),charge=clamp01(h.age/h.warn);
+  if(pattern==='seraphSweep'||pattern==='seraphInwardPillars'){
+   // Bespoke volumetric beam and spire meshes replace legacy planar decals.
+   group.visible=false;return;
+  }
   const span=reach(h,c),life=Math.max(.2,h.life),surge=active?easeOut(t/(onsetTime(h)+.25)):0,p=active?1:smooth(charge)*.95,tail=clamp01(post/TAIL);
   group.position.set(c.x,.12,c.z);group.rotation.set(0,h.yaw||0,0);group.scale.set(1+tail*.1,Math.max(.001,1-smooth(tail)),1+tail*.1);
   for(const m of parts){m.visible=true;m.position.set(0,0,0);m.rotation.set(0,0,0);m.scale.set(1,1,1);}

@@ -27,8 +27,7 @@ export function seraphTelegraphRemaining(h,time=0){
 export function spawnSeraphDoctrine(g,id,spawn){
  const b=g.boss,p=g.player;
  const aim=Math.atan2(p.x-b.x,p.z-b.z);
- const at=(x,z)=>{const d=Math.hypot(x,z);return d>27?{x:x*27/d,z:z*27/d}:{x,z};};
- const circle=(x,z,warn,r,extra={})=>spawn('circle',{x,z,warn,r,life:.50,damage:28,...extra});
+ // Full-arena concentric blood pillars; no single player-facing row.
  if(id==='seraphSweep'){
   // One long floor-to-ceiling beam: scans LEFT to RIGHT, with no instant
   // map-wide hit. The physical danger travels at precisely the beam rate.
@@ -46,18 +45,13 @@ export function spawnSeraphDoctrine(g,id,spawn){
    damage:34,seraphCue:'wing-pass',pass:i});
  }
  if(id==='seraphInwardPillars'){
-  // The player sees 4 outward-to-inward CHAINED ranks. The last
-  // columns stop eleven metres out: the seraph's feet stay a refuge.
-  const ux=Math.sin(aim),uz=Math.cos(aim),sideX=uz,sideZ=-ux;
-  for(let rank=0;rank<4;rank++){
-   const radius=27-rank*5.25;
-   for(let column=-1;column<=1;column++){
-    const q=at(b.x+ux*radius+sideX*column*4.9,
-     b.z+uz*radius+sideZ*column*4.9);
-    circle(q.x,q.z,1.55+rank*.95+Math.abs(column)*.10,3.4,
-     {life:.54,damage:34,seraphCue:'blood-pillar',rank,column});
-   }
-  }
+  // Four 360-degree waves; the last inner edge stays clear of the caster.
+  // Each annular hitbox is outlined by a circle of real 3D blood pillars.
+  for(let rank=0;rank<4;rank++)spawn('ring',{
+   x:b.x,z:b.z,r:27-rank*5.65,width:3.4,
+   warn:1.6+rank*.93,life:.62,damage:34,
+   seraphCue:'blood-pillar-ring',rank
+  });
  }
  if(id==='seraphFrenzy'){
   // Frenzied but never unannounced: eleven FIXED rays radiate from
