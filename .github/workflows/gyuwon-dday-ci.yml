@@ -1,0 +1,44 @@
+name: Gyuwon D-day annual exam regression
+on:
+  pull_request:
+    paths:
+      - 'src/gyuwon-years.mjs'
+      - 'src/gyuwon-years-fx.mjs'
+      - 'src/gyuwon-years-hud.mjs'
+      - 'src/gyuwon-combat.mjs'
+      - 'src/gyuwon-battle.mjs'
+      - 'src/gyuwon-view.mjs'
+      - 'src/gyuwon-motion.mjs'
+      - 'src/gyuwon-actor.mjs'
+      - 'src/gyuwon-ui.mjs'
+      - 'tests/gyuwon-years.test.mjs'
+      - '.github/workflows/gyuwon-dday-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  annual-exams:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install 3D test dependencies
+        run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0
+      - name: Check annual exam syntax and integration
+        run: |
+          for file in src/gyuwon-years.mjs src/gyuwon-years-fx.mjs src/gyuwon-years-hud.mjs src/gyuwon-combat.mjs src/gyuwon-battle.mjs src/gyuwon-view.mjs src/gyuwon-motion.mjs src/gyuwon-actor.mjs src/gyuwon-ui.mjs tests/gyuwon-years.test.mjs; do
+            node --check "$file"
+          done
+      - name: Check D-day, exams, grade odds, hitboxes and old boss regressions
+        run: |
+          node --test \
+            tests/gyuwon-years.test.mjs \
+            tests/gyuwon.test.mjs \
+            tests/gyuwon-pattern-exposure.test.mjs \
+            tests/gyuwon-choreography.test.mjs \
+            tests/gyuwon-unified-combat-rig.test.mjs \
+            tests/gyuwon-production-rules.test.mjs \
+            tests/boss-animation-continuity.test.mjs
