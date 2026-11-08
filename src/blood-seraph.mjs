@@ -265,12 +265,22 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   // A rotating blood halo leaves the player's arena, charges and returns.
   const nextPass=(s.hazards||[]).find(h=>h.seraphCue==='wing-pass'&&
    h.age>=h.warn-.62&&h.age<=h.warn+h.life);
-  wingWheel.visible=pattern==='seraphWingCross'&&!!nextPass;
+  // After four damage passes the wing-wheel flies back along an ELEVATED,
+  // NON-DAMAGING arc and merges with the face halo instead of blinking out.
+  const flight=s.seraphWingReturn,returnTime=flight?s.t-flight.start:-1,
+   returning=flight&&returnTime>=0&&returnTime<flight.duration;
+  wingWheel.visible=pattern==='seraphWingCross'&&(!!nextPass||!!returning);
   if(nextPass){
    const here=hazardPosition(nextPass);
    wingWheel.position.set(here.x,2.55,here.z);
    wingWheel.rotation.set(.25,t*11,Math.PI/2+t*15);
    wingWheel.scale.setScalar(.9+Math.min(1,nextPass.age/nextPass.warn)*.16);
+  }else if(returning){
+   const u=ease(returnTime/flight.duration);
+   wingWheel.position.set(flight.x+(b.x-flight.x)*u,
+    2.55+8*Math.sin(Math.PI*u),flight.z+(b.z-flight.z)*u);
+   wingWheel.rotation.set(.25,t*11,Math.PI/2+t*13);
+   wingWheel.scale.setScalar(Math.max(.05,.95*(1-u)));
   }
   guides.forEach((guide,i)=>{
    const h=(s.hazards||[]).find(h=>h.seraphCue==='wing-pass'&&h.pass===i);

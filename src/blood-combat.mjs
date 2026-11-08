@@ -98,7 +98,7 @@ export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
  // A public/manual pattern request must not replace the mandatory wave.
  if(g.blood.requiredTsunamiStarted&&!g.blood.requiredTsunamiDone)return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false;s.pattern=id;s.patternDuration=spec.duration;s.t=0;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false; s.pattern=id;s.patternDuration=spec.duration;s.t=0;s.seraphWingReturn=null;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
@@ -237,6 +237,11 @@ export function startBloodPattern(g,id){
  }
  // Every seraph attack shares its geometry and warning clock with the renderer.
  if(SERAPH_CANONICAL_PATTERNS.includes(id))spawnSeraphDoctrine(g,id,(shape,opts)=>hazard(g,shape,opts));
+ if(id==='seraphWingCross'){
+  const last=s.hazards.filter(h=>h.seraphCue==='wing-pass').at(-1);
+  if(last)s.seraphWingReturn={x:last.x+last.vx*last.life,
+   z:last.z,start:last.warn+last.life,duration:.85};
+ }
  // Bind the encounter state before passing the two-argument hazard spawner.
  addBloodRiteAccent(g,id,(shape,opts)=>hazard(g,shape,opts));
  // The camera completes its reveal and returns well before the first actual
