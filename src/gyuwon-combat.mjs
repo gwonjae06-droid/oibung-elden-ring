@@ -1,3 +1,4 @@
+import {annualFloorHeight,resolveAnnualWorldMotion} from './gyuwon-year-world-data.mjs';
 import {pushOutAnnualCover} from './gyuwon-nightmare-mechanics.mjs';
 import {acceptAnnualDamage} from './gyuwon-annual-progress.mjs';
 import {tickBossHitTraits} from './boss-hit-traits.mjs';
@@ -22,7 +23,7 @@ export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
  const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
   boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
   gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null,memoryVariant:0,memoryRun:0,memoryRunTarget:2,proofQueue:[],proofIndex:0,whiteQuota:2,whiteCycle:0,casts:0,lastWarpCast:-1,teleport:null}};
- if(yearMode)game.gyuwon.years=createGyuwonYears();
+ if(yearMode){game.gyuwon.years=createGyuwonYears();game.gyuwon.years.worldSeed=game.gyuwon.patternDeck.seed;}
  // All weapon skills (card sigils, burning arrows, hammer guard and throw)
  // settle through the shared player combat manager, including DoT statistics.
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
@@ -360,7 +361,7 @@ function tickPlayer(g,dt,input){
    if(strikeGyuwonWard(g,p.x,p.z,w.damage*a.mult,a.yaw,
      playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85))){a.hit=true;return;}
    const impact=kwonMeleeContact(bodyShapes(),p,{
-    reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85,bladeRadius:.28});
+    reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85+(p.floorY||0),bladeRadius:.28});
    if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a,impact);}
   }
  });
@@ -396,7 +397,7 @@ function tickPlayer(g,dt,input){
   if(input.lock!==false)p.yaw=Math.atan2(b.x-p.x,b.z-p.z);
   else if(Math.hypot(x,z)>.05)p.yaw=Math.atan2(x,z);
  }
- if(g.gyuwon.years)pushOutAnnualCover(g,fromX,fromZ,dt);
+ if(g.gyuwon.years){pushOutAnnualCover(g,fromX,fromZ,dt);const next=resolveAnnualWorldMotion(g,{x:fromX,z:fromZ},p);p.x=next.x;p.z=next.z;}
  clampArena(p);
 }
 export function stepGyuwon(g,dt,input={}){
@@ -408,6 +409,7 @@ export function stepGyuwon(g,dt,input={}){
    g.player.action=null;g.projectiles.length=0;tickBoss(g,h);
   }
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
+  if(g.gyuwon.years){g.boss.floorY=annualFloorHeight(g,g.boss.x,g.boss.z);const p=g.player,ground=annualFloorHeight(g,p.x,p.z);if((p.floorY||0)-ground>.2){p.floorV=(p.floorV||0)-20*h;p.floorY=Math.max(ground,p.floorY+p.floorV*h);}else{p.floorY=ground;p.floorV=0;}}
   left-=h;
  }
 }

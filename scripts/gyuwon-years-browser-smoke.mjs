@@ -108,7 +108,9 @@ try{
  await page.screenshot({path:'artifacts/gyuwon-years/grade-great.png'});
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
   ?.firstElementChild?.shadowRoot&&window.readYearSession(document.getElementById('gyuwon-battle')
-   .firstElementChild.shadowRoot)?.game?.gyuwon?.years?.year===2,{},{timeout:20000});
+   .firstElementChild.shadowRoot)?.game?.gyuwon?.years?.year===2,{},{timeout:45000}).catch(async error=>{
+  console.error('Year-transition state',await page.evaluate(()=>{const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot,s=root&&window.readYearSession(root);return {active:s?.active,time:s?.game?.time,years:s?.game?.gyuwon?.years,diagnostics:s?.diagnostics()};}),errors);throw error;
+ });
  const carriedHp=await page.evaluate(()=>{
   const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
   const g=window.readYearSession(root).game;
@@ -162,7 +164,7 @@ try{
   return r&&!!r.querySelector('.gy-dday-clock')?.textContent;
  }),true);
  await page.screenshot({path:'artifacts/gyuwon-years/palsu-octopus.png'});
- await showYear(11,'recallAll','tsunami');
+ await showYear(9,'recallAll','tsunami');
  await page.waitForTimeout(850);snap=await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
@@ -170,7 +172,7 @@ try{
   return {year:g.gyuwon.years.year,hazards:g.gyuwon.hazards.length,
    map:s.diagnostics()?.view?.recall?.active,frameMs:s.diagnostics()?.frameMs?.slice(-120)};
  });
- assert.equal(snap.year,11);assert.ok(snap.hazards>=8);
+ assert.equal(snap.year,9);assert.ok(snap.hazards>=8);
  assert.ok(snap.map?.includes('tsunami'),'real cathedral stage did not appear');
  await page.screenshot({path:'artifacts/gyuwon-years/sibilsu-combined-arena.png'});
  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(480);

@@ -467,6 +467,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     book.rotation.y=(h.id%7)*.14;piles.push(book);
     if(piles.length>26)bookPiles.remove(piles.shift());
    }
+   if(v==='year-omr-floor')continue;
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||v==='year-bullet'||
     v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
@@ -540,6 +541,12 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   for(const [id,item]of dynamic)if(!live.has(id)){retireItem(item);dynamic.delete(id);}
   attackCues.update(g);
  }
+ const viewPoint=new THREE.Vector3(),sight=new THREE.Vector3(),offset=new THREE.Vector3();
+ function occlude(camera,g){
+  if(!dollRoot.visible||!camera||!g?.player)return;
+  sight.set(g.player.x,1.4+(g.player.floorY||0),g.player.z).sub(camera.position);const length=sight.lengthSq();
+  for(const fig of mobiles){const art=fig.getObjectByName('gyuwon-2d-anime-girl-illustration');art.getWorldPosition(viewPoint);offset.copy(viewPoint).sub(camera.position);const along=offset.dot(sight)/Math.max(.001,length),distance=offset.addScaledVector(sight,-along).length();art.material.opacity=along>0&&along<1.1&&distance<1.65?.3:1;}
+ }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
   for(const items of pool.values())for(const item of items)destroyItem(item);pool.clear();poolCount=0;attackCues.dispose();apocalypse.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
@@ -547,6 +554,6 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,ready:Promise.all(animeTextures.map(t=>t.userData.ready||Promise.resolve(true))),stats:()=>({yearProps:dynamic.size,pooledProps:poolCount,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
+ return {root,update,occlude,clear,dispose,artMaterials:animeMaterials,ready:Promise.all(animeTextures.map(t=>t.userData.ready||Promise.resolve(true))),stats:()=>({yearProps:dynamic.size,pooledProps:poolCount,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
 

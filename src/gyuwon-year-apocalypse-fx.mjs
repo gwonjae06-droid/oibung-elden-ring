@@ -116,7 +116,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
   e.worldBreak=worldStrength;
   breakLevel+=(worldStrength-breakLevel)*Math.min(1,.06);
   // These buildings are outside radius 32 and never alter actual navigation.
-  world.visible=worldStrength>.045;
+  world.visible=worldStrength>.045&&!e.worldSeed;
   if(world.visible){
    wall.color.copy(tint.setHex(0x687585).lerp(worldTint,breakLevel*.67));
    const level=breakLevel;

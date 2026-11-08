@@ -55,3 +55,16 @@ test('actual boss maps are built once, keep source geometry, switch exclusively 
  assert.equal(scene.getObjectByName('gyuwon-real-boss-maps'),undefined);
 });
 test('public journey has no dedicated practice entry',()=>{assert.doesNotMatch(readFileSync(new URL('../src/journey.mjs',import.meta.url),'utf8'),/practice-gyuwon|최규원 연습/);});
+
+test('floating memories reuse coherent original scenery without owning copied geometry',()=>{
+ const previous=globalThis.document,gradient={addColorStop(){}};
+ const ctx=new Proxy({createLinearGradient:()=>gradient,createRadialGradient:()=>gradient,measureText:()=>({width:32}),getImageData:()=>({data:new Uint8ClampedArray(1024*1024*4)})},{get:(o,k)=>k in o?o[k]:()=>{}});
+ globalThis.document={createElement:()=>({width:512,height:512,getContext:()=>ctx})};
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);const maps=createGyuwonRecallMaps(scene,{coarse:true,reduced:true});
+ try{for(const id of Object.keys(RECALL_MAP_NAMES)){
+  const source=new Set();maps.root.traverse(o=>{if(o.geometry)source.add(o.geometry);});
+  const part=maps.fragment(id);assert.equal(part.userData.originalMap,id);let count=0;
+  part.traverse(o=>{if(o.isMesh){count++;assert.ok(source.has(o.geometry));}});assert.ok(count>=3);
+  const bounds=new THREE.Box3().setFromObject(part),size=bounds.getSize(new THREE.Vector3());assert.ok(Math.max(size.x,size.y,size.z)<=15.001);
+ }}finally{maps.dispose();globalThis.document=previous;}
+});
