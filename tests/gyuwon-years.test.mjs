@@ -73,7 +73,7 @@ test('outcomes follow 10/50/40 boundaries and maxHP percentages',()=>{
 test('grade recovery resets D-365 and advances one academic year',()=>{
  const g=annual();nextExam(g);
  resolveGyuwonExamGrade(g,.4);
- advance(g,1.82);
+ advance(g,3.83);
  assert.equal(g.gyuwon.years.year,2);
  assert.equal(g.gyuwon.years.day,365);
  assert.equal(g.gyuwon.years.mode,'combat');
