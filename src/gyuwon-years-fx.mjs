@@ -241,7 +241,6 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     mesh(group,glyphPlane,wordMats.get(key),0,.45,.03,1,1,1,'gyuwon-social-symbol-face');
    }
   }
-  }
   return {group,v,parts};
  }
  const WAVE_LIMIT=34;
