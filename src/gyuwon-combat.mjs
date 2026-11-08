@@ -48,9 +48,18 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
   // The sixth-year shrine is breakable. Intact figures absorb a modest portion
   // of incoming boss damage until the player clears them or the cast ends.
   const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;
-  const receipt=acceptAnnualDamage(g,amount*(e.mode==='exam'?.5:1)*shield,{dot}),dealt=receipt.accepted;
-  if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
-   ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
+  const receipt=acceptAnnualDamage(g,amount*(e.mode==='exam'?.5:1)*shield,{dot});
+  s.lastHitReceipt=receipt;
+  // Return actual HP damage only. Saved overflow and calendar pressure
+  // must not inflate DPS, card lifesteal, sigils or bow burn procs.
+  const dealt=receipt.health;
+  if(!dot){
+   if(dealt>0)emit(g,'boss-hit',{amount:dealt,
+    ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
+   else if(receipt.calendarSeconds>0||receipt.credit>0)
+    emit(g,'gyuwon-calendar-hit',{amount:Math.min(amount,b.maxHp*.025),
+     ...(impact?{x:impact.x,y:impact.y,z:impact.part?impact.z:impact.z,part:impact.part}:{})});
+  }
   if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}
   return dealt;
  }
@@ -100,8 +109,10 @@ export function strikeGyuwonWard(g,x,z,damage,yaw=null,reach=2.9){
 function hit(g,amount,source,impact=null){
  const s=g.gyuwon;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
  const damage=damageGyuwon(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1),impact);
- if(!damage)return;
- settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
+ if(damage>0)settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
+ else if(s.years?.mode==='combat'&&s.lastHitReceipt?.calendarSeconds>0)
+  g.stats.hits++; // A confirmed physical hit, but not fake HP damage.
+
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.35,age:0,damage:24,hit:false,...opts};g.gyuwon.hazards.push(h);return h;}
 export function startGyuwonPattern(g,id,{replay=null}={}){

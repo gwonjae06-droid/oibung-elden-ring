@@ -52,10 +52,10 @@ test('annual HP floor converts overflow to visibly faster D-day instead of immun
  const first=damageGyuwon(g,max*100),dayAfterFirst=e.day;
  assert.equal(g.boss.hp,annualFloor(g));
  assert.ok(Math.abs(e.damageBank-budget*.5)<1e-8);
- assert.ok(first>max*.0975,'extra impact is accepted as calendar pressure');
+ assert.ok(Math.abs(first-budget)<1e-8,'only real boss HP reduction counts as dealt damage');
  assert.ok(dayAfterFirst<365&&e.season>0,'a heavy hit visibly advances the day counter');
  const after=damageGyuwon(g,120),dayAfterSecond=e.day;
- assert.ok(after>0,'another hit at the HP floor is not ignored');
+ assert.equal(after,0,'HP damage stays zero while the calendar moves');
  assert.ok(dayAfterSecond<dayAfterFirst,'extra hits advance the actual displayed time');
  assert.equal(g.boss.hp,annualFloor(g),'the next year is still protected');
  assert.equal(e.damageBank,budget*.5,'overflow is not banked twice');
@@ -207,4 +207,20 @@ test('successful and normal exam HP gains persist unchanged into the next year',
   assert.equal(e.year,2);
   assert.ok(Math.abs(g.boss.hp-expected)<1e-7,'next year must not erase the displayed recovery');
  }
+});
+
+test('calendar pressure is visible but cannot become fake player DPS or weapon healing',()=>{
+ const g=make(1,'cards'),e=g.gyuwon.years;
+ g.boss.hp=annualFloor(g);e.damageBank=annualBudget(g)*.5;
+ const day=e.day;
+ assert.equal(g.applyBonusDamage(80),0);
+ assert.equal(g.stats.damage,0);assert.equal(g.stats.hits,0);
+ assert.ok(e.day<day&&g.events.some(q=>q.type==='gyuwon-calendar-hit'));
+ assert.ok(!g.events.some(q=>q.type==='boss-hit'));
+ g.events.length=0;e.recover=5;g.player.z=g.boss.z+2;
+ assert.ok(actGyuwon(g,'light'));
+ advance(g,.85);
+ assert.equal(g.stats.damage,0,'the HP bar did not move so damage stats must not rise');
+ assert.ok(g.stats.hits>=1,'landed weapon contact still counts as a hit');
+ assert.equal(g.boss.hp,annualFloor(g));
 });

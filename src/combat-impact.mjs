@@ -17,11 +17,14 @@ export function createCombatImpact({shell=null,root=null,boss='kwon',reduced=fal
  }
  function hit(e,g){
   if(disposed||!g||!e)return false;showCamera?.observe(g);
-  const handHit=boss==='dice'&&e.type==='dice-giant-hand-hit',kind=e.type==='boss-hit'||handHit?'boss':['player-hit','hurt','player-crushed'].includes(e.type)?'player':null;if(!kind)return false;
+  const handHit=boss==='dice'&&e.type==='dice-giant-hand-hit',
+    calendarHit=boss==='gyuwon'&&e.type==='gyuwon-calendar-hit',
+    kind=e.type==='boss-hit'||handHit||calendarHit?'boss':['player-hit','hurt','player-crushed'].includes(e.type)?'player':null;
+   if(!kind)return false;
   const raw=Number(e.amount),amount=Number.isFinite(raw)?Math.max(0,raw):0;if(amount<=0&&e.type!=='player-crushed')return false;
   const hp=g[kind==='boss'?'boss':'player'];if(!hp)return false;
   const max=Math.max(1,Number(hp.maxHp)||100),current=clamp(Number(hp.hp)||0,0,max),old=lastHp[kind]===null?clamp(current+amount,0,max):clamp(Math.max(lastHp[kind],current+amount),0,max);
-  if(!handHit){lastHp[kind]=current;const trail=trails[kind];trail.max=max;trail.current=current;trail.value=Math.max(trail.value??old,old);trail.wait=.13;}
+  if(!handHit&&!calendarHit){lastHp[kind]=current;const trail=trails[kind];trail.max=max;trail.current=current;trail.value=Math.max(trail.value??old,old);trail.wait=.13;}
   const b=g.boss,p=g.player,dx=(kind==='boss'?b.x-p.x:p.x-b.x)||0,dz=(kind==='boss'?b.z-p.z:p.z-b.z)||0,length=Math.hypot(dx,dz)||1,heavy=Boolean(e.big)||(handHit&&amount>=60)||amount>=max*.11||g.weapon==='hammer'&&kind==='boss',style=IMPACT_FEEL[boss]||IMPACT_FEEL.kwon,weight=clamp(.65+amount/max*4,.65,1.5),state=recoil[kind];
   state.total=kind==='boss'?(heavy?BOSS_IMPACT_SECONDS.heavy:BOSS_IMPACT_SECONDS.light):BOSS_IMPACT_SECONDS.player;state.left=state.total;state.dx=dx/length;state.dz=dz/length;state.amp=kind==='boss'?style.recoil*weight:.48*weight;
   if(kind==='boss'){freeze=Math.max(freeze,hitstopSeconds(amount,heavy,g.weapon));flash=Math.max(flash,reduced?.055:.12);}else flash=Math.max(flash,reduced?.08:.22);return true;
