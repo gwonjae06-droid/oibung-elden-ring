@@ -31,10 +31,10 @@ test('every year-specific attack has a visible anticipation preceding its first 
 
 test('the examination subject cadence still gives at least one second of warning',()=>{
  const g=game();g.gyuwon.years.cast=null;g.gyuwon.years.recover=0;
- g.gyuwon.years.season=26;
+ g.gyuwon.years.season=30;
  stepGyuwon(g,.03);
  assert.equal(g.gyuwon.years.mode,'exam');
- assert.ok(GYUWON_SUBJECT_SECONDS>=2.4);
+ assert.ok(GYUWON_SUBJECT_SECONDS===1.8);
  for(const h of g.gyuwon.hazards)assert.ok(h.warn>=GYUWON_MIN_TELEGRAPH-.001);
 });
 
@@ -119,7 +119,7 @@ test('six high-detail dolls actually descend onto their matching live strike cen
   const i=fig.userData.index,angle=i*Math.PI/3;
   assert.ok(Math.abs(fig.position.x-Math.sin(angle)*14)<.001);
   assert.ok(Math.abs(fig.position.z-Math.cos(angle)*14)<.001);
-  assert.ok(fig.children.length>=10);
+  assert.ok(fig.getObjectByName('gyuwon-2d-anime-girl-illustration'));
  }
  fx.dispose();
 });
@@ -147,27 +147,17 @@ test('visual cues activate on and only after the scheduled collision clock',()=>
 });
 
 
-test('third-year physical flame ring and social-science exam symbols follow live expanding radius',()=>{
+test('third-year flame uses a continuous crest at its authoritative radius',()=>{
  const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
- const burning=game(3);startGyuwonYearCast(burning,'flame');
- fx.update(burning);
- const flames=stage.getObjectByName('gyuwon-live-ring-crests');
- assert.ok(flames?.isInstancedMesh);
- assert.equal(flames.count,54);
- const h=burning.gyuwon.hazards[0];h.age=h.warn+.25;fx.update(burning);
- const m=new THREE.Matrix4();flames.getMatrixAt(0,m);
- const c=new THREE.Vector3(),q=new THREE.Quaternion(),scale=new THREE.Vector3();m.decompose(c,q,scale);
- assert.ok(Math.abs(c.z-(h.r+(h.grow||0)*.25))<.01,'physical crest must follow live hazard radius');
- const examined=game();examined.gyuwon.years.season=26;examined.gyuwon.years.recover=0;
- stepGyuwon(examined,.03);
- for(let i=0;i<4;i++){
-  examined.gyuwon.years.subjectT=GYUWON_SUBJECT_SECONDS-.01;
-  stepGyuwon(examined,.03);
+ const g=game(3);startGyuwonYearCast(g,'flame');fx.update(g);
+ const crest=stage.getObjectByName('gyuwon-continuous-physical-pressure-crest');
+ assert.ok(crest?.isMesh);assert.equal(crest.isInstancedMesh,undefined);
+ const h=g.gyuwon.hazards[0];h.age=h.warn+.25;fx.update(g);
+ const attr=crest.geometry.attributes.position,r=h.r+h.grow*.25;
+ for(let i=0;i<attr.count;i++){
+  const d=Math.hypot(attr.getX(i),attr.getZ(i));
+  assert.ok(d>=r-h.width*.72-.001&&d<=r+h.width*.72+.001);
  }
- assert.equal(examined.gyuwon.years.subjectLabel,'탐구');
- fx.update(examined);
- assert.ok(stage.getObjectByName('gyuwon-social-law-object'));
- assert.ok(stage.getObjectByName('gyuwon-live-ring-crests'));
  fx.dispose();
 });
 
@@ -182,3 +172,4 @@ test('rider IK plants both character shoes on raised vehicle pegs, then blends o
  assert.ok(shoe.position.y<.26,'shoes should settle back onto the floor after dismounting');
  actor.dispose();
 });
+

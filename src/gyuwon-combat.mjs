@@ -86,6 +86,11 @@ export function strikeGyuwonWard(g,x,z,damage,yaw=null,reach=2.9){
  emit(g,'gyuwon-ward-hit',{x:best.x,z:best.z,amount:damage});
  if(best.hp<=0){
   g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>h.wardIndex!==best.index);
+  if(e.wards.every(w=>w.hp<=0)){
+   g.gyuwon.hazards.length=0;g.gyuwon.stun=3;
+   e.cast=null;e.rideTrack=[];e.recover=3;g.gyuwon.pattern=null;
+   g.boss.state='recovery';emit(g,'stagger');
+  }
   emit(g,'gyuwon-ward-break',{x:best.x,z:best.z,remaining:e.wards.filter(w=>w.hp>0).length});
  }
  return true;
@@ -244,7 +249,7 @@ function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition'
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
- const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage));
+ const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage*(g.gyuwon.years?.attackBuff>0?1.25:1)));
  h.hit=true;p.hp=Math.max(0,p.hp-amount);p.invuln=.65;if(h.slow)g.gyuwon.slow=h.slow;
  emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.gyuwon.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
@@ -378,3 +383,4 @@ export function stepGyuwon(g,dt,input={}){
   left-=h;
  }
 }
+

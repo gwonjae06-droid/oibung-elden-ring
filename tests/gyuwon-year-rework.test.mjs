@@ -15,12 +15,12 @@ const game=(year=1)=>{
 test('all five exam subjects fight only near the boss, never target the player position',()=>{
  const g=game(1),e=g.gyuwon.years;
  g.player.x=21;g.player.z=19;g.boss.x=-3;g.boss.z=-2;
- e.cast=null;e.recover=0;e.season=26;
+ e.cast=null;e.recover=0;e.season=30;
  stepGyuwon(g,.03);
  assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
   assert.equal(e.subject,i);
-  assert.ok(g.gyuwon.hazards.length>0);
+  assert.ok(i===4?g.gyuwon.hazards.length===0:g.gyuwon.hazards.length>0);
   for(const h of g.gyuwon.hazards){
    assert.ok(['circle','ring'].includes(h.shape),h.shape);
    assert.ok(Math.hypot(h.x-g.boss.x,h.z-g.boss.z)+h.r<=GYUWON_EXAM_MAX_REACH);
@@ -117,8 +117,9 @@ test('years no longer create a broadcast-cone panel or a combined rifle-and-bow 
  const stage=new THREE.Group(),fx=createGyuwonYearsFx(stage,{coarse:true});
  const g=game(7);startGyuwonYearCast(g,'chatstorm');fx.update(g);
  assert.equal(stage.getObjectByName('gyuwon-live-cone-surface'),undefined);
- assert.ok(g.gyuwon.hazards.every(h=>h.shape==='circle'&&h.visual==='year-stream-pulse'));
- assert.ok(stage.getObjectByName('gyuwon-broadcast-bass-wave-physical-ring'));
+ assert.ok(g.gyuwon.hazards.every(h=>h.shape==='ring'&&h.visual==='year-stream-pulse'));
+ assert.ok(stage.getObjectByName('gyuwon-continuous-physical-pressure-crest'));
  assert.equal(stage.getObjectByName('gyuwon-snipergun-and-bow'),undefined);
  fx.dispose();
 });
+

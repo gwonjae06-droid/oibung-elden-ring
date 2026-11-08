@@ -29,9 +29,9 @@ export function createGyuwonSoftTentacle(parent,material,{coarse=false,index=0}=
   const sway=Math.sin(time*1.9+index*.64)*(.40*(1-easing)+.14);
   for(let i=0;i<5;i++){
    const t=i/4,d=reach*t,arc=Math.sin(t*Math.PI);
-   const height=attacking?2.45+(1-t)*1.15+(1-easing)*2.8*arc:
+   const height=attacking?2.45*(1-t)+.28*t+(1-easing)*3.6*arc:
     2.45+2.5*arc-1.2*t;
-   const offset=sway*t+.38*arc*Math.sin(time*1.25+index+t*3)*(1-.60*easing);
+   const offset=(sway*t+.38*arc*Math.sin(time*1.25+index+t*3))*(1-easing);
    pts[i].set(x+side*d+lateralX*offset,height,z+forward*d+lateralZ*offset);
   }
   const spline=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.38);
@@ -60,3 +60,4 @@ export function createGyuwonSoftTentacle(parent,material,{coarse=false,index=0}=
  function dispose(){mesh.removeFromParent();geometry.dispose();}
  return {mesh,pose,dispose,stats:()=>({rings:bands+1,sides,vertices:position.length/3})};
 }
+

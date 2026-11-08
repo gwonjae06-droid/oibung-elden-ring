@@ -62,12 +62,6 @@ export function createGyuwonGachaWheel(parent,{coarse=false}={}){
    bulbMat[i%2],'gyuwon-live-donation-light-bulb');
   bulb.position.set(Math.cos(a)*2.06,Math.sin(a)*2.06,.23);
  }
- const beacons=new THREE.Group();beacons.name='gyuwon-gacha-winning-burst';root.add(beacons);
- for(let i=0;i<(coarse?14:26);i++){
-  const goldChip=add(beacons,ownGeo(new THREE.OctahedronGeometry(.12,0)),i%2?gold:bulbMat[1],
-   'gyuwon-gacha-physical-jackpot-spark');
-  goldChip.userData.number=i;
- }
  let disposed=false;
  function update(g){
   if(disposed)return;
@@ -76,16 +70,10 @@ export function createGyuwonGachaWheel(parent,{coarse=false}={}){
   if(!active)return;
   root.position.set(g.boss.x,4.2,g.boss.z+3.0);
   root.rotation.y=g.boss.yaw||0;
-  const t=e.castT||0,turn=ease(t/3.05);
+  const t=e.cast==='nightmare365'?Math.max(0,(e.castT||0)-7.6):e.castT||0,turn=ease(t/(e.cast==='nightmare365'?1.0:3.05));
   rotor.rotation.z=TAU*8*turn+gyuwonGachaResultAngle(e.gachaResult||0)*turn;
   pointer.rotation.z=Math.PI+Math.sin(Math.min(3,t)*22)*.075*(1-turn);
-  beacons.visible=t>=3.05;
-  beacons.children.forEach((part,i)=>{
-   const a=i*2.399963+g.time*(.65+(i%4)*.19),r=2.35+((i%3)*.28)+Math.sin(t*4+i)*.19;
-   part.position.set(Math.cos(a)*r,Math.sin(a)*r,Math.sin(t*3+i)*.6);
-   part.rotation.set(g.time*1.4+i,g.time*.7-i,i*.4);
-   part.scale.setScalar(.65+.7*Math.abs(Math.sin(g.time*7+i)));
-  });
+
  }
  function dispose(){if(disposed)return;disposed=true;root.removeFromParent();
   for(const obj of materials)obj.dispose();for(const obj of geos)obj.dispose();
@@ -93,3 +81,4 @@ export function createGyuwonGachaWheel(parent,{coarse=false}={}){
  }
  return {root,rotor,update,dispose,stats:()=>({sectors:6,outcomes:GYUWON_GACHA_OUTCOMES.length})};
 }
+

@@ -5,7 +5,7 @@ import {resolve} from 'node:path';
 import {chromium} from 'playwright-core';
 
 const which=cmd=>{try{return execFileSync('which',[cmd],{encoding:'utf8'}).trim();}catch{return '';}};
-const executablePath=which('google-chrome')||which('google-chrome-stable')||which('chromium')||which('chromium-browser');
+const executablePath=process.env.EDGE_PATH||which('google-chrome')||which('google-chrome-stable')||which('chromium')||which('chromium-browser');
 if(!executablePath)throw Error('Chromium/Chrome missing on runner');
 await mkdir('artifacts/gyuwon-years',{recursive:true});
 const browser=await chromium.launch({
@@ -51,7 +51,7 @@ try{
  await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const g=readBattleSession(document.getElementById('gyuwon-battle').firstElementChild.shadowRoot).game;
-  const e=g.gyuwon.years;e.mode='combat';e.season=26;e.day=0;e.cast=null;e.recover=0;
+  const e=g.gyuwon.years;e.mode='combat';e.season=30;e.day=0;e.cast=null;e.recover=0;
   g.boss.state='recovery';g.gyuwon.hazards.length=0;
  });
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')
@@ -131,3 +131,4 @@ try{
  await page.evaluate(()=>window.__yearQa?.close?.());
  console.log('GYUWON_DDAY_BROWSER_SMOKE',JSON.stringify({snap:{...snap,frameMs:snap.frameMs?.slice(-4)},mobile,errors}));
 }finally{await browser.close();}
+

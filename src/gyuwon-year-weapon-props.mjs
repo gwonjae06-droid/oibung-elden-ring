@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 // Actual handheld objects on the sculpted actor's wrist joints. No duplicate
 // 'rifle and bow at once' prop can be spawned in world space.
 export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
@@ -35,7 +36,7 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   smokePuffs.push(puff);
  }
  const gun=mount(wrists[1],'gyuwon-fourth-year-rifle-rig');
- gun.position.set(.015,-.12,.18);
+ gun.position.set(.015,.12,-.24);gun.scale.setScalar(.62);
  const receiver=add(gun,new THREE.BoxGeometry(.33,.31,1.22),metal,'gyuwon-rifle-receiver',0,0,.72);
  add(gun,new THREE.BoxGeometry(.27,.25,.8),wood,'gyuwon-rifle-wooden-stock',0,-.04,-.29);
  const muzzle=add(gun,new THREE.CylinderGeometry(.07,.085,1.5,coarse?10:18),barrel,
@@ -65,6 +66,7 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  add(bow,bowGeo(lower),wood,'gyuwon-bow-recurved-lower-limb');
  add(bow,new THREE.BoxGeometry(.17,.4,.16),stock,'gyuwon-bow-hand-grip',0,0,.61);
  const drawLine=geo(new THREE.BufferGeometry());
+ const stringHand=new THREE.Vector3();
  drawLine.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9),3));
  const bowString=new THREE.Line(drawLine,new THREE.LineBasicMaterial({color:0xf4eac8}));
  materials.push(bowString.material);bowString.name='gyuwon-bow-live-drawn-string';bow.add(bowString);
@@ -80,11 +82,9 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  function update(g){
   if(disposed)return;
   const e=g?.gyuwon?.years,year=e?.year,cast=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
-  cigarette.visible=cast==='smoke'||cast==='ultimateSmoke'||cast==='nightmare365'&&t>=2.7&&t<4.55;
-  gun.visible=cast==='sniper'||cast==='crossfire'||cast==='ultimateMarksman'||cast==='nightmare365'&&t>=4.25&&t<6.25;
-  supportingHand.visible=gun.visible;
-  bow.visible=cast==='archery'||cast==='ultimateMarksman'&&t>=3.8||cast==='nightmare365'&&t>=5.5&&t<6.6;
-  arrow.visible=bow.visible;
+  const pose=gyuwonWeaponPose(e,g.gyuwon?.hazards);
+  cigarette.visible=pose.cigarette;gun.visible=pose.rifle;
+  supportingHand.visible=gun.visible;bow.visible=pose.bow;arrow.visible=pose.nocked;
   const smoking=Math.max(0,Math.min(1,t/1.2));
   cigarette.rotation.set(-.24-.55*smoking,0,.16);
   ember.emissiveIntensity=1.1+.7*Math.max(0,Math.sin(t*8));
@@ -95,18 +95,13 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
    p.scale.setScalar(.4+u*2.9);
    p.material.opacity=(1-u)*.18;
   });
-  const shot=gun.visible&&g.gyuwon?.hazards?.some(h=>h.visual==='year-bullet'&&
-   h.age>=h.warn&&h.age<h.warn+.13);
-  gun.position.z=.18-(shot?.15:0);
-  gun.rotation.x=shot?.13:0;
-  // Every arrow remains a genuine 3D bolt while the separate string bends
-  // smoothly toward the pulling hand. Nock recoils on its authored beat.
-  const draw=bow.visible?Math.min(1,t/1.16):0;
-  const released=(e?.cast==='archery'||e?.cast==='ultimateMarksman')&&g.gyuwon?.hazards?.some(h=>h.visual==='year-arrow'&&h.fired);
-  const pull=draw*(released?.13:1);
+  gun.position.z=-.24-pose.recoil*.10;
+  gun.rotation.x=pose.recoil*.13;
+  const pull=pose.draw;
   const positions=drawLine.getAttribute('position');
   positions.setXYZ(0,0,-1.26,.17);
-  positions.setXYZ(1,0,0,.17-pull*.72);
+  bow.updateWorldMatrix(true,false);wrists[1].getWorldPosition(stringHand);bow.worldToLocal(stringHand);
+  positions.setXYZ(1,stringHand.x,stringHand.y,stringHand.z);
   positions.setXYZ(2,0,1.26,.17);
   positions.needsUpdate=true;
   arrow.position.z=.18-pull*.54;arrow.rotation.x=.12*pull;
@@ -118,3 +113,4 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  }
  return {update,dispose,stats:()=>({cigarette:cigarette.visible,gun:gun.visible,bow:bow.visible})};
 }
+

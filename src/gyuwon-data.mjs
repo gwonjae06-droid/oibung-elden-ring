@@ -34,9 +34,34 @@ export const gyuwonPool=(phase,space='white')=>phase===1
    :['reverse','stop','paradox','erasure','counterproof'])
  :MEMORY_ORDER;
 // Shared collision geometry also drives the warning meshes.
-import {hazardContains as ordinaryContains} from './blood-data.mjs';
-export {hazardPosition} from './blood-data.mjs';
+import {hazardContains as ordinaryContains,hazardPosition as ordinaryPosition} from './blood-data.mjs';
+import {sampleRide,tentacleYaw} from './gyuwon-year-choreography.mjs';
+export function hazardPosition(h){
+ if(h.rideSegment)return sampleRide(h.rideSegment,h.age);
+ if(h.topple){
+  const q=Math.max(0,Math.min(1,(h.age-h.warn)/h.life));
+  return {x:h.x,z:h.z,r:h.r,angle:q*Math.PI/2};
+ }
+ return ordinaryPosition(h);
+}
 export function hazardContains(h,p){
+ if(h.visual==='year-tentacle'){
+  const yaw=tentacleYaw(h),dx=p.x-h.originX,dz=p.z-h.originZ;
+  const along=dx*Math.sin(yaw)+dz*Math.cos(yaw),q=Math.max(0,Math.min(1,along/h.length));
+  const thickness=Math.min(h.width,.64*Math.pow(1-q,.82)+.14);
+  return Math.abs(dx*Math.cos(yaw)-dz*Math.sin(yaw))<=thickness&&along>=0&&along<=h.length;
+ }
+ if(h.rideSegment){const c=hazardPosition(h);return Math.hypot(p.x-c.x,p.z-c.z)<=h.r+.28;}
+ if(h.shape==='topple'){
+  const dx=p.x-h.x,dz=p.z-h.z,s=Math.sin(h.yaw),c=Math.cos(h.yaw);
+  return Math.abs(dx*c-dz*s)<=h.width&&Math.abs(dx*s+dz*c)<=h.length/2;
+ }
+ if(h.shape==='radialWave'){
+  const c=hazardPosition(h),dx=p.x-c.x,dz=p.z-c.z;
+  return Math.abs(dx*Math.cos(h.yaw)-dz*Math.sin(h.yaw))<=h.width&&
+   Math.abs(dx*Math.sin(h.yaw)+dz*Math.cos(h.yaw))<=h.depth;
+ }
  if(h.shape==='wave'){const z=h.z+(h.age-h.warn)*h.speed;return Math.abs(p.z-z)<h.depth+.55&&Math.abs(p.x-h.gap)>h.opening-.55;}
  return ordinaryContains(h,p);
 }
+

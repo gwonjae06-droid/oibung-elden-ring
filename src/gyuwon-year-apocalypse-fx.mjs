@@ -60,22 +60,8 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
  const wards=[];
  for(let i=0;i<6;i++){
   const o=new THREE.Group();o.name='gyuwon-physical-ward-'+i;wardRoot.add(o);wards.push(o);
-  const a=mesh(o,ring,gold,0,2.3,0,1.55,2.1,1,'gyuwon-shrine-ward-halo');
-  const b=mesh(o,ring,ghostMat,0,2.3,0,1.1,1.65,1,'gyuwon-shrine-secondary-halo');
-  a.rotation.y=.4;b.rotation.y=-.4;
   mesh(o,box,dark,0,.65,0,1.4,1.15,.6,'gyuwon-ward-collapsible-plinth');
  }
- const castRoot=new THREE.Group();castRoot.name='gyuwon-signature-physical-spectacle';root.add(castRoot);
- const charge=mesh(castRoot,ball,gold,0,3.5,0,.8,.8,.8,'gyuwon-ultimate-charge-core');
- const castRings=[];
- for(let i=0;i<3;i++){
-  const part=mesh(castRoot,ring,i%2?ghostMat:gold,0,1.1,0,2+i*.7,2+i*.7,2+i*.7,
-   'gyuwon-signature-circling-mechanical-orbit');
-  part.rotation.x=.4+i*.47;castRings.push(part);
- }
- const haloParticles=new THREE.InstancedMesh(ball,gold,coarse?12:24);
- haloParticles.name='gyuwon-signature-orbiting-material';castRoot.add(haloParticles);
- haloParticles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
  const nightmareRoot=new THREE.Group();nightmareRoot.name='gyuwon-365-day-nightmare-ghost-relay';
  root.add(nightmareRoot);
  const afterimages=[];
@@ -91,9 +77,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
    arm.rotation.z=side*.19;
    mesh(group,box,clothing,side*.23,.35,0,.29,.8,.33,'gyuwon-memory-leg');
   }
-  const token=mesh(group,ball,i%2?red:gold,0,3.0,0,.24,.24,.24,
-   'gyuwon-old-year-signature-token');
-  group.userData.token=token;afterimages.push(group);
+  afterimages.push(group);
  }
  const finale=mesh(nightmareRoot,ring,red,0,.18,0,5,5,5,
   'gyuwon-nightmare-final-circular-shockwave');finale.rotation.x=Math.PI/2;
@@ -109,7 +93,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
   if(!e||g.status!=='playing'){root.visible=false;return;}
   root.visible=true;
   const t=g.time,aim=Math.atan2(g.player.x-b.x,g.player.z-b.z);
-  const worldStrength=gyuwonWorldBreak(e.year,e.failures);
+  const worldStrength=gyuwonWorldBreak((e.examCount||0)+1,e.failures);
   e.worldBreak=worldStrength;
   breakLevel+=(worldStrength-breakLevel)*Math.min(1,.06);
   // These buildings are outside radius 32 and never alter actual navigation.
@@ -166,7 +150,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
    }
    gradeWave.material=gradeColour;
    gradeWave.scale.setScalar(.2+3.5*smooth((gt-1.5)/1.4));
-   gradeWave.visible=gt>1.2;gradeWave.position.y=.05;
+   gradeWave.visible=false;gradeWave.position.y=.05;
    for(let i=0;i<pages.length;i++){
     const sheet=pages[i],a=i*2.399963;
     sheet.visible=gt>1.1;
@@ -180,33 +164,12 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
   if(wardRoot.visible)wards.forEach((o,i)=>{
    const w=e.wards[i];o.visible=!!w&&w.hp>0;
    if(o.visible){
-    o.position.set(w.x,0,w.z);o.rotation.y=t*.4+i*.8;
-    o.scale.setScalar(.87+.13*Math.sin(t*4+i));
+    o.position.set(w.x,0,w.z);o.rotation.y=0;
+    o.scale.set(1,Math.max(.25,w.hp/w.maxHp),1);
    }
   });
   const active=e.mode==='combat'&&!!e.cast&&
    (e.cast.startsWith('ultimate')||e.cast==='nightmare365');
-  castRoot.visible=active;
-  if(active){
-   const n=e.castT||0;
-   const palette=e.year<=3?gold:e.year<=5?red:e.year<=8?ghostMat:gold;
-   charge.material=palette;charge.position.set(b.x,4+Math.sin(t*3)*.4,b.z);
-   charge.scale.setScalar(1.0+Math.sin(t*6)*.22);
-   castRings.forEach((part,i)=>{
-    part.material=palette;part.position.set(b.x,1.4+Math.sin(t+i)*.25,b.z);
-    part.rotation.set(.22+i*.45,t*(i%2?-.7:.6),t*.39+i);
-    part.scale.setScalar((2.1+i*.62)*(1+.11*Math.sin(n*4+i)));
-   });
-   for(let i=0;i<haloParticles.count;i++){
-    const ang=i*2.399963+t*(.6+(i%3)*.14),r=3+(i%3)*.75;
-    dummy.position.set(b.x+Math.sin(ang)*r,2+(i%6)*.4,
-     b.z+Math.cos(ang)*r);
-    dummy.rotation.set(t*.5+i,i*.4,t*.6);
-    dummy.scale.setScalar(.14+.07*(i%3));dummy.updateMatrix();
-    haloParticles.setMatrixAt(i,dummy.matrix);
-   }
-   haloParticles.instanceMatrix.needsUpdate=true;
-  }
   const nightmare=active&&e.cast==='nightmare365';
   nightmareRoot.visible=nightmare;
   if(nightmare){
@@ -221,15 +184,16 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
      Math.cos(angle)*radius);
     o.rotation.y=angle+Math.PI;
     o.scale.setScalar((.74+i*.025)*rise*leave);
-    o.userData.token.position.y=2.9+.18*Math.sin(t*4+i);
+
    });
-   finale.visible=progress>13.8;
+   finale.visible=false;
    if(finale.visible)finale.scale.setScalar(3.2+Math.max(0,progress-15.1)*9);
   }
  }
  function dispose(){if(disposed)return;disposed=true;root.removeFromParent();
   for(const m of mats)m.dispose();for(const g of geos)g.dispose();
-  wallPieces.dispose();windows.dispose();rubble.dispose();haloParticles.dispose();}
+  wallPieces.dispose();windows.dispose();rubble.dispose();}
  return {root,update,dispose,stats:()=>({corruption:breakLevel,
   brokenWalls:wallCount,fracturedWindows:windowCount,ghosts:afterimages.length})};
 }
+

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {GYUWON_RIFLE_SOCKET,ownAnticipation} from './gyuwon-year-choreography.mjs';
 
 // In-world, genuinely volumetric objects. Windup, contact and despawn are read
 // from the identical hazard clock used by the authoritative combat engine.
@@ -34,7 +35,7 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
    const count=coarse?14:28;
    for(let i=0;i<count;i++){
     const fogMaterial=fog.clone();fogMaterial.opacity=.12;
-    mats.push(fogMaterial);
+
     const puff=new THREE.Mesh(puffGeo,fogMaterial);
     puff.name='gyuwon-real-cigarette-smoke-plume';
     puff.userData.index=i;
@@ -46,14 +47,15 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
    ray.rotation.x=Math.PI/2;ray.scale.set(1.7,Math.max(1,h.length),1.7);
    parent.add(ray);meshes.push(ray);
    const muzzle=new THREE.Mesh(orb,charged);parent.add(muzzle);meshes.push(muzzle);
-   const rim=new THREE.Mesh(ring,ember);rim.rotation.y=Math.PI/2;parent.add(rim);meshes.push(rim);
-   ray.position.y=1.45;
-   muzzle.position.set(0,1.5,-h.length/2);
-   rim.position.set(0,1.5,-h.length/2);
+
+   ray.position.y=GYUWON_RIFLE_SOCKET.height;
+   muzzle.position.set(0,GYUWON_RIFLE_SOCKET.height,-h.length/2);
+
   }
   return {parent,meshes,type:h.visual,id:h.id};
  }
  function release(id){const obj=items.get(id);if(!obj)return;
+  for(const mesh of obj.meshes)if(!mats.includes(mesh.material))mesh.material.dispose();
   obj.parent.removeFromParent();items.delete(id);}
  function clear(){for(const id of [...items.keys()])release(id);}
  function update(g){
@@ -71,13 +73,12 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
    parent.visible=!(h.signature&&h.warn-h.age>1.55);
    parent.position.set(h.x,0,h.z);parent.rotation.y=h.yaw||0;
    if(obj.type==='year-bullet'){
-    const [ray,muzzle,rim]=meshes;
-    const ready=.13+.87*windup;
+    const [ray,muzzle]=meshes;
+    const ready=.13+.87*ownAnticipation(h);
     ray.visible=true;
-    ray.scale.set(impact?5:1,Math.max(1,h.length),impact?5:1);
-    muzzle.scale.setScalar(impact?3.5:.45+ready*.85);
-    rim.scale.setScalar(.7+ready*1.2);
-    if(impact)rim.rotation.z+=(h.age-h.warn)*8;
+    ray.scale.set(impact?1.4:.32,Math.max(1,h.length),impact?1.4:.32);
+    muzzle.scale.setScalar(impact?.65:0);
+    muzzle.visible=impact;
     ray.material=impact?ember:charged;
    }else{
     for(const puff of meshes){
@@ -100,3 +101,4 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
   for(const geo of geos)geo.dispose();for(const mat of mats)mat.dispose();}
  return {group,update,clear,dispose,stats:()=>({active:items.size,volumetric:true})};
 }
+

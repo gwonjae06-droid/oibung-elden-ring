@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import {ownAnticipation,ridePose,smooth,tentacleYaw} from './gyuwon-year-choreography.mjs';
+import {createGyuwonPressureCrest} from './gyuwon-pressure-crest.mjs';
 import {hazardPosition} from './gyuwon-data.mjs';
 import {buildGyuwonYearAttackCues} from './gyuwon-year-cues.mjs';
 import {createGyuwonAnimeIllustration} from './gyuwon-anime-illustration.mjs';
@@ -130,10 +132,6 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    map:animeTextures[i],transparent:true,depthWrite:false}));
   materials.push(art.material);art.name='gyuwon-2d-anime-girl-illustration';
   art.position.set(0,2.52,0);art.scale.set(2.55,3.86,1);fig.add(art);
-  for(let j=0;j<7;j++)
-   mesh(fig,sphere,j%2?neon:purple,
-    Math.sin(j*2.399963)*1.48,.62+(j%4)*1.04,.28,
-    .12,.12,.12,'gyuwon-anime-collection-bright-star');
   mesh(fig,box,neon,0,.38,.16,1.9,.12,.1,'gyuwon-anime-display-sign');
   fig.scale.setScalar(coarse?.85:1);
  }
@@ -163,46 +161,65 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   if(typeof document==='undefined')return null;
   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
   const c=canvas.getContext('2d');if(!c)return null;
-  c.fillStyle='#e7e1ce';c.fillRect(0,0,512,256);
-  c.strokeStyle='#5c2430';c.lineWidth=8;c.strokeRect(12,12,488,232);
+  c.clearRect(0,0,512,256);
   c.fillStyle='#312932';c.font='bold 68px sans-serif';
   c.textAlign='center';c.textBaseline='middle';
-  c.fillText(glyphSets[kind]?.[idx%4]||'?',256,128,480);
+  if(kind==='year-history'){
+   c.strokeStyle='#d2b78c';c.fillStyle='#9c7452';c.lineWidth=9;
+   if(idx%2===0){ // palace roof and pillars
+    c.beginPath();c.moveTo(70,110);c.lineTo(256,40);c.lineTo(442,110);c.closePath();c.stroke();
+    for(let i=0;i<5;i++)c.fillRect(104+i*66,116,16,100);c.fillRect(80,218,355,12);
+   }else{ // period earthenware silhouette
+    c.beginPath();c.moveTo(205,40);c.lineTo(307,40);c.bezierCurveTo(280,120,420,200,302,228);
+    c.lineTo(210,228);c.bezierCurveTo(92,200,232,120,205,40);c.fill();
+   }
+  }else c.fillText(glyphSets[kind]?.[idx%4]||'?',256,128,480);
   const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
   textures.push(tex);wordTex.set(key,tex);return tex;
  }
  function makeItem(h){
+  const owned=[];const itemGeo=g=>(owned.push(g),g);
   const group=new THREE.Group();group.name='gyuwon-year-attack-'+h.visual;
   root.add(group);
   const v=h.visual||'',parts=[];
-  if(v==='year-workbook'||v==='year-bookfall'||v==='year-merch'){
+  if(v==='year-toppling-book'){
+   const pivot=new THREE.Group();pivot.name='gyuwon-textbook-hinge';group.add(pivot);
+   mesh(pivot,box,paper,0,7.5,0,h.width*2,15,.55,'gyuwon-giant-standing-textbook');
+   for(const side of [-1,1])mesh(pivot,box,hot,0,7.5,side*.31,h.width*2+.12,15.1,.10,'gyuwon-textbook-hardback-cover');
+   for(let i=0;i<5;i++)mesh(pivot,box,graphite,0,11-i*1.2,.38,h.width*1.4,.12,.03,'gyuwon-textbook-cover-lettering');
+   group.userData.hinge=pivot;
+  }else if(v==='sword'){
+   const pivot=new THREE.Group();pivot.name='gyuwon-memory-sword-hinge';group.add(pivot);
+   const shape=new THREE.Shape();shape.moveTo(-1,0);shape.lineTo(1,0);shape.lineTo(1,38);shape.lineTo(0,43);shape.lineTo(-1,38);shape.closePath();
+   const blade=itemGeo(new THREE.ExtrudeGeometry(shape,{depth:.45,bevelEnabled:true,bevelSize:.1,bevelThickness:.12,bevelSegments:2,steps:1}));
+   mesh(pivot,blade,steel,0,0,-.2,1,1,1,'gyuwon-memory-forged-spatial-blade');
+   mesh(pivot,box,steel,0,0,0,6,.6,.8,'gyuwon-memory-sword-crossguard');
+   mesh(pivot,cylinder,graphite,0,-2,0,.45,4,.45,'gyuwon-memory-sword-grip');
+   group.userData.hinge=pivot;
+  }else if(v==='dice'){
+   mesh(group,box,paper,0,0,0,3.4,3.4,3.4,'gyuwon-memory-tumbling-die');
+   for(const side of [-1,1])for(let i=0;i<5;i++)mesh(group,sphere,graphite,side*1.72,(i%2-.5)*1.2,(Math.floor(i/2)-1)*.9,.10,.30,.30,'gyuwon-dice-recessed-pip');
+  }else if(v==='year-radial-sludge'){
+   const body=itemGeo(new THREE.BoxGeometry(h.width*2,3,h.depth*2,coarse?8:16,6,4));
+   const pos=body.attributes.position;
+   for(let i=0;i<pos.count;i++)pos.setZ(i,pos.getZ(i)+Math.sin(pos.getY(i)*1.4)*.35);
+   body.computeVertexNormals();mesh(group,body,slime,0,1.5,0,1,1,1,'gyuwon-rolling-garbage-wave');
+  }else if(v==='year-workbook'||v==='year-bookfall'||v==='year-merch'){
    parts.push(mesh(group,box,paper,0,0,0,
      v==='year-bookfall'?h.r*1.45:1.35,.26,v==='year-bookfall'?h.r*1.52:1.75));
    mesh(group,box,hot,0,.15,0,1.05,.03,1.47);
    if(v==='year-merch'){
-    const art=mesh(group,new THREE.PlaneGeometry(1.25,1.45),
+    const art=mesh(group,itemGeo(new THREE.PlaneGeometry(1.25,1.45)),
      animeMaterials[h.id%6],0,.24,.94,1,1,1,'gyuwon-anime-2d-merch-portrait');
-    geometries.push(art.geometry);art.rotation.x=-Math.PI/2;
+    art.rotation.x=-Math.PI/2;
    }
   }else if(v==='year-gacha-prize'){
    mesh(group,sphere,neon,0,.62,0,h.r*.70,h.r*.94,h.r*.70,
     'gyuwon-gacha-falling-prize-capsule');
    mesh(group,box,steel,0,1,0,1.0,.25,1.0,'gyuwon-gacha-capsule-impact-core');
-   for(let i=0;i<7;i++){
-    const theta=i*2.399963;
-    mesh(group,sphere,i%2?neon:purple,
-     Math.sin(theta)*h.r*.65,.18+i%3*.4,Math.cos(theta)*h.r*.65,
-     .25,.24,.25,'gyuwon-gacha-falling-sparks');
-   }
   }else if(v==='year-stream-pulse'){
-   const beat=mesh(group,ring,neon,0,-.58,0,h.r,h.r,h.r,
-    'gyuwon-broadcast-bass-wave-physical-ring');beat.rotation.x=Math.PI/2;
-   for(let i=0;i<6;i++){
-    const a=i*Math.PI/3;
-    mesh(group,sphere,i%2?hot:purple,
-     Math.sin(a)*h.r*.56,.12,Math.cos(a)*h.r*.56,
-     .3,.30,.3,'gyuwon-stream-vibration-particles');
-   }
+   const crest=createGyuwonPressureCrest(neon,{coarse});group.add(crest.mesh);
+   group.userData.crest=crest;
   }else if(v==='year-pencil'||v==='year-arrow'){
    mesh(group,cylinder,v==='year-arrow'?hot:graphite,0,0,0,.09,2.1,.09).rotation.z=Math.PI*.45;
    mesh(group,sphere,steel,0,-1.05,0,.18,.23,.18);
@@ -210,13 +227,17 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    const diameter=2*(h.r+.28);
    mesh(group,sphere,slime,0,.25,0,diameter,1.55,diameter,
     'gyuwon-contorted-3d-sewage-mass');
-   for(let i=0;i<11;i++){
-    const a=i*2.399963,r=h.r*(.34+.56*((i*7)%5)/5);
-    const blob=mesh(group,sphere,i%4?slime:froth,
-     Math.cos(a)*r,.07+((i%3)*.17),Math.sin(a)*r,
-     .48+(i%3)*.33,.26+(i%4)*.17,.48+(i%3)*.33,
-     'gyuwon-sewage-physical-scattered-waste');
-    blob.rotation.set(i*.7,i*.2,i*.4);
+   if(v==='year-sludge'){
+    const bag=mesh(group,sphere,graphite,.55,.70,.22,1.45,1.65,1.1,'gyuwon-tied-trash-bag');
+    mesh(group,box,graphite,.55,1.65,.22,.32,.28,.24,'gyuwon-trash-bag-tied-neck');
+    const apple=mesh(group,sphere,paper,-.65,.45,.45,.47,.86,.47,'gyuwon-discarded-apple-core');
+    for(const y of [.1,.8])mesh(group,sphere,hot,-.65,y,.45,.73,.26,.73,'gyuwon-apple-peel');
+    const fish=new THREE.Group();fish.name='gyuwon-discarded-fish-skeleton';group.add(fish);fish.position.set(.2,.45,-.8);
+    mesh(fish,box,paper,0,0,0,1.8,.09,.09,'gyuwon-fish-spine');
+    for(let i=0;i<5;i++)for(const side of [-1,1]){
+     const rib=mesh(fish,box,paper,-.6+i*.25,0,side*.21,.06,.06,.52,'gyuwon-fish-rib');rib.rotation.y=side*.45;
+    }
+    mesh(fish,sphere,paper,.92,0,0,.34,.29,.32,'gyuwon-fish-skull');
    }
    const spill=mesh(group,ring,slime,0,-.46,0,
     h.r+.18,h.r+.18,h.r+.18,'gyuwon-sewage-ground-spreading-spill');
@@ -225,16 +246,16 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    // The muzzle-aligned tracer lives in gyuwon-year-cues.mjs, not here.
   }else if(v==='year-photocard'){
    mesh(group,box,paper,0,0,0,1.65,2.15,.075,'gyuwon-anime-photocard-cardstock');
-   const art=mesh(group,new THREE.PlaneGeometry(1.46,1.95),
+   const art=mesh(group,itemGeo(new THREE.PlaneGeometry(1.46,1.95)),
     animeMaterials[h.id%6],0,0,.046,1,1,1,'gyuwon-anime-photocard-2d-illustration');
-   geometries.push(art.geometry);
+
    mesh(group,box,neon,0,-.89,.075,1.2,.09,.035);
   }else if(glyphSets[v]&&v!=='year-social'){
    const tex=wordTexture(v,h.id%4);
    const key=v+(h.id%4);
    if(!wordMats.has(key)){const m=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
     wordMats.set(key,m);if(m!==paper)materials.push(m);}
-   mesh(group,glyphBacking,paper,0,0,-.082,1,1,1,'gyuwon-3d-letter-block');
+
    parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,.006,1,1,1,'gyuwon-letter-ink-face'));
    if(h.shape==='lane'){
     // Exam writing occupies the complete warning/hit lane, not just one
@@ -249,27 +270,23 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    }
   }else if(v==='year-figure'){
    // Figurine attack bodies are handled by the actual posed models.
+  }else if(v==='year-audience'){
+   for(let i=0;i<3;i++){
+    const person=new THREE.Group();person.name='gyuwon-rushing-circus-spectator';person.position.set((i-1)*.8,0,-i*.65);group.add(person);
+    mesh(person,cylinder,graphite,0,1.1,0,.62,1.2,.62,'gyuwon-spectator-coat');
+    mesh(person,sphere,wax,0,1.95,0,.56,.65,.55,'gyuwon-spectator-head');
+    for(const side of [-1,1]){
+     mesh(person,box,graphite,side*.19,.30,side*.22,.25,.7,.28,'gyuwon-spectator-running-leg');
+     mesh(person,box,graphite,side*.42,1.2,side*.22,.20,.8,.22,'gyuwon-spectator-swinging-arm');
+    }
+   }
   }else if(v==='year-circus'){
    mesh(group,sphere,hot,0,0,0,h.r*2,h.r*2,h.r*2);
    }else if(v==='year-fire'||v==='year-social'){
-   // A single instanced physical crest expands at the collision radius.
-   // At max radius, every angular segment overlaps (no invisible hit gaps).
-   const count=coarse?54:80;
-   const inst=new THREE.InstancedMesh(sphere,v==='year-fire'?hot:purple,count);
-   inst.name='gyuwon-live-ring-crests';inst.frustumCulled=false;
-   inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);group.add(inst);
-   group.userData.ringCreasts=inst;
-   if(v==='year-social'){
-    const key='year-social'+h.id%4,tex=wordTexture('year-social',h.id%4);
-    if(!wordMats.has(key)){
-     const ink=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
-     if(ink!==paper)materials.push(ink);wordMats.set(key,ink);
-    }
-    mesh(group,glyphBacking,paper,0,.45,-.06,1,1,1,'gyuwon-social-law-object');
-    mesh(group,glyphPlane,wordMats.get(key),0,.45,.03,1,1,1,'gyuwon-social-symbol-face');
-   }
+   const crest=createGyuwonPressureCrest(v==='year-fire'?hot:purple,{coarse});
+   group.add(crest.mesh);group.userData.crest=crest;
   }
-  return {group,v,parts};
+  return {group,v,parts,owned};
  }
  const WAVE_LIMIT=34;
  function clearWave(){
@@ -294,8 +311,13 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const cueL=mesh(cues,box,paper,0,.08,0,.24,.16,60),cueR=mesh(cues,box,paper,0,.08,0,.24,.16,60);
  const score=new THREE.Group();score.name='gyuwon-score-energy';root.add(score);
  const scoreRing=mesh(score,ring,neon,0,.2,0,3.5,.1,3.5);scoreRing.rotation.x=Math.PI/2;
+ function releaseItem(item){
+  item.group.userData.crest?.dispose();
+  for(const geometry of item.owned)geometry.dispose();
+  item.group.removeFromParent();
+ }
  function removeDynamic(){
-  for(const obj of dynamic.values()){obj.group.userData.ringCreasts?.dispose?.();obj.group.removeFromParent();}
+  for(const obj of dynamic.values())releaseItem(obj);
   dynamic.clear();
  }
  function update(g){
@@ -306,11 +328,11 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   root.visible=true;apocalypse.update(g);
   if(activePileYear!==e.year){activePileYear=e.year;bookPiles.clear();piles.length=0;piled.clear();}
   exam.visible=e.mode==='exam';exam.position.set(b.x,0,b.z);exam.rotation.y=b.yaw;
-  motorcycle.visible=e.mode==='combat'&&(e.cast==='bike'||e.cast==='ultimateBike'||e.cast==='nightmare365'&&e.castT<2);
-  scooter.visible=e.mode==='combat'&&(e.cast==='scooter'||e.cast==='ultimateScooter'||e.cast==='nightmare365'&&e.castT>=2&&e.castT<3.7);
+  const mounted=ridePose(e);
+  motorcycle.visible=!!mounted&&mounted.ride==='bike';scooter.visible=!!mounted&&mounted.ride==='scooter';
   gacha.update(g);
-  bodyslime.visible=e.mode==='combat'&&e.year===5;
-  flameAura.visible=e.mode==='combat'&&e.year===3;
+  bodyslime.visible=false;
+  flameAura.visible=false;
   flameAura.position.set(b.x,0,b.z);
   dollRoot.visible=e.mode==='combat'&&(e.year===6||e.cast==='nightmare365'&&e.castT>=6.5&&e.castT<8);
   streamSet.visible=e.mode==='combat'&&(e.year===7||e.cast==='nightmare365'&&e.castT>=7.8&&e.castT<9.5);
@@ -320,8 +342,8 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    light.scale.setScalar(1+liveEnergy*.12*Math.sin(g.time*6));
   }
   tentacleRoot.visible=e.mode==='combat'&&(e.year===8||e.cast==='nightmare365'&&e.castT>=9.2&&e.castT<11.2);
-  motorcycle.position.set(b.x,0,b.z);motorcycle.rotation.y=b.yaw;
-  scooter.position.set(b.x,0,b.z);scooter.rotation.y=b.yaw;
+  motorcycle.position.set(b.x,mounted?.y||0,b.z);motorcycle.rotation.y=b.yaw;
+  scooter.position.set(b.x,mounted?.y||0,b.z);scooter.rotation.y=b.yaw;
   bodyslime.position.set(b.x,0,b.z);
   if(flameAura.visible)for(let i=0;i<auraFlames.length;i++){
    const flame=auraFlames[i],a=i*Math.PI/4;
@@ -337,9 +359,9 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     const h=s.hazards.find(x=>x.visual==='year-figure'&&Math.hypot(x.x-cx,x.z-cz)<.1);
     fig.position.set(cx,0,cz);
     const impactDust=fig.userData.impactDust;
-    impactDust.visible=!!h&&h.age>=h.warn&&h.age<=h.warn+h.life;
+    impactDust.visible=false;
     if(h){
-     const ready=Math.min(1,h.age/Math.max(.1,h.warn));
+     const ready=ownAnticipation(h);
      // The model itself falls and contacts the identical center as the hit.
      fig.position.y=6*(1-ready)+(h.age>=h.warn?-.15*Math.sin(Math.min(1,(h.age-h.warn)/.35)*Math.PI):0);
      fig.rotation.y=i*.3+(1-ready)*.75;
@@ -353,11 +375,11 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    for(let i=0;i<8;i++){
     const h=s.hazards.find(x=>x.armIndex===i)||
      (e.cast==='octoInk'?s.hazards[i]:null);
-    const a=h?.yaw??i*Math.PI/4;
+    const a=h?tentacleYaw(h):i*Math.PI/4;
     const warn=h?.warn||1.2;
-    const ready=h?Math.max(0,Math.min(1,h.age/warn)):0;
+    const ready=h?ownAnticipation(h)*(h.age<=h.warn+h.life*.7?1:1-smooth((h.age-h.warn-h.life*.7)/(h.life*.3))):0;
     const attacking=h?.visual==='year-tentacle';
-    const reach=attacking?4.2+10.55*ready:
+    const reach=attacking?4.2+(h.length-4.2)*ready:
      e.cast==='octoInk'?11:4.7+Math.sin(g.time*1.8+i)*.4;
     const path=tentacles[i].pose({
      x:b.x,z:b.z,yaw:a,ready,time:g.time,attacking,reach
@@ -378,6 +400,8 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   // Only the actual split in the wave marks the safe passage; no artificial guide.
    cues.visible=false;
   if(waveHazard){
+   const visible=!(waveHazard.signature&&waveHazard.warn-waveHazard.age>1.55);
+   for(const w of waves){w.mesh.visible=w.crest.visible=visible;}
    const half=waveHazard.opening-.55;
    cueL.position.x=waveHazard.gap-half;cueR.position.x=waveHazard.gap+half;
    // Timing and gap edges are read from the live authoritative hazard.
@@ -394,7 +418,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     attr.needsUpdate=true;if(!reduced)w.geometry.computeVertexNormals();
    }
   }
-  score.visible=e.mode==='result';score.position.set(b.x,0,b.z);
+  score.visible=false;score.position.set(b.x,0,b.z);
   if(score.visible){
    const t=e.gradeT;
    score.scale.setScalar(1+t*2.3);scoreRing.material.color.setHex(
@@ -411,48 +435,71 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     if(piles.length>26)bookPiles.remove(piles.shift());
    }
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||v==='year-bullet'||
-    v==='sword'||v==='dice'||v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
+    v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
    if(!item){item=makeItem(h);dynamic.set(h.id,item);}
-   const p=hazardPosition(h),rise=Math.max(0,1-h.age/Math.max(.1,h.warn));
-    item.group.visible=!(h.signature&&h.warn-h.age>1.55);
+   const p=hazardPosition(h),rise=1-ownAnticipation(h);
+   const ready=ownAnticipation(h);
+
+    item.group.visible=h.warn-h.age<=1.55;
    item.group.position.set(p.x,1.45,p.z);
+   if(v==='year-toppling-book'){
+    item.group.position.set(h.x-Math.sin(h.yaw)*h.length/2,0,h.z-Math.cos(h.yaw)*h.length/2);
+    item.group.rotation.set(0,h.yaw,0);
+    // Entire book contacts its floor footprint exactly when damage starts.
+    item.group.userData.hinge.rotation.x=Math.PI/2*smooth(ready);
+   }
+   if(v==='sword'){
+    item.group.position.set(h.x-Math.sin(h.yaw)*h.length/2,0,h.z-Math.cos(h.yaw)*h.length/2);
+    item.group.rotation.set(0,h.yaw,0);item.group.userData.hinge.rotation.x=Math.PI/2*smooth(ready);
+   }
+   if(v==='dice')item.group.position.y=1.7+14*rise;
+   if(v==='year-radial-sludge'){item.group.position.y=0;item.group.rotation.set(0,h.yaw,0);}
+
    if(v==='year-bookfall'||v==='year-merch')item.group.position.y=.45+17*rise;
   if(v==='year-gacha-prize')item.group.position.y=.62+12*rise;
   if(v==='year-stream-pulse')item.group.position.y=.66;
   if(v==='year-gacha-prize'||v==='year-stream-pulse'){
-   const w=Math.min(1,h.age/Math.max(.1,h.warn));
+   const w=ownAnticipation(h);
    item.group.scale.setScalar(.82+.18*w);
   }
    if(v==='year-photocard')item.group.position.y=2.3;
    if(v==='year-sludge'||v==='year-ink'){
-   item.group.position.y=1.1;
+   const progress=ownAnticipation(h),lob=v==='year-sludge'&&e.cast?.startsWith('sewage');
+   item.group.position.y=.52+(lob?Math.sin(Math.PI*progress)*4:0);
+   if(lob){
+    item.group.position.x=e.from.x+(p.x-e.from.x)*smooth(progress);
+    item.group.position.z=e.from.z+(p.z-e.from.z)*smooth(progress);
+    item.group.scale.setScalar(.30+.70*smooth(progress));
+   }
    const puddle=item.group.getObjectByName('gyuwon-sewage-ground-spreading-spill');
    if(puddle){
-    const w=h.age>=h.warn?1:Math.min(1,h.age/Math.max(.1,h.warn));
+    const w=h.age>=h.warn?1:ownAnticipation(h);
     puddle.scale.setScalar((h.r+.18)*(.55+.45*w));
    }
   }
    if(v==='year-fire')item.group.position.y=1.1;
    if(v==='year-circus')item.group.position.y=h.r;
+   if(v==='year-audience'){
+    item.group.position.y=0;item.group.rotation.y=Math.atan2(h.vx,h.vz);
+    item.group.traverse(o=>{
+     if(o.name==='gyuwon-spectator-running-leg')o.rotation.x=Math.sin(h.age*13+Math.sign(o.position.x)*Math.PI/2)*.6;
+     if(o.name==='gyuwon-spectator-swinging-arm')o.rotation.x=-Math.sin(h.age*13+Math.sign(o.position.x)*Math.PI/2)*.65;
+    });
+   }
    if(v==='year-figure')item.group.visible=false;
-    if(glyphSets[v]&&h.shape==='circle')item.group.scale.setScalar(1.18);
-    if(v==='year-fire'||v==='year-social'){
-     const inst=item.group.userData.ringCreasts,center=hazardPosition(h),num=inst.count;
-     const dummy=ringDummy;
-     for(let i=0;i<num;i++){
-      const a=i*Math.PI*2/num;
-      dummy.position.set(Math.sin(a)*center.r,0,Math.cos(a)*center.r);
-      dummy.scale.setScalar(1.5);
-      dummy.rotation.set(0,g.time*3+i*.3,0);dummy.updateMatrix();
-      inst.setMatrixAt(i,dummy.matrix);
-     }
-     inst.instanceMatrix.needsUpdate=true;
-    }
-   if(v.startsWith('year-')&&v!=='year-bookfall')item.group.rotation.y=h.yaw||g.time*.14;
-   item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
+    if(glyphSets[v]&&h.shape==='circle'){
+    item.group.position.y=v==='year-korean'?.7+9*rise:v==='year-english'?1.8+8*rise:1.2;
+    item.group.scale.set(v==='year-english'?.55:1.18,v==='year-english'?2.8:1.18,1.18);
+   }
+   if(item.group.userData.crest){
+    item.group.position.y=0;item.group.rotation.set(0,0,0);
+    item.group.userData.crest.update(p.r,h.width||1,g.time,v==='year-fire',ownAnticipation(h));
+   }
+   if(v.startsWith('year-')&&!['year-bookfall','year-toppling-book','year-radial-sludge','year-audience'].includes(v)&&!item.group.userData.crest)item.group.rotation.y=h.yaw||g.time*.14;
+   if(!item.group.userData.crest&&!item.group.userData.hinge)item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
   }
-  for(const [id,item]of dynamic)if(!live.has(id)){item.group.userData.ringCreasts?.dispose?.();item.group.removeFromParent();dynamic.delete(id);}
+  for(const [id,item]of dynamic)if(!live.has(id)){releaseItem(item);dynamic.delete(id);}
   attackCues.update(g);
  }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
@@ -464,3 +511,4 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  }
  return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
+

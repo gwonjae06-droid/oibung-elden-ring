@@ -44,20 +44,20 @@ test('an ultimate is guaranteed once each year without replacing the shuffled re
  assert.equal(e.year,8);
  assert.equal(e.castCount,1);
 });
-test('real grade cinematics last 3.75s and failed exams progressively break the world',()=>{
+test('real grade cinematics last 3s and failed exams progressively break the world',()=>{
  const g=make(4),e=g.gyuwon.years;
  assert.ok(gyuwonWorldBreak(11,7)>gyuwonWorldBreak(3,1));
  resolveGyuwonExamGrade(g,.95);
  assert.equal(e.grade,'failure');
  assert.equal(e.failures,1);
  assert.ok(e.worldBreak>0);
- assert.equal(e.resultScene.duration,3.75);
+ assert.equal(e.resultScene.duration,3);
  assert.equal(e.mode,'result');
  assert.equal(actGyuwon(g,'attack'),false,'no attacking through a non-skippable grade cinematic');
  const hp=g.boss.hp;assert.equal(damageGyuwon(g,123),0);
  assert.equal(g.boss.hp,hp);
  stepGyuwon(g,.05);assert.equal(e.mode,'result');
- e.gradeT=3.73;stepGyuwon(g,.05);
+ e.gradeT=2.98;stepGyuwon(g,.05);
  assert.equal(e.year,5);
  assert.equal(e.mode,'combat');
  assert.equal(e.resultScene,null);
@@ -81,16 +81,16 @@ test('sixth-year shrine effigies can be physically destroyed and their hitboxes 
 });
 test('six outcome gachas are distinct, real combat layouts',()=>{
  const layouts=[];
+ const g=make(7),e=g.gyuwon.years,seen=new Set();
  for(let result=0;result<6;result++){
-  const g=make(7),e=g.gyuwon.years;
-  e.castCount=result;
   g.time=0;
   startGyuwonYearCast(g,'ultimateGacha');
-  assert.equal(e.gachaResult,(result+1)*7%6);
+  seen.add(e.gachaResult);
   const footprints=g.gyuwon.hazards.map(h=>[h.shape,h.visual,Math.round(h.x*10),Math.round(h.z*10)]);
   assert.ok(footprints.every(h=>h[0]==='circle'||h[0]==='ring'));
   layouts.push(JSON.stringify(footprints));
  }
+ assert.equal(seen.size,6);
  assert.ok(new Set(layouts).size>=5,'six wheel sectors should visibly diverge');
 });
 test('eleventh-year nightmare uses ten sequential past selves and a dodgeable finale',()=>{
@@ -124,3 +124,4 @@ test('far-future signature beats have no premature triangular or visible floor w
  assert.ok(fx.root.children.every(x=>x.geometry?.userData.silhouette==='capped-rounded-stone-no-triangle-warnings'));
  fx.dispose();
 });
+

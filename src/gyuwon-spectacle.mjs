@@ -118,7 +118,9 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
   for(const [id,group] of attacks)releaseAttack(id,group);
  }
  let lastStage=null,lastBuild=-1;
- return {update(g,dt,death){const s=g.gyuwon,b=g.boss,won=g.status==='won';root.visible=b.phase===3||won;
+ return {update(g,dt,death){const s=g.gyuwon,b=g.boss,won=g.status==='won';
+  if(s.years){root.visible=false;clear();return;}
+  root.visible=b.phase===3||won;
   const current=won?null:s.stageMemory,build=Math.min(1,Math.max(.08,s.stageTime)/.35);
   if(current!==lastStage||Math.abs(build-lastBuild)>.025){
    for(const[name,v]of groups){v.visible=!won&&name===current;if(v.visible){
@@ -175,3 +177,4 @@ export function createGyuwonSpectacle(stage,{coarse=false}={}){
    root.removeFromParent();
   }};
 }
+

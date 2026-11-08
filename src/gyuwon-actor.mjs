@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import {ridePose,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
+import {createGyuwonHandIk} from './gyuwon-hand-ik.mjs';
 import {createGyuwonMotionDirector} from './gyuwon-motion.mjs';
 import {createGyuwonYearRig} from './gyuwon-year-rig.mjs';
 
@@ -190,12 +192,13 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  pageGeo.computeVertexNormals();
  for(let i=0;i<6;i++)pages.push(mesh(root,pageGeo,new THREE.MeshStandardMaterial({color:0xd4bd83,side:THREE.DoubleSide,transparent:true,opacity:.8,roughness:.86}),0,0,0,'gyuwon-floating-page'));
  const yearRig=createGyuwonYearRig({torso,head,wrists,coarse});
+ const handIk=createGyuwonHandIk({arms,forearms,wrists,torso});
  let rideBlend=0;
  const motion=createGyuwonMotionDirector();
  return {root,update(g,death=0,dt=0){
   const s=g.gyuwon,b=g.boss,p=motion.update(g,dt),t=Number.isFinite(g.time)?g.time:0;
-  const years=s.years;yearRig.update(g);
-  const mounted=years?.mode==='combat'&&(years.cast==='bike'||years.cast==='scooter'||years.cast==='ultimateBike'||years.cast==='ultimateScooter');
+  const years=s.years,weapon=gyuwonWeaponPose(years,s.hazards);
+  const mounted=ridePose(years);
   const mountTarget=mounted?1:0;
   rideBlend+=(mountTarget-rideBlend)*(1-Math.exp(-Math.min(.05,Math.max(0,dt))*10));
   bodyMaterials.forEach((m,i)=>m.color.copy(originalColors[i]).lerp(goldColor,g.status==='won'?Math.min(1,death/2):0));
@@ -205,15 +208,15 @@ export function createGyuwonActor(stage,{coarse=false}={}){
     pants.color.copy(originalColors[1]).lerp(tone,.20);}
   }
   const transition=b.state==='transition';
-  root.position.set(b.x,g.status==='won'?death*death*1.5:0,b.z);
+  root.position.set(b.x,g.status==='won'?death*death*1.5:mounted?.y||0,b.z);
   root.rotation.y=p.facing;
   const roll=s.years?.dodge;
   root.rotation.z=roll?Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7:0;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
   if(s.years?.year===5&&g.status==='playing')root.scale.set(1+.065*Math.sin(t*3.7),1-.095*Math.sin(t*3.7),1+.05*Math.sin(t*2.8));
-  torso.rotation.set(p.lean*.42,p.twist*.28,p.twist*.10+(p.weightShift||0)*.035);
-  const breath=Math.sin(t*1.9)*.007;
-  torso.position.y=(years?.mode==='exam'?1.54:1.95-rideBlend*.24)-p.steps*.035+breath;
+  torso.rotation.set(weapon.rifle?0:mounted?.28:p.lean*.42,weapon.rifle?0:p.twist*.28,weapon.rifle?0:p.twist*.10+(p.weightShift||0)*.035);
+  const breath=weapon.rifle?0:Math.sin(t*1.9)*.007;
+  torso.position.y=(years?.mode==='exam'?1.54:1.95+rideBlend*.36)-p.steps*.035+breath;
   head.rotation.set(p.headPitch,p.headYaw,Math.sin(t*2)*.012);
   neck.rotation.z=(p.weightShift||0)*.018;
   // Year nine memories must never trigger the legacy headless final phase.
@@ -226,12 +229,14 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   divineFace.position.set(0,6.9+Math.sin(t*.75)*.28,-2.25);
   divineFace.rotation.y=Math.sin(t*.22)*.14;
   divineFace.scale.setScalar(.78+.05*Math.sin(t*.8));
-  arms[0].rotation.x=p.leftArm;arms[0].rotation.z=p.twist*.12;
-  arms[1].rotation.x=p.rightArm;arms[1].rotation.z=-p.twist*.18;
-  forearms[0].rotation.x=p.leftElbow??-.1;
-  forearms[1].rotation.x=p.rightElbow??-.1;
-  wrists[0].rotation.x=p.leftWrist??0;
-  wrists[1].rotation.x=p.rightWrist??0;
+  arms[0].rotation.set(p.leftArm,0,p.twist*.12);
+  arms[1].rotation.set(p.rightArm,0,-p.twist*.18);
+  forearms[0].rotation.set(p.leftElbow??-.1,0,0);
+  forearms[1].rotation.set(p.rightElbow??-.1,0,0);
+  wrists[0].rotation.set(p.leftWrist??0,0,0);
+  wrists[1].rotation.set(p.rightWrist??0,0,0);
+  if(years)handIk.update(years,weapon,mounted);
+  yearRig.update(g);
   book.rotation.x=p.book;
   book.visible=!years||years.mode==='combat'&&[2,3].includes(years.year);
    // Joint curls follow the same attack movement and relax after each cast.
@@ -251,8 +256,9 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    // Knees always join the current thigh and calf. The shoe never sinks
    // below the table and returns to the same planted rest coordinates.
    leg.hip.set(leg.side*.31,s.years?.mode==='exam'?1.02:1.27+(p.weightShift||0)*leg.side*.025,0);
+   leg.hip.y+=rideBlend*.34;
    leg.ankle.set(leg.side*.32,.17+(years?.mode==='exam'?0:lift),years?.mode==='exam'?1.2:.10+swing*.19);
-   const vehicleIsBike=years?.cast==='bike'||years?.cast==='ultimateBike',onDeck=leg.side<0;
+   const vehicleIsBike=mounted?.ride==='bike',onDeck=leg.side<0;
    const mountFootY=vehicleIsBike?.77:onDeck?.53:.21;
    const mountFootZ=vehicleIsBike?-.54:onDeck?-.35:.51;
    leg.ankle.y+=(mountFootY-leg.ankle.y)*rideBlend;
@@ -263,6 +269,12 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    leg.knee.x+=(leg.side*.63-leg.knee.x)*rideBlend;
    leg.knee.y+=(1.12-leg.knee.y)*rideBlend;
    leg.knee.z+=(.68-leg.knee.z)*rideBlend;
+   if(years?.year===7&&years.cast&&!mounted){
+    const step=Math.sin((years.castT-1.2)*Math.PI*2/.67+(leg.side<0?0:Math.PI));
+    const lift=Math.max(0,step)*.26;
+    leg.ankle.y+=lift;leg.ankle.z+=Math.max(0,step)*.20;leg.knee.y+=lift*.4;
+    leg.hip.y-=Math.abs(p.weightShift||0)*.07;
+   }
    setBone(leg.thigh,leg.knee,leg.hip);
    setBone(leg.shin,leg.ankle,leg.knee);
    leg.joint.position.copy(leg.knee);
@@ -275,3 +287,4 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   }
  },dispose(){yearRig.dispose();photo?.dispose();faceSkin.dispose();godSkin.dispose();}};
 }
+

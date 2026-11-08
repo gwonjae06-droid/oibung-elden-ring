@@ -54,10 +54,10 @@ test('incoming damage during exam is 50% and other years retain ordinary damage'
  const other=annual();assert.equal(damageGyuwon(other,120),120);
 });
 
-test('outcomes follow 10/50/40 boundaries and maxHP percentages',()=>{
- const sample=[{r:0,grade:'great',delta:.10},{r:.09999,grade:'great',delta:.10},
-  {r:.10,grade:'normal',delta:.05},{r:.59999,grade:'normal',delta:.05},
-  {r:.60,grade:'failure',delta:-.05},{r:.999,grade:'failure',delta:-.05}];
+test('outcomes follow 30/40/30 boundaries and maxHP percentages',()=>{
+ const sample=[{r:0,grade:'great',delta:.10},{r:.29999,grade:'great',delta:.10},
+  {r:.30,grade:'normal',delta:.05},{r:.69999,grade:'normal',delta:.05},
+  {r:.70,grade:'failure',delta:-.05},{r:.999,grade:'failure',delta:-.05}];
  for(const item of sample){
   const g=annual();g.boss.hp=g.boss.maxHp*.5;
   const result=resolveGyuwonExamGrade(g,item.r);
@@ -73,7 +73,7 @@ test('outcomes follow 10/50/40 boundaries and maxHP percentages',()=>{
 test('grade recovery resets D-365 and advances one academic year',()=>{
  const g=annual();nextExam(g);
  resolveGyuwonExamGrade(g,.4);
- advance(g,3.76);
+ advance(g,3.01);
  assert.equal(g.gyuwon.years.year,2);
  assert.equal(g.gyuwon.years.day,365);
  assert.equal(g.gyuwon.years.mode,'combat');
@@ -157,3 +157,4 @@ test('legacy engine fixtures remain isolated, while the published encounter uses
  const modern=annual();
  assert.equal(modern.gyuwon.years.mode,'combat');
 });
+

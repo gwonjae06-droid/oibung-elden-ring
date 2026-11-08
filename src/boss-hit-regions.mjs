@@ -86,8 +86,9 @@ export function gyuwonHurtShapes(g){
   at('left-leg',-.32,.76,0,.30,.75,.33),
   at('right-leg',.32,.76,0,.30,.75,.33)
  ];
- if(b.phase===1||(b.state==='transition'&&(g.gyuwon.t||0)<2.65))
+ if(g.gyuwon.years||b.phase===1||(b.state==='transition'&&(g.gyuwon.t||0)<2.65))
   parts.push(at('anatomical-head',0,3.15,0,.47,.55,.48));
  return parts;
 }
 export const gyuwonAimPart=g=>gyuwonHurtShapes(g).find(p=>p.id==='tailored-torso')||g?.boss;
+

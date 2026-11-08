@@ -1,3 +1,4 @@
+import {ridePose,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {GYUWON_PATTERNS} from './gyuwon-data.mjs';
 import {poseAlpha,createPoseContinuity} from './boss-animation-continuity.mjs';
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
@@ -54,8 +55,16 @@ function annualExamMotion(g){
    leftWrist:.20*breakdown,rightWrist:-.18*breakdown,
    weightShift:-.75*breakdown,book:-1.05};
  }
- const id=e.cast||'',dance=e.year===7,floppy=e.year===5,octo=e.year===8;
- const beat=Math.sin(g.time*(dance?8:4)),power=charge*(1-Math.min(1,Math.max(0,t-3)*.5));
+ const mounted=ridePose(e),weapon=gyuwonWeaponPose(e,g.gyuwon.hazards);
+ if(mounted)return {lean:mounted.ride==='bike'?-.70:-.35,twist:0,headPitch:.20,headYaw:0,
+  leftArm:-1.06,rightArm:-1.06,leftElbow:-.43,rightElbow:-.43,
+  leftWrist:.2,rightWrist:.2,weightShift:0,book:-.75};
+ if(g.gyuwon.stun>0)return {...NEUTRAL,lean:-.65,headPitch:.48,leftArm:-.25,rightArm:-.2};
+ const id=weapon.rifle?'sniper':weapon.bow?'archery':e.cast||'',dance=e.year===7,floppy=e.year===5,octo=e.year===8;
+ const timings=g.gyuwon.motionBeats||[],strike=Math.max(0,...timings.map(w=>pulse(t-w,.16)));
+ const beat=Math.sin((e.cast?t:g.time)*(dance?Math.PI*2/.67:4));
+ const last=timings.at(-1)||1.2,tail=1-ease((t-last-.2)/.65);
+ const power=(charge*.35+strike*.65)*tail;
  if(id==='nightmare365'){
   const beat=(e.castT||0);
   const strike=Math.exp(-Math.pow((beat%1.3-.9)/.18,2));
@@ -67,7 +76,12 @@ function annualExamMotion(g){
    leftWrist:.12,rightWrist:-.14,weightShift:Math.sin(beat*3)*.18,
    book:-.8};
  }
- if(id.startsWith('ultimate')){
+ if(id==='ultimateSmoke'){
+  const strike=Math.max(0,...g.gyuwon.motionBeats.map(w=>pulse(t-w,.15)));
+  return {...NEUTRAL,lean:-.20+strike*.35,leftArm:-1.8+strike*.7,rightArm:-1.8+strike*.7,
+   leftElbow:-.65,rightElbow:-.65,headPitch:-.15};
+ }
+ if(id.startsWith('ultimate')&&!['ultimateGacha','ultimateOctopus'].includes(id)){
   const power=ease(t/1.0),beat=Math.sin(g.time*(e.year===7?8:5));
   const plunge=Math.max(0,...(g.gyuwon?.hazards||[])
    .filter(h=>h.fired).map(h=>pulse(h.age-h.warn,.14)));
@@ -90,15 +104,14 @@ function annualExamMotion(g){
    leftWrist:.08,rightWrist:.32*inhale,weightShift:0,book:-.6};
  }
  if(id==='sniper'||id==='crossfire'){
-  const fire=ease(t/1.0),kick=Math.max(0,...(g.gyuwon?.hazards||[])
-   .filter(h=>h.visual==='year-bullet').map(h=>pulse(h.age-h.warn,.12)));
+  const fire=ease(t/.85),kick=weapon.recoil;
   return {lean:-.18-kick*.12,twist:.04,headPitch:.10,headYaw:0,
    leftArm:-.58-1.10*fire,rightArm:-.45-1.15*fire+kick*.19,
    leftElbow:-.45-.28*fire,rightElbow:-.35-.37*fire,
    leftWrist:.07,rightWrist:.18-kick*.25,weightShift:-.10,book:-.6};
  }
  if(id==='archery'){
-  const pull=ease(t/1.12),release=(g.gyuwon?.hazards||[]).some(h=>h.visual==='year-arrow'&&h.fired);
+  const pull=weapon.draw,release=weapon.recoil;
   return {lean:-.22,twist:-.12,headPitch:.06,headYaw:0,
    leftArm:-.42-1.0*pull,rightArm:-.4-.89*pull+(release?.32:0),
    leftElbow:-.22-.26*pull,rightElbow:-.17-.98*pull+(release?.45:0),
@@ -111,10 +124,10 @@ function annualExamMotion(g){
    leftElbow:-.3-.26*spin,rightElbow:-.3-.40*spin,
    leftWrist:.1,rightWrist:.12,weightShift:react*.30,book:-.6};
  }
- if(dance)return {lean:beat*.28,twist:Math.sin(g.time*5)*.58,headPitch:-.15+beat*.17,
+ if(dance)return {lean:beat*(e.cast?.24:.04),twist:Math.sin(t*4.7)*(e.cast?.48:.04),headPitch:-.15+beat*.10,
   headYaw:Math.cos(g.time*6)*.22,leftArm:-.9-beat*.7,rightArm:-.9+beat*.7,
   leftElbow:-.45,rightElbow:-.45,leftWrist:.2,rightWrist:-.2,
-  weightShift:beat*.85,book:-.6};
+  weightShift:beat*(e.cast?.70:.06),book:-.6};
  if(floppy)return {lean:beat*.4,twist:Math.sin(g.time*2.3)*.47,headPitch:beat*.3,
   headYaw:Math.sin(g.time*.9)*.3,leftArm:-.8-power*.52,rightArm:-.7-power*.8,
   leftElbow:-.8,rightElbow:-.72,leftWrist:.38,rightWrist:-.32,
@@ -201,7 +214,8 @@ export function createGyuwonMotionDirector(){
   const target=b.state==='pattern'||b.state==='transition'?b.yaw:Math.atan2(g.player.x-b.x,g.player.z-b.z);
   facing+=Math.atan2(Math.sin(target-facing),Math.cos(target-facing))*poseAlpha(8,h);
   const out=pose.step(gyuwonRawMotion(g),h,{owner:g,time:g.time,rate:b.state==='pattern'?22:11});
-  return {...out,steps:speed,facing};
+  return {...out,steps:ridePose(g.gyuwon?.years)?0:speed,facing:ridePose(g.gyuwon?.years)?.yaw??(gyuwonWeaponPose(g.gyuwon?.years,g.gyuwon?.hazards).rifle?b.yaw:facing)};
  }
  return {update,reset};
 }
+
