@@ -49,7 +49,8 @@ for(const [id,,duration,recovery,phases,stage] of RINGMASTER_ATTACK_DEFINITIONS)
   startClownPattern(g,id);
   const d=PATTERNS[id],lead=d.precast;
   for(let i=0;i<Math.ceil((lead-.01)*120);i++)stepClown(g,1/120);
-  assert.equal(g.clown.zones.length,0,'no hitbox before visible precast '+id);
+  assert.equal(g.clown.zones.filter(z=>!['troupe','troupe-melee','legacyEcho'].includes(z.source)).length,0,
+   'no director hitbox before his visible precast '+id);
   const zones=new Map();let punished=false;
   const events=new Set();
   for(let i=0;i<Math.ceil((d.dur+.05-lead)*120);i++){
@@ -57,6 +58,7 @@ for(const [id,,duration,recovery,phases,stage] of RINGMASTER_ATTACK_DEFINITIONS)
    if(g.clown.punish)punished=true;
    for(const e of g.events)events.add(e.type);
    for(const z of g.clown.zones){
+    if(['troupe','troupe-melee','legacyEcho'].includes(z.source))continue;
     zones.set(z.id,z);
     assert.ok(Number.isFinite(z.x)&&Number.isFinite(z.z));
     assert.ok(z.warn>=.85,id+' warning too quick');

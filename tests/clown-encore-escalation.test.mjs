@@ -30,7 +30,7 @@ test('new clown performances use delayed real hazards and moving physical attack
   const zones=new Map(),bombs=new Set();
   for(let i=0;i<Math.ceil(PATTERNS[id].dur*120);i++){
    stepClown(g,1/120);
-   for(const z of g.clown.zones)zones.set(z.id,z);
+   for(const z of g.clown.zones)if(!['troupe','troupe-melee','legacyEcho'].includes(z.source))zones.set(z.id,z);
    for(const b of g.clown.bombs)bombs.add(b.id);
   }
   const hits=[...zones.values()].filter(z=>z.damage>0&&!z.visual);

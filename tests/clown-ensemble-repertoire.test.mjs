@@ -42,7 +42,8 @@ for(const [key,,duration,recovery,phases,stage] of ENSEMBLE_DEFINITIONS){
   for(let i=0;i<Math.ceil((total+.04)*120);i++){
    stepClown(g,1/120);
    if(g.clown.punish)recovered=true;
-   for(const z of g.clown.zones)if(z.state==='warn'&&z.damage>0){
+   for(const z of g.clown.zones)if(z.state==='warn'&&z.damage>0&&
+     !['troupe','troupe-melee','legacyEcho'].includes(z.source)){
     warningIds.add(z.id);
     assert.ok(z.warn>=1.20,key);
     assert.ok(Number.isFinite(z.x)&&Number.isFinite(z.z),key);

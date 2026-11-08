@@ -140,6 +140,7 @@ for(const name of newShows)test(name+' actually appears, signals physical cast a
   stepClown(g,1/120);
   if(g.clown.punish)punish=true;
   for(const z of g.clown.zones){
+   if(['troupe','troupe-melee','legacyEcho'].includes(z.source))continue;
    if(z.damage>0&&!z.visual){
     zones.set(z.id,z);
     assert.ok(z.warn>=1.3,'bad warning '+name);

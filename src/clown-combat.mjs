@@ -1249,7 +1249,11 @@ function tickClown(g, dt) {
     c.punish =
       c.pt >= d.dur - d.recover &&
       !c.waves.length &&
-      !c.zones.some((z) => (!z.visual || z.waveKind) && z.state === 'warn');
+      !c.zones.some((z) =>
+        z.source !== 'troupe' &&
+        z.source !== 'troupe-melee' &&
+        z.source !== 'legacyEcho' &&
+        (!z.visual || z.waveKind) && z.state === 'warn');
     if (c.pt >= d.dur) finish(g);
   }
 }

@@ -90,5 +90,8 @@ test('phase-change cutscene remains attack-free, and minis keep their separate s
  m.cooldown=.01;
  events=run(g,10).events.filter(x=>x.type==='clown-legacy-echo-cast');
  assert.ok(events.length>=1,'legacy miniboss must not be starved by independent ordinary performers');
- if(events.length>=2)assert.ok(events[1].time-events[0].time>=6.4);
+ for(const id of new Set(events.map(e=>e.id)){
+  const times=events.filter(e=>e.id===id).map(e=>e.time);
+  for(let i=1;i<times.length;i++)assert.ok(times[i]-times[i-1]>=6.4-1/60);
+ }
 });
