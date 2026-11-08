@@ -8,6 +8,7 @@ import {KWON_THREE,KWON_THIRD_FAR,KWON_THIRD_PATTERNS,makeKwonFractures,
  kwonFractureFront,kwonFractureContact,advanceKwonFractures,
  kwonThirdTransition,kwonThirdSwordDrive} from '../src/kwon-third-phase.mjs';
 import {createKwonThirdPhaseView} from '../src/kwon-third-phase-view.mjs';
+import {KWON_MOON} from '../src/kwon-moon-cataclysm.mjs';
 
 const tick=(g,t)=>{for(let i=0;i<Math.ceil(t*120);i++)step(g,1/120);};
 test('Kwon owns 100-66.7 / 66.7-33.3 / 33.3-0 HP acts, without changing Clown',()=>{
@@ -27,7 +28,12 @@ test('Kwon owns 100-66.7 / 66.7-33.3 / 33.3-0 HP acts, without changing Clown',(
  assert.ok(g.boss.hp<threshold2);
  assert.deepEqual(g.kwonFractures,[]);
  assert.equal(cinematicPose(g.boss).detach,1,'jaw must remain sword in third-act transition');
- tick(g,CINEMATIC+.1);assert.equal(g.boss.state,'idle');
+ tick(g,CINEMATIC+.1);
+ assert.equal(g.boss.state,'moonCinematic','third-act moon cinematic starts after the phase threshold');
+ assert.equal(g.kwonMoon.mode,'cinematic');
+ assert.equal(damageArenaBoss(g,1,0,{developer:true}),0,'unskippable moon cinematic cannot be damaged through');
+ tick(g,KWON_MOON.cinematic+KWON_MOON.stormEnd+2);
+ assert.equal(g.kwonMoon.mode,'done','meteors fully resolve before normal combat resumes');
  w();damageArenaBoss(g,g.boss.hp+1,0,{developer:true});
  assert.equal(g.status,'won');assert.equal(g.boss.phase,3);
  const c=createGame('sword',{register:false});
