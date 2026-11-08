@@ -305,8 +305,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   exam.visible=e.mode==='exam';exam.position.set(b.x,0,b.z);exam.rotation.y=b.yaw;
   motorcycle.visible=e.mode==='combat'&&e.cast==='bike';
   scooter.visible=e.mode==='combat'&&e.cast==='scooter';
-  cigarette.visible=e.mode==='combat'&&e.cast==='smoke';
-  weapon.visible=e.mode==='combat'&&e.year===4;
+  gacha.update(g);
   bodyslime.visible=e.mode==='combat'&&e.year===5;
   flameAura.visible=e.mode==='combat'&&e.year===3;
   flameAura.position.set(b.x,0,b.z);
@@ -320,13 +319,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   tentacleRoot.visible=e.mode==='combat'&&e.year===8;
   motorcycle.position.set(b.x,0,b.z);motorcycle.rotation.y=b.yaw;
   scooter.position.set(b.x,0,b.z);scooter.rotation.y=b.yaw;
-  cigarette.position.set(b.x,0,b.z);cigarette.rotation.y=b.yaw;
-  weapon.position.set(b.x,0,b.z);weapon.rotation.y=b.yaw;
   bodyslime.position.set(b.x,0,b.z);
-  for(let i=0;i<smokePuffs.length;i++){
-   const puff=smokePuffs[i];puff.position.y=2.2+i*.34+Math.sin(g.time*3+i)*.15;
-   puff.material.opacity=1;
-  }
   if(flameAura.visible)for(let i=0;i<auraFlames.length;i++){
    const flame=auraFlames[i],a=i*Math.PI/4;
    flame.position.set(Math.sin(a)*.95,1.4+Math.sin(g.time*6+i)*.34,Math.cos(a)*.95);
@@ -353,41 +346,29 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   if(tentacleRoot.visible){
    let cup=0;
    for(let i=0;i<8;i++){
-    const h=s.hazards.find(x=>x.armIndex===i)||(e.cast==='octoInk'?s.hazards[i]:null);
+    const h=s.hazards.find(x=>x.armIndex===i)||
+     (e.cast==='octoInk'?s.hazards[i]:null);
     const a=h?.yaw??i*Math.PI/4;
     const warn=h?.warn||1.2;
     const ready=h?Math.max(0,Math.min(1,h.age/warn)):0;
     const attacking=h?.visual==='year-tentacle';
-    const reach=attacking?4.2+10.55*ready:e.cast==='octoInk'?11:4.7+Math.sin(g.time*1.8+i)*.4;
-    armStart.set(b.x,2.45,b.z);
-    for(let j=0;j<stages;j++){
-     const t=(j+1)/stages,m=(j+.5)/stages;
-     const sway=Math.sin(g.time*2.3+i*.8+j*.40)*.45*(1-ready);
-     const distance=reach*t;
-     // A real raised-arm anticipation descends to an arm's-length impact.
-     const y=attacking?
-      .38+(1-t)*2.1+(1-ready)*2.7*Math.sin(Math.PI*t):
-      2.25+Math.sin(Math.PI*t)*1.45-Math.max(0,t-.75)*1.5;
-     armEnd.set(b.x+Math.sin(a)*distance+Math.cos(a)*sway*t,y,
-      b.z+Math.cos(a)*distance-Math.sin(a)*sway*t);
-     armSegment.copy(armEnd).sub(armStart);
-     armDirection.copy(armSegment).normalize();
-     const part=tentacles[i][j],width=.58*(1-j/stages*.74);
-     part.position.copy(armStart).addScaledVector(armSegment,.5);
-     part.quaternion.setFromUnitVectors(armUp,armDirection);
-     part.scale.set(width,Math.max(.02,armSegment.length()),width);
-     for(const q of [.32,.68]){
-      suctionDummy.position.copy(armStart).addScaledVector(armSegment,q).addScaledVector(armNormal,width*.70);
-      suctionDummy.quaternion.copy(cupRotation);
-      suctionDummy.scale.setScalar(Math.max(.22,width*.72));
-      suctionDummy.updateMatrix();suction.setMatrixAt(cup++,suctionDummy.matrix);
-     }
-     armStart.copy(armEnd);
+    const reach=attacking?4.2+10.55*ready:
+     e.cast==='octoInk'?11:4.7+Math.sin(g.time*1.8+i)*.4;
+    const path=tentacles[i].pose({
+     x:b.x,z:b.z,yaw:a,ready,time:g.time,attacking,reach
+    }).curve;
+    for(let j=0;j<stages;j++)for(const q of [.32,.68]){
+     const t=(j+q)/stages;
+     suctionDummy.position.copy(path.getPoint(t)).addScaledVector(suctionNormal,
+      (.64*Math.pow(1-t,.82)+.04)*.71);
+     suctionDummy.quaternion.copy(cupRotation);
+     suctionDummy.scale.setScalar(Math.max(.15,(.64*(1-t)+.04)*.64));
+     suctionDummy.updateMatrix();suction.setMatrixAt(cup++,suctionDummy.matrix);
     }
    }
    suction.instanceMatrix.needsUpdate=true;
   }
-  const waveHazard=s.hazards.find(h=>h.shape==='wave'&&(h.visual==='year-sludge-wave'||h.visual==='year-water-wave'));
+    const waveHazard=s.hazards.find(h=>h.shape==='wave'&&(h.visual==='year-sludge-wave'||h.visual==='year-water-wave'));
   if(waveHazard?.id!==waveId){if(waveHazard)makeWave(waveHazard);else clearWave();}
   // Only the actual split in the wave marks the safe passage; no artificial guide.
    cues.visible=false;
@@ -431,8 +412,21 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    const p=hazardPosition(h),rise=Math.max(0,1-h.age/Math.max(.1,h.warn));
    item.group.position.set(p.x,1.45,p.z);
    if(v==='year-bookfall'||v==='year-merch')item.group.position.y=.45+17*rise;
+  if(v==='year-gacha-prize')item.group.position.y=.62+12*rise;
+  if(v==='year-stream-pulse')item.group.position.y=.66;
+  if(v==='year-gacha-prize'||v==='year-stream-pulse'){
+   const w=Math.min(1,h.age/Math.max(.1,h.warn));
+   item.group.scale.setScalar(.82+.18*w);
+  }
    if(v==='year-photocard')item.group.position.y=2.3;
-   if(v==='year-sludge'||v==='year-ink')item.group.position.y=1.05;
+   if(v==='year-sludge'||v==='year-ink'){
+   item.group.position.y=1.1;
+   const puddle=item.group.getObjectByName('gyuwon-sewage-ground-spreading-spill');
+   if(puddle){
+    const w=h.age>=h.warn?1:Math.min(1,h.age/Math.max(.1,h.warn));
+    puddle.scale.setScalar((h.r+.18)*(.55+.45*w));
+   }
+  }
    if(v==='year-fire')item.group.position.y=1.1;
    if(v==='year-circus')item.group.position.y=h.r;
    if(v==='year-figure')item.group.visible=false;
@@ -457,9 +451,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
-  attackCues.dispose();for(const m of new Set(materials))m.dispose();
+  attackCues.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
+  for(const m of new Set(materials))m.dispose();
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
+ return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
