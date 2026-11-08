@@ -10,7 +10,7 @@ export const GYUWON_MIN_TELEGRAPH=1.05;
 export const GYUWON_YEAR_PATTERNS=Object.freeze({
  bike:[3.4,1.3],scooter:[3.6,1.3],smoke:[3.2,1.3],
  workbook:[3.8,1.2],pencil:[3.5,1.2],
- letters:[4,1.2],bookfall:[4.1,1.45],flame:[4.3,1.5],
+ letters:[4.65,1.2],bookfall:[4.1,1.45],flame:[4.3,1.5],
  sniper:[3.7,1.65],archery:[4.1,1.6],crossfire:[4.45,1.75],
  sewageThrow:[3.8,1.4],sewageWave:[7.4,2],sewageBomb:[4.4,1.6],
  figures:[5.2,1.5],photocard:[4.55,1.4],merch:[4.8,1.7],
@@ -152,8 +152,13 @@ function beginCast(g,id,emit){
     damage:id==='workbook'?23:16,visual:'year-'+id});
   }
  }else if(id==='letters'){
-  for(let i=0;i<4;i++)line(g,p.x+(i-1.5)*3,p.z,i%2?.4:-.4,1.05+i*.57,
-   {width:1.05,damage:22,visual:'year-letters'});
+  // Letters are physical embossed projectiles rather than invisible 36m lanes.
+  for(let i=0;i<4;i++){
+   const angle=a+(i-1.5)*.14;
+   add(g,'circle',{x:b.x,z:b.z,r:1.37,
+    vx:Math.sin(angle)*24,vz:Math.cos(angle)*24,
+    warn:1.05+i*.62,life:1.5,damage:22,visual:'year-letters'});
+  }
  }else if(id==='bookfall'){
   for(let i=0;i<5;i++)mark(g,p.x+(i%3-1)*4,p.z+(Math.floor(i/3)-.5)*4,
    1.1+i*.52,2.5,24,'year-bookfall');
