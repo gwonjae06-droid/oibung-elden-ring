@@ -23,7 +23,13 @@ export const GYUWON_PATTERNS=Object.freeze({
  circus:{name:'오슬우의 기억 · 마지막 대공연',duration:7,recover:2.5},
  gamble:{name:'박성원의 기억 · 천상의 도박장',duration:7,recover:2.5},
  tsunami:{name:'배서준의 기억 · 수평선의 대해일',duration:8,recover:3},
- chalk:{name:'최규원의 기억 · 세계라는 칠판',duration:6.5,recover:2.8}
+ chalk:{name:'최규원의 기억 · 세계라는 칠판',duration:6.5,recover:2.8},
+ 'exam-first':{name:'현역 · 첫 수능',duration:5.4,recover:2.3},
+ 'exam-retake':{name:'재수 · 재시험',duration:5.65,recover:2.4},
+ 'exam-third':{name:'삼수 · 세 답안',duration:7.6,recover:2.5},
+ 'exam-shooter':{name:'사수 · 네 자루의 총',duration:6.2,recover:2.7},
+ 'exam-sewage':{name:'오수 · 오물 해일',duration:8.25,recover:3},
+ 'exam-figurines':{name:'육수 · 여섯 피규어',duration:9.3,recover:3.2}
 });
 export const MEMORY_ORDER=['sword','circus','gamble','tsunami','chalk'];
 export const memoryInterval=ratio=>ratio>.2?8:ratio>.1?5:ratio>.05?2.5:1;
