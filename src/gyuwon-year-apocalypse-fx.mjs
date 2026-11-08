@@ -77,10 +77,26 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
    arm.rotation.z=side*.19;
    mesh(group,box,clothing,side*.23,.35,0,.29,.8,.33,'gyuwon-memory-leg');
   }
+  // Recognizable remnants distinguish each historical self during its beat.
+  if(i===0||i===1){for(const side of [-1,1])mesh(group,ring,gold,side*.55,.5,.2,.38,.38,.38,'gyuwon-ghost-vehicle-wheel');mesh(group,box,gold,.4,1,.25,.1,1.2,.1,'gyuwon-ghost-handlebar-stem');}
+  if(i===2)for(let j=0;j<3;j++)mesh(group,box,report,.6,1+j*.17,.1,.65,.14,.48,'gyuwon-ghost-textbook');
+  if(i===3){mesh(group,box,dark,.42,1.8,.7,.15,.17,1.5,'gyuwon-ghost-rifle');mesh(group,box,gold,.42,1.7,.1,.3,.3,.45,'gyuwon-ghost-rifle-stock');}
+  if(i===4)mesh(group,ball,dark,.65,1.0,.15,.4,.55,.4,'gyuwon-ghost-trash-bag');
+  if(i===5){mesh(group,box,report,.65,1.5,.1,.65,.95,.08,'gyuwon-ghost-collectible-card');mesh(group,ball,gold,.65,1.6,.18,.18,.3,.05,'gyuwon-ghost-collectible-portrait');}
+  if(i===6){mesh(group,box,dark,.7,.8,.1,.7,1.3,.55,'gyuwon-ghost-speaker');for(const y of [.5,1.1])mesh(group,ring,gold,.7,y,.4,.23,.23,.23,'gyuwon-ghost-speaker-cone');}
+  if(i===7)for(const side of [-1,1]){const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,1.3,0),new THREE.Vector3(side*.8,1.6,.1),new THREE.Vector3(side*1.1,.3,.8)]);mesh(group,geo(new THREE.TubeGeometry(curve,12,.1,6,false)),ghostMat,0,0,0,1,1,1,'gyuwon-ghost-octopus-arm');}
+  if(i===8)mesh(group,box,gold,.65,2.2,.2,.22,3.5,.12,'gyuwon-ghost-memory-sword');
+  if(i===9){mesh(group,box,report,.7,1.5,.1,.6,.6,.6,'gyuwon-ghost-paradox-die');mesh(group,ring,gold,-.7,1.6,.1,.35,.35,.35,'gyuwon-ghost-paradox-mask');}
   afterimages.push(group);
  }
  const finale=mesh(nightmareRoot,ring,red,0,.18,0,5,5,5,
   'gyuwon-nightmare-final-circular-shockwave');finale.rotation.x=Math.PI/2;
+ const coverRoot=new THREE.Group();coverRoot.name='gyuwon-fourth-year-destructible-cover';root.add(coverRoot);
+ const coverPieces=[];for(let i=0;i<3;i++){
+  const group=new THREE.Group();coverRoot.add(group);const slab=mesh(group,box,wall,0,1.4,0,3.4,2.8,1.4,'gyuwon-rifle-physical-cover');
+  const shards=[];for(let j=0;j<6;j++)shards.push(mesh(group,box,desk,(j%3-1)*.8,.5,0,.7,.7,.9,'gyuwon-rifle-cover-fragment'));
+  coverPieces.push({group,slab,shards});
+ }
  const dummy=new THREE.Object3D();
  let owner=null,disposed=false,breakLevel=0;
  const clamp=v=>Math.max(0,Math.min(1,v));
@@ -131,6 +147,8 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
    rubble.instanceMatrix.needsUpdate=true;
    splits.visible=worldStrength>.2;
   }
+  coverRoot.visible=e.cast==='ultimateMarksman';
+  coverPieces.forEach(({group,slab,shards},i)=>{const c=e.cover?.[i];group.visible=!!c;if(!c)return;group.position.set(c.x,0,c.z);group.rotation.y=b.yaw;slab.visible=c.hp>0;slab.scale.y=2.8*(.65+.35*c.hp/c.maxHp);for(let j=0;j<shards.length;j++){shards[j].visible=c.hp<c.maxHp;shards[j].position.set((j%3-1)*1.3,.25,Math.floor(j/3)*1.8-1);shards[j].rotation.set(j*.4,j*.7,j*.25);}});
   const grade=e.mode==='result',gt=e.gradeT||0,choice=e.grade;
   scoreScene.visible=grade;
   if(grade){
@@ -183,7 +201,7 @@ export function createGyuwonYearApocalypseFx(stage,{coarse=false,reduced=false}=
     o.position.set(Math.sin(angle)*radius,(1-rise)*-2.4+Math.sin(t*2+i)*.15,
      Math.cos(angle)*radius);
     o.rotation.y=angle+Math.PI;
-    o.scale.setScalar((.74+i*.025)*rise*leave);
+    o.scale.setScalar((.74+i*.025)*rise*leave);o.rotation.x=i<2?-.35:Math.sin(Math.min(1,Math.max(0,q/.9))*Math.PI)*-.22;for(const limb of o.children)if(limb.name==='gyuwon-memory-hanging-arm')limb.rotation.x=-Math.sin(Math.min(1,Math.max(0,q/.9))*Math.PI)*(i===3?1.1:1.8);
 
    });
    finale.visible=false;

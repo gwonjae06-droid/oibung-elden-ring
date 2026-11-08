@@ -1,3 +1,5 @@
+import {augmentAnnualCast,tickAnnualMechanics} from './gyuwon-nightmare-mechanics.mjs';
+import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,applyAnnualCarry} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
@@ -6,7 +8,7 @@ import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
 
 // New live-battle rules. The pre-2026 phase patterns remain only as compatibility
 // code for old tools/tests and are not selected by the published year-mode fight.
-export const GYUWON_YEAR_SECONDS=30;
+export const GYUWON_YEAR_SECONDS=GYUWON_CALENDAR_SECONDS;
 export const GYUWON_EXAM_SUBJECTS=Object.freeze(['국어','수학','영어','한국사','탐구']);
 export const GYUWON_SUBJECT_SECONDS=1.8;
 export const GYUWON_RESULT_SECONDS=3;
@@ -45,7 +47,7 @@ export function createGyuwonYears(){
   mapClock:0,mapIndex:0,chat:[],gachaResult:0,lastCast:null,dodge:null,
   signatureUsed:false,nightmareUsed:false,failures:0,worldBreak:0,wards:[],
   resultScene:null,nightmareStartedAt:-1,examCount:0,
-  attackBuff:0,speedBuff:0,inquiry:null,rideTrack:[],rideKind:null};
+  attackBuff:0,speedBuff:0,inquiry:null,rideTrack:[],rideKind:null,calendarDamage:0,damageBank:0,yearDamage:0,endingUnlocked:false,mapPending:false};
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function add(g,shape,opts={}){
@@ -86,7 +88,7 @@ function mapHazards(g,key,offset=0){
  }
 }
 function spawnExamSubject(g,index){
- const e=g.gyuwon.years,b=g.boss;g.gyuwon.hazards.length=0;
+ const e=g.gyuwon.years,b=g.boss;g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>h.examShot&&h.age<h.warn+h.life);
  e.subject=index;e.subjectT=0;e.subjectLabel=GYUWON_EXAM_SUBJECTS[index];
  // During the Suneung all attacks originate around the seated boss. Never
  // spawn a player-centered long-range strike or map-wide exam diagram.
@@ -111,6 +113,10 @@ function spawnExamSubject(g,index){
   else if(benefit==='speed')e.speedBuff=3;
   else g.boss.hp=Math.min(g.boss.maxHp,g.boss.hp+g.boss.maxHp*.01);
  }
+ if(index<4){
+  const angle=playerAim(g),distance=Math.hypot(g.player.x-b.x,g.player.z-b.z);
+  for(let i=0;i<2;i++){const yaw=angle+(i?(index%2?-.08:.08):0);add(g,'circle',{x:b.x,z:b.z,r:.8,warn:1.05+i*.35,life:Math.min(3.8,(distance+8)/24),vx:Math.sin(yaw)*24,vz:Math.cos(yaw)*24,damage:19,visual:['year-korean','year-math','year-english','year-history'][index],examShot:true});}
+ }
  g.gyuwon.pattern='year-exam';g.gyuwon.t=0;
  g.gyuwon.motionBeats=g.gyuwon.hazards.map(h=>h.warn);
 }
@@ -125,8 +131,8 @@ export function resolveGyuwonExamGrade(g,random=Math.random(),emit=()=>{}){
  const e=g.gyuwon.years;
  const r=clamp(Number.isFinite(random)?random:.5,0,1-Number.EPSILON);
  const result=r<.30?'great':r<.70?'normal':'failure';
- const max=g.boss.maxHp,delta=max*(result==='great'?.10:result==='normal'?.05:-.05);
- g.boss.hp=clamp(g.boss.hp+delta,0,max);
+ const max=g.boss.maxHp,delta=max*(result==='great'?.05:result==='normal'?.02:-.04);
+ g.boss.hp=clamp(g.boss.hp+delta,Math.min(g.boss.hp,annualFloor(g)),max);
  e.grade=result;e.gradeT=0;e.gradeAt=g.time;e.scoreFlash=1;e.mode='result';e.subjectLabel=null;
  e.cast=null;g.gyuwon.pattern=null;g.gyuwon.hazards.length=0;
  e.examCount++;e.failures+=(result==='failure'?1:0);e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);
@@ -140,14 +146,14 @@ function pickMemoryMap(g){
  const e=g.gyuwon.years,s=g.gyuwon;
  if(e.year<9){s.stageMemory=null;g.boss.phase=1;return;}
  g.boss.phase=3;const pool=locations;
- s.stageMemory=pool[e.mapIndex%pool.length];s.stageTime=0;
- e.mapClock=0;e.mapIndex++;
+ s.stageMemory=drawPatternShuffle(s.patternDeck,'gyuwon-annual-map',pool,{avoid:s.stageMemory});s.stageTime=0;
+ e.mapClock=0;e.mapPending=false;e.mapIndex++;
 }
 function startNextYear(g,emit){
  const e=g.gyuwon.years;
  e.year=e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
- e.mapClock=0;e.mapIndex=0;e.chat=[];e.wards=[];
+ e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);
  e.signatureUsed=false;e.nightmareUsed=false;e.rideTrack=[];
  e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);e.resultScene=null;
  g.gyuwon.hazards.length=0;
@@ -161,7 +167,7 @@ function beginCast(g,id,emit){
  e.aim=a;g.gyuwon.t=0;g.gyuwon.pattern='year-'+id;
  e.rideTrack=[];
  if(GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)]===id){e.signatureUsed=true;if(e.year>=11)e.nightmareUsed=true;}
- g.boss.state='pattern';b.yaw=a;g.gyuwon.hazards.length=0;
+ g.boss.state='pattern';b.yaw=a;g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>(h.persistent||h.lingering)&&h.age<h.warn+h.life);
  const dx=Math.sin(a),dz=Math.cos(a);
  if(Object.values(GYUWON_YEAR_SIGNATURES).includes(id)){
   spawnGyuwonSignature(g,id,{add,mark,line,mapHazards,playerAim,makeRide});
@@ -272,6 +278,7 @@ function beginCast(g,id,emit){
    locations.forEach((key,i)=>mapHazards(g,key,i*.47));
   }
  }
+ augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim});
  g.gyuwon.motionBeats=[...new Set(g.gyuwon.hazards.map(h=>h.warn))].sort((x,y)=>x-y);
  emit('gyuwon-warning',{pattern:'year-'+id});
 }
@@ -282,7 +289,7 @@ export function startGyuwonYearCast(g,id,emit=()=>{}){
 function tickHazards(g,dt,hurt,emit){
  const s=g.gyuwon,e=s.years;
  for(const h of s.hazards){
-  h.age+=dt;
+  h.age+=dt;tickAnnualMechanics(g,h,dt,add,emit);
   if(!h.fired&&h.age>=h.warn){h.fired=true;emit('gyuwon-impact',{pattern:s.pattern});}
   if(!h.hit&&h.age>=h.warn&&h.age<=h.warn+h.life&&h.damage>0&&hazardContains(h,g.player))hurt(h);
   if(g.status!=='playing')return;
@@ -297,9 +304,10 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  }
  s.elevation=0;s.slow=Math.max(0,s.slow-dt);s.stun=Math.max(0,s.stun-dt);
  if(g.status!=='playing')return;
- if(e.year>=9&&e.mode==='combat'&&!e.cast){
+ if(e.year>=9&&e.mode==='combat'){
   e.mapClock+=dt;s.stageTime+=dt;
-  if(e.mapClock>=gyuwonMapInterval(e.year))pickMemoryMap(g);
+  if(e.mapClock>=gyuwonMapInterval(e.year))e.mapPending=true;
+  if(e.mapPending&&!e.cast){pickMemoryMap(g);emit('memory-stage',{memory:s.stageMemory});}
  }
  if(e.mode==='result'){
   e.gradeT+=dt;if(e.gradeT>=GYUWON_RESULT_SECONDS)startNextYear(g,emit);
@@ -314,7 +322,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
    else spawnExamSubject(g,e.subject+1);
   }return;
  }
- e.season=Math.min(GYUWON_YEAR_SECONDS,e.season+dt);
+ e.season=Math.min(GYUWON_YEAR_SECONDS,e.season+dt*annualClockRate(g));
  e.day=Math.max(0,Math.ceil(365*(1-e.season/GYUWON_YEAR_SECONDS)));
  if(s.stun>0)return;
  if(e.cast){
@@ -325,8 +333,9 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   if(g.status!=='playing')return;
   b.yaw=rifleAimYaw(s.hazards)??b.yaw;
   const spec=GYUWON_YEAR_PATTERNS[e.cast];
-  if(e.castT>=spec[0]){
-   e.cast=null;s.pattern=null;s.hazards.length=0;b.state='recovery';
+  if(e.castT>=Math.max(spec[0],e.castDuration||0)){
+   if(e.cast==='nightmare365')e.endingUnlocked=true;
+   e.cast=null;s.pattern=null;s.hazards=s.hazards.filter(h=>h.persistent&&h.age<h.warn+h.life);b.state='recovery';
    e.wards=[];e.recover=spec[1];
    if(e.year===4&&e.castCount%3===0){
     const side=e.castCount%2?-1:1;
@@ -337,7 +346,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   }
   return;
  }
- b.state='recovery';e.recover-=dt;
+ b.state='recovery';e.recover-=dt;if(s.hazards.length)tickHazards(g,dt,hurt,emit);
  if(e.speedBuff>0&&!e.dodge){
   const dx=g.player.x-b.x,dz=g.player.z-b.z,d=Math.hypot(dx,dz);
   if(d>5){const step=Math.min(d-5,3*dt);b.x+=dx/d*step;b.z+=dz/d*step;}
@@ -352,7 +361,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   if(d.t>=.72)e.dodge=null;
  }
  if(e.recover>0)return;
- if(e.day===0){beginExam(g,emit);return;}
+ if(e.day===0){if(!e.signatureUsed){beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;}beginExam(g,emit);return;}
  if(!e.signatureUsed&&(e.season>=9.2||e.year>=11&&b.hp/b.maxHp<=.36)){
   beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;
  }

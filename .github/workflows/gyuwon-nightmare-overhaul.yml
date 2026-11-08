@@ -1,0 +1,43 @@
+name: Gyuwon nightmare overhaul
+on:
+  pull_request:
+    paths: ['src/gyuwon-*.mjs', 'src/boss-music.mjs', 'src/boss-tracks.mjs', 'tests/gyuwon*.test.mjs', 'assets/art/gyuwon-collectibles/**', 'scripts/gyuwon-natural-smoke.cjs', '.github/workflows/gyuwon-nightmare-overhaul.yml']
+  push:
+    branches: [main]
+    paths: ['src/gyuwon-*.mjs', 'src/boss-music.mjs', 'src/boss-tracks.mjs', 'tests/gyuwon*.test.mjs', 'assets/art/gyuwon-collectibles/**', 'scripts/gyuwon-natural-smoke.cjs', '.github/workflows/gyuwon-nightmare-overhaul.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  annual-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install renderer and browser tools
+        run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Check all Gyuwon regressions and existing music routing
+        run: node --test tests/gyuwon*.test.mjs tests/boss-tracks.test.mjs tests/boss-music.test.mjs
+      - name: Measure annual damage pacing
+        run: node scripts/gyuwon-pacing-simulation.mjs
+      - name: Check all 37 attacks, real maps, pause, landscape and cleanup
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+        run: node scripts/gyuwon-natural-smoke.cjs
+      - name: Check touch attack and dodge after retry
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+          GYUWON_LIVE_ONLY: '1'
+          GYUWON_TOUCH: '1'
+        run: node scripts/gyuwon-natural-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gyuwon-nightmare-evidence
+          path: |
+            qa-output/gyuwon-natural/
+            qa-output/gyuwon-overhaul/
+          retention-days: 7

@@ -89,8 +89,8 @@ export function makeRide(g,{add,ultimate=false,scooter=false}={}){
 }
 export function gyuwonWeaponPose(e,hazards=[]){
  const id=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
- const rifle=id==='sniper'||id==='crossfire'||id==='ultimateMarksman'||id==='nightmare365'&&t>=4.25&&t<5.9;
- const bow=id==='archery';
+ const rifle=id==='sniper'||id==='crossfire'&&t<3.65||id==='ultimateMarksman'||id==='nightmare365'&&t>=4.25&&t<5.9;
+ const bow=id==='archery'||id==='crossfire'&&t>=3.65;
  const cigarette=id==='smoke';
  const shots=hazards.filter(h=>h.visual===(bow?'year-arrow':'year-bullet'));
  const next=shots.find(h=>h.age<h.warn),recent=shots.findLast(h=>h.age>=h.warn);

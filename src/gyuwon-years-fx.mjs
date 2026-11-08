@@ -18,6 +18,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  function geo(g){geometries.push(g);return g;}
  function mat(color,extra={}){const m=new THREE.MeshPhysicalMaterial({
   color,roughness:.55,metalness:.1,...extra});materials.push(m);return m;}
+ const memoryGold=mat(0xf0c96b,{metalness:.68,roughness:.32,emissive:0x86601f,emissiveIntensity:.38});
+ const memoryCount=coarse?192:384,memoryPositions=new Float32Array(memoryCount*3),memoryGeometry=geo(new THREE.BufferGeometry());memoryGeometry.setAttribute('position',new THREE.BufferAttribute(memoryPositions,3).setUsage(THREE.DynamicDrawUsage));
+ const memoryDustMaterial=new THREE.PointsMaterial({color:0xffd16c,size:coarse?.16:.12,transparent:true,opacity:.78,depthWrite:false});materials.push(memoryDustMaterial);
+ const memoryDust=new THREE.Points(memoryGeometry,memoryDustMaterial);memoryDust.name='gyuwon-golden-memory-reconstruction-particles';memoryDust.frustumCulled=false;root.add(memoryDust);
  const paper=mat(0xddd7c9,{roughness:.91,side:THREE.DoubleSide});
  const graphite=mat(0x292c34,{roughness:.69});
  const steel=mat(0x5a6573,{roughness:.31,metalness:.76});
@@ -145,7 +149,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  suction.frustumCulled=false;tentacleRoot.add(suction);
  const suctionDummy=new THREE.Object3D(),suctionNormal=new THREE.Vector3(0,-1,0);
  const cupRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
-  const dynamic=new Map();const ringDummy=new THREE.Object3D();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
+  const dynamic=new Map(),pool=new Map();let poolCount=0;const poolKey=h=>[h.visual,h.shape,h.r,h.width,h.length,(h.visual==='year-photocard'||h.visual==='year-merch')?h.id%6:0].join(':');const ringDummy=new THREE.Object3D();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wavePool=[],wave=null,owned=null,disposed=false;
  const portrait=["청산별곡","관동별곡","어즈버","사미인곡"];
  const glyphSets={
   'year-korean':portrait,
@@ -182,22 +186,39 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   const group=new THREE.Group();group.name='gyuwon-year-attack-'+h.visual;
   root.add(group);
   const v=h.visual||'',parts=[];
-  if(v==='year-toppling-book'){
+  if(v==='year-toppling-book'||v==='year-final-omr'){
    const pivot=new THREE.Group();pivot.name='gyuwon-textbook-hinge';group.add(pivot);
-   mesh(pivot,box,paper,0,7.5,0,h.width*2,15,.55,'gyuwon-giant-standing-textbook');
-   for(const side of [-1,1])mesh(pivot,box,hot,0,7.5,side*.31,h.width*2+.12,15.1,.10,'gyuwon-textbook-hardback-cover');
-   for(let i=0;i<5;i++)mesh(pivot,box,graphite,0,11-i*1.2,.38,h.width*1.4,.12,.03,'gyuwon-textbook-cover-lettering');
+   if(v==='year-final-omr'){
+    pivot.name='gyuwon-last-answer-omr-hinge';pivot.scale.set(1,h.length/15,1);
+    const fold=new THREE.Group();fold.name='gyuwon-last-answer-paper-fold';fold.position.y=7.5;pivot.add(fold);group.userData.fold=fold;
+    const outline=itemGeo(new THREE.RingGeometry(.78,1,12)),fill=itemGeo(new THREE.CircleGeometry(1,12));
+    for(const [parent,count,start]of [[pivot,10,0],[fold,8,10]]){
+     mesh(parent,box,paper,0,3.75,0,h.width*2,7.5,.16,'gyuwon-ivory-omr-answer-sheet');
+     const bubbles=new THREE.InstancedMesh(outline,graphite,count*5*3*2),answers=new THREE.InstancedMesh(fill,hot,count*3*2),dummy=new THREE.Object3D();
+     bubbles.name='gyuwon-omr-answer-bubble-grid';answers.name='gyuwon-omr-failed-answer-records';let index=0,answer=0;
+     for(let row=start;row<start+count;row++)for(let block=-1;block<=1;block++)for(const side of [-1,1])for(let col=0;col<5;col++){
+      const x=block*4.5+(col-2)*.52,y=1.1+row*.69-(parent===fold?7.5:0);
+      dummy.position.set(x,y,side*.115);dummy.rotation.set(0,side<0?Math.PI:0,0);dummy.scale.set(.17,.17,1);dummy.updateMatrix();bubbles.setMatrixAt(index++,dummy.matrix);
+      if(col===row%5){dummy.scale.set(.14,.14,.03);dummy.updateMatrix();answers.setMatrixAt(answer++,dummy.matrix);}
+     }
+     parent.add(bubbles,answers);
+    }
+   }else{
+    mesh(pivot,box,paper,0,7.5,0,h.width*2,15,.55,'gyuwon-giant-standing-textbook');
+    for(const side of [-1,1])mesh(pivot,box,hot,0,7.5,side*.31,h.width*2+.12,15.1,.10,'gyuwon-textbook-hardback-cover');
+    for(let i=0;i<5;i++)mesh(pivot,box,graphite,0,11-i*1.2,.38,h.width*1.4,.12,.03,'gyuwon-textbook-cover-lettering');
+   }
    group.userData.hinge=pivot;
   }else if(v==='sword'){
-   const pivot=new THREE.Group();pivot.name='gyuwon-memory-sword-hinge';group.add(pivot);
+   const pivot=new THREE.Group();pivot.name='gyuwon-memory-sword-hinge';pivot.scale.set(h.width,h.length/43,1);group.add(pivot);
    const shape=new THREE.Shape();shape.moveTo(-1,0);shape.lineTo(1,0);shape.lineTo(1,38);shape.lineTo(0,43);shape.lineTo(-1,38);shape.closePath();
    const blade=itemGeo(new THREE.ExtrudeGeometry(shape,{depth:.45,bevelEnabled:true,bevelSize:.1,bevelThickness:.12,bevelSegments:2,steps:1}));
-   mesh(pivot,blade,steel,0,0,-.2,1,1,1,'gyuwon-memory-forged-spatial-blade');
-   mesh(pivot,box,steel,0,0,0,6,.6,.8,'gyuwon-memory-sword-crossguard');
+   mesh(pivot,blade,memoryGold,0,0,-.2,1,1,1,'gyuwon-memory-forged-spatial-blade');
+   mesh(pivot,box,memoryGold,0,0,0,6,.6,.8,'gyuwon-memory-sword-crossguard');
    mesh(pivot,cylinder,graphite,0,-2,0,.45,4,.45,'gyuwon-memory-sword-grip');
    group.userData.hinge=pivot;
   }else if(v==='dice'){
-   mesh(group,box,paper,0,0,0,3.4,3.4,3.4,'gyuwon-memory-tumbling-die');
+   mesh(group,box,memoryGold,0,0,0,3.4,3.4,3.4,'gyuwon-memory-tumbling-die');
    for(const side of [-1,1])for(let i=0;i<5;i++)mesh(group,sphere,graphite,side*1.72,(i%2-.5)*1.2,(Math.floor(i/2)-1)*.9,.10,.30,.30,'gyuwon-dice-recessed-pip');
   }else if(v==='year-radial-sludge'){
    const body=itemGeo(new THREE.BoxGeometry(h.width*2,3,h.depth*2,coarse?8:16,6,4));
@@ -217,6 +238,9 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    mesh(group,sphere,neon,0,.62,0,h.r*.70,h.r*.94,h.r*.70,
     'gyuwon-gacha-falling-prize-capsule');
    mesh(group,box,steel,0,1,0,1.0,.25,1.0,'gyuwon-gacha-capsule-impact-core');
+   }else if(v==='year-open-workbook'){
+   const covers=[];for(const side of [-1,1]){const pivot=new THREE.Group();group.add(pivot);mesh(pivot,box,paper,side*.7,.12,0,1.4,.14,1.8,'gyuwon-open-workbook-pages');mesh(pivot,box,hot,side*.7,0,0,1.5,.08,1.9,'gyuwon-open-workbook-cover');pivot.userData.side=side;covers.push(pivot);}group.userData.covers=covers;
+   const crest=createGyuwonPressureCrest(paper,{coarse});group.add(crest.mesh);group.userData.crest=crest;
   }else if(v==='year-stream-pulse'){
    const crest=createGyuwonPressureCrest(neon,{coarse});group.add(crest.mesh);
    group.userData.crest=crest;
@@ -289,35 +313,33 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   return {group,v,parts,owned};
  }
  const WAVE_LIMIT=34;
- function clearWave(){
-  for(const w of waves){w.mesh.removeFromParent();w.crest.removeFromParent();w.geometry.dispose();}
-  waves=[];waveId=null;
- }
+ function clearWave(){for(const w of wavePool){w.mesh.visible=w.crest.visible=false;}waves=[];waveId=null;}
  function makeWave(h){
-  clearWave();waveId=h.id;
-  const gap=Math.max(0.1,h.opening-.55);
-  for(const [lo,hi] of [[-WAVE_LIMIT,Math.max(-WAVE_LIMIT,h.gap-gap)],
-   [Math.min(WAVE_LIMIT,h.gap+gap),WAVE_LIMIT]]){
+  clearWave();waveId=h.id;const gap=Math.max(.1,h.opening-.55);
+  for(const [index,[lo,hi]]of [[-WAVE_LIMIT,Math.max(-WAVE_LIMIT,h.gap-gap)],[Math.min(WAVE_LIMIT,h.gap+gap),WAVE_LIMIT]].entries()){
    if(hi-lo<.2)continue;
-   const geometry=new THREE.BoxGeometry(hi-lo,7,(h.depth+.55)*2,coarse?8:20,4,2);
-   const m=mesh(root,geometry,h.visual==='year-sludge-wave'?slime:wavewater,
-    (lo+hi)/2,3.55,0,1,1,1,'gyuwon-dday-wave-body');
-   const crest=mesh(root,box,h.visual==='year-sludge-wave'?froth:paper,
-     (lo+hi)/2,6.75,0,hi-lo,.29,.48,'gyuwon-3d-water-physical-crest');
-    waves.push({mesh:m,geometry,base:geometry.attributes.position.array.slice(),crest,sideWidth:hi-lo});
+   let w=wavePool[index];
+   if(!w){const geometry=geo(new THREE.BoxGeometry(1,7,1,coarse?8:20,4,2));
+    const m=mesh(root,geometry,wavewater,0,3.55,0,1,1,1,'gyuwon-dday-wave-body'),crest=mesh(root,box,paper,0,6.75,0,1,.29,.48,'gyuwon-3d-water-physical-crest');
+    w={mesh:m,geometry,base:geometry.attributes.position.array.slice(),crest};wavePool[index]=w;
+   }
+   w.mesh.visible=w.crest.visible=true;w.mesh.material=h.visual==='year-sludge-wave'?slime:wavewater;w.crest.material=h.visual==='year-sludge-wave'?froth:paper;
+   w.mesh.position.x=w.crest.position.x=(lo+hi)/2;w.mesh.scale.set(hi-lo,1,(h.depth+.55)*2);w.crest.scale.x=hi-lo;w.sideWidth=hi-lo;waves.push(w);
   }
  }
  const cues=new THREE.Group();cues.name='gyuwon-exam-wave-passages';root.add(cues);
  const cueL=mesh(cues,box,paper,0,.08,0,.24,.16,60),cueR=mesh(cues,box,paper,0,.08,0,.24,.16,60);
  const score=new THREE.Group();score.name='gyuwon-score-energy';root.add(score);
  const scoreRing=mesh(score,ring,neon,0,.2,0,3.5,.1,3.5);scoreRing.rotation.x=Math.PI/2;
- function releaseItem(item){
+ function destroyItem(item){item.group.traverse(o=>{if(o.isInstancedMesh)o.dispose();});
   item.group.userData.crest?.dispose();
   for(const geometry of item.owned)geometry.dispose();
   item.group.removeFromParent();
  }
+ function retireItem(item){const key=item.poolKey;if(poolCount<48){if(!pool.has(key))pool.set(key,[]);if(pool.get(key).length<4){item.group.visible=false;pool.get(key).push(item);poolCount++;return;}}destroyItem(item);}
+ function acquireItem(h){const key=poolKey(h),items=pool.get(key);let item;if(items?.length){item=items.pop();poolCount--;item.group.visible=true;item.group.scale.set(1,1,1);item.group.rotation.set(0,0,0);}else item=makeItem(h);item.poolKey=key;return item;}
  function removeDynamic(){
-  for(const obj of dynamic.values())releaseItem(obj);
+  for(const obj of dynamic.values())retireItem(obj);
   dynamic.clear();
  }
  function update(g){
@@ -386,7 +408,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     }).curve;
     for(let j=0;j<stages;j++)for(const q of [.32,.68]){
      const t=(j+q)/stages;
-     suctionDummy.position.copy(path.getPoint(t)).addScaledVector(suctionNormal,
+     path.getPoint(t,suctionDummy.position).addScaledVector(suctionNormal,
       (.64*Math.pow(1-t,.82)+.04)*.71);
      suctionDummy.quaternion.copy(cupRotation);
      suctionDummy.scale.setScalar(Math.max(.15,(.64*(1-t)+.04)*.64));
@@ -406,13 +428,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    cueL.position.x=waveHazard.gap-half;cueR.position.x=waveHazard.gap+half;
    // Timing and gap edges are read from the live authoritative hazard.
    const z=waveHazard.z+Math.max(0,waveHazard.age-waveHazard.warn)*waveHazard.speed;
-   for(const w of waves){
+   for(const [index,w]of waves.entries()){
+    const lo=index===0?-WAVE_LIMIT:waveHazard.gap+half,hi=index===0?waveHazard.gap-half:WAVE_LIMIT;w.sideWidth=hi-lo;w.mesh.scale.x=w.crest.scale.x=w.sideWidth;w.mesh.position.x=w.crest.position.x=(lo+hi)/2;
     w.mesh.position.z=z;w.crest.position.z=z+(waveHazard.depth+.55)*.82;
     w.crest.position.y=6.65+.15*Math.sin(g.time*3.5+w.sideWidth);
     const attr=w.geometry.attributes.position,arr=w.base;
     if(!reduced)for(let i=0;i<attr.count;i++){
      const j=i*3;
-     attr.setY(i,arr[j+1]+Math.sin(arr[j]*.32+g.time*2.8+arr[j+1]*.7)*.42);
+     attr.setY(i,arr[j+1]+Math.sin(arr[j]*w.sideWidth*.32+g.time*2.8+arr[j+1]*.7)*.42);
      // Never displace the crest Z outside its authoritative collision depth.
     }
     attr.needsUpdate=true;if(!reduced)w.geometry.computeVertexNormals();
@@ -423,6 +446,16 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    const t=e.gradeT;
    score.scale.setScalar(1+t*2.3);scoreRing.material.color.setHex(
     e.grade==='great'?0xf1c75a:e.grade==='normal'?0x9bd4c9:0xad2836);
+  }
+  memoryDust.visible=e.year>=9&&e.mode==='combat';
+  if(memoryDust.visible){const attr=memoryGeometry.attributes.position,hazards=s.hazards.filter(h=>h.warn-h.age<1.55);
+   for(let i=0;i<memoryCount;i++){const h=hazards[i%hazards.length],a=i*2.399963+g.time*.3;
+    if(h){const p=hazardPosition(h);let x=p.x+Math.sin(a)*(h.r||1.5),z=p.z+Math.cos(a)*(h.r||1.5),y=.5+(i%11)*.24;
+     if(h.shape==='lane'||h.shape==='topple'){const d=((i*17%97)/96-.5)*h.length;x=p.x+Math.sin(h.yaw)*d;z=p.z+Math.cos(h.yaw)*d;}
+     if(h.shape==='wave'){x=(i/memoryCount-.5)*68;z=h.z+Math.max(0,h.age-h.warn)*h.speed;y=.6+(i%23)*.25;if(Math.abs(x-h.gap)<h.opening)x=h.gap+h.opening+1;}
+     attr.setXYZ(i,x,y+Math.sin(a)*.2,z);
+    }else{const r=28+(i%7);attr.setXYZ(i,Math.sin(a)*r,.5+(i%21)*.3,Math.cos(a)*r);}
+   }attr.needsUpdate=true;
   }
   const live=new Set();
   for(const h of s.hazards){
@@ -437,26 +470,29 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||v==='year-bullet'||
     v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
-   if(!item){item=makeItem(h);dynamic.set(h.id,item);}
+   if(!item){item=acquireItem(h);dynamic.set(h.id,item);}
    const p=hazardPosition(h),rise=1-ownAnticipation(h);
-   const ready=ownAnticipation(h);
+   const ready=ownAnticipation(h,v==='year-final-omr'?3:1.05);
 
-    item.group.visible=h.warn-h.age<=1.55;
+    item.group.visible=h.warn-h.age<=(v==='year-final-omr'?3:1.55);
    item.group.position.set(p.x,1.45,p.z);
-   if(v==='year-toppling-book'){
+   if(v==='year-toppling-book'||v==='year-final-omr'){
     item.group.position.set(h.x-Math.sin(h.yaw)*h.length/2,0,h.z-Math.cos(h.yaw)*h.length/2);
     item.group.rotation.set(0,h.yaw,0);
     // Entire book contacts its floor footprint exactly when damage starts.
     item.group.userData.hinge.rotation.x=Math.PI/2*smooth(ready);
+    if(item.group.userData.fold)item.group.userData.fold.rotation.x=-Math.sin(Math.PI*ready)*.62;
    }
    if(v==='sword'){
     item.group.position.set(h.x-Math.sin(h.yaw)*h.length/2,0,h.z-Math.cos(h.yaw)*h.length/2);
     item.group.rotation.set(0,h.yaw,0);item.group.userData.hinge.rotation.x=Math.PI/2*smooth(ready);
    }
-   if(v==='dice')item.group.position.y=1.7+14*rise;
-   if(v==='year-radial-sludge'){item.group.position.y=0;item.group.rotation.set(0,h.yaw,0);}
+   if(v==='dice'){item.group.position.y=1.7+14*rise;if(h.stageRedirect&&h.age<h.warn){item.group.position.x=h.dropFromX+(h.x-h.dropFromX)*smooth(ready);item.group.position.z=h.dropFromZ+(h.z-h.dropFromZ)*smooth(ready);item.group.rotation.z=(1-ready)*.8;}}
+   if(v==='year-radial-sludge'){item.group.position.y=0;item.group.rotation.set(0,h.yaw,0);item.group.scale.y=(h.waveHeight||3)/3;}
 
    if(v==='year-bookfall'||v==='year-merch')item.group.position.y=.45+17*rise;
+   if(h.sentenceIndex!==undefined&&h.age<h.warn){const q=ownAnticipation(h,1.9);item.group.position.set(h.x+(h.sentenceIndex-1.5)*2*(1-smooth(q)),1.2+2.4*Math.sin(q*Math.PI),h.z+2*Math.sin(q*Math.PI));item.group.rotation.z=(1-q)*.8;}
+   if(v==='year-photocard')item.group.scale.z=.7+.3*Math.sin(h.age*10);
   if(v==='year-gacha-prize')item.group.position.y=.62+12*rise;
   if(v==='year-stream-pulse')item.group.position.y=.66;
   if(v==='year-gacha-prize'||v==='year-stream-pulse'){
@@ -478,6 +514,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     puddle.scale.setScalar((h.r+.18)*(.55+.45*w));
    }
   }
+   if(h.puddle){item.group.position.y=.025;item.group.scale.y=.10;}
    if(v==='year-fire')item.group.position.y=1.1;
    if(v==='year-circus')item.group.position.y=h.r;
    if(v==='year-audience'){
@@ -492,23 +529,24 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     item.group.position.y=v==='year-korean'?.7+9*rise:v==='year-english'?1.8+8*rise:1.2;
     item.group.scale.set(v==='year-english'?.55:1.18,v==='year-english'?2.8:1.18,1.18);
    }
+   if(item.group.userData.covers)for(const cover of item.group.userData.covers)cover.rotation.z=cover.userData.side*Math.PI*.46*(1-ready);
    if(item.group.userData.crest){
     item.group.position.y=0;item.group.rotation.set(0,0,0);
     item.group.userData.crest.update(p.r,h.width||1,g.time,v==='year-fire',ownAnticipation(h));
    }
-   if(v.startsWith('year-')&&!['year-bookfall','year-toppling-book','year-radial-sludge','year-audience'].includes(v)&&!item.group.userData.crest)item.group.rotation.y=h.yaw||g.time*.14;
+   if(v.startsWith('year-')&&!['year-bookfall','year-toppling-book','year-radial-sludge','year-audience'].includes(v)&&!item.group.userData.crest&&!item.group.userData.hinge)item.group.rotation.y=h.yaw??g.time*.14;
    if(!item.group.userData.crest&&!item.group.userData.hinge)item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
   }
-  for(const [id,item]of dynamic)if(!live.has(id)){releaseItem(item);dynamic.delete(id);}
+  for(const [id,item]of dynamic)if(!live.has(id)){retireItem(item);dynamic.delete(id);}
   attackCues.update(g);
  }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
-  attackCues.dispose();apocalypse.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
+  for(const items of pool.values())for(const item of items)destroyItem(item);pool.clear();poolCount=0;attackCues.dispose();apocalypse.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
   for(const m of new Set(materials))m.dispose();
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
+ return {root,update,clear,dispose,ready:Promise.all(animeTextures.map(t=>t.userData.ready||Promise.resolve(true))),stats:()=>({yearProps:dynamic.size,pooledProps:poolCount,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
 

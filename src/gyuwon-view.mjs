@@ -57,7 +57,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const easeUnit=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
  const studyTint=new THREE.Color(0x111b28),whiteTint=new THREE.Color(0xffffff),voidTint=new THREE.Color(0x010105);
  const studyFloor=new THREE.Color(0x354252),whiteFloor=new THREE.Color(0xe9e7e4),darkFloor=new THREE.Color(0x090810);
- let deathElapsed=0;
+ let deathElapsed=0,disposed=false;
  function clear(){deathElapsed=0;spectacle.clear();recall.clear();philosophy.reset();hazardFx.clear();yearsFx.clear();absorbFx.clear();}
  function update(g,dt=0){
   const b=g.boss,s=g.gyuwon,won=g.status==='won';if(won)deathElapsed+=dt;actor.update(g,deathElapsed,dt);
@@ -82,6 +82,6 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years)yearsFx.update(g);else{shadowHand.update(g);absorbFx.update(g);}
  }
- return {root,update,clear,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){clear();hazardFx.dispose();yearsFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarmProgressive:async(renderer,camera)=>{await yearsFx.ready;if(disposed)return;const textures=new Set();yearsFx.root.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.map)textures.add(m.map);});for(const t of textures){if(disposed)return;renderer.initTexture?.(t);await new Promise(resolve=>setTimeout(resolve,0));}if(!disposed)await recall.prewarmProgressive(renderer,camera);},prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(){},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){if(disposed)return;disposed=true;clear();hazardFx.dispose();yearsFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
 

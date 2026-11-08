@@ -22,7 +22,8 @@ try{
   return route.fulfill({path:resolve('node_modules/three/build',basename),contentType:'text/javascript'});
  });
  await page.goto('http://127.0.0.1:8000/spider-combat.html',{waitUntil:'domcontentloaded',timeout:60000});
- await page.waitForSelector('#arena');
+ await page.waitForSelector('[data-j="new"]',{timeout:60000});await page.waitForTimeout(200);await page.evaluate(()=>document.getElementById('journey')?.close());
+ const cdp=await page.context().newCDPSession(page);await cdp.send('Emulation.setFocusEmulationEnabled',{enabled:true});
  const opened=await page.evaluate(async()=>{
   const {launchGyuwonBattle}=await import('./src/gyuwon-battle.mjs');
   window.__yearQa=launchGyuwonBattle({weapon:'sword',diagnostics:true,configure(g){
@@ -31,8 +32,9 @@ try{
   return Boolean(window.__yearQa);
  });
  assert.equal(opened,true);
- await page.waitForFunction(async()=>{
-  const {readBattleSession}=await import('./src/battle-session.mjs');
+ await page.evaluate(async()=>{window.readYearSession=(await import('./src/battle-session.mjs')).readBattleSession;});
+ await page.waitForFunction(()=>{
+  const readBattleSession=window.readYearSession;
   const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
   return !!(root&&readBattleSession(root)?.active);
  },{},{timeout:55000});
@@ -51,7 +53,7 @@ try{
  await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const g=readBattleSession(document.getElementById('gyuwon-battle').firstElementChild.shadowRoot).game;
-  const e=g.gyuwon.years;e.mode='combat';e.season=30;e.day=0;e.cast=null;e.recover=0;
+  const e=g.gyuwon.years;e.mode='combat';e.season=48;e.signatureUsed=true;e.day=0;e.cast=null;e.recover=0;
   g.boss.state='recovery';g.gyuwon.hazards.length=0;
  });
  await page.waitForFunction(()=>document.getElementById('gyuwon-battle')

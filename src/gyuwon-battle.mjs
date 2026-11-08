@@ -73,16 +73,17 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   function move(e){const r=$('stick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,z=r.top+r.height/2-e.clientY;const n=Math.max(1,Math.hypot(x,z)/40);x/=n;z/=n;stick.x=x/40;stick.z=z/40;$('thumb').style.transform=`translate(${x}px,${-z}px)`;}
   $('stick').onpointerdown=e=>{e.preventDefault();stickPointer=e.pointerId;$('stick').setPointerCapture(stickPointer);move(e);};$('stick').onpointermove=e=>{if(e.pointerId===stickPointer)move(e);};$('stick').onpointerup=$('stick').onpointercancel=()=>{releaseCapturedPointer($('stick'),stickPointer);stickPointer=null;stick.x=stick.z=0;$('thumb').style.transform='';};
   installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&mode==='playing',listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
-  hud.ready.then(ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
+  hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
     // First-use GPU shader compilation belongs behind the initial loading
     // gate, never in the middle of a phase-three memory map transition.
-    try{study.prewarm(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
-    if(closed)return;ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
+    try{await study.prewarmProgressive(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    if(closed)return;hud.loading(false);ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
    // Keep the modal's containing block in sync with browser viewport resizes.
    if(d.style.width!==innerWidth+'px')d.style.width=innerWidth+'px';if(d.style.height!==innerHeight+'px')d.style.height=innerHeight+'px';
-   const visualDt=ready&&!document.hidden&&mode!=='paused'?dt:0;
+   if(!ready){frameAt=0;return;}
+   const visualDt=!document.hidden&&mode!=='paused'?dt:0;
 
    if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,input());if(g.status!=='playing')setMode('ending');}
    if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?8:1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'최규원 토벌':'마지막 문제 앞에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'정답이 없는 밤에도, 그는 처음으로 문제집을 덮었다.':'';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}

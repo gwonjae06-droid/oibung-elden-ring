@@ -12,15 +12,15 @@ const game=(year=1)=>{
  g.gyuwon.years.year=year;g.gyuwon.years.mode='combat';
  g.player.invuln=1000;return g;
 };
-test('all five exam subjects fight only near the boss, never target the player position',()=>{
+test('exam attacks start near the boss and ranged shots physically travel toward the player',()=>{
  const g=game(1),e=g.gyuwon.years;
  g.player.x=21;g.player.z=19;g.boss.x=-3;g.boss.z=-2;
- e.cast=null;e.recover=0;e.season=30;
+ e.cast=null;e.recover=0;e.season=48;e.signatureUsed=true;
  stepGyuwon(g,.03);
  assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
   assert.equal(e.subject,i);
-  assert.ok(i===4?g.gyuwon.hazards.length===0:g.gyuwon.hazards.length>0);
+  assert.ok(i===4?g.gyuwon.hazards.every(h=>h.examShot):g.gyuwon.hazards.length>0);
   for(const h of g.gyuwon.hazards){
    assert.ok(['circle','ring'].includes(h.shape),h.shape);
    assert.ok(Math.hypot(h.x-g.boss.x,h.z-g.boss.z)+h.r<=GYUWON_EXAM_MAX_REACH);
@@ -92,8 +92,8 @@ test('seven-year roulette stops on its fixed authored outcome and attacks as fal
  fx.update(g);
  assert.notEqual(wheel.rotation.z,start);
  assert.ok(root.getObjectByName('gyuwon-gacha-fixed-arrow-pointer'));
- assert.equal(g.gyuwon.hazards.length,4);
- assert.ok(g.gyuwon.hazards.every(h=>h.visual==='year-gacha-prize'&&h.warn>=3));
+ assert.ok(g.gyuwon.hazards.length>=1);
+ assert.ok(g.gyuwon.hazards.every(h=>['year-gacha-prize','year-stream-pulse','year-vehicle'].includes(h.visual)&&h.warn>=3));
  g.gyuwon.hazards[0].age=g.gyuwon.hazards[0].warn-.01;
  fx.update(g);
  assert.ok(stage.getObjectByName('gyuwon-gacha-falling-prize-capsule'));

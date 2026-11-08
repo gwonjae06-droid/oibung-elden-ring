@@ -1,3 +1,5 @@
+import {pushOutAnnualCover} from './gyuwon-nightmare-mechanics.mjs';
+import {acceptAnnualDamage} from './gyuwon-annual-progress.mjs';
 import {tickBossHitTraits} from './boss-hit-traits.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -46,8 +48,8 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
   // The sixth-year shrine is breakable. Intact figures absorb a modest portion
   // of incoming boss damage until the player clears them or the cast ends.
   const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;
-  const dealt=Math.min(b.hp,amount*(e.mode==='exam'?.5:1)*shield);
-  b.hp-=dealt;if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
+  const receipt=acceptAnnualDamage(g,amount*(e.mode==='exam'?.5:1)*shield),dealt=receipt.accepted;
+  if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
    ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
   if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}
   return dealt;
@@ -369,7 +371,7 @@ function tickPlayer(g,dt,input){
   const speed=playerWalkSpeed(p,(g.gyuwon.slow>0?.65:1)*(p.skill.blue>0?1.5:1));
   p.x+=x/n*speed*dt;p.z+=z/n*speed*dt;p.yaw=Math.atan2(b.x-p.x,b.z-p.z);
  }
- clampArena(p);
+ if(g.gyuwon.years)pushOutAnnualCover(g);clampArena(p);
 }
 export function stepGyuwon(g,dt,input={}){
  if(g.status!=='playing'||!Number.isFinite(dt)||dt<=0)return;

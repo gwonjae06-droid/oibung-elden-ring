@@ -10,7 +10,7 @@ function mockCanvas(){
 }
 const hazard=(id,visual)=>({id,visual,shape:'circle',x:0,z:0,r:5,age:.7,warn:1,yaw:0,width:2,opening:3,gap:0,depth:1,speed:4});
 const game=hazards=>({status:'playing',boss:{phase:3},gyuwon:{stageMemory:'tsunami',stageTime:1,t:1,hazards},time:1});
-test('retired final-boss attack geometries are disposed while other hazards remain active',()=>{
+test('retired memory props are pooled and released when the encounter closes',()=>{
  const restore=mockCanvas();
  try{
   const scene=new THREE.Scene(),fx=createGyuwonSpectacle(scene);
@@ -24,10 +24,10 @@ test('retired final-boss attack geometries are disposed while other hazards rema
     object.geometry.addEventListener('dispose',()=>released++);
   fx.update(game([h2]),.016,0);
   assert.equal(fx.stats().liveAttackGroups,1);
-  assert.ok(released>=1,'retired spotlight geometry released');
+  assert.equal(released,0,'pooled props survive expiry');assert.ok(fx.stats().pooledAttackGroups>=1);
   fx.update(game([]),.016,0);
   assert.equal(fx.stats().liveAttackGroups,0);
-  fx.dispose();
+  fx.dispose();assert.ok(released>=1,'pooled geometry is disposed on close');
  }finally{restore();}
 });
 test('giant wave does not double-render its surface as an expensive point cloud',()=>{
