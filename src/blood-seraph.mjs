@@ -61,12 +61,31 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  // The eye is genuine volumetric geometry with an iris, pupil and socket.
  const socket=makeMesh(root,new THREE.SphereGeometry(1.42,coarse?16:30,coarse?12:22),
   dark,'blood-seraph-eye-socket',0,1.96,1.13);socket.scale.set(1.35,.78,.46);
+ const irisMat=ruby.clone();irisMat.emissive.setHex(0x7a1832);
  const iris=makeMesh(root,new THREE.SphereGeometry(1.2,coarse?18:34,coarse?12:24),
-  ruby,'blood-seraph-crimson-iris',0,1.96,1.49);iris.scale.set(1.26,.64,.36);
+  irisMat,'blood-seraph-crimson-iris',0,1.96,1.49);iris.scale.set(1.26,.64,.36);
  const pupil=makeMesh(root,new THREE.SphereGeometry(.55,coarse?12:24,coarse?8:16),
   dark,'blood-seraph-eye-pupil',0,1.96,1.78);pupil.scale.set(.74,.73,.3);
  const gleam=makeMesh(root,new THREE.SphereGeometry(.17,10,8),glow,
   'blood-seraph-eye-glint',-.4,2.22,1.98);
+ // Laser is an articulated real 3D shaft. Its aim and visibility read the
+ // same hazard yaw/warn/life that drives the floor collision footprint.
+ const beamPivot=new THREE.Group();beamPivot.name='blood-seraph-eye-beam-socket';
+ beamPivot.position.set(0,1.96,1.85);root.add(beamPivot);
+ const shaft=vec(0,-7.3,26),axis=vec(0,1,0),middle=shaft.clone().multiplyScalar(.5);
+ const beamMat=new THREE.MeshBasicMaterial({color:0xff9aa8,transparent:true,opacity:.86,
+  blending:THREE.AdditiveBlending,depthWrite:false});
+ const auraMat=new THREE.MeshBasicMaterial({color:0xc72247,transparent:true,opacity:.36,
+  blending:THREE.AdditiveBlending,depthWrite:false});
+ const beam=new THREE.Group();beam.name='blood-seraph-live-ocular-ray';beamPivot.add(beam);
+ for(const [radius,material] of [[.21,beamMat],[1.0,auraMat]]){
+  const m=makeMesh(beam,new THREE.CylinderGeometry(radius,radius,1,coarse?8:14),
+   material,'blood-seraph-ocular-ray-shell');
+  m.position.copy(middle);
+  m.quaternion.setFromUnitVectors(axis,shaft.clone().normalize());
+  m.scale.y=shaft.length();
+ }
+ beamPivot.visible=false;
  const haloAnchor=new THREE.Group();haloAnchor.name='blood-seraph-halo-assembly';
  haloAnchor.position.set(0,2.25,-3.4);root.add(haloAnchor);
  const rings=[];
@@ -159,15 +178,28 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   const t=g.time||0,pattern=b.state==='pattern'?s.pattern:null;
   const first=s.hazards?.length?Math.min(...s.hazards.map(h=>h.warn)):1.2;
   const charge=pattern?ease((s.t||0)/Math.max(.2,first)):0;
-  const beats=pattern==='seraphWings'?[1.15,2.04,2.93]:
-   pattern==='seraphFinale'?[1.48,2.33,3.18,4.03]:[];
-  const slash=beats.reduce((m,beat)=>Math.max(m,Math.max(0,1-Math.abs((s.t||0)-beat)/.5)),0);
+  // Never animate at guessed fixed times: use authoritative hazard warns,
+  // which include the battle tempo multiplier and readability padding.
+  const allBeats=(s.hazards||[]).map(h=>h.warn).sort((a,b)=>a-b);
+  const wingAttack=['seraphWings','seraphFinale','seraphDescent'].includes(pattern);
+  const slash=wingAttack?allBeats.reduce((m,beat)=>
+   Math.max(m,Math.max(0,1-Math.abs((s.t||0)-beat)/.52)),0):0;
+  const closing=pattern==='seraphEmbrace'?charge:0;
+  const featherfall=pattern==='seraphFeathers'?charge:0;
+  const gaze=pattern==='seraphGaze';
+  const activeRay=gaze?(s.hazards||[]).find(h=>h.damage>0&&h.age>=h.warn&&h.age<h.warn+h.life):null;
+  beamPivot.visible=!!activeRay;
+  if(activeRay)beamPivot.rotation.y=activeRay.yaw-(b.yaw||0);
+  const eyeCharge=gaze?Math.max(0,...(s.hazards||[]).map(h=>
+   h.age<h.warn?Math.min(1,h.age/Math.max(.01,h.warn)):0)):0;
   wings.forEach(({pivot,pair,side})=>{
    const breath=reduced?0:Math.sin(t*(1.05+pair*.19)+side*.55)*.043;
    const flare=pattern==='seraphCrown'||pattern==='seraphFinale'?charge*.23:0;
-   pivot.rotation.z=(pair===0?.11:pair===1?-.09:.19)+breath+side*(slash*.24+flare);
-   pivot.rotation.y=side*(.06+charge*.085+slash*.15);
-   pivot.rotation.x=breath*.5+slash*.09;
+   pivot.rotation.z=(pair===0?.11:pair===1?-.09:.19)+breath+
+    side*(slash*.24+flare+featherfall*.16);
+   pivot.rotation.y=side*(.06+charge*.085+slash*.15+closing*.85);
+   pivot.rotation.x=breath*.5+slash*.09+closing*.18;
+   if(pattern==='seraphDescent')pivot.rotation.z-=side*slash*.31;
   });
   rings.forEach((m,i)=>{m.rotation.z=(reduced?0:t*.12*(i%2?-1:1))+i*.24;
    const pulse=1+(reduced?0:Math.sin(t*1.7-i)*.02)+charge*.045;
@@ -175,10 +207,12 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   });
   const eyePulse=.85+.15*Math.sin(t*(pattern?5:2.4));
   iris.scale.z=.36*(1+charge*.3);
-  iris.material.emissiveIntensity=.46+charge*.9;
+  iris.material.emissiveIntensity=.46+charge*.45+eyeCharge*1.1+
+   (g.blood.seraphHealDone&&b.state==='transition'?.55:0);
   gleam.scale.setScalar(eyePulse+charge*.25);
  }
- function clear(){shown=0;root.visible=false;root.position.set(0,0,0);root.rotation.set(0,0,0);
+ function clear(){shown=0;root.visible=false;beamPivot.visible=false;
+  root.position.set(0,0,0);root.rotation.set(0,0,0);
   wings.forEach(({pivot})=>pivot.rotation.set(0,0,0));}
  function dispose(){
   if(disposed)return;disposed=true;root.parent?.remove(root);
@@ -189,6 +223,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  }
  return {root,update,clear,dispose,stats:()=>({visible:root.visible,
   wingPairs:3,hinges:wings.length,featherInstances:wings.reduce((n,w)=>n+w.feathers.count,0),
-  haloRings:rings.length,hasEye:!!pupil,decorativeOnly:false,
+  haloRings:rings.length,hasEye:!!pupil,hasLiveEyeRay:!!beamPivot,
+  eyeRayVisible:beamPivot.visible,decorativeOnly:false,
   ownsHurtSilhouette:true,damageSources:0})};
 }
