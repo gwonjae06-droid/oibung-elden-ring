@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {BLOOD_SERAPH_TRANSITION,hazardPosition} from './blood-data.mjs';
 import {createBloodHead} from './blood-head.mjs';
 import {SERAPH_EYE_ATTACKS} from './blood-seraph-doctrine.mjs';
+import {createBloodSeraphPillars} from './blood-seraph-pillars.mjs';
 
 // A real, deliberately budgeted 3D seraph rig, NOT a fullscreen image.
 // The enormous seraph is the ONLY visible 3P boss and occupies the real
@@ -40,6 +41,7 @@ const WING_FORMS=[
 export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='blood-third-phase-crimson-seraph';root.userData.decorativeOnly=false;root.userData.bossCombatRig=true;
  scene.add(root);root.visible=false;
+ const pillars=createBloodSeraphPillars(scene,{coarse,reduced});
  const ruby=new THREE.MeshStandardMaterial({color:0x6a0a21,emissive:0x480718,emissiveIntensity:.52,metalness:.18,roughness:.33,side:THREE.DoubleSide});
  const pearl=new THREE.MeshStandardMaterial({color:0xe6a5a9,emissive:0x6f1a31,emissiveIntensity:.28,metalness:.14,roughness:.47});
  const edging=new THREE.MeshStandardMaterial({color:0xe2728a,emissive:0xa02a4e,emissiveIntensity:.54,metalness:.3,roughness:.29});
@@ -73,6 +75,20 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   edging,'blood-seraph-sacred-face-ring',0,1.95,1.35);
  const gleam=makeMesh(root,new THREE.SphereGeometry(.14,10,8),glow,
   'blood-seraph-forehead-sanctum-light',-.46,3.07,2.52);
+ // Face and halo, not an ugly rectangular strip across the floor, prepare
+ // the sweeping cannon with a strong, holy circular energy charge.
+ const chargeMat=new THREE.MeshBasicMaterial({color:0xff8ca6,transparent:true,
+  opacity:.15,depthWrite:false,blending:THREE.AdditiveBlending});
+ const chargeRing=makeMesh(root,new THREE.TorusGeometry(1.95,.12,8,48),
+  chargeMat,'blood-seraph-face-cannon-sacred-charge',0,1.95,3.4);
+ chargeRing.visible=false;
+ const teleportMat=new THREE.MeshBasicMaterial({color:0xff8a97,
+  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending});
+ const teleportRings=[0,1].map(i=>{
+  const ring=makeMesh(scene,new THREE.TorusGeometry(2.2,.14,7,48),
+   teleportMat.clone(),'blood-seraph-teleport-sanctum-'+i);
+  ring.rotation.x=-Math.PI/2;ring.visible=false;return ring;
+ });
  // Laser is an articulated real 3D shaft. Its aim and visibility read the
  // same hazard yaw/warn/life that drives the floor collision footprint.
  const beamPivot=new THREE.Group();beamPivot.name='blood-seraph-eye-beam-socket';
@@ -198,7 +214,10 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   const phase=g?.boss?.phase||1;
   const visible=phase===3&&g?.status!=='lost'&&g?.status!=='won';
   root.visible=visible;
-  if(!visible){shown=0;return;}
+  if(!visible){
+   shown=0;pillars.clear();chargeRing.visible=false;
+   teleportRings.forEach(r=>r.visible=false);return;
+  }
   const s=g.blood,b=g.boss,p=g.player;
   const intro=b.state==='transition'?ease((s.t-.2)/(BLOOD_SERAPH_TRANSITION-.55)):1;
   const d=clamp(dt,0,.12),k=1-Math.exp(-d*4);
@@ -210,7 +229,17 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   root.rotation.y=b.yaw||0;
   const scale=Math.max(.001,shown)*1.10; // 34% grander than the old 0.82 scale
 
-  root.scale.setScalar(scale);
+  const blink=s.seraphBlink,age=blink?Math.max(0,blink.age||0):0;
+  root.scale.setScalar(scale*(blink?Math.max(.14,ease(age/.34)):1));
+  teleportRings.forEach((ring,i)=>{
+   ring.visible=!!blink&&age<.62;
+   if(!ring.visible)return;
+   const site=i===0?blink.from:blink.to;
+   ring.position.set(site.x,.35,site.z);
+   ring.scale.setScalar(1+age*(i===0?2.1:1.35));
+   ring.material.opacity=.50*(1-ease(age/.62));
+  });
+  pillars.update(g);
   const t=g.time||0,pattern=b.state==='pattern'?s.pattern:null;
   const first=s.hazards?.length?Math.min(...s.hazards.map(h=>h.warn)):1.2;
   const charge=pattern?ease((s.t||0)/Math.max(.2,first)):0;
@@ -263,6 +292,11 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   });
   visage.update(g,c,d,{cast:charge});
   holyFaceRing.scale.setScalar(1+charge*.18+eyeCharge*.22);
+  const charging=pattern==='seraphSweep'&&(!activeRay||s.t<first);
+  chargeRing.visible=charging&&eyeCharge>.05;
+  chargeRing.scale.setScalar(.65+eyeCharge*.8);
+  chargeRing.material.opacity=.12+.65*eyeCharge;
+  chargeRing.rotation.z=t*2.2;
   holyFaceRing.rotation.z=(reduced?0:t*.38)+(pattern==='seraphFrenzy'?t*1.5:0);
   gleam.scale.setScalar(.86+.1*Math.sin(t*3)+charge*.35+eyeCharge*.65);
   // A rotating blood halo leaves the player's arena, charges and returns.
@@ -299,6 +333,8 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
 
  }
  function clear(){shown=0;root.visible=false;beamPivot.visible=false;
+  pillars.clear();chargeRing.visible=false;
+  teleportRings.forEach(r=>r.visible=false);
   wingWheel.visible=false;haloWheel.visible=false;
   guides.forEach(m=>m.visible=false);
   root.position.set(0,0,0);root.rotation.set(0,0,0);
@@ -306,10 +342,12 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  function dispose(){
   if(disposed)return;disposed=true;root.parent?.remove(root);
   wingWheel.parent?.remove(wingWheel);haloWheel.parent?.remove(haloWheel);
+  pillars.dispose();
+  for(const ring of teleportRings)ring.parent?.remove(ring);
   for(const guide of guides)guide.parent?.remove(guide);
   visage.dispose();
   const geometries=new Set(),materials=new Set();
-  for(const node of [root,wingWheel,haloWheel,...guides])node.traverse(o=>{
+  for(const node of [root,wingWheel,haloWheel,...guides,...teleportRings])node.traverse(o=>{
    if(o.geometry)geometries.add(o.geometry);
    if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);
   });
@@ -323,6 +361,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   hasLiveEyeRay:!!beamPivot,
   eyeRayVisible:beamPivot.visible,wingWheelVisible:wingWheel.visible,
   warningGuides:guides.filter(g=>g.visible).length,
-  haloWheelVisible:haloWheel.visible,decorativeOnly:false,
+  haloWheelVisible:haloWheel.visible,columns:pillars.stats(),
+  sacredChargeVisible:chargeRing.visible,
+  teleportRingsVisible:teleportRings.filter(r=>r.visible).length,
+  decorativeOnly:false,
   ownsHurtSilhouette:true,damageSources:0})};
 }
