@@ -11,6 +11,7 @@ import {createBloodSpellFx} from './blood-spell-fx.mjs';
 import {createGrandBloodRites} from './blood-grand-rites.mjs';
 import {createBloodSiphonFx} from './blood-siphon-fx.mjs';
 import {createBloodWings} from './blood-wings.mjs';
+import {createBloodSeraph} from './blood-seraph.mjs';
 import {createBloodMotionDirector} from './blood-attack-motion.mjs';
 import {createBloodWhipView} from './blood-whip-view.mjs';
 import {createCathedralFx} from './blood-cathedral-fx.mjs';
@@ -48,6 +49,7 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
  const core=mesh(fluid.sphere,fluid.material,0,4.7,0,actor);core.visible=false;
  const halo=mesh(new THREE.TorusGeometry(1.65,.045,6,56),fluid.material,0,4.7,-.2,actor);
  const wings=createBloodWings(regalia.torso,fluid,quality,{reduced});
+ const seraph=createBloodSeraph(scene,{coarse,reduced});
  const motionDirector=createBloodMotionDirector();
  const birthWave=mesh(new THREE.TorusGeometry(1,.06,5,64),new THREE.MeshBasicMaterial({color:0xf04e65,transparent:true,opacity:.3,depthWrite:false}),0,.35,0,fxRoot);birthWave.rotation.x=Math.PI/2;birthWave.visible=false;
  const projectiles=createPlayerProjectileView(THREE,scene);
@@ -74,11 +76,12 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
    rivuletTime=0;surfaceFlow.streakBoss(reduced?1:3);
   }
   head.visible=c.dissolve<.8;head.scale.setScalar(Math.max(.01,1-c.dissolve));core.visible=c.dissolve>0;core.scale.setScalar(Math.max(.001,c.dissolve)*(1+(reduced?0:Math.sin(g.time*5)*.07)));
-  halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings));halo.rotation.z=reduced?0:g.time*.35;
+  halo.visible=c.dissolve>.5;halo.scale.setScalar(Math.max(.01,c.wings)*(b.phase===3?1.32:1));halo.rotation.z=reduced?0:g.time*.35;
   wings.update(g,c,dt,motion);
+  seraph.update(g,c,dt);
   const env=cathedral.update(g,c,dt);architecture.update(g,c,env);
   apocalypse.update(g,c);
-  heart.visible=b.phase===2||c.active;
+  heart.visible=b.phase>=2||c.active;
   heart.scale.setScalar((1+env.pulse*.065+c.bell*.17)*Math.max(.1,fade));
   scene.traverse(o=>{if(o.isHemisphereLight)o.intensity=1.2*env.light+.38;if(o.isDirectionalLight&&o.name!=='cinematic-boss-silhouette-fill')o.intensity=1.45*env.light+.35;});
   if(c.active&&c.t>=1.8&&lastBirth<1.8)particles.burst(b.x,4+s.elevation,b.z,{count:20,power:4});
@@ -96,8 +99,8 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
   shake*=Math.exp(-dt*14);
  }
  function occlude(camera,g){focusGame=g;}
- function clear(){projectiles.clear();spells.clear();grandRites.clear();bloodWhip.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
- return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,storm:apocalypse.stats(),siphon:siphonFx.stats(),whip:bloodWhip.stats()}),
+ function clear(){projectiles.clear();spells.clear();grandRites.clear();bloodWhip.clear();siphonFx.clear();surfaceFlow.clear();wings.clear();seraph.clear();motionDirector.reset();regalia.resetPose();deathTime=lastBirth=shake=cast=energy=hitRoll=rivuletTime=0;lastWallSurge=-Infinity;lastHp=R.hp;portrait.clear();actor.rotation.set(0,0,0);}
+ return {update,root,occlude,clear,quality,stats:()=>({drops:particles.active,puddles:particles.puddles,hazards:spells.active,bloodSea:architecture.stats().bloodSea,storm:apocalypse.stats(),siphon:siphonFx.stats(),whip:bloodWhip.stats(),seraph:seraph.stats()}),
   event(e,g){if(e.type==='blood-impact'){
    shake=Math.max(shake,({burst:.16,dive:.25,tide:.18,pursuit:.12,lances:.14,cross:.14,judgement:.2,ritual:.2,reverseFlow:.12,wingGenesis:.16,heartFeast:.22})[g.blood.pattern]||.025);
    // Heavy phase-two blood waves throw a small secondary spray out toward
@@ -125,5 +128,5 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
      camera.position.z+=Math.sin(visualTime*19)*amplitude*.13;
     }
    }},
-  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();bloodWhip.dispose();portrait.dispose();wings.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
+  dispose(){if(disposed)return;disposed=true;visibility.dispose();clear();projectiles.dispose();bloodWhip.dispose();portrait.dispose();wings.dispose();seraph.dispose();particles.dispose();surfaceFlow.dispose();grandRites.dispose();siphonFx.dispose();cathedral.dispose();apocalypse.dispose();architecture.dispose();const bound=collectSceneResources(scene);for(const resource of fluid.resources)if(!bound.has(resource))resource.dispose();}};
 }
