@@ -48,7 +48,7 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
   // The sixth-year shrine is breakable. Intact figures absorb a modest portion
   // of incoming boss damage until the player clears them or the cast ends.
   const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;
-  const receipt=acceptAnnualDamage(g,amount*(e.mode==='exam'?.5:1)*shield),dealt=receipt.accepted;
+  const receipt=acceptAnnualDamage(g,amount*(e.mode==='exam'?.5:1)*shield,{dot}),dealt=receipt.accepted;
   if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
    ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
   if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}

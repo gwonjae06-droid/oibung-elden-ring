@@ -47,17 +47,35 @@ test('ordinary weapon actions, ammo and stamina keep advancing all eleven years'
  }}finally{Math.random=random;}
 });
 
-test('extra damage is credited once, capped, and never restores health',()=>{
- const g=make(),max=g.boss.maxHp;
- const accepted=damageGyuwon(g,max*100);
+test('annual HP floor converts overflow to visibly faster D-day instead of immunity',()=>{
+ const g=make(),max=g.boss.maxHp,e=g.gyuwon.years,budget=annualBudget(g);
+ const first=damageGyuwon(g,max*100),dayAfterFirst=e.day;
  assert.equal(g.boss.hp,annualFloor(g));
- assert.ok(Math.abs(accepted-max*.0975)<1e-8);
- assert.equal(g.gyuwon.years.damageBank,annualBudget(g)*.5);
- assert.equal(damageGyuwon(g,max),0);
+ assert.ok(Math.abs(e.damageBank-budget*.5)<1e-8);
+ assert.ok(first>max*.0975,'extra impact is accepted as calendar pressure');
+ assert.ok(dayAfterFirst<365&&e.season>0,'a heavy hit visibly advances the day counter');
+ const after=damageGyuwon(g,120),dayAfterSecond=e.day;
+ assert.ok(after>0,'another hit at the HP floor is not ignored');
+ assert.ok(dayAfterSecond<dayAfterFirst,'extra hits advance the actual displayed time');
+ assert.equal(g.boss.hp,annualFloor(g),'the next year is still protected');
+ assert.equal(e.damageBank,budget*.5,'overflow is not banked twice');
  g.gyuwon.years.year=2;
  const before=g.boss.hp,spent=applyAnnualCarry(g);
  assert.ok(Math.abs(before-g.boss.hp-spent)<1e-9);assert.equal(applyAnnualCarry(g),0);
 });
+test('normal hits, dots and eleventh-year clock distortion obey the pressure rules',()=>{
+ const game=make(),e=game.gyuwon.years;
+ assert.equal(e.season,0);
+ damageGyuwon(game,100);assert.ok(e.season>0&&e.day<365,'normal hits move the calendar');
+ const normalAdvance=e.season;
+ const dots=make();damageGyuwon(dots,100,null,{dot:true});
+ assert.ok(dots.gyuwon.years.season>0&&dots.gyuwon.years.season<normalAdvance,'DoT pressure is smaller');
+ const last=make(11);last.gyuwon.years.season=0;last.gyuwon.years.day=365;
+ assert.equal(annualDisplay(last).day,365);
+ damageGyuwon(last,100);
+ assert.ok(annualDisplay(last).day<365,'the last-year pause cannot hide a real clock advance');
+});
+
 
 test('memory time accumulates during attacks and switches only after the live cast ends',()=>{
  const g=make(9),e=g.gyuwon.years;g.boss.phase=3;g.gyuwon.stageMemory='sword';
