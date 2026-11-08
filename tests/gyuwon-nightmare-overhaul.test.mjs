@@ -200,7 +200,8 @@ test('successful and normal exam HP gains persist unchanged into the next year',
   e.mode='exam';e.subject=4;
   const gradeResult=resolveGyuwonExamGrade(g,roll);
   assert.equal(gradeResult.result,grade);
-  const expected=Math.min(7000,before-bank+7000*delta);
+  const raw=Math.min(7000,before-bank+7000*delta);
+  const expected=delta<0?Math.max(7000*(1-.065*2),raw):raw;
   assert.ok(Math.abs(g.boss.hp-expected)<1e-7,'grade must pay overflow before HP recovery');
   assert.equal(e.damageBank,0);
   advance(g,3.05);

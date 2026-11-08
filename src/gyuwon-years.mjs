@@ -1,5 +1,5 @@
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
-import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
+import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
@@ -116,7 +116,10 @@ export function resolveGyuwonExamGrade(g,random=Math.random(),emit=()=>{}){
  // Apply any earlier overflow before success/normal/failure adjustments.
  // The HP shown during the result cinematic must match the next-year HP.
  settleAnnualCarryBeforeGrade(g);
- g.boss.hp=clamp(g.boss.hp+delta,Math.min(g.boss.hp,annualFloor(g)),max);
+ // Failures can reduce HP into the *next* year's allowance. Never resurrect
+ // an already-lower HP value or kill the boss before the last annual ultimate.
+ const lower=delta<0?Math.min(g.boss.hp,annualFloorForYear(g,e.year+1)):0;
+ g.boss.hp=clamp(g.boss.hp+delta,lower,max);
  e.grade=result;e.gradeT=0;e.gradeAt=g.time;e.scoreFlash=1;e.mode='result';e.subjectLabel=null;
  e.cast=null;g.gyuwon.pattern=null;g.gyuwon.hazards.length=0;
  e.examCount++;e.failures+=(result==='failure'?1:0);e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);

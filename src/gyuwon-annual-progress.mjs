@@ -3,11 +3,12 @@
 // converts further weapon pressure directly into the visible D-day clock.
 export const GYUWON_CALENDAR_SECONDS=48;
 export const annualBudget=g=>g.boss.maxHp*.065;
-export function annualFloor(g){
+export function annualFloorForYear(g,year){
  const e=g.gyuwon.years;
- if(e.year>=11)return e.endingUnlocked?0:g.boss.maxHp*.015;
- return g.boss.maxHp*(1-.065*e.year);
+ if(year>=11)return e.endingUnlocked||year>11?0:g.boss.maxHp*.015;
+ return g.boss.maxHp*(1-.065*year);
 }
+export const annualFloor=g=>annualFloorForYear(g,g.gyuwon.years.year);
 export const annualClockRate=g=>1+Math.min(1.4,(g.gyuwon.years.calendarDamage||0)/annualBudget(g)*.4);
 export function acceptAnnualDamage(g,amount,{dot=false}={}){
  const e=g.gyuwon.years,b=g.boss,budget=annualBudget(g);
@@ -42,9 +43,8 @@ export function acceptAnnualDamage(g,amount,{dot=false}={}){
 // a successful exam appear to lose HP upon entering the next school year.
 // Settle last year's earned overflow first, against the next-year floor.
 export function settleAnnualCarryBeforeGrade(g){
- const e=g.gyuwon.years,b=g.boss,nextYear=e.year+1;
- const nextFloor=nextYear>=11?(e.endingUnlocked||nextYear>11?0:b.maxHp*.015):
-  b.maxHp*(1-.065*nextYear);
+ const e=g.gyuwon.years,b=g.boss;
+ const nextFloor=annualFloorForYear(g,e.year+1);
  const amount=Math.max(0,Math.min(e.damageBank||0,b.hp-nextFloor));
  b.hp-=amount;e.damageBank=0;e.yearDamage=amount;
  return amount;
