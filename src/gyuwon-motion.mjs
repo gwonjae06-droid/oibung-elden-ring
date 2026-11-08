@@ -35,11 +35,50 @@ function annualExamMotion(g){
    leftArm:-1.45,rightArm:-1.34+hand,leftElbow:-.84,rightElbow:-.65+hand*.35,
    leftWrist:.13,rightWrist:.18+hand*.7,weightShift:0,book:-.23};
  }
- if(e.mode==='result')return {lean:-.25,twist:Math.sin(e.gradeT*5)*.12,
-  headPitch:e.grade==='failure'?.6:-.28,headYaw:0,leftArm:-.6,rightArm:-.25,
-  leftElbow:-.28,rightElbow:-.18,leftWrist:0,rightWrist:0,weightShift:0,book:-.6};
+ if(e.mode==='result'){
+  // Three different, unskippable transitions: uplift, exhausted acceptance,
+  // or a full desperate collapse. Both arms and torso remain articulated.
+  const q=e.gradeT||0,up=ease(q/.8),breakdown=ease((q-1.25)/.9);
+  if(e.grade==='great')return {lean:-.14+up*.2,twist:up*.18,
+   headPitch:-.24*up,headYaw:Math.sin(q*2)*.10,leftArm:-.35-1.6*up,
+   rightArm:-.3-1.45*up,leftElbow:-.35-up*.35,rightElbow:-.35-up*.25,
+   leftWrist:.05,rightWrist:.15,weightShift:up*.3,book:-.6};
+  if(e.grade==='normal')return {lean:-.20-breakdown*.3,twist:Math.sin(q*3)*.05,
+   headPitch:.15+breakdown*.38,headYaw:.08*Math.sin(q),
+   leftArm:-.6,rightArm:-.4,leftElbow:-.35,rightElbow:-.3,
+   leftWrist:.08,rightWrist:-.03,weightShift:-.25*breakdown,book:-.7};
+  return {lean:-.2-breakdown*.82,twist:Math.sin(q*12)*.22*(1-breakdown),
+   headPitch:.20+breakdown*.66,headYaw:Math.sin(q*9)*.15*(1-breakdown),
+   leftArm:-.6-1.5*breakdown,rightArm:-.4-1.75*breakdown,
+   leftElbow:-.28-.70*breakdown,rightElbow:-.18-.68*breakdown,
+   leftWrist:.20*breakdown,rightWrist:-.18*breakdown,
+   weightShift:-.75*breakdown,book:-1.05};
+ }
  const id=e.cast||'',dance=e.year===7,floppy=e.year===5,octo=e.year===8;
  const beat=Math.sin(g.time*(dance?8:4)),power=charge*(1-Math.min(1,Math.max(0,t-3)*.5));
+ if(id==='nightmare365'){
+  const beat=(e.castT||0);
+  const strike=Math.exp(-Math.pow((beat%1.3-.9)/.18,2));
+  const lift=ease(beat/2),last=ease((beat-14.0)/.7);
+  return {lean:-.24-strike*.38+last*.37,twist:Math.sin(beat*4)*.24,
+   headPitch:-.35+strike*.23-last*.20,headYaw:Math.sin(beat*2)*.17,
+   leftArm:-.6-lift*.7-strike*.57,rightArm:-.55-lift*.82-strike*.7-last*.5,
+   leftElbow:-.3-strike*.7,rightElbow:-.3-strike*.72,
+   leftWrist:.12,rightWrist:-.14,weightShift:Math.sin(beat*3)*.18,
+   book:-.8};
+ }
+ if(id.startsWith('ultimate')){
+  const power=ease(t/1.0),beat=Math.sin(g.time*(e.year===7?8:5));
+  const plunge=Math.max(0,...(g.gyuwon?.hazards||[])
+   .filter(h=>h.fired).map(h=>pulse(h.age-h.warn,.14)));
+  return {lean:-.23-power*.24+plunge*.31,
+   twist:beat*.23,headPitch:-.22*power+plunge*.30,
+   headYaw:Math.sin(t*.9)*.12,
+   leftArm:-.45-1.08*power+plunge*.34,
+   rightArm:-.25-1.25*power+plunge*.42,
+   leftElbow:-.30-.40*power,rightElbow:-.30-.48*power,
+   leftWrist:.1,rightWrist:-.16,weightShift:beat*.22,book:-.65};
+ }
  if(id==='bike'||id==='scooter')return {lean:-.86,twist:0,headPitch:.34,headYaw:0,
   leftArm:-1.06,rightArm:-1.06,leftElbow:-.43,rightElbow:-.43,
   leftWrist:.2,rightWrist:.2,weightShift:0,book:-.75};

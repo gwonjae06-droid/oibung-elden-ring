@@ -1,5 +1,7 @@
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
+import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
+ spawnGyuwonSignature,gyuwonWorldBreak} from './gyuwon-year-signatures.mjs';
 
 // New live-battle rules. The pre-2026 phase patterns remain only as compatibility
 // code for old tools/tests and are not selected by the published year-mode fight.
@@ -17,7 +19,8 @@ export const GYUWON_YEAR_PATTERNS=Object.freeze({
  figures:[5.2,1.5],photocard:[4.55,1.4],merch:[4.8,1.7],
  dance:[4.2,1.5],donation:[6.8,1.65],chatstorm:[4.3,1.4],
  octoStrike:[4.8,1.6],octoSweep:[5.1,1.7],octoInk:[4.5,1.5],
- recall:[5.9,1.8],recallMix:[7.0,2.0],recallAll:[8.6,2.2]
+ recall:[5.9,1.8],recallMix:[7.0,2.0],recallAll:[8.6,2.2],
+ ...GYUWON_SIGNATURE_SPECS
 });
 const YEAR_ROSTERS=Object.freeze({
  1:['bike','scooter','smoke'],
@@ -37,7 +40,9 @@ export function createGyuwonYears(){
  return {mode:'combat',year:1,day:365,season:0,cast:null,castT:0,castCount:0,
   recover:1.8,subject:0,subjectT:0,grade:null,gradeT:0,gradeAt:-100,
   bannerUntil:2.8,subjectLabel:null,scoreFlash:0,from:null,aim:0,
-  mapClock:0,mapIndex:0,chat:[],gachaResult:0,lastCast:null,dodge:null};
+  mapClock:0,mapIndex:0,chat:[],gachaResult:0,lastCast:null,dodge:null,
+  signatureUsed:false,nightmareUsed:false,failures:0,worldBreak:0,wards:[],
+  resultScene:null,nightmareStartedAt:-1};
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function add(g,shape,opts={}){
@@ -113,7 +118,9 @@ export function resolveGyuwonExamGrade(g,random=Math.random(),emit=()=>{}){
  g.boss.hp=clamp(g.boss.hp+delta,0,max);
  e.grade=result;e.gradeT=0;e.gradeAt=g.time;e.scoreFlash=1;e.mode='result';e.subjectLabel=null;
  e.cast=null;g.gyuwon.pattern=null;g.gyuwon.hazards.length=0;
- g.boss.state='recovery';
+ e.failures+=(result==='failure'?1:0);e.worldBreak=gyuwonWorldBreak(e.year,e.failures);
+ e.resultScene={grade:result,fromYear:e.year,nextYear:Math.min(11,e.year+1),duration:3.75};
+ e.wards=[];g.boss.state='recovery';
  emit('gyuwon-exam-grade',{result,delta,year:e.year});
  if(g.boss.hp<=0){g.status='won';g.boss.state='dead';emit('victory');}
  return {result,delta};
@@ -127,9 +134,12 @@ function pickMemoryMap(g){
 }
 function startNextYear(g,emit){
  const e=g.gyuwon.years;
- e.year++;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
+ e.year=Math.min(11,e.year+1);e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
- e.mapClock=0;e.mapIndex=0;e.chat=[];g.gyuwon.hazards.length=0;
+ e.mapClock=0;e.mapIndex=0;e.chat=[];e.wards=[];
+ e.signatureUsed=e.year===11?e.nightmareUsed:false;
+ e.worldBreak=gyuwonWorldBreak(e.year,e.failures);e.resultScene=null;
+ g.gyuwon.hazards.length=0;
  g.boss.state='recovery';g.gyuwon.pattern=null;g.gyuwon.space='white';
  pickMemoryMap(g);
  emit('gyuwon-year',{year:e.year});
@@ -138,9 +148,12 @@ function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
  e.cast=id;e.lastCast=id;e.castT=0;e.castCount++;e.from={x:b.x,z:b.z};e.dodge=null;
  e.aim=a;g.gyuwon.t=0;g.gyuwon.pattern='year-'+id;
+ if(GYUWON_YEAR_SIGNATURES[e.year]===id){e.signatureUsed=true;if(e.year===11)e.nightmareUsed=true;}
  g.boss.state='pattern';b.yaw=a;g.gyuwon.hazards.length=0;
  const dx=Math.sin(a),dz=Math.cos(a);
- if(id==='bike'||id==='scooter'){
+ if(Object.values(GYUWON_YEAR_SIGNATURES).includes(id)){
+  spawnGyuwonSignature(g,id,{add,mark,line,mapHazards,playerAim});
+ }else if(id==='bike'||id==='scooter'){
   const speed=id==='bike'?18:13;
   add(g,'circle',{x:b.x,z:b.z,r:id==='bike'?1.9:1.5,vx:dx*speed,vz:dz*speed,
    warn:1.08,life:1.12,damage:id==='bike'?32:25,visual:'year-vehicle'});
@@ -266,8 +279,8 @@ function tickHazards(g,dt,hurt,emit){
   if(g.status!=='playing')return;
  }
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
- if(e.cast==='bike'||e.cast==='scooter'){
-  const h=s.hazards.find(x=>x.visual==='year-vehicle');
+ if(e.cast==='bike'||e.cast==='scooter'||e.cast==='ultimateBike'||e.cast==='ultimateScooter'){
+  const h=s.hazards.findLast(x=>x.visual==='year-vehicle'&&x.age>=x.warn&&x.age<x.warn+x.life);
   if(h&&h.age>=h.warn){
    const t=Math.min(h.life,h.age-h.warn);
    g.boss.x=clamp(h.x+h.vx*t,-28,28);g.boss.z=clamp(h.z+h.vz*t,-28,28);
@@ -278,12 +291,12 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  const b=g.boss,s=g.gyuwon,e=s.years;
  s.elevation=0;s.slow=Math.max(0,s.slow-dt);s.stun=Math.max(0,s.stun-dt);
  if(g.status!=='playing')return;
- if(e.year>=9&&e.mode==='combat'){
+ if(e.year>=9&&e.mode==='combat'&&!e.cast?.startsWith('ultimate')&&e.cast!=='nightmare365'){
   e.mapClock+=dt;s.stageTime+=dt;
   if(e.mapClock>=gyuwonMapInterval(e.year))pickMemoryMap(g);
  }
  if(e.mode==='result'){
-  e.gradeT+=dt;if(e.gradeT>=1.75)startNextYear(g,emit);
+  e.gradeT+=dt;if(e.gradeT>=3.75)startNextYear(g,emit);
   return;
  }
  if(e.mode==='exam'){
@@ -308,7 +321,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   const spec=GYUWON_YEAR_PATTERNS[e.cast];
   if(e.castT>=spec[0]){
    e.cast=null;s.pattern=null;s.hazards.length=0;b.state='recovery';
-   e.recover=spec[1];
+   e.wards=[];e.recover=spec[1];
    if(e.year===4&&e.castCount%3===0){
     const side=e.castCount%2?-1:1;
     e.dodge={t:0,fromX:b.x,fromZ:b.z,toX:clamp(b.x+side*4.4,-26,26),
@@ -329,6 +342,9 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
  }
  if(e.recover>0)return;
  if(e.day===0){beginExam(g,emit);return;}
+ if(!e.signatureUsed&&(e.season>=9.2||e.year===11&&b.hp/b.maxHp<=.36)){
+  beginCast(g,GYUWON_YEAR_SIGNATURES[e.year],emit);return;
+ }
  const choices=gyuwonYearRoster(e.year);
  const id=drawPatternShuffle(s.patternDeck,'gyuwon-year-'+e.year,choices,
   {avoid:e.lastCast});

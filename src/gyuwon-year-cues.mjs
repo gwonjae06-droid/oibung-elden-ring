@@ -68,6 +68,7 @@ export function buildGyuwonYearAttackCues(stage,{coarse=false}={}){
    active.add(h.id);let obj=items.get(h.id);
    if(!obj){obj=make(h);items.set(h.id,obj);}
    const {parent,meshes}=obj,{windup,impact}=gyuwonYearCuePhase(h);
+   parent.visible=!(h.signature&&h.warn-h.age>1.55);
    parent.position.set(h.x,0,h.z);parent.rotation.y=h.yaw||0;
    if(obj.type==='year-bullet'){
     const [ray,muzzle,rim]=meshes;

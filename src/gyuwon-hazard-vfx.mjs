@@ -203,6 +203,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
    let state=states.get(h.id);
    if(!state){state=make(h,f,s.pattern);states.set(h.id,state);}
    const mesh=state.mesh;
+   mesh.visible=!(h.signature&&h.warn-h.age>1.55);
    // Expanding ring crests follow the same time-varying footprint as damage.
    if(f.kind===2&&Math.abs(f.r-state.r)>.09){
     const values=fragments(h,f,coarse,state.lang),attr=mesh.geometry.getAttribute('position');

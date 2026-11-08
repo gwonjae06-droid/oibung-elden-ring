@@ -195,7 +195,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  return {root,update(g,death=0,dt=0){
   const s=g.gyuwon,b=g.boss,p=motion.update(g,dt),t=Number.isFinite(g.time)?g.time:0;
   const years=s.years;yearRig.update(g);
-  const mounted=years?.mode==='combat'&&(years.cast==='bike'||years.cast==='scooter');
+  const mounted=years?.mode==='combat'&&(years.cast==='bike'||years.cast==='scooter'||years.cast==='ultimateBike'||years.cast==='ultimateScooter');
   const mountTarget=mounted?1:0;
   rideBlend+=(mountTarget-rideBlend)*(1-Math.exp(-Math.min(.05,Math.max(0,dt))*10));
   bodyMaterials.forEach((m,i)=>m.color.copy(originalColors[i]).lerp(goldColor,g.status==='won'?Math.min(1,death/2):0));
@@ -252,7 +252,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    // below the table and returns to the same planted rest coordinates.
    leg.hip.set(leg.side*.31,s.years?.mode==='exam'?1.02:1.27+(p.weightShift||0)*leg.side*.025,0);
    leg.ankle.set(leg.side*.32,.17+(years?.mode==='exam'?0:lift),years?.mode==='exam'?1.2:.10+swing*.19);
-   const vehicleIsBike=years?.cast==='bike',onDeck=leg.side<0;
+   const vehicleIsBike=years?.cast==='bike'||years?.cast==='ultimateBike',onDeck=leg.side<0;
    const mountFootY=vehicleIsBike?.77:onDeck?.53:.21;
    const mountFootZ=vehicleIsBike?-.54:onDeck?-.35:.51;
    leg.ankle.y+=(mountFootY-leg.ankle.y)*rideBlend;

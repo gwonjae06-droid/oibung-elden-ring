@@ -32,7 +32,7 @@ export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
  return game;
 }
 export function actGyuwon(g,type,input={}){
- if(g.status!=='playing'||g.boss.state==='transition')return false;
+ if(g.status!=='playing'||g.boss.state==='transition'||g.gyuwon.years?.mode==='result')return false;
  if(!g.player.action)g.player.yaw=type==='roll'&&(input.x||input.z)?Math.atan2(input.x||0,input.z||0):Math.atan2(g.boss.x-g.player.x,g.boss.z-g.player.z);
  return actPlayer(g,type);
 }
@@ -41,7 +41,12 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  // In the annual-exam encounter, every year is vulnerable;
  // during the five-subject exam only, incoming damage is halved.
  if(g.gyuwon.years){
-  const b=g.boss,s=g.gyuwon,dealt=Math.min(b.hp,amount*(s.years.mode==='exam'?.5:1));
+  const b=g.boss,s=g.gyuwon,e=s.years;
+  if(e.mode==='result')return 0;
+  // The sixth-year shrine is breakable. Intact figures absorb a modest portion
+  // of incoming boss damage until the player clears them or the cast ends.
+  const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;
+  const dealt=Math.min(b.hp,amount*(e.mode==='exam'?.5:1)*shield);
   b.hp-=dealt;if(dealt&&!dot)emit(g,'boss-hit',{amount:dealt,
    ...(impact?{x:impact.x,y:impact.y,z:impact.z,part:impact.part}:{})});
   if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;emit(g,'victory');}
@@ -58,6 +63,32 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  if(b.phase===1&&b.hp<=b.maxHp*.65||b.phase===2&&b.hp<=b.maxHp*.3)s.phasePending=true;
  if(b.hp<=0){g.status='won';b.state='dead';s.hazards.length=0;g.projectiles.length=0;s.slow=0;emit(g,'victory');}
  return damage;
+}
+// The shrine effigies are real strike targets, not cosmetic invulnerable props.
+// These contacts share player melee/projectile hit ownership with boss contacts.
+export function strikeGyuwonWard(g,x,z,damage,yaw=null,reach=2.9){
+ const e=g.gyuwon?.years;
+ if(e?.mode!=='combat'||e.cast!=='ultimateShrine'||!e.wards?.length)return false;
+ let best=null,dist=Infinity;
+ for(const ward of e.wards){
+  if(ward.hp<=0)continue;
+  const dx=ward.x-x,dz=ward.z-z,d=Math.hypot(dx,dz);
+  if(d>reach+1.4||d>=dist)continue;
+  if(yaw!==null){
+   const diff=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),
+    Math.cos(Math.atan2(dx,dz)-yaw));
+   if(Math.abs(diff)>.64)continue;
+  }
+  best=ward;dist=d;
+ }
+ if(!best)return false;
+ best.hp=Math.max(0,best.hp-damage);
+ emit(g,'gyuwon-ward-hit',{x:best.x,z:best.z,amount:damage});
+ if(best.hp<=0){
+  g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>h.wardIndex!==best.index);
+  emit(g,'gyuwon-ward-break',{x:best.x,z:best.z,remaining:e.wards.filter(w=>w.hp>0).length});
+ }
+ return true;
 }
 function hit(g,amount,source,impact=null){
  const s=g.gyuwon;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
@@ -296,6 +327,8 @@ function tickPlayer(g,dt,input){
   backstep:(a,h)=>{p.x-=Math.sin(a.yaw)*9*h;p.z-=Math.cos(a.yaw)*9*h;},
   melee:a=>{
    if(g.gyuwon.elevation>2)return;
+   if(strikeGyuwonWard(g,p.x,p.z,w.damage*a.mult,a.yaw,
+     playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85))){a.hit=true;return;}
    const impact=kwonMeleeContact(bodyShapes(),p,{
     reach:playerMeleeReach(g,g.weapon==='hammer'?3.05:2.85),yaw:a.yaw,height:1.85,bladeRadius:.28});
    if(impact){a.hit=true;hit(g,w.damage*a.mult+(a.bankedBonus||0),a,impact);}
@@ -305,6 +338,22 @@ function tickPlayer(g,dt,input){
  for(const q of g.projectiles){
   const prev=advancePlayerProjectile(q,dt,p);
   if(q.hit||q.bossHit||q.life<=0)continue;
+  // Projectile vs. physical shrine effigy: swept 2D segment check.
+  const vx=q.x-prev.x,vz=q.z-prev.z,range=vx*vx+vz*vz;
+  const wards=g.gyuwon.years?.wards;
+  const shrine=g.gyuwon.years?.cast==='ultimateShrine'&&wards?.some(w=>w.hp>0);
+  if(shrine){
+   let absorbed=false;
+   for(const w of wards){
+    if(w.hp<=0)continue;
+    const t=range>1e-7?Math.max(0,Math.min(1,((w.x-prev.x)*vx+(w.z-prev.z)*vz)/range)):0;
+    if(Math.hypot(prev.x+vx*t-w.x,prev.z+vz*t-w.z)<1.55){
+     if(claimPlayerProjectileHit(q))strikeGyuwonWard(g,w.x,w.z,q.damage);
+     absorbed=true;break;
+    }
+   }
+   if(absorbed)continue;
+  }
   const impact=kwonProjectileContact(bodyShapes(),prev,{x:q.x,y:q.y,z:q.z});
   if(impact&&claimPlayerProjectileHit(q))hit(g,q.damage,q.source,impact);
  }
@@ -322,6 +371,9 @@ export function stepGyuwon(g,dt,input={}){
  let left=Math.min(.05,dt);while(left>1e-9&&g.status==='playing'){
   const h=Math.min(1/120,left);g.time+=h;
   if(g.boss.state==='transition'){g.player.action=null;g.projectiles.length=0;tickBoss(g,h);}
+  else if(g.gyuwon.years?.mode==='result'){
+   g.player.action=null;g.projectiles.length=0;tickBoss(g,h);
+  }
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
   left-=h;
  }

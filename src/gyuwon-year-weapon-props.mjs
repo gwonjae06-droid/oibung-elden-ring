@@ -80,10 +80,10 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
  function update(g){
   if(disposed)return;
   const e=g?.gyuwon?.years,year=e?.year,cast=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
-  cigarette.visible=year===1&&cast==='smoke';
-  gun.visible=year===4&&(cast==='sniper'||cast==='crossfire');
+  cigarette.visible=cast==='smoke'||cast==='ultimateSmoke'||cast==='nightmare365'&&t>=2.7&&t<4.55;
+  gun.visible=cast==='sniper'||cast==='crossfire'||cast==='ultimateMarksman'||cast==='nightmare365'&&t>=4.25&&t<6.25;
   supportingHand.visible=gun.visible;
-  bow.visible=year===4&&cast==='archery';
+  bow.visible=cast==='archery'||cast==='ultimateMarksman'&&t>=3.8||cast==='nightmare365'&&t>=5.5&&t<6.6;
   arrow.visible=bow.visible;
   const smoking=Math.max(0,Math.min(1,t/1.2));
   cigarette.rotation.set(-.24-.55*smoking,0,.16);
@@ -102,7 +102,7 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   // Every arrow remains a genuine 3D bolt while the separate string bends
   // smoothly toward the pulling hand. Nock recoils on its authored beat.
   const draw=bow.visible?Math.min(1,t/1.16):0;
-  const released=e?.cast==='archery'&&g.gyuwon?.hazards?.some(h=>h.visual==='year-arrow'&&h.fired);
+  const released=(e?.cast==='archery'||e?.cast==='ultimateMarksman')&&g.gyuwon?.hazards?.some(h=>h.visual==='year-arrow'&&h.fired);
   const pull=draw*(released?.13:1);
   const positions=drawLine.getAttribute('position');
   positions.setXYZ(0,0,-1.26,.17);

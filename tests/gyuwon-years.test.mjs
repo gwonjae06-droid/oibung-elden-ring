@@ -134,7 +134,7 @@ test('the fourth year stays exclusively sniper/bow, and the eighth has eight arm
 });
 
 test('ninth through eleventh years use real maps and combined hazards',()=>{
- const g=annual(),e=g.gyuwon.years;e.year=8;e.mode='result';e.gradeT=1.75;
+ const g=annual(),e=g.gyuwon.years;e.year=8;e.mode='result';e.gradeT=3.75;
  stepGyuwon(g,.025);assert.equal(e.year,9);
  assert.equal(g.boss.phase,3);assert.ok(g.gyuwon.stageMemory);
  e.recover=0;stepGyuwon(g,.025);

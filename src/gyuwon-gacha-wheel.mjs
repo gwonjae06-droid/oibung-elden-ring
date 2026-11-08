@@ -71,7 +71,7 @@ export function createGyuwonGachaWheel(parent,{coarse=false}={}){
  let disposed=false;
  function update(g){
   if(disposed)return;
-  const e=g?.gyuwon?.years,active=e?.year===7&&e?.mode==='combat'&&e?.cast==='donation';
+  const e=g?.gyuwon?.years,active=e?.mode==='combat'&&(e?.cast==='donation'||e?.cast==='ultimateGacha'||e?.cast==='nightmare365'&&e?.castT>=7.6&&e?.castT<9.5);
   root.visible=!!active;
   if(!active)return;
   root.position.set(g.boss.x,4.2,g.boss.z+3.0);

@@ -4,12 +4,14 @@ import {buildGyuwonYearAttackCues} from './gyuwon-year-cues.mjs';
 import {createGyuwonAnimeIllustration} from './gyuwon-anime-illustration.mjs';
 import {createGyuwonGachaWheel} from './gyuwon-gacha-wheel.mjs';
 import {createGyuwonSoftTentacle} from './gyuwon-soft-tentacle.mjs';
+import {createGyuwonYearApocalypseFx} from './gyuwon-year-apocalypse-fx.mjs';
 
 // Reusable scenery/props for the D-day encounter. Never owns gameplay damage.
 // Existing battle hazards are the sole source of collision shapes and timing.
 export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const root=new THREE.Group();root.name='gyuwon-dday-examination-world';root.visible=false;stage.add(root);
  const attackCues=buildGyuwonYearAttackCues(root,{coarse});
+ const apocalypse=createGyuwonYearApocalypseFx(root,{coarse,reduced});
  const materials=[],geometries=[],textures=[];
  function geo(g){geometries.push(g);return g;}
  function mat(color,extra={}){const m=new THREE.MeshPhysicalMaterial({
@@ -301,23 +303,23 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   const e=g?.gyuwon?.years,b=g?.boss,s=g?.gyuwon;
   if(owned!==g){owned=g;clearWave();removeDynamic();bookPiles.clear();piles.length=0;piled.clear();activePileYear=0;}
   if(!e||g.status!=='playing'){root.visible=false;clearWave();removeDynamic();return;}
-  root.visible=true;
+  root.visible=true;apocalypse.update(g);
   if(activePileYear!==e.year){activePileYear=e.year;bookPiles.clear();piles.length=0;piled.clear();}
   exam.visible=e.mode==='exam';exam.position.set(b.x,0,b.z);exam.rotation.y=b.yaw;
-  motorcycle.visible=e.mode==='combat'&&e.cast==='bike';
-  scooter.visible=e.mode==='combat'&&e.cast==='scooter';
+  motorcycle.visible=e.mode==='combat'&&(e.cast==='bike'||e.cast==='ultimateBike'||e.cast==='nightmare365'&&e.castT<2);
+  scooter.visible=e.mode==='combat'&&(e.cast==='scooter'||e.cast==='ultimateScooter'||e.cast==='nightmare365'&&e.castT>=2&&e.castT<3.7);
   gacha.update(g);
   bodyslime.visible=e.mode==='combat'&&e.year===5;
   flameAura.visible=e.mode==='combat'&&e.year===3;
   flameAura.position.set(b.x,0,b.z);
-  dollRoot.visible=e.mode==='combat'&&e.year===6;
-  streamSet.visible=e.mode==='combat'&&e.year===7;
+  dollRoot.visible=e.mode==='combat'&&(e.year===6||e.cast==='nightmare365'&&e.castT>=6.5&&e.castT<8);
+  streamSet.visible=e.mode==='combat'&&(e.year===7||e.cast==='nightmare365'&&e.castT>=7.8&&e.castT<9.5);
   if(streamSet.visible){
    streamSet.position.set(b.x,0,b.z);streamSet.rotation.y=b.yaw;
    const liveEnergy=e.cast==='donation'?1:.3;
    light.scale.setScalar(1+liveEnergy*.12*Math.sin(g.time*6));
   }
-  tentacleRoot.visible=e.mode==='combat'&&e.year===8;
+  tentacleRoot.visible=e.mode==='combat'&&(e.year===8||e.cast==='nightmare365'&&e.castT>=9.2&&e.castT<11.2);
   motorcycle.position.set(b.x,0,b.z);motorcycle.rotation.y=b.yaw;
   scooter.position.set(b.x,0,b.z);scooter.rotation.y=b.yaw;
   bodyslime.position.set(b.x,0,b.z);
@@ -330,8 +332,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    gameParts[i].scale.y=.5+.3*Math.sin(g.time*4+i);
   }
   if(dollRoot.visible)mobiles.forEach((fig,i)=>{
-    const a=i*Math.PI/3,h=s.hazards.find(x=>x.visual==='year-figure'&&Math.abs(x.x-Math.sin(a)*14)<.1&&Math.abs(x.z-Math.cos(a)*14)<.1);
-    fig.position.set(Math.sin(a)*14,0,Math.cos(a)*14);
+    const a=i*Math.PI/3,ward=e.cast==='ultimateShrine'?e.wards?.[i]:null;
+    const cx=ward?.x??Math.sin(a)*14,cz=ward?.z??Math.cos(a)*14;
+    const h=s.hazards.find(x=>x.visual==='year-figure'&&Math.hypot(x.x-cx,x.z-cz)<.1);
+    fig.position.set(cx,0,cz);
     const impactDust=fig.userData.impactDust;
     impactDust.visible=!!h&&h.age>=h.warn&&h.age<=h.warn+h.life;
     if(h){
@@ -411,6 +415,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    live.add(h.id);let item=dynamic.get(h.id);
    if(!item){item=makeItem(h);dynamic.set(h.id,item);}
    const p=hazardPosition(h),rise=Math.max(0,1-h.age/Math.max(.1,h.warn));
+    item.group.visible=!(h.signature&&h.warn-h.age>1.55);
    item.group.position.set(p.x,1.45,p.z);
    if(v==='year-bookfall'||v==='year-merch')item.group.position.y=.45+17*rise;
   if(v==='year-gacha-prize')item.group.position.y=.62+12*rise;
@@ -452,10 +457,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  }
  function clear(){clearWave();removeDynamic();attackCues.clear();bookPiles.clear();piles.length=0;piled.clear();root.visible=false;}
  function dispose(){if(disposed)return;disposed=true;clear();root.removeFromParent();
-  attackCues.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
+  attackCues.dispose();apocalypse.dispose();gacha.dispose();tentacles.forEach(t=>t.dispose());
   for(const m of new Set(materials))m.dispose();
   for(const g of new Set(geometries))g.dispose();
   for(const t of textures)t.dispose();
  }
- return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
+ return {root,update,clear,dispose,stats:()=>({yearProps:dynamic.size,waves:waves.length,tentacles:8,animeStandees:6,gachaSectors:gacha.stats().sectors,apocalypse:apocalypse.stats(),stackedBooks:piles.length,physicalCues:attackCues.stats().active})};
 }
