@@ -11,7 +11,8 @@ export function createRecoverySfx(options={}){
    if(disposed||!event||!['heal-start','skill-heal'].includes(event.type))return false;
    if(muted()){sample.setEnabled(false);return false;}
    sample.setEnabled(true);
-   return sample.play(event.type==='heal-start'?'healed':'skill-heal',{volume:event.type==='heal-start'?1.35:.95});
+   const volume=event.type==='heal-start'?1.35:event.flavor==='cards'?.03:.95;
+   return sample.play(event.type==='heal-start'?'healed':'skill-heal',{volume});
   },
   clear(){sample.setEnabled(false);},
   dispose(){if(disposed)return;disposed=true;sample.dispose();},
