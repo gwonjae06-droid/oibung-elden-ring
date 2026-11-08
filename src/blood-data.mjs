@@ -1,4 +1,5 @@
 import {BOSS_TEMPO} from './boss-tempo.mjs';
+import {SERAPH_CANONICAL_PATTERNS} from './blood-seraph-doctrine.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 export const BLOOD_RULES=Object.freeze({name:'영원한 혈왕 배서준',phaseName:'혈익의 대천사 배서준',radius:32,hp:6400,transition:4.6});
  // The normal-journey HP pool stays unchanged. Only the 1P/2P split moves.
@@ -46,7 +47,13 @@ const ORIGINAL_BLOOD_PATTERNS=Object.freeze({
  seraphFeathers:{name:'순교의 깃털비',phase:3,duration:5.3,recover:1.85},
  seraphEmbrace:{name:'여섯 날개의 포옹',phase:3,duration:6.2,recover:1.85},
  seraphDescent:{name:'세라프의 강림',phase:3,duration:5.0,recover:1.95},
- seraphFinale:{name:'최후의 성가',phase:3,duration:8.0,recover:2.5}
+ seraphFinale:{name:'최후의 성가',phase:3,duration:8.0,recover:2.5},
+ seraphSweep:{name:'대천사의 혈사포 횡단',phase:3,duration:5.8,recover:2.1},
+ seraphWingCross:{name:'천륜의 혈익 비행',phase:3,duration:7.4,recover:2.0},
+ seraphInwardPillars:{name:'성혈의 귀환 기둥',phase:3,duration:6.2,recover:1.9},
+ seraphFrenzy:{name:'천사의 광란 혈사포',phase:3,duration:7.4,recover:2.3},
+ seraphHaloProcession:{name:'붉은 천륜 행진',phase:3,duration:7.5,recover:2.1},
+ seraphBloodRosette:{name:'육익 혈장미의 계시',phase:3,duration:6.2,recover:2.1}
 });
 // Compress the recovery phase, not the authored hit/animation sequence.
 export const BLOOD_PATTERNS=Object.freeze(Object.fromEntries(
@@ -59,9 +66,13 @@ export const BLOOD_SAFE_GROUND_PATTERNS=new Set([
  'burst','vortex','dive','eclipse','tide','ritual','judgement',
  'wingGenesis','wing','pulse','pursuit','reverseFlow','heartCage','cross','requiem',
  'seraphWings','seraphPulse','seraphLances','seraphCrown',
- 'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale'
+ 'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale',
+ ...SERAPH_CANONICAL_PATTERNS
 ]);
-export const bloodPool=phase=>Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
+// Retain old optional 3P prototypes for backwards compatibility, but only
+// choose original seraph movements in actual phase-three combat.
+export const bloodPool=phase=>phase===3?[...SERAPH_CANONICAL_PATTERNS,'seraphFinale']:
+ Object.keys(BLOOD_PATTERNS).filter(id=>BLOOD_PATTERNS[id].phase===phase);
 export function hazardPosition(h){const t=Math.max(0,h.age-h.warn);return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,r:h.r+(h.grow||0)*t};}
 // Rendered warning blood and authoritative collision share the same footprint.
 // Reduced padding is deliberately forgiving for evasive melee play.

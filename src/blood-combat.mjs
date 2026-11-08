@@ -1,4 +1,5 @@
 import {createBloodPatternDeck,nextBloodPattern} from './blood-pattern-director.mjs';
+import {SERAPH_CANONICAL_PATTERNS,spawnSeraphDoctrine} from './blood-seraph-doctrine.mjs';
 import {BLOOD_EPIC_CUTS} from './blood-epic-script.mjs';
 import {beginBloodWhip,stepBloodWhip} from './blood-whip.mjs';
 import {bloodTsunamiFlanks,bloodTsunamiApproach} from './blood-tsunami.mjs';
@@ -234,6 +235,8 @@ export function startBloodPattern(g,id){
   for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:1.32,grow:14,
    warn:5.15+i*.94,life:1.2,damage:34});
  }
+ // Every seraph attack shares its geometry and warning clock with the renderer.
+ if(SERAPH_CANONICAL_PATTERNS.includes(id))spawnSeraphDoctrine(g,id,(shape,opts)=>hazard(g,shape,opts));
  // Bind the encounter state before passing the two-argument hazard spawner.
  addBloodRiteAccent(g,id,(shape,opts)=>hazard(g,shape,opts));
  // The camera completes its reveal and returns well before the first actual
