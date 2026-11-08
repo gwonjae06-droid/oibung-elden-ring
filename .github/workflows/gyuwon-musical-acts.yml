@@ -1,0 +1,29 @@
+name: Gyuwon musical genre transitions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gyuwon-*.mjs'
+      - 'tests/gyuwon-musical-genres.test.mjs'
+      - '.github/workflows/gyuwon-musical-acts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  musical-acts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three test dependency
+        run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0
+      - name: Check stage, white world, combat, UI, music and tests
+        run: |
+          for f in src/gyuwon-musical-genres.mjs src/gyuwon-musical-stage.mjs src/gyuwon-musical-hud.mjs src/gyuwon-musical-score.mjs src/gyuwon-musical-narrator.mjs src/gyuwon-years.mjs src/gyuwon-battle.mjs src/gyuwon-combat.mjs src/gyuwon-view.mjs src/gyuwon-ui.mjs src/gyuwon-year-rig.mjs src/gyuwon-year-world.mjs src/gyuwon-years-hud.mjs src/gyuwon-annual-progress.mjs tests/gyuwon-musical-genres.test.mjs; do
+            node --check "$f"
+          done
+      - name: Simulate all seven actual playable genres and final 800 HP
+        run: node --test tests/gyuwon-musical-genres.test.mjs

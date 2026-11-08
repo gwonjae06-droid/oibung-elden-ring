@@ -127,7 +127,7 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
   activeYear=stage;
   handProps.update(g);
   for(const [n,groups]of perYear)for(const group of groups)
-   group.visible=!!e&&!arsenalKind(y)&&(stage===n||n===9&&stage>=9||n===11&&y>=11);
+   group.visible=!!e&&!['musical','curtain'].includes(e.mode)&&!arsenalKind(y)&&(stage===n||n===9&&stage>=9||n===11&&y>=11);
   helmet.visible=!!e&&stage===1&&['bike','ultimateBike'].includes(e.cast);
   for(const lid of eyelids){
    const blinkPhase=(t*(e?.mode==='exam'?.74:1.08)+y*.31)%3.35;

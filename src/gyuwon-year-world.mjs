@@ -127,7 +127,19 @@ export function createGyuwonYearWorld(scene,{coarse=false,artMaterials=[],fragme
   if(disposed)return;
   if(!g.gyuwon?.years||g.status==='won'){root.visible=false;return;}
   if(owner!==g){clear();owner=g;}root.visible=true;
-  const e=g.gyuwon.years,blend=annualWorldBlend(g),from=annualWorldLayers(blend.from,e.worldSeed),to=annualWorldLayers(blend.to,e.worldSeed);
+  const e=g.gyuwon.years;
+  // Acts 5-11 are a single clean theatrical white void. Hide the old
+  // sewage/school/sea textures completely, not merely under a white fog.
+  if(e.mode==='musical'||e.mode==='curtain'){
+   active=[];for(const entry of entries.values())entry.group.visible=false;
+   floor.visible=true;floor.material.color.setHex(0xfaf9f5);
+   if(scene.background?.isColor)scene.background.setHex(0xfafafa);
+   if(scene.fog){scene.fog.color.setHex(0xfafafa);scene.fog.density=.001;}
+   const sun=scene.children.find(o=>o.isDirectionalLight);
+   if(sun){sun.color.setHex(0xfff9ed);sun.intensity=2.35;}
+   return;
+  }
+  const blend=annualWorldBlend(g),from=annualWorldLayers(blend.from,e.worldSeed),to=annualWorldLayers(blend.to,e.worldSeed);
   active=blend.from===blend.to?[...to]:[...new Set([...from,...to])];if(e.year>11&&e.cast==='nightmare365'&&!active.includes(11))active.push(11);
   for(const entry of entries.values())entry.group.visible=false;
   for(const id of active){const entry=prepare(id),out=blend.from!==blend.to&&from.includes(id)&&!to.includes(id),incoming=blend.from!==blend.to&&to.includes(id)&&!from.includes(id);

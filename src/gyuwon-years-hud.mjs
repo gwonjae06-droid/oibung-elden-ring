@@ -19,7 +19,7 @@ export function createGyuwonYearsHud(doc,shell){
  const viewers=['규원님 오늘도 응원해요','와 춤 실화냐','후원 리액션 가자','수능 화이팅','방송 텐션 미쳤다','1000원 후원!','오늘 클립 땄어요','ㅋㅋㅋㅋㅋㅋㅋ'];
  function update(g){
   const e=g?.gyuwon?.years;
-  if(!e||g.status!=='playing'){clock.hidden=center.hidden=chat.hidden=true;return;}
+  if(!e||g.status!=='playing'||e.musical){clock.hidden=center.hidden=chat.hidden=true;return;}
   clock.hidden=false;readout.classList.toggle('gy-dday-pressure',e.mode==='combat'&&g.time-(e.lastPressureAt??-1000)<.22);const visual=annualDisplay(g);if(readout.dataset)readout.dataset.echo=visual.echo===null?'':String(visual.echo);if(readout.style)readout.style.opacity=String(1-visual.glitch*.2);const value=e.mode==='exam'?'수능 당일':e.mode==='result'?'채점 완료':'수능까지 D-'+visual.day;
   if(readout.textContent!==value)readout.textContent=value;
   const detail=e.mode==='exam'?e.subjectLabel:gyuwonYearTitle(e.year);

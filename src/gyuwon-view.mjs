@@ -83,7 +83,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
    floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);
   spectacle.update(g,dt,deathElapsed);recall.update(g,dt);if(!s.years)philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
-  if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);arsenalFx.update(g);annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
+  if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);arsenalFx.update(g);if(['musical','curtain'].includes(s.years.mode)){yearsFx.root.visible=false;arsenalFx.root.visible=false;}annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
  }
  async function prewarmProgressive(renderer,camera,{companions=[]}={}){
   await yearsFx.ready;if(disposed)return;

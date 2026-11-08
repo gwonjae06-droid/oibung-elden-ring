@@ -3,6 +3,7 @@ import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwo
 import {GYUWON_CALENDAR_SECONDS,syncAnnualHealth,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,updateRideAim,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
+import {enterGyuwonMusical,tickGyuwonMusical,isGyuwonMusicalYear} from './gyuwon-musical-genres.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
 import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
  spawnGyuwonSignature,gyuwonWorldBreak} from './gyuwon-year-signatures.mjs';
@@ -146,8 +147,9 @@ function startNextYear(g,emit){
  e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);e.resultScene=null;
  g.gyuwon.hazards.length=0;
  g.boss.state='recovery';g.gyuwon.pattern=null;g.gyuwon.space='white';
- pickMemoryMap(g);
+ if(!isGyuwonMusicalYear(e.year))pickMemoryMap(g);
  emit('gyuwon-year',{year:e.year});
+ if(isGyuwonMusicalYear(e.year))enterGyuwonMusical(g,emit);
 }
 function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
@@ -285,8 +287,13 @@ function tickHazards(g,dt,hurt,emit){
  s.hazards=s.hazards.filter(h=>h.age<h.warn+h.life);
 
 }
-export function tickGyuwonYears(g,dt,{hurt,emit}){
+export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
  const b=g.boss,s=g.gyuwon,e=s.years;
+ if(isGyuwonMusicalYear(e.year)&&e.mode==='combat'&&!e.musical)enterGyuwonMusical(g,emit);
+ if(e.mode==='musical'||e.mode==='curtain'){
+  tickGyuwonMusical(g,dt,{emit,input,advance:()=>startNextYear(g,emit)});
+  return;
+ }
  if(e.mode==='combat'){
   e.attackBuff=Math.max(0,e.attackBuff-dt);e.speedBuff=Math.max(0,e.speedBuff-dt);
  }
@@ -349,7 +356,7 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   b.x=d.fromX+(d.toX-d.fromX)*k;b.z=d.fromZ+(d.toZ-d.fromZ)*k;
   if(d.t>=.72)e.dodge=null;
  }
- if(e.day===0&&b.hp<=annualFloor(g)+1e-7){beginExam(g,emit);return;}
+ if(e.day===0&&b.hp<=annualFloor(g)+1e-7){if(e.year===4)startNextYear(g,emit);else beginExam(g,emit);return;}
  if(e.recover>0)return;
  if(!e.signatureUsed&&e.season>=GYUWON_YEAR_SECONDS*.55){
   beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;

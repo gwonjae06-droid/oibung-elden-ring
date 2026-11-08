@@ -18,7 +18,10 @@ export function syncAnnualHealth(g){
 }
 export function acceptAnnualDamage(g,amount,{dot=false}={}){
  const e=g.gyuwon.years,b=g.boss,budget=annualBudget(g),damage=Math.max(0,Number.isFinite(amount)?amount:0);
- const floor=e.mode==='exam'?annualFloorForYear(g,e.year+1):annualFloor(g);
+ // The final show owns its last 800 HP; a stray melee/DoT tick cannot
+ // bypass the unskippable, character-driven ending.
+ const floor=e.mode==='exam'?annualFloorForYear(g,e.year+1):
+  e.mode==='musical'&&e.year===11?Math.max(800,annualFloor(g)):annualFloor(g);
  const health=Math.max(0,Math.min(damage,b.hp-floor));b.hp-=health;
  const credit=e.mode==='combat'&&e.year<11?Math.max(0,Math.min(damage-health,budget*.5-(e.damageBank||0))):0;
  e.damageBank=(e.damageBank||0)+credit;e.yearDamage=(e.yearDamage||0)+health+credit;
