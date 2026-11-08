@@ -26,12 +26,15 @@ export function balletPartnerFrame(g){
  const p=bounded({x:(b.x||0)+Math.sin(angle)*radius,z:(b.z||0)+Math.cos(angle)*radius});
  const name=c.name||'';
  const attack=phase&&!transition&&c.state==='pattern';
- const spin=attack?Math.sin(Math.max(0,t-.5)*3.0)*(.45+(name==='balletFouette'?.75:0)):0;
+ // Three complete, eased wooden pirouettes return to the resting stance
+ // without a yaw snap; the spouse counter-rotates on the same beat.
+ const spin=attack?(name==='balletFouette'?
+  6*Math.PI*smooth((t-.62)/5.5):Math.sin(Math.max(0,t-.5)*3.0)*.45):0;
  const bow=transition?Math.sin(Math.PI*smooth((t-3.6)/1.6))*.30:0;
  const pulse=attack?smooth((t-.4)/.75)*(1-smooth((t-5.6)/1.1)):0;
  return {active:phase,transition,enter,orbit,
-  lead:{x:b.x||0,z:b.z||0,yaw:(c.yaw||b.yaw||0)+spin,bow,pulse,spin},
-  partner:{x:p.x,z:p.z,yaw:orbit-Math.PI/2-spin*.9,bow,pulse,spin:-spin*.9},
+  lead:{x:b.x||0,z:b.z||0,yaw:(attack&&name==='balletPasDeDeux'?angle:(c.yaw??b.yaw??0))+spin,bow,pulse,spin},
+  partner:{x:p.x,z:p.z,yaw:orbit-Math.PI/2-spin*(name==='balletFouette'?1:.9),bow,pulse,spin:-spin},
   pattern:name,time:t};
 }
 function flash(g,c,api,key){api.once(c,'ballet-intro',()=>api.emit(g,'clown-ballet-beat',{pattern:key}));}
