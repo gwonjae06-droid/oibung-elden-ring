@@ -13,7 +13,7 @@ import {bloodTransformation} from '../src/blood-transformation.mjs';
 import {bloodHurtShapes,bloodAimPart} from '../src/boss-hit-regions.mjs';
 import {createBloodTransformationAudio} from '../src/blood-transformation-audio.mjs';
 import {bossTrack,createBossTracks} from '../src/boss-tracks.mjs';
-import {BLOOD_SERAPH_MUSIC_START_SECONDS} from '../src/boss-music.mjs';
+import {BLOOD_MUSIC_REPRISE_SECONDS} from '../src/boss-tracks.mjs';
 
 const advance=(g,t)=>{for(let left=t;left>1e-7;left-=.05)stepBlood(g,Math.min(.05,left));};
 const p3=()=>{
@@ -167,7 +167,7 @@ test('real cathedral draws 3P warnings, hands and eye without creating hitboxes 
   assert.ok(view.stats().seraph.featherInstances>=60);
   assert.ok(view.stats().hazards>=1);
   const floor=scene.getObjectByName('blood-hazard-dark-and-safe-liquid');
-  assert.ok(floor?.visible,'new patterns need visible geometry for their exact footprints');
+  assert.equal(floor?.visible,false,'sweeping laser must not paint a flat blood bar below the actual beam');
   assert.equal(scene.getObjectByName('blood-third-phase-crimson-seraph').userData.decorativeOnly,false);
   assert.equal(view.root.visible,false,'the old 2P humanoid MUST be hidden in phase three');
   assert.ok(bloodHurtShapes(g).every(h=>h.id.startsWith('seraph-')));
@@ -178,10 +178,16 @@ test('real cathedral draws 3P warnings, hands and eye without creating hitboxes 
    assert.ok(startBloodPattern(g,id));
    view.update(g,.025);
    assert.ok(view.stats().hazards>=1,id);
+   if(id==='seraphInwardPillars'){
+    const h=g.blood.hazards[0];h.age=h.warn-.3;view.update(g,.025);
+    assert.equal(view.stats().seraph.columns.visible,true);
+    assert.equal(view.stats().seraph.columns.columns,24);
+    assert.equal(floor?.visible,true,'concentric pillars still have readable circular warnings');
+   }
   }
  }finally{view.dispose();}
 });
-test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged tempo',()=>{
+test('Seraph continues original 2P MP3 and reprises only after the ending',()=>{
  const phaseTwo=bossTrack({boss:'blood',phase:2});
  const third=bossTrack({boss:'blood',phase:3});
  assert.equal(third.key,'blood:2');
@@ -196,7 +202,7 @@ test('Seraph uses the late section of the existing bloodbgm2 MP3 with unchanged 
  const tracks=createBossTracks({Audio},{fadeMs:100});
  tracks.update({boss:'blood',phase:2,offset:1.8});
  assert.equal(clips[0].currentTime,1.8);
- assert.equal(BLOOD_SERAPH_MUSIC_START_SECONDS,142,'legacy constant is retained but ignored by the new seamless phase change');
+ assert.equal(BLOOD_MUSIC_REPRISE_SECONDS,130);
  const resumedAt=clips[0].currentTime=193.7;
  tracks.update({boss:'blood',phase:3});
  assert.equal(tracks.playingKey,'blood:2');
