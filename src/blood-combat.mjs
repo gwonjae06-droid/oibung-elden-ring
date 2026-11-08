@@ -35,6 +35,19 @@ export function bloodProjectileGroundHeight(projectile){
  return projectile?.kind==='wave' ? .25 : BLOOD_PROJECTILE_GROUND_HEIGHT;
 }
 const emit=(g,type,data={})=>g.events.push({type,...data});
+// A single authoritative teleport for boss collisions, lock-on and visual body.
+function teleportSeraph(g,x,z,reason){
+ const b=g.boss,s=g.blood,from={x:b.x,z:b.z};
+ if(b.phase!==3||Math.hypot(b.x-x,b.z-z)<.2)return false;
+ b.x=x;b.z=z;b.yaw=Math.atan2(g.player.x-b.x,g.player.z-b.z);
+ const to={x,z};s.seraphBlink={from,to,age:0,duration:.62,reason};
+ emit(g,'blood-seraph-teleport',{from,to,reason});return true;
+}
+export function seraphFlankDestination(b,p,ordinal=0){
+ const angle=Math.atan2(p.x,p.z)+(ordinal%2?1:-1)*.88;
+ const distance=Math.max(11,Math.min(19,Math.hypot(p.x,p.z)*.75));
+ return {x:Math.sin(angle)*distance,z:Math.cos(angle)*distance};
+}
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createBloodGame(weapon='sword',{seed}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
@@ -43,6 +56,7 @@ export function createBloodGame(weapon='sword',{seed}={}){
   blood:{requiredTsunamiStarted:false,requiredTsunamiDone:false,
     seraphArmed:false,seraphPending:false,seraphAwakened:false,
     seraphFinaleStarted:false,seraphFinaleDone:false,seraphHealDone:false,transitionKind:null,
+     seraphBlink:null,seraphFlankDone:false,seraphManeuverElapsed:0,
     deck:createBloodPatternDeck(seed),walk:null,pattern:null,index:0,t:0,recover:1.2*BOSS_TEMPO.recovery,maneuver:0,hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,cathedralShattered:false,seaCrashed:false,deathTime:0,siphon:createBloodSiphonState(),whip:null,whipCooldown:1.65,patternDuration:0}};
  Object.defineProperty(game,'applyBonusDamage',{enumerable:false,writable:true,configurable:true,
   value:(amount,poise=0,{dot=false}={})=>{
@@ -98,7 +112,9 @@ export function startBloodPattern(g,id){
  const spec=BLOOD_PATTERNS[id];if(!spec||spec.phase!==g.boss.phase||g.status!=='playing'||g.boss.state==='transition')return false;
  // A public/manual pattern request must not replace the mandatory wave.
  if(g.blood.requiredTsunamiStarted&&!g.blood.requiredTsunamiDone)return false;
- const b=g.boss,s=g.blood,p=g.player,aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false; s.pattern=id;s.patternDuration=spec.duration;s.t=0;s.seraphWingReturn=null;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const b=g.boss,s=g.blood,p=g.player;
+ if(b.phase===3)teleportSeraph(g,0,0,'central-cast');
+ const aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false; s.pattern=id;s.patternDuration=spec.duration;s.t=0;s.seraphWingReturn=null;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
@@ -263,6 +279,7 @@ function beginSeraph(g){
  s.seraphArmed=false;s.seraphAwakened=false;s.seraphHealDone=false;s.t=0;s.pattern=null;
  s.walk=null;s.hazards.length=0;s.heartNodes=[];s.whip=null;
  s.whipCooldown=Infinity;s.stun=0;s.slow=0;s.elevation=0;
+ teleportSeraph(g,0,0,'seraph-ascension');
  if(s.siphon)s.siphon.active=false;
  g.projectiles.length=0;g.player.action=null;
  emit(g,'phase',{phase:3});emit(g,'blood-seraph-awakening',{duration:BLOOD_SERAPH_TRANSITION});
@@ -278,9 +295,16 @@ function hurt(g,h){
  const before=p.hp;p.hp=Math.max(0,p.hp-amount);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
-function beginRecovery(g,duration){const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;s.walk=createBloodWalk(g.boss,g.player,duration);}
+function beginRecovery(g,duration){
+ const s=g.blood;g.boss.state='recovery';s.recover=duration;s.elevation=0;
+ s.walk=g.boss.phase===3?null:createBloodWalk(g.boss,g.player,duration);
+}
 function tickBoss(g,dt){
  const b=g.boss,s=g.blood;s.slow=Math.max(0,s.slow-dt);
+ if(s.seraphBlink){
+  s.seraphBlink.age+=dt;
+  if(s.seraphBlink.age>=s.seraphBlink.duration)s.seraphBlink=null;
+ }
  if(b.state==='transition'){s.t+=dt;
   if(s.transitionKind==='seraph'){
    if(s.t>=2.65&&!s.seraphHealDone){
@@ -320,19 +344,40 @@ function tickBoss(g,dt){
   if(s.phasePending){beginPhase(g);return;}
   // Brace during the windup without changing the visible hit timing.
   if(s.whip){s.recover-=dt;return;}
-  if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
-  s.walk.t+=dt;const step=sampleBloodWalk(s.walk);b.x=step.x;b.z=step.z;b.yaw=s.whip?.yaw??step.yaw;
+  if(b.phase!==3){
+   if(!s.walk)s.walk=createBloodWalk(b,g.player,s.recover);
+   s.walk.t+=dt;const step=sampleBloodWalk(s.walk);
+   b.x=step.x;b.z=step.z;b.yaw=s.whip?.yaw??step.yaw;
+  }
   s.recover-=dt;
   if(s.recover<=0){
    // Keep every frame of the existing stationary punish window first.
    // A separate non-attacking stance now makes the boss visibly reposition.
-   b.state='maneuver';s.maneuver=b.phase===3?.78:Math.max(.98,(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap);
-   s.walk=createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
+   b.state='maneuver';
+   s.maneuver=b.phase===3?1.65:Math.max(.98,(b.phase===2?1.14:1.24)*BOSS_TEMPO.gap);
+   s.seraphManeuverElapsed=0;s.seraphFlankDone=false;
+   s.walk=b.phase===3?null:createBloodManeuver(b,g.player,s.maneuver,s.index,b.phase);
   }
   return;
  }
  if(b.state==='maneuver'){
   if(s.phasePending){beginPhase(g);return;}
+  if(b.phase===3){
+   s.seraphManeuverElapsed+=dt;
+   if(!s.seraphFlankDone&&s.seraphManeuverElapsed>=.28){
+    s.seraphFlankDone=true;
+    const point=seraphFlankDestination(b,g.player,s.index);
+    teleportSeraph(g,point.x,point.z,'holy-flank');
+   }
+   s.maneuver-=dt;
+   if(s.maneuver<=0){
+    s.index++;
+    // All phase-three spells return to the arena centre BEFORE their
+    // warning and live impact directions are authored.
+    startBloodPattern(g,nextBloodPattern(s.deck,b.phase));
+   }
+   return;
+  }
   s.walk.t+=dt;
   const pose=sampleBloodWalk(s.walk);
   b.x=pose.x;b.z=pose.z;b.yaw=pose.yaw;
