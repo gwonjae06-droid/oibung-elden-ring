@@ -101,6 +101,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    limbs.push(part);
   }tentacles.push(limbs);
  }
+ // The suction cups are one instanced draw call across all 8 segmented arms.
+ const suctionGeom=geo(new THREE.CylinderGeometry(.205,.23,.075,coarse?7:12));
+ const suction=new THREE.InstancedMesh(suctionGeom,purple,8*stages*2);
+ suction.name='gyuwon-eight-arm-suction-cups';suction.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+ suction.frustumCulled=false;tentacleRoot.add(suction);
+ const suctionDummy=new THREE.Object3D(),armUp=new THREE.Vector3(0,1,0);
+ const armStart=new THREE.Vector3(),armEnd=new THREE.Vector3(),armSegment=new THREE.Vector3(),armDirection=new THREE.Vector3();
+ const armNormal=new THREE.Vector3(0,-1,0),cupRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
  const dynamic=new Map();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
  const portrait=["청산별곡","관동별곡","어즈버","사미인곡"];
  const glyphSets={
@@ -219,19 +227,41 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   }
   if(dollRoot.visible)mobiles.forEach((fig,i)=>{fig.rotation.y=g.time*.62+i;fig.position.y=.15*Math.sin(g.time*3+i)});
   if(tentacleRoot.visible){
-   const offset=new THREE.Vector3(),last=new THREE.Vector3(),tip=new THREE.Vector3(),dir=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
+   let cup=0;
    for(let i=0;i<8;i++){
-    const a=i*Math.PI/4;last.set(b.x,2.4,b.z);
+    const h=s.hazards.find(x=>x.armIndex===i)||(e.cast==='octoInk'?s.hazards[i]:null);
+    const a=h?.yaw??i*Math.PI/4;
+    const warn=h?.warn||1.2;
+    const ready=h?Math.max(0,Math.min(1,h.age/warn)):0;
+    const attacking=h?.visual==='year-tentacle';
+    const reach=attacking?4.2+10.55*ready:e.cast==='octoInk'?11:4.7+Math.sin(g.time*1.8+i)*.4;
+    armStart.set(b.x,2.45,b.z);
     for(let j=0;j<stages;j++){
-     const t=(j+1)/stages,sway=Math.sin(g.time*3.4+i+j*.41)*1.15;
-     tip.set(b.x+Math.sin(a)*t*11+Math.cos(a)*sway*t,2.5+Math.sin(t*Math.PI)*3.4-t*1.7,
-      b.z+Math.cos(a)*t*11-Math.sin(a)*sway*t);
-     const part=tentacles[i][j];offset.copy(tip).sub(last);dir.copy(offset).normalize();
-     part.position.copy(last).addScaledVector(offset,.5);
-     part.quaternion.setFromUnitVectors(up,dir);part.scale.y=offset.length();
-     last.copy(tip);
+     const t=(j+1)/stages,m=(j+.5)/stages;
+     const sway=Math.sin(g.time*2.3+i*.8+j*.40)*.45*(1-ready);
+     const distance=reach*t;
+     // A real raised-arm anticipation descends to an arm's-length impact.
+     const y=attacking?
+      .38+(1-t)*2.1+(1-ready)*2.7*Math.sin(Math.PI*t):
+      2.25+Math.sin(Math.PI*t)*1.45-Math.max(0,t-.75)*1.5;
+     armEnd.set(b.x+Math.sin(a)*distance+Math.cos(a)*sway*t,y,
+      b.z+Math.cos(a)*distance-Math.sin(a)*sway*t);
+     armSegment.copy(armEnd).sub(armStart);
+     armDirection.copy(armSegment).normalize();
+     const part=tentacles[i][j],width=.58*(1-j/stages*.74);
+     part.position.copy(armStart).addScaledVector(armSegment,.5);
+     part.quaternion.setFromUnitVectors(armUp,armDirection);
+     part.scale.set(width,Math.max(.02,armSegment.length()),width);
+     for(const q of [.32,.68]){
+      suctionDummy.position.copy(armStart).addScaledVector(armSegment,q).addScaledVector(armNormal,width*.70);
+      suctionDummy.quaternion.copy(cupRotation);
+      suctionDummy.scale.setScalar(Math.max(.22,width*.72));
+      suctionDummy.updateMatrix();suction.setMatrixAt(cup++,suctionDummy.matrix);
+     }
+     armStart.copy(armEnd);
     }
    }
+   suction.instanceMatrix.needsUpdate=true;
   }
   const waveHazard=s.hazards.find(h=>h.shape==='wave'&&(h.visual==='year-sludge-wave'||h.visual==='year-water-wave'));
   if(waveHazard?.id!==waveId){if(waveHazard)makeWave(waveHazard);else clearWave();}
