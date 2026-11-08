@@ -5,7 +5,7 @@ export const GYUWON_CALENDAR_SECONDS=48;
 export const annualBudget=g=>g.boss.maxHp*.065;
 export function annualFloorForYear(g,year){
  const e=g.gyuwon.years;
- if(year>=11)return e.endingUnlocked||year>11?0:g.boss.maxHp*.015;
+ if(year>=11)return e.endingUnlocked?0:g.boss.maxHp*.015;
  return g.boss.maxHp*(1-.065*year);
 }
 export const annualFloor=g=>annualFloorForYear(g,g.gyuwon.years.year);
