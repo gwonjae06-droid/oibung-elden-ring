@@ -20,6 +20,11 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const wavewater=mat(0x5d867d,{roughness:.22,metalness:.24,transparent:true,opacity:.73,side:THREE.DoubleSide});
  const purple=mat(0xb19eb9,{roughness:.29,clearcoat:.8});
  const neon=mat(0xe5bf61,{roughness:.34,emissive:0x5b351a,emissiveIntensity:.8});
+ const froth=mat(0x9aab91,{roughness:.30,metalness:.12,clearcoat:.9});
+ const wax=mat(0xf0c4ba,{roughness:.28,clearcoat:.65});
+ const dollOutfits=[0xc78ba9,0x87a5bc,0xc4b187,0x9b82bc,0x87aa9e,0xc6a38b]
+  .map(color=>mat(color,{roughness:.3,clearcoat:.65}));
+ const smokeMat=mat(0x859090,{roughness:1,transparent:true,opacity:.26,depthWrite:false});
  const glyphPlane=geo(new THREE.PlaneGeometry(3.6,1.8));
  const glyphBacking=geo(new THREE.BoxGeometry(3.55,1.76,.16));
  const box=geo(new THREE.BoxGeometry(1,1,1)),cylinder=geo(new THREE.CylinderGeometry(.5,.5,1,coarse?10:18)),
@@ -31,6 +36,9 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   a.castShadow=false;a.receiveShadow=false;a.name=name;parent.add(a);return a;
  }
  const exam=new THREE.Group();exam.name='gyuwon-suneung-desk';root.add(exam);
+ const examMarks=new THREE.Group();examMarks.name='gyuwon-omr-actual-answer-sheet';exam.add(examMarks);
+ for(let row=0;row<8;row++)for(let col=0;col<3;col++)
+  mesh(examMarks,sphere,graphite,-.32+col*.29,1.478,-.42+row*.125,.072,.018,.05,'gyuwon-omr-shaded-ink');
  mesh(exam,box,steel,0,1.3,0,2.65,.18,1.8);
  for(const sign of [-1,1]){
   mesh(exam,box,steel,sign*1.06,.65,sign*.55,.18,1.3,.18);
@@ -39,6 +47,9 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const chair=mesh(exam,box,steel,0,.62,1.13,1.55,.17,1.15);
  mesh(exam,box,steel,0,1.18,1.63,1.55,1.05,.16);
  mesh(exam,box,paper,0,1.43,-.1,1.2,.037,.88);
+ mesh(exam,box,wax,-1.05,1.43,-.46,.38,.09,.18);
+ mesh(exam,box,paper,.96,1.43,.14,.45,.065,.66);
+ mesh(exam,box,graphite,1.0,1.48,.36,.39,.018,.14);
  mesh(exam,cylinder,graphite,.42,1.45,.15,.025,.63,.025).rotation.z=.63;
  const motorcycle=new THREE.Group();motorcycle.name='gyuwon-motorbike';root.add(motorcycle);
  const scooter=new THREE.Group();scooter.name='gyuwon-electric-scooter';root.add(scooter);
@@ -52,13 +63,24 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  mesh(motorcycle,box,hot,0,1.3,-.25,.8,.4,.92);
  mesh(motorcycle,box,rubber,0,1.63,-.47,.82,.17,1.05);
  mesh(motorcycle,cylinder,steel,0,1.5,1.1,.065,1.55,.065).rotation.x=.4;
+ mesh(motorcycle,box,steel,0,1.03,-1.15,.95,.52,.62);
+ mesh(motorcycle,cylinder,steel,0,1.04,-1.93,.18,1.1,.18).rotation.x=Math.PI/2;
+ mesh(motorcycle,sphere,hot,0,1.64,1.47,.38,.29,.15);
+ mesh(motorcycle,box,graphite,0,1.82,.94,1.25,.08,.12);
+ for(const side of [-1,1]){
+  mesh(motorcycle,box,steel,side*.72,.82,-.56,.68,.13,.12);
+  mesh(motorcycle,box,rubber,side*.78,.73,-.61,.36,.11,.35);
+ }
  wheel(scooter,-1.1,.35);wheel(scooter,1.1,.35);
  mesh(scooter,box,steel,0,.49,0,.37,.13,2.25);
  mesh(scooter,cylinder,steel,0,1.4,.85,.044,2.1,.044);
  mesh(scooter,box,rubber,0,2.45,.85,1.1,.09,.13);
+ mesh(scooter,sphere,wax,0,1.35,1.08,.27,.19,.22);
+ mesh(scooter,box,graphite,0,.56,0,.31,.06,1.85);
+ for(const side of [-1,1])mesh(scooter,cylinder,steel,side*.55,2.44,.85,.12,.28,.12);
  const cigarette=new THREE.Group();cigarette.name='gyuwon-cigarette-smoke';root.add(cigarette);
  mesh(cigarette,cylinder,paper,0,2.12,0,.08,1.0,.08).rotation.z=.84;
- const smokePuffs=Array.from({length:6},(_,i)=>mesh(cigarette,sphere,paper,0,2.35+i*.34,.3+i*.22,
+ const smokePuffs=Array.from({length:6},(_,i)=>mesh(cigarette,sphere,smokeMat,0,2.35+i*.34,.3+i*.22,
    .21+i*.07,.14+i*.045,.24+i*.06));
  const weapon=new THREE.Group();weapon.name='gyuwon-snipergun-and-bow';root.add(weapon);
  mesh(weapon,box,steel,0,1.4,.25,.46,.32,2.2);
