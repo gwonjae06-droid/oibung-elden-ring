@@ -1,0 +1,41 @@
+name: Clown overlapping attacks and escape-route fairness
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/clown-combat.mjs'
+      - 'src/clown-troupe.mjs'
+      - 'src/clown-escape-routes.mjs'
+      - 'src/clown-legacy-echo.mjs'
+      - 'src/player-movement-rules.mjs'
+      - 'tests/clown-escape-routes.test.mjs'
+      - 'tests/clown-troupe-independent-cadence.test.mjs'
+      - 'tests/clown-troupe-melee.test.mjs'
+      - '.github/workflows/clown-escape-routes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  escapes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Three.js used by shared combat engine
+        run: npm install --no-save --no-audit --no-fund three@0.180.0
+      - name: Validate all collision and routing source syntax
+        run: |
+          node --check src/clown-escape-routes.mjs
+          node --check src/clown-troupe.mjs
+          node --check src/clown-legacy-echo.mjs
+          node --check src/clown-combat.mjs
+          node --check tests/clown-escape-routes.test.mjs
+      - name: Prove 3-4s attack cadence and real reachable warning overlap
+        run: >
+          node --test
+          tests/clown-escape-routes.test.mjs
+          tests/clown-troupe-independent-cadence.test.mjs
+          tests/clown-troupe-melee.test.mjs

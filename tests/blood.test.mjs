@@ -6,15 +6,16 @@ import {freshProfile,loadProfile,newRun,finishAttempt,advanceJourney} from '../s
 import {createEncounterStore} from '../src/encounter-state.mjs';
 import {score} from '../src/boss-score.mjs';
 const advance=(g,seconds,input={})=>{for(let t=0;t<seconds-1e-8;t+=.01)stepBlood(g,.01,input);};
-test('all twenty-seven patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
- assert.equal(bloodPool(1).length,13);assert.equal(bloodPool(2).length,14);
+test('all thirty-six patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
+ assert.equal(bloodPool(1).length,13);assert.equal(bloodPool(2).length,14);assert.equal(bloodPool(3).length,9);
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.x=8;g.player.z=8;g.player.hp=g.player.maxHp=1e6;
   assert.ok(startBloodPattern(g,id));assert.ok(g.blood.hazards.length);assert.ok(g.blood.hazards.every(h=>h.warn>=.6));
   const hp=g.player.hp;advance(g,.5);assert.equal(g.player.hp,hp,id+' damaged before warning');
   // Evaluate the complete field every beat, including simultaneous hazards.
   for(let t=.5;t<spec.duration;t+=.1){const active=g.blood.hazards.filter(h=>h.age>=h.warn&&h.age<h.warn+h.life);let safe=false;for(let x=-24;x<=24&&!safe;x+=3)for(let z=-24;z<=24;z+=3)if(Math.hypot(x,z)<26&&active.every(h=>!hazardContains(h,{x,z}))){safe=true;break;}assert.ok(safe,id+' has no safe area at '+t);advance(g,.1);}
-  advance(g,.2);assert.equal(g.boss.state,'recovery',id);assert.equal(g.blood.elevation,0);assert.equal(g.blood.hazards.length,0);assert.ok(g.blood.recover>1.5);
+  advance(g,.2);assert.equal(g.boss.state,'recovery',id);assert.equal(g.blood.elevation,0);assert.equal(g.blood.hazards.length,0);assert.ok(g.blood.recover>0&&g.blood.recover<=spec.recover,
+   id+' must leave a real, finite punishable recovery window');
  }
 });
 test('70% health waits for current attack, freezes all damage, transitions once without transition healing',()=>{

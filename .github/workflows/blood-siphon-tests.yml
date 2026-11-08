@@ -7,6 +7,7 @@ on:
       - 'src/blood-data.mjs'
       - 'src/blood-siphon.mjs'
       - 'tests/blood-siphon.test.mjs'
+      - 'tests/blood.test.mjs'
       - 'tests/hard-story-balance.test.mjs'
       - 'scripts/blood-siphon-smoke.mjs'
       - '.github/workflows/blood-siphon-tests.yml'

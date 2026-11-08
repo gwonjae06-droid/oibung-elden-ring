@@ -38,9 +38,10 @@ export function beginLegacyEchoAttack(g,m,{zone,emit}){
  m.showCue=move;m.target=aim;
  const common={warn,source:'legacyEcho',miniOwner:m.id,major:false};
  if(move==='headBomb'){
-  attack.shots.push({x:aim.x,z:aim.z,wind:warn});
-  zone(g,{shape:'circle',...aim,r:2.25,damage:LEGACY_ECHO_CONFIG.damage.headBomb,
+  const impact=zone(g,{shape:'circle',...aim,r:2.25,damage:LEGACY_ECHO_CONFIG.damage.headBomb,
    sound:'legacyHeadBomb',blast:true,...common});
+  // The mini must visibly THROW to the actual rebalanced collision point.
+  attack.shots.push({x:impact?.x??aim.x,z:impact?.z??aim.z,wind:warn});
  }else if(move==='clap'){
   const front=safe({x:from.x+Math.sin(angle)*2.05,z:from.z+Math.cos(angle)*2.05});
   zone(g,{shape:'circle',...front,r:2.65,damage:LEGACY_ECHO_CONFIG.damage.clap,
@@ -53,9 +54,9 @@ export function beginLegacyEchoAttack(g,m,{zone,emit}){
  }else{
   for(let i=0;i<2;i++){
    const q=safe({x:aim.x+Math.sin(angle+i*1.9)*2.85,z:aim.z+Math.cos(angle+i*1.9)*2.85});
-   attack.shots.push({x:q.x,z:q.z,wind:warn+i*.36});
-   zone(g,{shape:'circle',...q,r:1.7,damage:LEGACY_ECHO_CONFIG.damage.juggle,
+   const impact=zone(g,{shape:'circle',...q,r:1.7,damage:LEGACY_ECHO_CONFIG.damage.juggle,
     sound:'legacyJuggle',...common,warn:warn+i*.36});
+   attack.shots.push({x:impact?.x??q.x,z:impact?.z??q.z,wind:warn+i*.36});
   }
  }
  emit(g,'clown-legacy-echo-cast',{id:m.id,kind:move,x:m.x,z:m.z,wind:warn});

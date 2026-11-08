@@ -49,6 +49,39 @@ try{
  assert.equal(snap.year,1);
  assert.match(snap.clock,/수능까지 D-\d+/);
  await page.screenshot({path:'artifacts/gyuwon-years/hyeonyeok-desktop.png'});
+ // This regression used to be invisible: Gyuwon's simulation emitted player
+ // shots correctly but never installed the common visual projectile layer.
+ // Exercise all four renderer branches in the live WebGL battle.
+ await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  const g=window.readYearSession(root).game,p=g.player;
+  for(const [i,kind] of ['bow','cards','wave','hammer-throw'].entries()){
+   g.projectiles.push({id:g.nextId++,kind,x:p.x+(i-1.5)*2.0,
+    y:p.floorY+1.45,z:p.z-2.5-i*.6,yaw:Math.PI,life:8,
+    speed:0,damage:0,skill:false});
+  }
+ });
+ await page.waitForFunction(()=>{
+  const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
+  return window.readYearSession(root)?.diagnostics()?.projectiles?.active===4;
+ },{},{timeout:15000});
+ const projectileState=await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  const session=window.readYearSession(root);
+  return {simulation:session.game.projectiles.map(p=>p.kind),
+   renderer:session.diagnostics().projectiles};
+ });
+ assert.deepEqual(projectileState.simulation,['bow','cards','wave','hammer-throw']);
+ assert.equal(projectileState.renderer.active,4,'all four visual projectile types must appear');
+ await page.screenshot({path:'artifacts/gyuwon-years/player-projectiles-visible.png'});
+ await page.evaluate(()=>{
+  const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+  window.readYearSession(root).game.projectiles.length=0;
+ });
+ await page.waitForFunction(()=>{
+  const root=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
+  return window.readYearSession(root)?.diagnostics()?.projectiles?.active===0;
+ },{},{timeout:15000});
  // Verify that the actual live battle input, not just the shared free-look
  // helper, changes the camera when Q unlocks target tracking.
  const beforeFreeLook=await page.evaluate(()=>{

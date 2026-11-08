@@ -1,4 +1,5 @@
 import {LEGACY_ECHO_CONFIG,legacyEchoCount,createLegacyEcho,beginLegacyEchoAttack,stepLegacyEcho} from './clown-legacy-echo.mjs';
+import {balanceClownMeleeOpening} from './clown-escape-routes.mjs';
 // Independently simulated, targetable nightmare-circus ensemble.
 // Every attack uses the same telegraphed zone engine as the ringmaster.
 // There is no decorative "mob" which can damage without a real cue.
@@ -229,14 +230,17 @@ const eased=x=>{const v=sat(x);return v*v*(3-2*v);};
 // the decorative lane never deals remote damage or tracks a dodging player.
 function beginMelee(g,m,zone,emit){
  const s=CIRCUS_ROLES[m.role],now=g.clown.time||0,from={x:m.x,z:m.z};
- const yaw=contactAngle(from,g.player),distance=Math.hypot(g.player.x-from.x,g.player.z-from.z);
+ let yaw=contactAngle(from,g.player);const distance=Math.hypot(g.player.x-from.x,g.player.z-from.z);
  const heavy=m.role==='strongman',wind=s.wind,travel=heavy?.29:.24;
  const stride=clamp(distance-(heavy?1.72:1.48),0,heavy?2.3:2.65);
  const follow=(g.clown.horrorStage||1)>=2,third=(g.clown.horrorStage||1)>=3&&!heavy;
  const impacts=[wind+travel*.48];
  if(follow)impacts.push(wind+travel+.94);
  if(third)impacts.push(wind+travel+1.80);
- m.melee={kind:m.role,from,yaw,start:now,wind,travel,stride,impacts,hit:impacts.map(()=>false)};
+ m.melee=balanceClownMeleeOpening(g,m,{
+  kind:m.role,from,yaw,start:now,wind,travel,stride,impacts,hit:impacts.map(()=>false)
+ });
+ yaw=m.melee.yaw;
  m.cast=impacts.at(-1)+.34;
  // Individual cadence is assigned when a melee attack starts, not after
  // the physical combo and its recovery.
@@ -268,7 +272,7 @@ function advanceMelee(g,m,h,hurt){
   const distance=Math.hypot(dx,dz),angle=Math.atan2(dx,dz);
   const difference=Math.atan2(Math.sin(angle-a.yaw),Math.cos(angle-a.yaw));
   const reach=heavy?2.75:2.55,arc=heavy?1.08:1.22;
-  if(distance<=reach&&Math.abs(difference)<=arc&&typeof hurt==='function')
+  if(!a.feint&&distance<=reach&&Math.abs(difference)<=arc&&typeof hurt==='function')
    hurt(g,Math.round(CIRCUS_ROLES[a.kind].attack*(k===0?1:k===1?.78:.68)),a.kind+'-'+m.id+'-'+k);
  }
  if(elapsed>=a.impacts.at(-1)+.34){m.melee=null;m.showCue=null;return false;}
