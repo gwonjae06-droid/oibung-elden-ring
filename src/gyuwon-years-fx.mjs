@@ -139,6 +139,8 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,0));
   }else if(v==='year-figure'){
    mesh(group,sphere,purple,0,0,0,2.1,2.1,2.1);
+  }else if(v==='year-circus'){
+   mesh(group,sphere,hot,0,0,0,h.r*2,h.r*2,h.r*2);
   }else if(v==='year-fire'){
    mesh(group,geo(new THREE.ConeGeometry(1.3,5,coarse?9:16)),hot,0,1.8,0);
   }
@@ -240,7 +242,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   for(const h of s.hazards){
    const v=h.visual||'';
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||
-    v==='sword'||v==='dice'||v==='year-circus'||v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
+    v==='sword'||v==='dice'||v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);
    if(!item){item=makeItem(h);dynamic.set(h.id,item);}
    const p=hazardPosition(h),rise=Math.max(0,1-h.age/Math.max(.1,h.warn));
@@ -249,6 +251,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    if(v==='year-photocard')item.group.position.y=2.3;
    if(v==='year-sludge'||v==='year-ink')item.group.position.y=.55;
    if(v==='year-fire')item.group.position.y=1.1;
+   if(v==='year-circus')item.group.position.y=h.r;
    if(v.startsWith('year-')&&v!=='year-bookfall')item.group.rotation.y=h.yaw||g.time*.14;
    item.group.rotation.z=.09*Math.sin(g.time*3+h.id);
   }
