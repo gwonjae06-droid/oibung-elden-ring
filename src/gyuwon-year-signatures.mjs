@@ -1,3 +1,4 @@
+import {ARSENAL_SIGNATURES,ARSENAL_PATTERNS} from './gyuwon-arsenal.mjs';
 import {rifleRay} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 // Physical, readable once-per-year signature attacks for the D-day boss.
@@ -5,9 +6,11 @@ import {drawPatternShuffle} from './pattern-shuffle.mjs';
 export const GYUWON_YEAR_SIGNATURES=Object.freeze({
  1:'ultimateBike',2:'ultimateScooter',3:'ultimateSmoke',4:'ultimateMarksman',
  5:'ultimateSewage',6:'ultimateShrine',7:'ultimateGacha',8:'ultimateOctopus',
+ ...ARSENAL_SIGNATURES,
  9:'ultimateMemory',10:'ultimateParadox',11:'nightmare365'
 });
 export const GYUWON_SIGNATURE_SPECS=Object.freeze({
+ ...ARSENAL_PATTERNS,
  ultimateBike:[13.4,1.9],ultimateScooter:[9.8,2],
  ultimateSmoke:[8.5,2.1],ultimateMarksman:[22.2,2.5],
  ultimateSewage:[9.8,2.2],ultimateShrine:[18.8,2.2],

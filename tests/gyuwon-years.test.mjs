@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -13,7 +14,7 @@ const advance=(g,t)=>{for(let i=0;i<Math.ceil(t*120);i++)stepGyuwon(g,1/120);};
 const annual=()=>{const g=createGyuwonGame('sword',{yearMode:true,seed:19});g.player.invuln=1000;return g;};
 function nextExam(g){
  const e=g.gyuwon.years;
- e.mode='combat';e.cast=null;e.recover=0;e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;
+ e.mode='combat';e.cast=null;e.recover=0;g.boss.hp=annualFloor(g);e.season=48;e.signatureUsed=true;
  g.boss.state='recovery';g.gyuwon.hazards.length=0;
  stepGyuwon(g,.025);return e;
 }
@@ -34,7 +35,7 @@ test('the 365-day timer expires into five sequential exams, never a mid-cast int
  const g=annual(),e=g.gyuwon.years;
  e.recover=0;stepGyuwon(g,.03);
  const first=e.cast;
- e.season=GYUWON_YEAR_SECONDS;stepGyuwon(g,.05);
+ g.boss.hp=annualFloor(g);e.season=48;stepGyuwon(g,.05);
  assert.equal(e.cast,first);
  assert.equal(e.day,0);
  for(let i=0;i<3000&&e.mode==='combat';i++)stepGyuwon(g,.025);
@@ -86,10 +87,10 @@ test('retake rosters match each requested distinct transformation',()=>{
  assert.ok(gyuwonYearRoster(2).includes('scooter'));
  assert.deepEqual(gyuwonYearRoster(3),['letters','bookfall']);
  assert.deepEqual(gyuwonYearRoster(4),['sniper','archery','crossfire']);
- assert.deepEqual(gyuwonYearRoster(5),['sewageThrow','sewageWave','sewageBomb']);
- assert.ok(gyuwonYearRoster(6).includes('figures'));
- assert.ok(gyuwonYearRoster(7).includes('donation'));
- assert.ok(gyuwonYearRoster(8).includes('octoStrike'));
+ assert.deepEqual(gyuwonYearRoster(5),['hammerCrush','hammerSweep','hammerQuake']);
+ assert.ok(gyuwonYearRoster(6).includes('swordAdvance'));
+ assert.ok(gyuwonYearRoster(7).includes('bowVolley'));
+ assert.ok(gyuwonYearRoster(8).includes('cardsReturn'));
  assert.deepEqual(gyuwonYearRoster(9),['recall']);
  assert.deepEqual(gyuwonYearRoster(10),['recallMix']);
  assert.deepEqual(gyuwonYearRoster(11),['recallAll']);
@@ -99,24 +100,10 @@ test('retake rosters match each requested distinct transformation',()=>{
  assert.ok(gyuwonMapInterval(20)>=1.5);
 });
 
-test('fifth-year physical sewage wave shares its safe gap with collision logic',()=>{
- const g=annual(),e=g.gyuwon.years;e.year=5;e.recover=0;
- // The fifth-year shuffle eventually casts each attack once.
- const seen=new Set();
- for(let i=0;i<3;i++){
-  e.recover=0;e.cast=null;g.boss.state='recovery';stepGyuwon(g,.03);
-  seen.add(e.cast);
-  if(e.cast==='sewageWave'){
-   const h=g.gyuwon.hazards.find(v=>v.shape==='wave');
-   assert.ok(h);
-   h.age=h.warn+2.5;
-   const z=h.z+(h.age-h.warn)*h.speed;
-   assert.equal(hazardContains(h,{x:h.gap,z}),false);
-   assert.equal(hazardContains(h,{x:h.gap+h.opening+2,z}),true);
-  }
-  e.cast=null;
- }
- assert.ok(seen.has('sewageWave'));
+test('fifth-year hammer shuffle has three distinct real attacks',()=>{
+ const g=annual(),e=g.gyuwon.years;e.year=5;e.recover=0;const seen=new Set();
+ for(let i=0;i<3;i++){e.recover=0;e.cast=null;stepGyuwon(g,.03);seen.add(e.cast);assert.ok(g.gyuwon.hazards.some(h=>h.weaponStrike));}
+ assert.deepEqual([...seen].sort(),['hammerCrush','hammerQuake','hammerSweep']);
 });
 
 test('the fourth year stays exclusively sniper/bow, and the eighth has eight armed segments',()=>{

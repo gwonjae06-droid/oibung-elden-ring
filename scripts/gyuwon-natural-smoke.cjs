@@ -62,7 +62,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_PATH||'playwright-core');
     for(const id of ids){
     const g=createGyuwonGame('sword',{yearMode:true,seed:42});g.player.invuln=1e5;
     const year=Array.from({length:11},(_,i)=>i+1).find(y=>gyuwonYearRoster(y).includes(id)||GYUWON_YEAR_SIGNATURES[y]===id);
-    g.gyuwon.years.year=year;g.boss.phase=year>=9?3:1;g.gyuwon.stageMemory='sword';
+    g.gyuwon.years.year=year||({sewageThrow:5,sewageWave:5,sewageBomb:5,figures:6,photocard:6,merch:6,dance:7,donation:7,chatstorm:7,octoStrike:8,octoSweep:8,octoInk:8,ultimateSewage:5,ultimateShrine:6,ultimateGacha:7,ultimateOctopus:8})[id]||1;g.boss.phase=year>=9?3:1;g.gyuwon.stageMemory='sword';
     startGyuwonYearCast(g,id);
     const first=Math.min(...g.gyuwon.hazards.map(h=>h.warn));
     for(const time of cycle===0?[0,first-.10,first+.02,GYUWON_YEAR_PATTERNS[id][0]-.08]:[first+.02]){

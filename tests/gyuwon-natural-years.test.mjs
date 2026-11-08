@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -27,7 +28,7 @@ test('n수 continues counting years and schedules a new nightmare after every ex
  for(const year of [12,13,14]){
   resolveGyuwonExamGrade(g,.5);tick(g,3.01);assert.equal(e.year,year);
   assert.equal(gyuwonYearTitle(e.year),'n수');assert.equal(e.signatureUsed,false);
-  e.recover=0;e.season=9.3;stepGyuwon(g,.02);
+  e.recover=0;e.yearStartHp=g.boss.maxHp;g.boss.hp=g.boss.maxHp*.4;stepGyuwon(g,.02);
   assert.equal(e.cast,'nightmare365');assert.equal(e.signatureUsed,true);
  }
 });
@@ -107,7 +108,7 @@ test('inquiry grants three actual bounded benefits without invisible attack haza
  const seen=new Set();
  for(let seed=1;seed<=40;seed++){
   const g=make(2,seed*1234567),e=g.gyuwon.years;g.boss.hp=g.boss.maxHp*.5;
-  e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;e.recover=0;stepGyuwon(g,.01);
+  e.season=48;e.signatureUsed=true;e.recover=0;stepGyuwon(g,.01);
   for(let i=0;i<4;i++){e.subjectT=GYUWON_SUBJECT_SECONDS-.01;stepGyuwon(g,.02);}
   assert.equal(e.subject,4);assert.equal(g.gyuwon.hazards.length,0);seen.add(e.inquiry);
   if(e.inquiry==='attack')assert.equal(e.attackBuff,5);

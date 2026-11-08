@@ -1,3 +1,4 @@
+import {arsenalMotion} from './gyuwon-arsenal.mjs';
 import {ridePose,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {GYUWON_PATTERNS} from './gyuwon-data.mjs';
 import {poseAlpha,createPoseContinuity} from './boss-animation-continuity.mjs';
@@ -60,6 +61,7 @@ function annualExamMotion(g){
   leftArm:-1.06,rightArm:-1.06,leftElbow:-.43,rightElbow:-.43,
   leftWrist:.2,rightWrist:.2,weightShift:0,book:-.75};
  if(g.gyuwon.stun>0)return {...NEUTRAL,lean:-.65,headPitch:.48,leftArm:-.25,rightArm:-.2};
+ const arsenal=arsenalMotion(g);if(arsenal)return arsenal;
  const id=weapon.rifle?'sniper':weapon.bow?'archery':e.cast||'',dance=e.year===7,floppy=e.year===5,octo=e.year===8;
  const timings=g.gyuwon.motionBeats||[],strike=Math.max(0,...timings.map(w=>pulse(t-w,.16)));
  const beat=Math.sin((e.cast?t:g.time)*(dance?Math.PI*2/.67:4));

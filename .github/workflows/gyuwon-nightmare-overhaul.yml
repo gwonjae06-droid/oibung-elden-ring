@@ -11,7 +11,7 @@ permissions:
 jobs:
   annual-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,6 +39,12 @@ jobs:
         run: |
           node scripts/gyuwon-rider-smoke.cjs
           GYUWON_TOUCH=1 node scripts/gyuwon-rider-smoke.cjs
+      - name: Check HP-driven exams and sixteen weapon attacks on desktop and touch
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+        run: |
+          node scripts/gyuwon-arsenal-smoke.cjs
+          GYUWON_TOUCH=1 node scripts/gyuwon-arsenal-smoke.cjs
       - name: Check all annual worlds and physical OMR floor
         env:
           EDGE_PATH: /usr/bin/google-chrome
@@ -57,4 +63,5 @@ jobs:
             qa-output/gyuwon-overhaul/
             qa-output/gyuwon-worlds/
             qa-output/gyuwon-rider/
+            qa-output/gyuwon-arsenal/
           retention-days: 7
