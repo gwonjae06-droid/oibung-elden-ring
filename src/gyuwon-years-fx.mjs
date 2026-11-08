@@ -88,6 +88,19 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  mesh(weapon,box,rubber,0,1.1,-.4,.25,.7,.44);
  const bowCurve=geo(new THREE.TorusGeometry(.85,.08,6,coarse?16:28,Math.PI));
  const bow=mesh(weapon,bowCurve,hot,1.1,1.6,.6,1,1,1);bow.rotation.z=Math.PI/2;
+ const streamSet=new THREE.Group();streamSet.name='gyuwon-seven-year-broadcast-studio';root.add(streamSet);
+ const ringLight=geo(new THREE.TorusGeometry(.9,.075,coarse?10:16,coarse?28:54));
+ const cameraLens=geo(new THREE.CylinderGeometry(.21,.26,.35,coarse?12:24));
+ const broadcast=mesh(streamSet,cylinder,steel,-3.3,1.35,-3.6,.055,2.7,.055,'gyuwon-stream-mic-stand');
+ const light=mesh(streamSet,ringLight,neon,3.2,3.2,-4.0,1,1,1,'gyuwon-broadcast-ring-light');
+ const lens=mesh(streamSet,cameraLens,graphite,3.2,3.05,-3.7,1,1,1,'gyuwon-broadcast-camera-lens');
+ lens.rotation.x=Math.PI/2;
+ mesh(streamSet,box,graphite,-3.3,2.55,-3.25,.62,.28,.57,'gyuwon-stream-live-microphone');
+ const speakerL=mesh(streamSet,box,graphite,-4.7,.91,-3.1,1.35,1.7,1.06,'gyuwon-stream-left-speaker');
+ const speakerR=mesh(streamSet,box,graphite,4.7,.91,-3.1,1.35,1.7,1.06,'gyuwon-stream-right-speaker');
+ for(const speaker of [speakerL,speakerR]){
+  mesh(speaker,cylinder,steel,0,-.12,.52,.38,.085,.38,'gyuwon-studio-bass-cone').rotation.x=Math.PI/2;
+ }
  const bodyslime=new THREE.Group();bodyslime.name='gyuwon-slime-aura';root.add(bodyslime);
  for(let i=0;i<8;i++){
   const a=i*Math.PI/4;const m=mesh(bodyslime,sphere,slime,Math.sin(a)*1.4,.28,Math.cos(a)*1.4,1,.5,.72);
@@ -183,6 +196,8 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   }else if(v==='year-photocard'){
    mesh(group,box,paper,0,0,0,1.5,1.95,.075);
    mesh(group,box,purple,0,0,.045,1.18,1.55,.015);
+   mesh(group,box,neon,0,-.68,.075,.83,.085,.035);
+   mesh(group,sphere,wax,0,.16,.10,.38,.56,.045);
   }else if(glyphSets[v]){
    const tex=wordTexture(v,h.id%4);
    const key=v+(h.id%4);
@@ -242,6 +257,12 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   flameAura.visible=e.mode==='combat'&&e.year===3;
   flameAura.position.set(b.x,0,b.z);
   dollRoot.visible=e.mode==='combat'&&e.year===6;
+  streamSet.visible=e.mode==='combat'&&e.year===7;
+  if(streamSet.visible){
+   streamSet.position.set(b.x,0,b.z);streamSet.rotation.y=b.yaw;
+   const liveEnergy=e.cast==='donation'?1:.3;
+   light.scale.setScalar(1+liveEnergy*.12*Math.sin(g.time*6));
+  }
   tentacleRoot.visible=e.mode==='combat'&&e.year===8;
   motorcycle.position.set(b.x,0,b.z);motorcycle.rotation.y=b.yaw;
   scooter.position.set(b.x,0,b.z);scooter.rotation.y=b.yaw;
