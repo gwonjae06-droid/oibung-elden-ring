@@ -87,7 +87,17 @@ try{
  await page.waitForTimeout(430);await page.screenshot({path:'artifacts/gyuwon-years/osu-sewage-wave.png'});
  await showYear(7,'donation');
  await page.waitForTimeout(420);
- assert.equal(await page.locator('#gyuwon-battle').evaluate(el=>!el.firstElementChild.shadowRoot.querySelector('.gy-dday-chat').hidden),true);
+ const chatState=await page.locator('#gyuwon-battle').evaluate(async el=>{
+  const {readBattleSession}=await import('./src/battle-session.mjs');
+  const root=el.firstElementChild.shadowRoot,session=readBattleSession(root);
+  const game=session?.game,chat=root.querySelector('.gy-dday-chat');
+  return {chatHidden:chat?.hidden,chatText:chat?.textContent,
+   status:game?.status,year:game?.gyuwon?.years?.year,
+   cast:game?.gyuwon?.years?.cast,castT:game?.gyuwon?.years?.castT,
+   mode:game?.gyuwon?.years?.mode,active:session?.active};
+ });
+ assert.equal(chatState.chatHidden,false,
+  'Gyuwon year-seven chat should be visible: '+JSON.stringify({chatState,errors}));
  await page.screenshot({path:'artifacts/gyuwon-years/chilsu-live-chat.png'});
  await showYear(8,'octoStrike');
  await page.waitForTimeout(420);
