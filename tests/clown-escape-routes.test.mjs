@@ -94,7 +94,7 @@ test('actual melee weapon sweeps participate in safe-route detection',()=>{
  assert.ok(clownEscapeRoutes(g).length>0,'old threats remain dodgeable');
  member.melee=result;
  if(!result.feint)assert.ok(clownEscapeRoutes(g).length>0,
-  'actual physical blade's future contact cannot close every path');
+  "future physical blade contact cannot close every path");
 });
 
 test('full third-act independent cast pressure keeps a route for many starting seeds',()=>{
