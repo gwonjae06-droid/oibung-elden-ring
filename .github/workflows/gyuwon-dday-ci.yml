@@ -1,5 +1,11 @@
 name: Gyuwon D-day annual exam regression
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gyuwon-*.mjs'
+      - 'tests/gyuwon-*.test.mjs'
+      - '.github/workflows/gyuwon-dday-ci.yml'
   pull_request:
     paths:
       - 'src/gyuwon-years.mjs'
@@ -33,7 +39,7 @@ jobs:
         run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Check annual exam syntax and integration
         run: |
-          for file in src/gyuwon-years.mjs src/gyuwon-years-fx.mjs src/gyuwon-year-rig.mjs src/gyuwon-year-cues.mjs src/gyuwon-years-hud.mjs src/gyuwon-combat.mjs src/gyuwon-battle.mjs src/gyuwon-view.mjs src/gyuwon-motion.mjs src/gyuwon-actor.mjs src/gyuwon-ui.mjs tests/gyuwon-years.test.mjs tests/gyuwon-year-production.test.mjs; do
+          for file in src/gyuwon-years.mjs src/gyuwon-years-fx.mjs src/gyuwon-year-weapon-props.mjs src/gyuwon-anime-illustration.mjs src/gyuwon-gacha-wheel.mjs src/gyuwon-soft-tentacle.mjs src/gyuwon-year-rig.mjs src/gyuwon-year-cues.mjs src/gyuwon-years-hud.mjs src/gyuwon-combat.mjs src/gyuwon-battle.mjs src/gyuwon-view.mjs src/gyuwon-motion.mjs src/gyuwon-actor.mjs src/gyuwon-ui.mjs tests/gyuwon-years.test.mjs tests/gyuwon-year-production.test.mjs tests/gyuwon-year-rework.test.mjs; do
             node --check "$file"
           done
       - name: Check D-day, exams, grade odds, hitboxes and old boss regressions
@@ -41,6 +47,7 @@ jobs:
           node --test \
             tests/gyuwon-years.test.mjs \
             tests/gyuwon-year-production.test.mjs \
+            tests/gyuwon-year-rework.test.mjs \
             tests/gyuwon.test.mjs \
             tests/gyuwon-pattern-exposure.test.mjs \
             tests/gyuwon-choreography.test.mjs \
