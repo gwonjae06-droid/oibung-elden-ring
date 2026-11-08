@@ -22,8 +22,13 @@ export function clownThreatCovers(z,p,margin=PLAYER_MARGIN){
  if(z.shape==='lane'){
   const dx=p.x-z.x,dz=p.z-z.z,forward=dx*Math.sin(z.yaw)+dz*Math.cos(z.y),
    lateral=dx*Math.cos(z.yaw)-dz*Math.sin(z.yaw);
-  return forward>=-margin&&forward<=(z.len||0)+margin&&
-   Math.abs(lateral)<=(z.w||0)/2+margin;
+  const withinLength=forward>=-margin&&forward<=Number(z.len||0)+margin;
+  const withinWidth=Math.abs(lateral)<=Number(z.w||0)/2+margin;
+  if(z.len===9&&z.w===2&&p.x===.3&&p.z===4)
+   console.log('CLOWN LANE INTERNAL',JSON.stringify({
+    dx,dz,forward,lateral,margin,withinLength,withinWidth
+   }));
+  return withinLength&&withinWidth;
  }
  if(z.shape==='cone')
   return dist(z,p)<=(z.r||0)+margin&&
