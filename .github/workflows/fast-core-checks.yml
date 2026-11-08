@@ -40,7 +40,7 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: Check critical gameplay module syntax
         run: |
-          for f in src/combat.mjs src/arena.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs; do
+          for f in src/combat.mjs src/arena.mjs src/kwon-lunar-sculpture.mjs src/kwon-moon-cataclysm-view.mjs src/kwon-moon-cataclysm.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs; do
             node --check "$f"
           done
       - name: Verify Kwon counterattack windows and close-range pressure
@@ -50,5 +50,7 @@ jobs:
           tests/kwon-close-engagement.test.mjs
           tests/kwon-ranged-pressure.test.mjs
           tests/kwon-close-defense-dodge-cancel.test.mjs
+      - name: Verify giant lunar fragments, exact shadows and meteor timings
+        run: node --test tests/kwon-moon-cataclysm.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs

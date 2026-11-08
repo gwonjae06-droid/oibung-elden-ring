@@ -4,7 +4,7 @@ import {createKwonSkySwordView} from './kwon-sky-sword-view.mjs';
 import {createKwonThirdPhaseView} from './kwon-third-phase-view.mjs';
 import {createKwonShatteredWorld} from './kwon-shattered-world.mjs';
 import {createKwonMoonCataclysmView} from './kwon-moon-cataclysm-view.mjs';
-import {moonPosition,moonCinematicPose} from './kwon-moon-cataclysm.mjs';
+import {moonPosition,moonCinematicPose,moonStormTremor} from './kwon-moon-cataclysm.mjs';
 import {kwonThirdTransition} from './kwon-third-phase.mjs';
 import {arenaCovered} from './arena-visibility.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
@@ -95,6 +95,53 @@ const facePhi=FACE_WORLD_W/FACE_R,faceTheta=BOSS_FACE.chin*PX/FACE_R,faceMesh=ne
 function canvasTexture(draw,size){const c=document.createElement('canvas');c.width=size.w;c.height=size.h;draw(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return arenaRuntime.own(t);}
 function loadBossSkin(){const img=skinImage=new Image();img.onload=()=>{if(arenaRuntime.disposed)return;try{faceMat.map=canvasTexture(ctx=>drawFace(ctx,img,BOSS_FACE),faceSize(BOSS_FACE));bladeMat.map=canvasTexture(ctx=>drawBlade(ctx,img,BOSS_FACE,BLADE_STRETCH),bladeSize(BOSS_FACE,BLADE_STRETCH));faceMat.needsUpdate=true;bladeMat.needsUpdate=true;const geo=arenaRuntime.own(new THREE.PlaneGeometry(FACE_WORLD_W,SWORD.length).rotateX(Math.PI/2).translate(0,0,SWORD.length/2)),a=new THREE.Mesh(geo,bladeMat),b=new THREE.Mesh(geo,bladeMat);b.rotation.z=Math.PI/2;swordGroup.add(a,b);fallbackBlade.visible=false;faceMesh.visible=true;}catch(e){console.error('boss skin failed',e);}};img.onerror=()=>{if(!arenaRuntime.disposed)console.error('boss face image failed to load');};img.src='data:image/jpeg;base64,'+BOSS_FACE.jpeg;}
 loadBossSkin();
+// During meteor fall fade the actual Kwon render materials, then restore their
+// original alpha-test, transparency and depth flags on victory or retry.
+const originalBossMaterials=new Map();
+let ghostOpacity=1,ghostActive=false;
+function captureBossMaterials(){
+ bossRoot.traverse(node=>{
+  if(!node.isMesh)return;
+  const mats=Array.isArray(node.material)?node.material:[node.material];
+  for(const material of mats)if(material&&!originalBossMaterials.has(material))
+   originalBossMaterials.set(material,{
+    opacity:material.opacity,transparent:material.transparent,
+    depthWrite:material.depthWrite,alphaTest:material.alphaTest
+   });
+ });
+ for(const material of [faceMat,bladeMat])if(!originalBossMaterials.has(material))
+  originalBossMaterials.set(material,{
+   opacity:material.opacity,transparent:material.transparent,
+   depthWrite:material.depthWrite,alphaTest:material.alphaTest
+  });
+}
+function applyBossGhost(alpha){
+ for(const [material,base] of originalBossMaterials){
+  const faded=alpha<.995;
+  const transparent=faded||base.transparent,depthWrite=faded?false:base.depthWrite;
+  const alphaTest=faded?0:base.alphaTest;
+  if(material.transparent!==transparent||material.depthWrite!==depthWrite||
+    material.alphaTest!==alphaTest){
+   material.transparent=transparent;material.depthWrite=depthWrite;
+   material.alphaTest=alphaTest;material.needsUpdate=true;
+  }
+  material.opacity=base.opacity*alpha;
+ }
+}
+function restoreBossGhost(){
+ if(!originalBossMaterials.size)return;
+ ghostOpacity=1;applyBossGhost(1);originalBossMaterials.clear();ghostActive=false;
+}
+function updateBossGhost(dt){
+ const storm=game?.kwonMoon?.mode==='storm'&&game?.boss?.phase===3;
+ if(storm&&!ghostActive){captureBossMaterials();ghostActive=true;}
+ if(!ghostActive)return;
+ const target=storm?.24:1;
+ ghostOpacity+=(target-ghostOpacity)*(1-Math.exp(-Math.max(0,dt)*3.6));
+ if(Math.abs(ghostOpacity-target)<.008)ghostOpacity=target;
+ applyBossGhost(ghostOpacity);
+ if(!storm&&ghostOpacity===1)restoreBossGhost();
+}
 const playerProjectiles=createPlayerProjectileView(scene);startup.own('Player crafted projectiles',()=>playerProjectiles.dispose());
 const waveView=createKwonVerticalWaveView(scene,{reduced:reduceMotion});startup.own('Kwon falling blade waves',()=>waveView.dispose());
 const skySwordView=createKwonSkySwordView(scene,{reduced:reduceMotion});startup.own('Kwon sky judgement sword',()=>skySwordView.dispose());
@@ -110,7 +157,7 @@ const bursts=[],burstGeo=new THREE.SphereGeometry(.09,6,4);
 for(const resource of [faceMat,bladeMat,arrowGeo,cardGeo,arrowMat,pierceMat,cardMat,burstGeo])arenaRuntime.own(resource);
 function burst(x,y,z,color,n){if(effects)return;for(let i=0;i<n;i++){const m=new THREE.Mesh(burstGeo,new THREE.MeshBasicMaterial({color,transparent:true}));m.position.set(x,y,z);scene.add(m);const a=Math.random()*Math.PI*2,s=2+Math.random()*3;bursts.push({m,vx:Math.cos(a)*s,vy:2+Math.random()*3,vz:Math.sin(a)*s,life:.45});}}
 function updateBursts(dt){for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];b.life-=dt;if(b.life<=0){scene.remove(b.m);b.m.material.dispose();bursts.splice(i,1);continue;}b.vy-=14*dt;b.m.position.x+=b.vx*dt;b.m.position.y+=b.vy*dt;b.m.position.z+=b.vz*dt;b.m.material.opacity=b.life/.45;}}
-function clearFx(){playerProjectiles.clear();effects?.clear();skillFx?.clear();for(const b of bursts){scene.remove(b.m);b.m.material.dispose();}bursts.length=0;for(const m of projMeshes.values())scene.remove(m);projMeshes.clear();waveView.clear();skySwordView.clear();thirdView.reset();brokenWorld.reset();lunarStorm.reset();$('damage-layer').replaceChildren();}
+function clearFx(){playerProjectiles.clear();effects?.clear();skillFx?.clear();for(const b of bursts){scene.remove(b.m);b.m.material.dispose();}bursts.length=0;for(const m of projMeshes.values())scene.remove(m);projMeshes.clear();waveView.clear();skySwordView.clear();thirdView.reset();brokenWorld.reset();lunarStorm.reset();restoreBossGhost();$('damage-layer').replaceChildren();}
 const tmpV=new THREE.Vector3();
 function toScreen(x,y,z){tmpV.set(x,y,z).project(camera);if(tmpV.z>1||tmpV.z<-1)return null;return {x:(tmpV.x*.5+.5)*canvas.clientWidth,y:(-tmpV.y*.5+.5)*canvas.clientHeight};}
 function floatText(text,x,y,z,cls){const s=toScreen(x,y,z);if(!s)return;const el=document.createElement('span');el.className='damage-number '+(cls||'');el.textContent=text;el.style.left=s.x+'px';el.style.top=s.y+'px';$('damage-layer').appendChild(el);arenaRuntime.setTimeout(()=>el.remove(),850);}
@@ -197,6 +244,8 @@ function handleEvents(){const g=game,p=g.player,b=g.boss;for(const ev of g.event
   const x=Number.isFinite(ev.x)?ev.x:b.x,y=Number.isFinite(ev.y)?ev.y+1.1:4.2,z=Number.isFinite(ev.z)?ev.z:b.z;
   floatText(String(ev.amount),x,y,z,'');burst(x,y-.4,z,0xf0d9a0,8);
  }else if(ev.type==='kwon-rift-release'){shake=Math.max(shake,.44);}
+ else if(ev.type==='kwon-meteor-impact'){shake=Math.max(shake,reduceMotion?.16:.92);}
+ else if(ev.type==='kwon-moon-slash'){shake=Math.max(shake,reduceMotion?.09:.52);}
  else if(ev.type==='player-hit'){floatText('-'+ev.amount,p.x,2.6,p.z,'player');burst(p.x,1.3,p.z,0xc04a40,10);if(!reduceMotion)shake=.35;const f=$('hit-flash');f.classList.add('visible');arenaRuntime.setTimeout(()=>f.classList.remove('visible'),140);}else if(ev.type==='dodge')floatText('회피',p.x,2.6,p.z,'');else if(ev.type==='phase')notice('내게 검을 쥘 손이 없었다면… 내 머리로라도 베겠다.');else if(ev.type==='stagger')notice('경직! 지금이 기회입니다');else if(ev.type==='skill-cast'){if(CARD_NOTICE[ev.flavor])notice(CARD_NOTICE[ev.flavor]);else if(ev.flavor==='sword')notice('검기·사거리 강화는 자동 적용');else if(ev.flavor==='hammer')notice(ev.path==='earth-wave'?'피해 저장 · 1.2초 방어':'귀환 철추');else if(ev.flavor==='bow')notice('후퇴 사격 · 화살 2발');}else if(ev.type==='skill-stun'){floatText('기절',b.x,5,b.z,'');notice('이권재 기절 · 1초');}else if(ev.type==='skill-heal')floatText('+'+Math.round(ev.amount),p.x,2.9,p.z,'');else if(ev.type==='skill-ready')notice('스킬 사용 가능');}g.events.length=0;}
 function weaponAngle(a){const rest=a.total-a.wind-a.active;if(a.t<a.wind)return -1.5*(a.t/a.wind);const k=clamp((a.t-a.wind)/a.active,0,1);if(k<1)return -1.5+2.9*k;return 1.4*(1-clamp((a.t-a.wind-a.active)/Math.max(rest,.01),0,1));}
 function syncPlayer(dt){const p=game.player,a=p.action,sp=Math.min(12,Math.hypot(p.x-vis.px,p.z-vis.pz)/Math.max(dt,.001));vis.px=p.x;vis.pz=p.z;vis.pphase+=dt*(4+sp*1.2);vis.cast=Math.max(0,vis.cast-dt);rig.position.set(p.x,0,p.z);const ty=a&&a.yaw!==undefined?a.yaw:p.yaw;vis.pyaw+=angleDelta(vis.pyaw,ty)*Math.min(1,dt*20);rig.rotation.y=vis.pyaw;pivot.rotation.set(0,0,0);body.rotation.set(0,0,0);const w=posePlayer(P,vis.pphase,a?0:sp);swayCape(P,vis.time,sp);body.position.y=1+w.bob;body.rotation.x=w.lean;let emissive=0,opacity=1;if(game.status==='lost'){body.rotation.x=-1.4;body.position.y=.45;}else if(a&&(a.kind==='attack'||a.kind==='skill')){const k=game.weapon==='hammer'?1.25:game.weapon==='sword'?1:.25;P.arms.R.rotation.x=0;pivot.rotation.x=weaponAngle(a)*k;if(a.kind==='attack'&&game.weapon==='sword')pivot.rotation.z=-.3;body.rotation.x=.12*Math.sin(clamp(a.t/a.total,0,1)*Math.PI);}else if(a&&a.kind==='charging'){pivot.rotation.x=-1.4;body.rotation.x=-.12;emissive=0x294e70;}else if(a&&a.kind==='roll'){body.rotation.x=(a.t/a.total)*Math.PI*2;body.position.y=.8;if(rolling(p))opacity=.55;}else if(a&&a.kind==='hurt'){body.rotation.x=-.3;emissive=0x661a1a;}else if(a&&a.kind==='heal'){emissive=0x1a5a2a;P.arms.R.rotation.x=0;pivot.rotation.x=-.8;}else if(vis.cast>0){P.arms.R.rotation.x=0;pivot.rotation.x=-1.1*(vis.cast/.3);}if(!emissive&&game.status==='playing'){const s=p.skill;if(s.haste>0)emissive=0x1a4a66;else if(s.blue>0)emissive=0x14316a;else if(s.nextRed)emissive=0x5a1410;else if(s.nextYellow)emissive=0x5a4a10;}for(const m of P.mats){m.emissive.setHex(emissive);m.opacity=opacity;}}
@@ -214,9 +263,15 @@ function updateCamera(dt){
  const p=game.player,b=game.boss,dx=b.x-p.x,dz=b.z-p.z,d=Math.hypot(dx,dz);
  if(mode==='menu'){const t=vis.time*.12;camera.position.set(Math.sin(t)*20,8.5,Math.cos(t)*20-2);camera.lookAt(0,2.2,-2);return;}
  if(lock&&d>.5&&game.status==='playing')view.yaw+=angleDelta(view.yaw,Math.atan2(dx,dz))*Math.min(1,dt*7);
- const fx=Math.sin(view.yaw),fz=Math.cos(view.yaw),hd=view.dist*Math.cos(view.pitch),elevation=b.phase>=2?1.3:0;
- let ox=0,oy=0;
- if(shake>0){shake=Math.max(0,shake-dt);ox=(Math.random()-.5)*shake*.6;oy=(Math.random()-.5)*shake*.6;}
+ const meteorActive=game.kwonMoon?.mode==='storm';
+ const fx=Math.sin(view.yaw),fz=Math.cos(view.yaw),
+  hd=(view.dist+(meteorActive?3.2:0))*Math.cos(view.pitch),
+  elevation=(b.phase>=2?1.3:0)+(meteorActive?3.0:0);
+ const quake=Math.max(shake,moonStormTremor(game.kwonMoon,p));
+ if(shake>0)shake=Math.max(0,shake-dt);
+ const intensity=quake*(reduceMotion?.15:1);
+ const ox=intensity*(Math.sin(vis.time*37)*.30+Math.sin(vis.time*65+1.4)*.18),
+  oy=intensity*(Math.sin(vis.time*41+2.2)*.22+Math.sin(vis.time*71)*.10);
  camera.position.set(p.x-fx*hd+ox,Math.max(.9,1.5+Math.sin(view.pitch)*view.dist)+oy+elevation,p.z-fz*hd);
  const k=lock?clamp(d*.12,0,.45):0;
  const focus=lock&&game.status==='playing'?stance?.cameraFocus({x:p.x,y:0,z:p.z}):null;
@@ -225,9 +280,13 @@ function updateCamera(dt){
  if(game.kwonMoon?.mode==='cinematic'){
   const pose=moonCinematicPose(game.kwonMoon.time),blend=pose.focus;
   const moon=moonPosition();
-  const farCamera=new THREE.Vector3(moon.x-24,moon.y-3,moon.z+27);
+  const farCamera=new THREE.Vector3(moon.x-24+pose.dolly,
+   moon.y-3+pose.cameraLift,moon.z+27-pose.dolly*2.2);
   camera.position.lerp(farCamera,blend);
-  target.lerp(new THREE.Vector3(moon.x,moon.y,moon.z),blend);
+  target.lerp(new THREE.Vector3(moon.x,moon.y+pose.cameraLift*.2,moon.z),blend);
+  const cutShake=pose.recoil*(reduceMotion?.015:.34);
+  camera.position.x+=Math.sin(vis.time*76)*cutShake;
+  camera.position.y+=Math.sin(vis.time*93+1.7)*cutShake*.58;
  }
  camera.lookAt(target);
 }
@@ -237,7 +296,7 @@ const quality=createEncounterQuality({coarse,onChange:scale=>resizeBattleViewpor
 const audit=createFramePerformanceAudit({renderer,boss:'kwon'});
 warmup=createBattleVisualWarmup({renderer,scene,camera});startup.own('Kwon visual warmup',()=>warmup.dispose());
 let drewArena=false;
-function frame(now,dt,realDt=dt){if(!warmup.ready||drewArena&&arenaCovered(document))return;if(mode==='playing'&&!introGate.blocked&&!consumeBattleGrace(game,dt)){const input=readInput();tryQueued(input);let left=dt;while(left>1e-6){const h=Math.min(left,1/60);step(game,h,input);left-=h;}if(game.status!=='playing'){mode='ending';endAt=now+(game.status==='won'?4800:1200);setUi();}}else if(mode==='ending'&&now>=endAt)showResult();handleEvents();impact.update(mode==='paused'||mode==='menu'?0:dt);contactFx.update(mode==='paused'||mode==='menu'?0:dt);cinematic.update(game,mode==='paused'||mode==='menu'?0:dt);atmosphere.update(game,mode==='paused'||mode==='menu'?0:dt);vis.time+=impact.frozen?0:dt;syncPlayer(dt);syncBoss(dt);impact.bossPose(bossModel);rig.rotation.x=rig.rotation.z=0;impact.playerPose(rig);syncProjectiles(dt);
+function frame(now,dt,realDt=dt){if(!warmup.ready||drewArena&&arenaCovered(document))return;if(mode==='playing'&&!introGate.blocked&&!consumeBattleGrace(game,dt)){const input=readInput();tryQueued(input);let left=dt;while(left>1e-6){const h=Math.min(left,1/60);step(game,h,input);left-=h;}if(game.status!=='playing'){mode='ending';endAt=now+(game.status==='won'?4800:1200);setUi();}}else if(mode==='ending'&&now>=endAt)showResult();handleEvents();impact.update(mode==='paused'||mode==='menu'?0:dt);contactFx.update(mode==='paused'||mode==='menu'?0:dt);cinematic.update(game,mode==='paused'||mode==='menu'?0:dt);atmosphere.update(game,mode==='paused'||mode==='menu'?0:dt);vis.time+=impact.frozen?0:dt;syncPlayer(dt);syncBoss(dt);updateBossGhost(mode==='paused'||mode==='menu'?0:dt);impact.bossPose(bossModel);rig.rotation.x=rig.rotation.z=0;impact.playerPose(rig);syncProjectiles(dt);
   ground.visible=ring.visible=game.boss.phase!==3;
   thirdView.update(game);brokenWorld.update(game,mode==='paused'?0:dt);
   lunarStorm.update(game);updateBursts(dt);stance?.update(game.boss);sanctuary?.userData.updateSanctuary?.(game,mode==='paused'?0:dt);sun.color.setHex(game.boss.phase===3?0xc8a2b4:game.boss.phase===2?0xe8a2a9:0xb4cce4);

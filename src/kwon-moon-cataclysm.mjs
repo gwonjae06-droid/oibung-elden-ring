@@ -2,7 +2,8 @@
 // This is pure simulation: THREE never owns a gameplay collider.
 export const KWON_MOON=Object.freeze({
  threshold:900,cinematic:8.1,slashTimes:[1.38,2.62,3.93],
- waveTimes:[0,3.45,6.9],fall:2.6,stormEnd:11.4,maxMeteors:9,
+ waveTimes:[0,5.2,10.4],fall:6.2,stormEnd:19.5,maxMeteors:9,
+ startHeight:67,landHeight:5.8,
 });
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const smooth=x=>{const q=clamp(x,0,1);return q*q*(3-2*q);};
@@ -20,6 +21,9 @@ export function moonCinematicPose(time){
   focus:smooth((t-.15)/.8)*(1-smooth((t-6.55)/1.2)),
   fragmentRelease:smooth((t-4.02)/.9),
   recoil:cuts.reduce((v,c)=>Math.max(v,c.intensity),0),
+  cameraLift:cuts.reduce((v,c)=>v+(c.stroke<1?c.wind*(1-c.stroke):0)*(c.index-1)*1.3,0),
+  dolly:cuts.reduce((v,c)=>Math.max(v,c.intensity*.48),0),
+  lightPulse:cuts.reduce((v,c)=>Math.max(v,c.intensity),0),
  };
 }
 export function makeKwonMoonState(){return {
@@ -41,15 +45,38 @@ function meteorLocations(g,wave){
  const p=g.player,targets=[{x:p.x,z:p.z}];
  for(let j=1;j<3;j++){
   const a=(wave*1.8+j*2.399963+1.17);
-  const r=10+(j%2)*3;
+  const r=13+(j%2)*2.5;
   targets.push({x:Math.sin(a)*r,z:Math.cos(a)*r});
  }
  return targets.map((pos,i)=>({
   id:g.nextId++,x:clamp(pos.x,-17,17),z:clamp(pos.z,-17,17),
-  age:0,impact:KWON_MOON.fall+(i===1?.34:i===2?.66:0),
-  radius:i===0?3.65:3.95,damage:wave===2?44:38,
+  age:0,impact:KWON_MOON.fall+(i===1?.72:i===2?1.45:0),
+  radius:i===0?4.9:4.55,damage:wave===2?44:38,
   hit:false,landed:false,warning:true,wave,index:i,
  }));
+}
+// Fixed terminal height means the visual rock, its cast shadow and the
+// authoritative circle of impact agree even at low frame rates.
+export function moonMeteorProgress(h){
+ if(!h||!(h.impact>0))return 0;
+ return clamp((h.age||0)/h.impact,0,1);
+}
+export function moonMeteorHeight(h){
+ const p=moonMeteorProgress(h),travel=.18*p+.82*smooth(p);
+ return KWON_MOON.startHeight+(KWON_MOON.landHeight-KWON_MOON.startHeight)*travel;
+}
+export function moonStormTremor(state,player){
+ if(!state||state.mode!=='storm'||!player)return 0;
+ let intensity=0;
+ for(const h of state.meteors){
+  const distance=Math.hypot(player.x-h.x,player.z-h.z);
+  const nearby=1-clamp((distance-9)/18,0,1);
+  const remaining=h.impact-h.age;
+  const fall=nearby*(.025+.16*smooth((moonMeteorProgress(h)-.46)/.54));
+  const impact=h.landed?nearby*.8*Math.exp(-Math.max(0,-remaining)*3.6):0;
+  intensity=Math.max(intensity,fall,impact);
+ }
+ return intensity;
 }
 export function advanceKwonMoon(g,dt,onPlayerHit=()=>{}){
  const m=g?.kwonMoon;if(!m||!['cinematic','storm'].includes(m.mode))return false;
