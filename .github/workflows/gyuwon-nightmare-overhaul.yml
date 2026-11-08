@@ -23,7 +23,7 @@ jobs:
         run: node --test tests/gyuwon*.test.mjs tests/boss-tracks.test.mjs tests/boss-music.test.mjs
       - name: Measure annual damage pacing
         run: node scripts/gyuwon-pacing-simulation.mjs
-      - name: Check all 37 attacks, real maps, pause, landscape and cleanup
+      - name: Check all currently authored attacks, real maps, pause, landscape and cleanup
         env:
           EDGE_PATH: /usr/bin/google-chrome
         run: node scripts/gyuwon-natural-smoke.cjs
