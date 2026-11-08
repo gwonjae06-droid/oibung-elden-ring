@@ -19,7 +19,7 @@ test('prayer and bell trigger once, pause resumes the same clips and skip cleans
  control.skip();skipBloodTransition(g);control.update(g);assert.ok(clips.every(a=>a.paused));stepBlood(g,.01);control.update(g);control.dispose();assert.ok(clips.every(a=>a.paused));
 });
 test('mute respects effects gain; retry permits a fresh single prayer',()=>{
- const {control,clips}=fixture(),g=createBloodGame();g.boss.state='transition';g.blood.t=.8;control.update(g,{muted:true});assert.equal(clips[0].plays,0);
+ const {control,clips}=fixture(),g=createBloodGame();g.boss.phase=2;g.boss.state='transition';g.blood.t=.8;control.update(g,{muted:true});assert.equal(clips[0].plays,0);
  control.update(g);assert.equal(clips[0].plays,1);control.reset();control.update(g);assert.equal(clips[0].plays,2);control.dispose();
 });
 test('phase-one music is silent before the bell and phase-two begins at 3.8',()=>{
@@ -33,5 +33,5 @@ test('cinematic music discards the silent phase one and starts the measured phas
 });
 test('blocked recordings are attempted once per cutscene and zero effects volume is respected',async()=>{
  const clips=[];class Audio{constructor(){this.paused=true;this.currentTime=0;this.plays=0;clips.push(this);}pause(){this.paused=true;}play(){this.plays++;return Promise.reject(Error('blocked'));}removeAttribute(){}load(){}}
- const control=createBloodTransformationAudio({AudioClass:Audio,storage:{getItem:key=>key.endsWith('effects')?'0':'1'}}),g=createBloodGame();g.boss.state='transition';g.blood.t=1;control.update(g);await Promise.resolve();control.update(g);assert.equal(clips[0].plays,1);assert.equal(clips[0].volume,0);control.dispose();
+ const control=createBloodTransformationAudio({AudioClass:Audio,storage:{getItem:key=>key.endsWith('effects')?'0':'1'}}),g=createBloodGame();g.boss.phase=2;g.boss.state='transition';g.blood.t=1;control.update(g);await Promise.resolve();control.update(g);assert.equal(clips[0].plays,1);assert.equal(clips[0].volume,0);control.dispose();
 });
