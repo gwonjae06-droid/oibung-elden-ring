@@ -11,7 +11,9 @@ const COLOR=Object.freeze({
  negate:0x65748d,reverse:0x68607a,stop:0x7b7785,
  verdict:0xb19b82,mirror:0xa9c6c9,axiom:0x9297ab,
  paradox:0x976d8a,erasure:0xb6ada9,counterproof:0x7a608d,
- sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2
+ sword:0xa9c3d6,circus:0xb49773,gamble:0xc2a674,chalk:0xc3b8a2,
+ 'exam-first':0x8d7885,'exam-retake':0xa04f45,'exam-third':0x9589a3,
+ 'exam-shooter':0xb9553c,'exam-sewage':0x445143,'exam-figurines':0x987ab0
 });
 // Each phase speaks its own material language, so the player knows where they are at a glance:
 // phase one is exam paper (flat standing pages), phase two is proof (slim crossed crystal blades),
@@ -20,6 +22,9 @@ const LANG={};
 for(const id of ['line','mark','repeat','choice','contradiction','timetable','blank'])LANG[id]='page';
 for(const id of ['negate','reverse','stop','verdict','mirror','axiom','paradox','erasure','counterproof'])LANG[id]='crystal';
 for(const id of ['sword','circus','gamble','chalk'])LANG[id]='ember';
+for(const id of ['exam-first','exam-retake','exam-third'])LANG[id]='page';
+for(const id of ['exam-shooter','exam-sewage'])LANG[id]='crystal';
+LANG['exam-figurines']='ember';
 // Every pattern has its own motion language. h: fragment height, jitter: tremble while charging
 // (stops at impact so the hit lands on the exact footprint), spin: ring/circle turn rate (rad/s),
 // pulse: glow beat while charging, snap: how hard the strike pops. Cosmetic only: footprint,
@@ -47,7 +52,13 @@ const STYLE=Object.freeze({
  sword:{h:2.00,jitter:0,spin:0,pulse:3,snap:1.2},
  circus:{h:1.10,jitter:.08,spin:0,pulse:8,snap:.6},
  gamble:{h:1.00,jitter:0,spin:1.0,pulse:6,snap:.7},
- chalk:{h:.90,jitter:.03,spin:0,pulse:5,snap:.5}
+ chalk:{h:.90,jitter:.03,spin:0,pulse:5,snap:.5},
+ 'exam-first':{h:.82,jitter:.04,spin:0,pulse:6,snap:.4},
+ 'exam-retake':{h:1.04,jitter:.08,spin:0,pulse:7,snap:.8},
+ 'exam-third':{h:1.1,jitter:0,spin:0,pulse:4,snap:.65},
+ 'exam-shooter':{h:.95,jitter:0,spin:0,pulse:10,snap:1.15},
+ 'exam-sewage':{h:1.3,jitter:.04,spin:0,pulse:4,snap:.8},
+ 'exam-figurines':{h:1.45,jitter:.08,spin:1.1,pulse:8,snap:.9}
 });
 const STYLE_DEFAULT=Object.freeze({h:1,jitter:0,spin:0,pulse:5,snap:.5});
 const WHITE=new THREE.Color(0xffffff),TMP=new THREE.Color(),GOLD=new THREE.Color(0xd09a2a);
