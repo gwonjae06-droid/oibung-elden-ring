@@ -3,14 +3,21 @@ import {LEGACY_ECHO_CONFIG,legacyEchoCount,createLegacyEcho,beginLegacyEchoAttac
 // Every attack uses the same telegraphed zone engine as the ringmaster.
 // There is no decorative "mob" which can damage without a real cue.
 const TAU=Math.PI*2;
-// Orchestra members only attack autonomously between the director's shows.
-// During any authored ringmaster move, their action is scripted explicitly;
-// free-spawning simultaneous hits would steal the lead and break recovery.
+// Ordinary troupe members have independent 3-4s attack clocks.
+// Their visible windups and hitboxes operate even during director attacks.
 const sat=x=>Math.max(0,Math.min(1,Number.isFinite(x)?x:0));
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,Number.isFinite(x)?x:0));
 // Frontliners occupy real physical space rather than firing another remote projectile.
 const ROLES=Object.freeze(['chorister','strongman','acrobat','bladeDancer','puppeteer','firekeeper','mimic','chorister']);
 const MELEE_ROLES=new Set(['strongman','bladeDancer']);
+// Deterministic staggered timing, independent of the ringmaster's show clock.
+export const CIRCUS_MEMBER_CADENCE=Object.freeze({min:3.05,max:3.95});
+export function circusMemberAttackInterval(member){
+ const id=Number.isFinite(member?.id)?member.id|0:0;
+ const turn=Number.isFinite(member?.attackCount)?member.attackCount|0:0;
+ const seed=(Math.imul(id+17,1664525)^Math.imul(turn+1,1013904223))>>>0;
+ return CIRCUS_MEMBER_CADENCE.min+(seed%91)/100;
+}
 export const CIRCUS_ROLES=Object.freeze({
  chorister:{hp:132,speed:2.45,range:12.5,attack:16,wind:1.35},
  strongman:{hp:192,speed:3.65,range:3.1,attack:24,wind:1.42},
@@ -27,7 +34,8 @@ function spawn(g,i){
  const role=ROLES[i%ROLES.length],a=i*TAU/ROLES.length+.55,r=11+(i%3)*2,origin=g.boss;
  return {id:g.nextId++,role,x:origin.x+Math.sin(a)*r,z:origin.z+Math.cos(a)*r,
   vx:0,vz:0,yaw:a+Math.PI,life:CIRCUS_ROLES[role].hp,maxHp:CIRCUS_ROLES[role].hp,
-  age:0,cast:0,cooldown:2.0+(i%4)*1.3,down:false,death:0,flash:0,step:0,
+  age:0,cast:0,cooldown:1.3+(i%6)*.42,attackCount:0,
+   down:false,death:0,flash:0,step:0,
   target:null,showCue:null,seenHit:null,routine:null,melee:null};
 }
 export function createCircusTroupe(g){
@@ -230,7 +238,8 @@ function beginMelee(g,m,zone,emit){
  if(third)impacts.push(wind+travel+1.80);
  m.melee={kind:m.role,from,yaw,start:now,wind,travel,stride,impacts,hit:impacts.map(()=>false)};
  m.cast=impacts.at(-1)+.34;
- m.cooldown=heavy?5.0:4.45;
+ // Individual cadence is assigned when a melee attack starts, not after
+ // the physical combo and its recovery.
  m.target=approach(from,yaw,stride);
  m.showCue=heavy?'club-crush':'blade-cross';
  m.routine={pose:heavy?'crush':'slash',start:now,until:now+m.cast,wind};
@@ -318,12 +327,9 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
  if(t.hush&&c.time>=t.hush.end)t.hush=null;
  t.globalCooldown=Math.max(0,t.globalCooldown-h);
  playerContacts(g,t,emit);
- const target=g.player,phase=b.phase,locked=Boolean(c.punish||c.stunT>0||c.noSeparate);
- // Small retired-O-Seulwoo bosses must take turns instead of being starved
- // by the faster-indexed ordinary NPCs. At most one mini cast begins every
- // three solo turns; the main ringmaster still owns the authored shows.
- const miniReady=stage>=2&&t.members.some(m=>m.legacy&&!m.down&&m.cast<=0&&m.cooldown<=h);
- const miniTurn=miniReady&&t.attackBeat%3===0;
+ const target=g.player;
+  // Old mini Seulwoo retains his slower cooldown but no longer suppresses
+  // other actors' individual attack clocks.
  for(let i=0;i<t.members.length;i++){
   const m=t.members[i],s=CIRCUS_ROLES[m.role];
   m.age+=h;m.flash=Math.max(0,m.flash-h);
@@ -331,8 +337,12 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   if(m.down){m.death+=h;continue;}
   const wasRolling=m.legacyAttack?.kind==='roll';
   if(m.legacyAttack)stepLegacyEcho(g,m,{hurt});
-  if(m.cast>0){m.cast=Math.max(0,m.cast-h);m.cooldown=Math.max(m.cooldown,m.cast+.8);}
-  else m.cooldown-=h;
+  if(m.cast>0){
+    m.cast=Math.max(0,m.cast-h);
+    if(m.legacy)m.cooldown=Math.max(m.cooldown,m.cast+.8);
+   }
+   // Normal member timers run during their own windup, not only afterward.
+   if(!m.legacy||m.cast<=0)m.cooldown-=h;
   // The locked strike owns the actor's movement until recovery, rather
   // than the orbit AI pulling its body away while its blade connects.
   if(m.melee&&advanceMelee(g,m,h,hurt))continue;
@@ -371,16 +381,16 @@ export function stepCircusTroupe(g,dt,{zone,emit,hurt}={}){
   m.step+=Math.hypot(m.x-oldX,m.z-oldZ);
   m.motionLean=clamp((m.vx*Math.cos(m.yaw)-m.vz*Math.sin(m.yaw))*.065,-.24,.24);
   if(!wasRolling)m.yaw=contactAngle(m,target);
-  // Do not stack all performer attacks simultaneously outside a deliberate
-  // choreographed show, nor attack into the boss's punish / cutscene window.
-  const authored=c.state==='pattern';
-  if(locked||authored||t.globalCooldown>0||m.cooldown>0||m.cast>0)continue;
-  if(miniTurn&&!m.legacy)continue;
-  if(t.members.filter(x=>x.cast>0&&!x.down).length>= (stage===3?2:1))continue;
-  castAttack(g,m,zone,emit);
-  m.cooldown=m.legacy?Math.max(m.cooldown,6.4+i*.25):4.45+i*.27;
-  t.globalCooldown=m.legacy?2.9:stage===3?1.2:stage===2?1.75:2.6;
-  t.attackBeat++;
+  // No shared cooldown or simultaneous-cast cap. The director may attack
+   // concurrently, but every member preserves its own readable warning.
+   // Phase transitions and death remain blocked by the early guard above.
+   if(m.cooldown>0||m.cast>0)continue;
+   castAttack(g,m,zone,emit);
+   if(!m.legacy){
+    m.attackCount=(m.attackCount||0)+1;
+    m.cooldown=circusMemberAttackInterval(m);
+   }else m.cooldown=Math.max(m.cooldown,LEGACY_ECHO_CONFIG.cooldown);
+   t.attackBeat++;
  }
  // Delete only after the exit animation has had time to finish.
  t.members=t.members.filter(m=>!m.down||m.death<1.8);

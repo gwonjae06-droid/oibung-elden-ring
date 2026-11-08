@@ -51,7 +51,8 @@ test('normal journey has tougher living actors including real strongman and blad
 for(const [stage,role,minHits] of [[1,'strongman',1],[2,'bladeDancer',2],[3,'bladeDancer',3]]){
  test(role+' melee has a conspicuous, locked windup and physically close hits',()=>{
   const {g,m}=setup(stage,role),r=perform({g},4);
-  assert.equal(r.casts.filter(c=>c.melee&&c.id===m.id).length,1);
+  assert.ok(r.casts.filter(c=>c.melee&&c.id===m.id).length>=1,
+   'a member may begin a second telegraphed strike after its independent 3-4s clock');
   const cast=r.casts.find(c=>c.melee&&c.id===m.id);
   const warning=r.zones.find(z=>z.source==='troupe-melee'&&z.owner===m.id);
   assert.ok(warning,'visual-only pre-swing lane');

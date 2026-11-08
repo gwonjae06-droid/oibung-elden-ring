@@ -1217,10 +1217,7 @@ function tickClown(g, dt) {
       c.odo+=Math.hypot(motion.dx,motion.dz);
     }
     c.wait -= dt;
-    // Finish any already-telegraphed small echo attack before beginning the
-    // director's next show: never stack two unrelated surprise hits.
-    if(c.wait<=0&&c.troupe?.members?.some(m=>m.cast>0&&!m.down))
-      c.wait=.08;
+    // The ringmaster maintains his own tempo even while his ensemble attacks.
     if (c.wait <= 0)
       startClownPattern(
         g,
