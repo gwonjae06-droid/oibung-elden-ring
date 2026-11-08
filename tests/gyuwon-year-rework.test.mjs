@@ -106,7 +106,7 @@ test('octopus limbs are seamless deforming skins, never separate cylinder segmen
  const skins=root.children.filter(o=>o.name==='gyuwon-seamless-soft-octopus-tentacle');
  assert.equal(skins.length,8);
  assert.ok(skins.every(o=>o.geometry.getAttribute('position').count>100));
- assert.equal(root.children.filter(o=>o.isMesh&&o.geometry.type==='CylinderGeometry').length,0);
+ assert.equal(root.children.filter(o=>o.isMesh&&!o.isInstancedMesh&&o.geometry.type==='CylinderGeometry').length,0,'continuous limbs may have real instanced suction cups');
  const pos=skins[0].geometry.getAttribute('position').array.slice();
  g.time+=.3;g.gyuwon.hazards[0].age=g.gyuwon.hazards[0].warn*.7;fx.update(g);
  assert.ok(skins[0].geometry.getAttribute('position').array.some((v,i)=>Math.abs(v-pos[i])>.001));
