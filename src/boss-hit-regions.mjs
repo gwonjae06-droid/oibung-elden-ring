@@ -78,7 +78,7 @@ export const bloodAimPart=g=>bloodHurtShapes(g).find(x=>x.id==='chest')||g?.boss
 export function gyuwonHurtShapes(g){
  if(!g?.gyuwon||!g?.boss)return [];
  const b=g.boss,at=(id,x,y,z,rx,ry,rz)=>
-  ellipsoid(b,id,{x,y,z},rx,ry,rz);
+  ellipsoid(b,id,{x,y:y+(g.gyuwon.years?b.floorY||0:0),z},rx,ry,rz);
  const parts=[
   at('tailored-torso',0,1.96,0,.63,.88,.53),
   at('left-upper-arm',-.74,2.17,.01,.29,.53,.29),

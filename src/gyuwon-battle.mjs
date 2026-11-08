@@ -92,7 +92,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
     // First-use GPU shader compilation belongs behind the initial loading
     // gate, never in the middle of a phase-three memory map transition.
-    try{await study.prewarmProgressive(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig]});}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
     if(closed)return;hud.loading(false);ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
@@ -107,7 +107,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
     if(e.type==='gyuwon-exam-bell'&&!muted()){bellAudio.pause();bellAudio.currentTime=0;bellAudio.play()?.catch(()=>{});}
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
-   study.update(g,impact.frozen?0:visualDt);study.root.rotation.x=study.root.rotation.z=0;impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
+   study.update(g,impact.frozen?0:visualDt);study.root.rotation.x=study.root.rotation.z=0;impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
    quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
    if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const fov=KWON_CAMERA_REFERENCE.fov+(g.gyuwon.years?.cast==='nightmare365'?5:0);if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const memoryCamera=lock?gyuwonMemoryFraming(g):{pitch:0,distance:0,height:0},
   frame=matchedBossCamera('gyuwon',{
@@ -115,8 +115,8 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   aspect:camera.aspect,locked:lock,extraDistance:memoryCamera.distance+(g.gyuwon.years?.cast==='nightmare365'?6:0),
   headHeight:3+Math.max(0,g.gyuwon.elevation||0)*.35
  });
- desired.set(frame.position.x,frame.position.y+memoryCamera.height,frame.position.z);
- target.set(frame.focus.x,frame.focus.y+memoryCamera.height*.18,frame.focus.z);
+ desired.set(frame.position.x,frame.position.y+memoryCamera.height+(p.floorY||0),frame.position.z);
+ target.set(frame.focus.x,frame.focus.y+memoryCamera.height*.18+(p.floorY||0)*.45,frame.focus.z);
  if(g.gyuwon.years?.mode==='result'){
   // Diegetic result cinematic: focus on the human boss and the real score sheet.
   const a=g.boss.yaw||0,b=g.boss,t=g.gyuwon.years.gradeT;

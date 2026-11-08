@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {annualWorldLayers} from './gyuwon-year-world-data.mjs';
 import {buildEnvironment} from './environment.mjs';
 import {buildCircus} from './circus-environment.mjs';
 import {buildDiceBoard} from './dice-actor.mjs';
@@ -108,7 +109,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
  }
 
  let warming=null;
- function prewarmProgressive(renderer,camera,{yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0))}={}){
+ function prewarmProgressive(renderer,camera,{yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0)),companions=[]}={}){
   if(warming)return warming;
   if(disposed||warmed||!renderer?.compile||!camera)return Promise.resolve();
   warming=(async()=>{
@@ -119,7 +120,7 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
    function chunk(entry,work){
     if(disposed)return;
     const visibility=[...maps.values()].map(x=>[x,x.group.visible]);
-    const sceneVisibility=scene.children.filter(o=>o!==root&&!o.isLight).map(o=>[o,o.visible]);
+    const sceneVisibility=scene.children.filter(o=>o!==root&&!o.isLight&&!companions.includes(o)).map(o=>[o,o.visible]);
     const previousTarget=target?renderer.getRenderTarget():null,at=now();
     try{for(const item of maps.values())item.group.visible=item===entry;if(entry)for(const [o]of sceneVisibility)o.visible=false;return work();}
     finally{if(target)renderer.setRenderTarget(previousTarget);for(const [item,v]of visibility)item.group.visible=v;for(const [o,v]of sceneVisibility)o.visible=v;audit.chunks++;audit.maxChunkMs=Math.max(audit.maxChunkMs,now()-at);}
@@ -137,9 +138,9 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
      if(target)for(let offset=0;offset<objects.length;offset+=16){
       if(disposed)return;
       chunk(entry,()=>{
-       objects.forEach((o,i)=>o.visible=i>=offset&&i<offset+16);
+       const culling=objects.map(o=>o.frustumCulled);objects.forEach((o,i)=>{o.visible=i>=offset&&i<offset+16;o.frustumCulled=false;});
        try{renderer.setRenderTarget(target);renderer.compile(scene,camera);renderer.render(scene,camera);preRendered++;}
-       finally{for(const o of objects)o.visible=true;}
+       finally{objects.forEach((o,i)=>{o.visible=true;o.frustumCulled=culling[i];});}
       });
       await yieldFrame();
      }
@@ -153,7 +154,8 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
 
  function update(g,dt=0){
   focus=g;
-  const id=g.status==='playing'&&g.boss.phase===3?g.gyuwon.stageMemory:null;
+  const yearly=g.gyuwon.years,show=!yearly||yearly.year===9||yearly.year>11&&annualWorldLayers(yearly.year,yearly.worldSeed).some(id=>id===9);
+  const id=show&&g.status==='playing'&&g.boss.phase===3?g.gyuwon.stageMemory:null;
   const next=maps.get(id)||null;
   if(next!==active){
    if(active)active.group.visible=false;
@@ -184,7 +186,21 @@ export function createGyuwonRecallMaps(scene,{coarse=false,reduced=false}={}){
   }
   maps.clear();root.removeFromParent();
  }
- return {root,update,prewarm,prewarmProgressive,clear,
+ function fragment(id){
+  const source=maps.get(id)?.group;if(!source)return null;source.updateWorldMatrix(true,true);
+  let focus=null,selected=[];
+  if(id==='sword')focus=source.getObjectByName('ruined-courtyard')?.children.find(o=>o.isGroup&&o.children.filter(x=>x.isMesh).length>=12);
+  if(id==='circus')focus=source.getObjectByName('circus-velvet-stage')?.children.find(o=>o.isGroup&&o.children.length>=6);
+  if(id==='tsunami')focus=source.getObjectByName('cathedral-sanctuary');
+  if(id==='gamble')selected=['roulette-table-body','roulette-numbered-wheel','roulette-brass-rail'].map(name=>source.getObjectByName(name)).filter(Boolean);
+  if(focus)focus.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)selected.push(o);});
+  if(!selected.length)source.traverse(o=>{if(o.isMesh&&o.geometry&&!/floor|ground|sky|sea|roof/i.test(o.name)&&(!o.isInstancedMesh||o.count<80)&&o.geometry.attributes.position.count<12000)selected.push(o);});
+  selected=selected.slice(0,coarse?16:24);const group=new THREE.Group();
+  for(const o of selected){const clone=o.clone(false);clone.matrixAutoUpdate=false;clone.matrix.copy(o.matrixWorld);clone.visible=true;group.add(clone);}
+  group.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(group),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3()),scale=15/Math.max(1,size.x,size.y,size.z);
+  const shell=new THREE.Group();shell.add(group);group.position.copy(center).multiplyScalar(-scale);group.scale.setScalar(scale);shell.userData.originalMap=id;shell.userData.minY=-size.y*scale/2;return shell;
+ }
+ return {root,update,prewarm,prewarmProgressive,fragment,clear,
   stats:()=>({active:active?.group.name||null,loaded:maps.size,builds:maps.size,
    originalRoot:active?.group.getObjectByName(RECALL_MAP_NAMES[active.id])?.name||null,
    switches,prewarmed:warmed,warmAudit,compiled,uploaded,preRendered,

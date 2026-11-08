@@ -23,7 +23,7 @@ export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}
  const volleyScale=game.journeyBalance?.mode==='story'&&game.weapon==='cards'&&count>1
   ?Math.max(.78,1-.055*(count-1)):1;
  for(let i=0;i<count;i++){
-  game.projectiles.push({id:game.nextId++,x:game.player.x,z:game.player.z,y:1.2,
+  game.projectiles.push({id:game.nextId++,x:game.player.x,z:game.player.z,y:1.2+(game.player.floorY||0),
    yaw:action.yaw+(i-(count-1)/2)*(count===2?.1:.075),
    speed:game.weapon==='bow'?26:game.weapon==='cards'?20:24,
    life:basicLifetime,damage:weapon.damage*action.mult*volleyScale,

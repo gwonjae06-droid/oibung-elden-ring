@@ -162,7 +162,7 @@ try{
   return r&&!!r.querySelector('.gy-dday-clock')?.textContent;
  }),true);
  await page.screenshot({path:'artifacts/gyuwon-years/palsu-octopus.png'});
- await showYear(11,'recallAll','tsunami');
+ await showYear(9,'recallAll','tsunami');
  await page.waitForTimeout(850);snap=await page.evaluate(async()=>{
   const {readBattleSession}=await import('./src/battle-session.mjs');
   const root=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
@@ -170,7 +170,7 @@ try{
   return {year:g.gyuwon.years.year,hazards:g.gyuwon.hazards.length,
    map:s.diagnostics()?.view?.recall?.active,frameMs:s.diagnostics()?.frameMs?.slice(-120)};
  });
- assert.equal(snap.year,11);assert.ok(snap.hazards>=8);
+ assert.equal(snap.year,9);assert.ok(snap.hazards>=8);
  assert.ok(snap.map?.includes('tsunami'),'real cathedral stage did not appear');
  await page.screenshot({path:'artifacts/gyuwon-years/sibilsu-combined-arena.png'});
  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(480);

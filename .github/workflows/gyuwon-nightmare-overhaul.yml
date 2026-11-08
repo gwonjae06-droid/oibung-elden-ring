@@ -33,6 +33,15 @@ jobs:
           GYUWON_LIVE_ONLY: '1'
           GYUWON_TOUCH: '1'
         run: node scripts/gyuwon-natural-smoke.cjs
+      - name: Check all annual worlds and physical OMR floor
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+        run: node scripts/gyuwon-worlds-smoke.cjs
+      - name: Check annual worlds on touch landscape
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+          GYUWON_TOUCH: '1'
+        run: node scripts/gyuwon-worlds-smoke.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -40,4 +49,5 @@ jobs:
           path: |
             qa-output/gyuwon-natural/
             qa-output/gyuwon-overhaul/
+            qa-output/gyuwon-worlds/
           retention-days: 7

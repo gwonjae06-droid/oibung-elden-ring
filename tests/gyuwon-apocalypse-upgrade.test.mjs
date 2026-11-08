@@ -98,7 +98,7 @@ test('eleventh-year nightmare uses ten sequential past selves and a dodgeable fi
  assert.equal(GYUWON_NIGHTMARE_BEATS.length,11);
  startGyuwonYearCast(g,'nightmare365');
  assert.equal(e.nightmareUsed,true);
- assert.equal(g.gyuwon.hazards.length,12);
+ assert.equal(g.gyuwon.hazards.filter(h=>h.visual!=='year-omr-floor').length,12);assert.equal(g.gyuwon.hazards.filter(h=>h.visual==='year-omr-floor').length,2);
  const strikes=g.gyuwon.hazards.slice(0,11);
  for(let i=1;i<strikes.length;i++){
   assert.ok(strikes[i].warn>strikes[i-1].warn+.8,'past years must fight in sequence');

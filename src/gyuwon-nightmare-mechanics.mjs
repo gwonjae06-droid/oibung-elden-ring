@@ -83,6 +83,7 @@ export function augmentAnnualCast(g,id,{add,mark,line,mapHazards,playerAim}){
   if(die)for(const h of crowd){h.redirectAt=die.warn+.3;h.redirectYaw=Math.atan2(h.vx,h.vz)+(e.year%2?.45:-.45);h.redirectCue=die.id;}
  }
  if(id==='nightmare365'){
+  if(e.year>=11)for(const side of [-1,1])add(g,'lane',{x:side*18,z:0,yaw:0,width:3,length:42,warn:19.5,life:.4,damage:23,visual:'year-omr-floor',signature:id});
   const x=b.x+Math.sin(a)*7,z=b.z+Math.cos(a)*7;
   add(g,'topple',{x,z,yaw:a,width:7,length:24,r:7,warn:19.5,life:.6,damage:43,visual:'year-final-omr',signature:id});
   e.castDuration=23.5;
