@@ -1,0 +1,45 @@
+name: Blood King crimson seraph third phase
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/blood-*.mjs'
+      - 'src/boss-music.mjs'
+      - 'src/boss-tracks.mjs'
+      - 'tests/blood-seraph-phase3.test.mjs'
+      - 'scripts/blood-seraph-browser-smoke.mjs'
+      - 'spider-combat.html'
+      - '.github/workflows/blood-seraph-phase3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  seraph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install real Three.js and WebGL browser test dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Check seraph simulation, rig and WebGL modules
+        run: |
+          for f in src/blood-seraph.mjs src/blood-combat.mjs src/blood-view.mjs src/blood-data.mjs src/blood-spell-fx.mjs src/blood-pattern-director.mjs src/blood-battle.mjs src/boss-tracks.mjs src/boss-music.mjs scripts/blood-seraph-browser-smoke.mjs; do node --check "$f"; done
+          node --test tests/blood-seraph-phase3.test.mjs tests/blood-siphon.test.mjs tests/blood-cinematic.test.mjs tests/boss-tracks.test.mjs tests/boss-music.test.mjs tests/hard-story-balance.test.mjs
+      - name: Render real seraph formation, attacks and mobile camera
+        env:
+          EDGE_PATH: /usr/bin/google-chrome
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/blood-seraph-http.log 2>&1 &
+          sleep 2
+          node scripts/blood-seraph-browser-smoke.mjs
+      - name: Save full WebGL screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blood-seraph-webgl-desktop-mobile
+          path: artifacts/blood-seraph/
+          if-no-files-found: warn
+          retention-days: 7
