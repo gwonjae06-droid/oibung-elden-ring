@@ -43,6 +43,35 @@ function annualExamMotion(g){
  if(id==='bike'||id==='scooter')return {lean:-.86,twist:0,headPitch:.34,headYaw:0,
   leftArm:-1.06,rightArm:-1.06,leftElbow:-.43,rightElbow:-.43,
   leftWrist:.2,rightWrist:.2,weightShift:0,book:-.75};
+ if(id==='smoke'){
+  const inhale=ease(t/.78)*(1-ease((t-1.42)/.72));
+  return {lean:-.09,twist:.13*inhale,headPitch:-.18*inhale,headYaw:0,
+   leftArm:-.38,rightArm:-.35-1.95*inhale,
+   leftElbow:-.2,rightElbow:-.22-1.0*inhale,
+   leftWrist:.08,rightWrist:.32*inhale,weightShift:0,book:-.6};
+ }
+ if(id==='sniper'||id==='crossfire'){
+  const fire=ease(t/1.0),kick=Math.max(0,...(g.gyuwon?.hazards||[])
+   .filter(h=>h.visual==='year-bullet').map(h=>pulse(h.age-h.warn,.12)));
+  return {lean:-.18-kick*.12,twist:.04,headPitch:.10,headYaw:0,
+   leftArm:-.58-1.10*fire,rightArm:-.45-1.15*fire+kick*.19,
+   leftElbow:-.45-.28*fire,rightElbow:-.35-.37*fire,
+   leftWrist:.07,rightWrist:.18-kick*.25,weightShift:-.10,book:-.6};
+ }
+ if(id==='archery'){
+  const pull=ease(t/1.12),release=(g.gyuwon?.hazards||[]).some(h=>h.visual==='year-arrow'&&h.fired);
+  return {lean:-.22,twist:-.12,headPitch:.06,headYaw:0,
+   leftArm:-.42-1.0*pull,rightArm:-.4-.89*pull+(release?.32:0),
+   leftElbow:-.22-.26*pull,rightElbow:-.17-.98*pull+(release?.45:0),
+   leftWrist:-.12,rightWrist:.48*pull,weightShift:.11,book:-.6};
+ }
+ if(id==='donation'){
+  const spin=ease(t/.8),react=ease((t-3.0)/.35);
+  return {lean:-.24+react*.45,twist:beat*.2,headPitch:-react*.24,headYaw:0,
+   leftArm:-.55-1.26*spin,rightArm:-.55-1.6*spin+beat*.22*react,
+   leftElbow:-.3-.26*spin,rightElbow:-.3-.40*spin,
+   leftWrist:.1,rightWrist:.12,weightShift:react*.30,book:-.6};
+ }
  if(dance)return {lean:beat*.28,twist:Math.sin(g.time*5)*.58,headPitch:-.15+beat*.17,
   headYaw:Math.cos(g.time*6)*.22,leftArm:-.9-beat*.7,rightArm:-.9+beat*.7,
   leftElbow:-.45,rightElbow:-.45,leftWrist:.2,rightWrist:-.2,

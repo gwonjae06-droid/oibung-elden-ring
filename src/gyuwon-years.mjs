@@ -7,6 +7,7 @@ export const GYUWON_YEAR_SECONDS=26;
 export const GYUWON_EXAM_SUBJECTS=Object.freeze(['국어','수학','영어','한국사','탐구']);
 export const GYUWON_SUBJECT_SECONDS=2.5;
 export const GYUWON_MIN_TELEGRAPH=1.05;
+export const GYUWON_EXAM_MAX_REACH=6.2;
 export const GYUWON_YEAR_PATTERNS=Object.freeze({
  bike:[3.4,1.3],scooter:[3.6,1.3],smoke:[3.2,1.3],
  workbook:[3.8,1.2],pencil:[3.5,1.2],
@@ -14,7 +15,7 @@ export const GYUWON_YEAR_PATTERNS=Object.freeze({
  sniper:[3.7,1.65],archery:[4.1,1.6],crossfire:[4.45,1.75],
  sewageThrow:[3.8,1.4],sewageWave:[7.4,2],sewageBomb:[4.4,1.6],
  figures:[5.2,1.5],photocard:[4.55,1.4],merch:[4.8,1.7],
- dance:[4.2,1.5],donation:[4.1,1.55],chatstorm:[4.3,1.4],
+ dance:[4.2,1.5],donation:[6.8,1.65],chatstorm:[4.3,1.4],
  octoStrike:[4.8,1.6],octoSweep:[5.1,1.7],octoInk:[4.5,1.5],
  recall:[5.9,1.8],recallMix:[7.0,2.0],recallAll:[8.6,2.2]
 });
@@ -36,7 +37,7 @@ export function createGyuwonYears(){
  return {mode:'combat',year:1,day:365,season:0,cast:null,castT:0,castCount:0,
   recover:1.8,subject:0,subjectT:0,grade:null,gradeT:0,gradeAt:-100,
   bannerUntil:2.8,subjectLabel:null,scoreFlash:0,from:null,aim:0,
-  mapClock:0,mapIndex:0,chat:[],lastCast:null,dodge:null};
+  mapClock:0,mapIndex:0,chat:[],gachaResult:0,lastCast:null,dodge:null};
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function add(g,shape,opts={}){
@@ -72,24 +73,27 @@ function mapHazards(g,key,offset=0){
  }
 }
 function spawnExamSubject(g,index){
- const e=g.gyuwon.years,p=g.player,b=g.boss;g.gyuwon.hazards.length=0;
+ const e=g.gyuwon.years,b=g.boss;g.gyuwon.hazards.length=0;
  e.subject=index;e.subjectT=0;e.subjectLabel=GYUWON_EXAM_SUBJECTS[index];
- // Five distinct forms, all with an authored >0.5 s physical preparation.
+ // During the Suneung all attacks originate around the seated boss. Never
+ // spawn a player-centered long-range strike or map-wide exam diagram.
+ const x=b.x,z=b.z;
  if(index===0){
-  line(g,p.x,p.z,.25,1.07,{width:1.25,visual:'year-korean'});
-  line(g,p.x,p.z,-.8,1.86,{width:1.15,visual:'year-korean'});
+  mark(g,x-2.45,z+1.1,1.08,2.0,21,'year-korean');
+  mark(g,x+2.45,z+1.1,1.86,2.0,21,'year-korean');
  }else if(index===1){
-  mark(g,p.x+3,p.z,1.06,2.1,19,'year-math');
-  mark(g,p.x-3,p.z,1.87,2.1,19,'year-math');
+  mark(g,x,z+2.3,1.08,2.15,20,'year-math');
+  mark(g,x-2.5,z-1.0,1.84,2.05,20,'year-math');
  }else if(index===2){
-  line(g,p.x,p.z,Math.PI/2,1.06,{width:1.45,visual:'year-english'});
-  line(g,p.x,p.z,0,1.87,{width:1.45,visual:'year-english'});
+  mark(g,x+2.6,z,1.08,2.15,22,'year-english');
+  mark(g,x-2.6,z,1.86,2.15,22,'year-english');
  }else if(index===3){
-  for(let i=0;i<2;i++)mark(g,p.x+(i?3.8:-3.8),p.z,1.06+i*.8,2.4,21,'year-history');
+  mark(g,x,z-2.5,1.08,2.25,22,'year-history');
+  mark(g,x+2.45,z+1.0,1.86,2.05,22,'year-history');
  }else{
-  add(g,'ring',{x:b.x,z:b.z,r:3.3,width:.8,grow:11,warn:1.07,
-   life:.8,damage:20,visual:'year-social'});
-  line(g,p.x,p.z,Math.PI*.75,1.86,{width:1.2,visual:'year-social'});
+  add(g,'ring',{x,z,r:2.3,width:.8,grow:2.2,warn:1.08,
+   life:.73,damage:20,visual:'year-social'});
+  mark(g,x,z+3.0,1.86,2.1,22,'year-social');
  }
  g.gyuwon.pattern='year-exam';g.gyuwon.t=0;
  g.gyuwon.motionBeats=g.gyuwon.hazards.map(h=>h.warn);
@@ -203,13 +207,30 @@ function beginCast(g,id,emit){
  }else if(id==='merch'){
   for(let i=0;i<4;i++)mark(g,p.x+(i-1.5)*4,p.z+Math.sin(i*2)*4,
    1.2+i*.77,2.5,27,'year-merch');
- }else if(id==='dance'||id==='donation'||id==='chatstorm'){
-  e.chat=['오늘도 합방 실화냐','규원님 화이팅!','오우 리액션','후원 감사합니다!'];
-  for(let i=0;i<(id==='dance'?3:4);i++){
-   const an=a+i*Math.PI*2/4;
-   add(g,'cone',{x:b.x,z:b.z,yaw:an,r:25,arc:.18,
-    warn:1.2+i*.67,life:.37,damage:26,visual:'year-stream'});
-  }
+  }else if(id==='donation'){
+   // Stream roulette snapshots its result once; physical prize capsules fall
+   // after the visibly turning six-segment wheel has selected an outcome.
+   e.gachaResult=(e.castCount*3+Math.floor(g.time*2))%6;
+   e.chat=['가챠 시작!', '수능 룰렛', '규원업!', '별풍선 대박'];
+   const base=a+(e.gachaResult-2.5)*.17;
+   for(let i=0;i<4;i++){
+    const an=base+i*Math.PI/2+(e.gachaResult%2)*.23;
+    const radius=5.4+(i%2)*2.3;
+    mark(g,b.x+Math.sin(an)*radius,b.z+Math.cos(an)*radius,
+     3.30+i*.58,2.35+(e.gachaResult===5?.48:0),27+(e.gachaResult===5?8:0),
+     'year-gacha-prize');
+   }
+ }else if(id==='dance'||id==='chatstorm'){
+   e.chat=['규원업!','오우 리액션','가즈아','수능 대박'];
+   // Bass speaker punches and chat explosions manifest as physical pressure
+   // beats, not a floating translucent triangular/cone attack panel.
+   const count=id==='dance'?3:4;
+   for(let i=0;i<count;i++){
+    const an=a+i*Math.PI*2/count;
+    const radius=4.3+(i%2)*1.2;
+    mark(g,b.x+Math.sin(an)*radius,b.z+Math.cos(an)*radius,
+     1.2+i*.67,2.9,26,'year-stream-pulse');
+   }
  }else if(id==='octoStrike'||id==='octoSweep'||id==='octoInk'){
   for(let i=0;i<8;i++){
    const angle=i*Math.PI/4+(id==='octoSweep'?.18:0);

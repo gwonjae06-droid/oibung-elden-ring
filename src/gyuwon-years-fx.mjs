@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import {hazardPosition} from './gyuwon-data.mjs';
 import {buildGyuwonYearAttackCues} from './gyuwon-year-cues.mjs';
+import {createGyuwonAnimeIllustration} from './gyuwon-anime-illustration.mjs';
+import {createGyuwonGachaWheel} from './gyuwon-gacha-wheel.mjs';
+import {createGyuwonSoftTentacle} from './gyuwon-soft-tentacle.mjs';
 
 // Reusable scenery/props for the D-day encounter. Never owns gameplay damage.
 // Existing battle hazards are the sole source of collision shapes and timing.
@@ -24,7 +27,13 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const wax=mat(0xf0c4ba,{roughness:.28,clearcoat:.65});
  const dollOutfits=[0xc78ba9,0x87a5bc,0xc4b187,0x9b82bc,0x87aa9e,0xc6a38b]
   .map(color=>mat(color,{roughness:.3,clearcoat:.65}));
- const smokeMat=mat(0x859090,{roughness:1,transparent:true,opacity:.26,depthWrite:false});
+ const animeTextures=Array.from({length:6},(_,i)=>createGyuwonAnimeIllustration(i));
+ textures.push(...animeTextures);
+ const animeMaterials=animeTextures.map(texture=>{
+  const m=new THREE.MeshBasicMaterial({map:texture,transparent:true,
+   side:THREE.DoubleSide,depthWrite:false});
+  materials.push(m);return m;
+ });
  const glyphPlane=geo(new THREE.PlaneGeometry(3.6,1.8));
  const glyphBacking=geo(new THREE.BoxGeometry(3.55,1.76,.16));
  const box=geo(new THREE.BoxGeometry(1,1,1)),cylinder=geo(new THREE.CylinderGeometry(.5,.5,1,coarse?10:18)),
@@ -78,16 +87,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  mesh(scooter,sphere,wax,0,1.35,1.08,.27,.19,.22);
  mesh(scooter,box,graphite,0,.56,0,.31,.06,1.85);
  for(const side of [-1,1])mesh(scooter,cylinder,steel,side*.55,2.44,.85,.12,.28,.12);
- const cigarette=new THREE.Group();cigarette.name='gyuwon-cigarette-smoke';root.add(cigarette);
- mesh(cigarette,cylinder,paper,0,2.12,0,.08,1.0,.08).rotation.z=.84;
- const smokePuffs=Array.from({length:6},(_,i)=>mesh(cigarette,sphere,smokeMat,0,2.35+i*.34,.3+i*.22,
-   .21+i*.07,.14+i*.045,.24+i*.06));
- const weapon=new THREE.Group();weapon.name='gyuwon-snipergun-and-bow';root.add(weapon);
- mesh(weapon,box,steel,0,1.4,.25,.46,.32,2.2);
- mesh(weapon,cylinder,steel,0,1.43,1.75,.12,.12,2.15).rotation.x=Math.PI/2;
- mesh(weapon,box,rubber,0,1.1,-.4,.25,.7,.44);
- const bowCurve=geo(new THREE.TorusGeometry(.85,.08,6,coarse?16:28,Math.PI));
- const bow=mesh(weapon,bowCurve,hot,1.1,1.6,.6,1,1,1);bow.rotation.z=Math.PI/2;
+ // Cigarette, rifle and bow are now attached to the actor's wrist joints.
  const streamSet=new THREE.Group();streamSet.name='gyuwon-seven-year-broadcast-studio';root.add(streamSet);
  const ringLight=geo(new THREE.TorusGeometry(.9,.075,coarse?10:16,coarse?28:54));
  const cameraLens=geo(new THREE.CylinderGeometry(.21,.26,.35,coarse?12:24));
@@ -101,6 +101,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  for(const speaker of [speakerL,speakerR]){
   mesh(speaker,cylinder,steel,0,-.12,.52,.38,.085,.38,'gyuwon-studio-bass-cone').rotation.x=Math.PI/2;
  }
+ const gacha=createGyuwonGachaWheel(root,{coarse});
  const bodyslime=new THREE.Group();bodyslime.name='gyuwon-slime-aura';root.add(bodyslime);
  for(let i=0;i<8;i++){
   const a=i*Math.PI/4;const m=mesh(bodyslime,sphere,slime,Math.sin(a)*1.4,.28,Math.cos(a)*1.4,1,.5,.72);
@@ -115,50 +116,35 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const bookPiles=new THREE.Group();bookPiles.name='gyuwon-bookfall-stacks';root.add(bookPiles);
  const piles=[],piled=new Set();let activePileYear=0;
  const dollRoot=new THREE.Group();dollRoot.name='gyuwon-figurines-and-photocards';root.add(dollRoot);
- const skirtGeometry=geo(new THREE.ConeGeometry(.79,1.35,coarse?16:32,3));
- const dollHat=geo(new THREE.TorusGeometry(.48,.11,coarse?8:12,coarse?16:32));
  for(let i=0;i<6;i++){
-  const angle=i*Math.PI/3,fig=new THREE.Group();
-  fig.position.set(Math.sin(angle)*14,0,Math.cos(angle)*14);
-  fig.userData.index=i;dollRoot.add(fig);mobiles.push(fig);
-  // The impact is visible across the same 2.9m radius as the figurine's contact.
+  const a=i*Math.PI/3,fig=new THREE.Group();
+  fig.position.set(Math.sin(a)*14,0,Math.cos(a)*14);
+  fig.userData.index=i;fig.name='gyuwon-anime-2d-display-stand';dollRoot.add(fig);mobiles.push(fig);
   const dust=mesh(fig,ring,froth,0,.13,0,3.18,3.18,3.18,'gyuwon-figurine-ground-impact');
   dust.rotation.x=Math.PI/2;dust.visible=false;fig.userData.impactDust=dust;
-  const suit=dollOutfits[i];
-  mesh(fig,cylinder,steel,0,.12,0,1.3,.25,1.3);
-  mesh(fig,skirtGeometry,suit,0,1.18,0,1,1,1,'gyuwon-figurine-dress-skirt');
-  mesh(fig,cylinder,suit,0,1.73,0,.54,.72,.54,'gyuwon-figurine-bodice');
-  mesh(fig,sphere,wax,0,2.39,0,.77,.89,.75,'gyuwon-figurine-face');
-  mesh(fig,sphere,graphite,0,2.73,-.13,.84,.48,.8,'gyuwon-figurine-sculpted-hair');
-  mesh(fig,dollHat,purple,0,2.82,.06,1,1,1,'gyuwon-figurine-headpiece').rotation.x=.34;
-  for(const side of [-1,1]){
-   const arm=mesh(fig,cylinder,wax,side*.72,1.66,0,.19,.88,.19,'gyuwon-figurine-pose-arm');
-   arm.rotation.z=side*.35;
-   mesh(fig,cylinder,purple,side*.27,.52,0,.19,.65,.19,'gyuwon-figurine-stockings');
-   mesh(fig,sphere,graphite,side*.19,2.42,.60,.075,.11,.04,'gyuwon-figurine-anime-eye');
-   mesh(fig,sphere,purple,side*.42,2.95,-.11,.21,.26,.23,'gyuwon-figurine-hair-bow');
-  }
-  fig.scale.setScalar(coarse?.82:1);
+  mesh(fig,cylinder,steel,0,.16,0,1.18,.26,1.18,'gyuwon-anime-collector-display-base');
+  const art=new THREE.Sprite(new THREE.SpriteMaterial({
+   map:animeTextures[i],transparent:true,depthWrite:false}));
+  materials.push(art.material);art.name='gyuwon-2d-anime-girl-illustration';
+  art.position.set(0,2.52,0);art.scale.set(2.55,3.86,1);fig.add(art);
+  for(let j=0;j<7;j++)
+   mesh(fig,sphere,j%2?neon:purple,
+    Math.sin(j*2.399963)*1.48,.62+(j%4)*1.04,.28,
+    .12,.12,.12,'gyuwon-anime-collection-bright-star');
+  mesh(fig,box,neon,0,.38,.16,1.9,.12,.1,'gyuwon-anime-display-sign');
+  fig.scale.setScalar(coarse?.85:1);
  }
  const tentacleRoot=new THREE.Group();tentacleRoot.name='gyuwon-eight-octopus-arms';root.add(tentacleRoot);
- const tentacles=[];const stages=coarse?4:7;
- for(let arm=0;arm<8;arm++){
-  const limbs=[];
-  for(let i=0;i<stages;i++){
-   const part=mesh(tentacleRoot,cylinder,slime,0,1,0,
-    .55*(1-i/stages*.7),1.6,.55*(1-i/stages*.7));
-   limbs.push(part);
-  }tentacles.push(limbs);
- }
- // The suction cups are one instanced draw call across all 8 segmented arms.
+ const tentacles=[],stages=coarse?4:7;
+ for(let arm=0;arm<8;arm++)
+  tentacles.push(createGyuwonSoftTentacle(tentacleRoot,slime,{coarse,index:arm}));
  const suctionGeom=geo(new THREE.CylinderGeometry(.205,.23,.075,coarse?7:12));
  const suction=new THREE.InstancedMesh(suctionGeom,purple,8*stages*2);
  suction.name='gyuwon-eight-arm-suction-cups';suction.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
  suction.frustumCulled=false;tentacleRoot.add(suction);
- const suctionDummy=new THREE.Object3D(),armUp=new THREE.Vector3(0,1,0);
- const armStart=new THREE.Vector3(),armEnd=new THREE.Vector3(),armSegment=new THREE.Vector3(),armDirection=new THREE.Vector3();
- const armNormal=new THREE.Vector3(0,-1,0),cupRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
- const dynamic=new Map();const ringDummy=new THREE.Object3D();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
+ const suctionDummy=new THREE.Object3D(),suctionNormal=new THREE.Vector3(0,-1,0);
+ const cupRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI);
+  const dynamic=new Map();const ringDummy=new THREE.Object3D();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
  const portrait=["청산별곡","관동별곡","어즈버","사미인곡"];
  const glyphSets={
   'year-korean':portrait,

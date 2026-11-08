@@ -189,7 +189,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  for(let i=0;i<uv.count;i++)uv.setZ(i,Math.sin(uv.getX(i)*7)*.038+Math.cos(uv.getY(i)*5)*.02);
  pageGeo.computeVertexNormals();
  for(let i=0;i<6;i++)pages.push(mesh(root,pageGeo,new THREE.MeshStandardMaterial({color:0xd4bd83,side:THREE.DoubleSide,transparent:true,opacity:.8,roughness:.86}),0,0,0,'gyuwon-floating-page'));
- const yearRig=createGyuwonYearRig({torso,head,coarse});
+ const yearRig=createGyuwonYearRig({torso,head,wrists,coarse});
  let rideBlend=0;
  const motion=createGyuwonMotionDirector();
  return {root,update(g,death=0,dt=0){

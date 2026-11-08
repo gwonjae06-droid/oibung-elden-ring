@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import {createGyuwonYearWeaponProps} from './gyuwon-year-weapon-props.mjs';
 
 // The legacy humanoid's existing anatomical joint hierarchy is reused.
 // All additions follow head/chest joints rather than drawing screen-space masks.
 // A bounded per-year detail tier protects mobile GPU budgets.
-export function createGyuwonYearRig({torso,head,coarse=false}={}){
+export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
+ const handProps=createGyuwonYearWeaponProps({wrists,coarse});
  const mats=[],geos=[],perYear=new Map();
  const material=(color,options={})=>{
   const m=new THREE.MeshPhysicalMaterial({color,roughness:.66,...options});mats.push(m);return m;
@@ -114,6 +116,7 @@ export function createGyuwonYearRig({torso,head,coarse=false}={}){
   if(disposed)return;
   const e=g?.gyuwon?.years,y=e?.year||0,stage=Math.min(9,y),t=g?.time||0;
   activeYear=stage;
+  handProps.update(g);
   for(const [n,groups]of perYear)for(const group of groups)
    group.visible=!!e&&(stage===n||n===9&&stage>=9);
   helmet.visible=!!e&&stage===1&&e.cast==='bike';
@@ -139,10 +142,11 @@ export function createGyuwonYearRig({torso,head,coarse=false}={}){
   for(let i=0;i<charms.length;i++)charms[i].rotation.y=.22*Math.sin(t*2.4+i);
  }
  function dispose(){if(disposed)return;disposed=true;
+  handProps.dispose();
   face.removeFromParent();
   for(const groups of perYear.values())for(const g of groups)g.removeFromParent();
   for(const g of new Set(geos))g.dispose();
   for(const m of new Set(mats))m.dispose();
  }
- return {update,dispose,get activeYear(){return activeYear},get tint(){return yearTints.get(activeYear)||null},stats:()=>({activeYear,faceControls:eyelids.length+brows.length+eyes.length,garments:perYear.size})};
+ return {update,dispose,get activeYear(){return activeYear},get tint(){return yearTints.get(activeYear)||null},stats:()=>({activeYear,faceControls:eyelids.length+brows.length+eyes.length,garments:perYear.size,handProps:handProps.stats()})};
 }
