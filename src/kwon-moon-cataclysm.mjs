@@ -62,7 +62,10 @@ export function moonMeteorProgress(h){
  return clamp((h.age||0)/h.impact,0,1);
 }
 export function moonMeteorHeight(h){
- const p=moonMeteorProgress(h),travel=.18*p+.82*smooth(p);
+ const p=moonMeteorProgress(h);
+ if(p<=0)return KWON_MOON.startHeight;
+ if(p>=1)return KWON_MOON.landHeight;
+ const travel=.18*p+.82*smooth(p);
  return KWON_MOON.startHeight+(KWON_MOON.landHeight-KWON_MOON.startHeight)*travel;
 }
 export function moonStormTremor(state,player){
