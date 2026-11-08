@@ -116,6 +116,11 @@ export function buildBloodView(scene,{coarse=false,reduced=false}={}){
      bays=[-35,-21,-7,7,21,35],z=bays.reduce((best,q)=>Math.abs(q-g.boss.z)<Math.abs(best-g.boss.z)?q:best,bays[0]);
     particles.burst(side*32.4,4.2,z,{count:5,power:7,lift:.15,gravity:.6,direction:{x:side*9,z:0}});
    }
+  }if(e.type==='blood-seraph-teleport'){
+   for(const site of [e.from,e.to])if(site){
+    particles.burst(site.x,4,site.z,{count:reduced?16:42,power:6,lift:2.2});
+    particles.ripple(site.x,site.z,{from:.6,to:4.5,duration:.65,power:.8});
+   }
   }if(e.type==='hurt')particles.burst(g.player.x,1,g.player.z,{count:12,power:4});if(e.type==='blood-seraph-heal'){
    particles.burst(g.boss.x,6.7,g.boss.z,{count:reduced?22:70,power:6,lift:2});
    particles.ripple(g.boss.x,g.boss.z,{from:12,to:.6,duration:1.6,power:1.2});
