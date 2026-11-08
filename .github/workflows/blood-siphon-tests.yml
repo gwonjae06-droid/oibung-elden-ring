@@ -1,5 +1,15 @@
 name: Baeseojun phase-two blood siphon regeneration
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/blood-combat.mjs'
+      - 'src/blood-data.mjs'
+      - 'src/blood-siphon.mjs'
+      - 'tests/blood-siphon.test.mjs'
+      - 'tests/hard-story-balance.test.mjs'
+      - 'scripts/blood-siphon-smoke.mjs'
+      - '.github/workflows/blood-siphon-tests.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +25,7 @@ jobs:
       - name: Install graphics and browser testing dependencies
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Verify timed regeneration, phase boundary, game rules and visual resources
-        run: node --test tests/blood-siphon.test.mjs tests/blood.test.mjs tests/blood-render.test.mjs tests/blood-cathedral-sea.test.mjs
+        run: node --test tests/blood-siphon.test.mjs tests/hard-story-balance.test.mjs tests/blood.test.mjs tests/blood-render.test.mjs tests/blood-cathedral-sea.test.mjs
       - name: Render actual healing on PC and mobile landscape
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 >/tmp/blood-siphon-http.log 2>&1 &
