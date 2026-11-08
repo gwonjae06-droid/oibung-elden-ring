@@ -20,14 +20,10 @@ const round=(n)=>Math.round(n*1000)/1000;
 export function clownThreatCovers(z,p,margin=PLAYER_MARGIN){
  if(!z||!p)return false;
  if(z.shape==='lane'){
-  const dx=p.x-z.x,dz=p.z-z.z,forward=dx*Math.sin(z.yaw)+dz*Math.cos(z.y),
-   lateral=dx*Math.cos(z.yaw)-dz*Math.sin(z.yaw);
+  const dx=p.x-z.x,dz=p.z-z.z,sy=Math.sin(z.yaw),cy=Math.cos(z.yaw);
+  const forward=dx*sy+dz*cy,lateral=dx*cy-dz*sy;
   const withinLength=forward>=-margin&&forward<=Number(z.len||0)+margin;
   const withinWidth=Math.abs(lateral)<=Number(z.w||0)/2+margin;
-  if(z.len===9&&z.w===2&&p.x===.3&&p.z===4)
-   console.log('CLOWN LANE INTERNAL',JSON.stringify({
-    dx,dz,forward,lateral,margin,withinLength,withinWidth
-   }));
   return withinLength&&withinWidth;
  }
  if(z.shape==='cone')
