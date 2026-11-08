@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -35,11 +36,11 @@ test('all eleven years have a separately scheduled physical ultimate and safe wa
   }
  }
 });
-test('an ultimate is guaranteed once each year without replacing the shuffled regular roster',()=>{
+test('the new weapon signature is selected at a health milestone, not elapsed time',()=>{
  const g=make(8),e=g.gyuwon.years;
- e.season=9.2;e.day=235;e.recover=0;
+ e.yearStartHp=g.boss.maxHp;g.boss.hp=g.boss.maxHp-(g.boss.maxHp-annualFloor(g))*.6;e.recover=0;
  tickGyuwonYears(g,.03,{hurt:()=>{},emit:()=>{}});
- assert.equal(e.cast,'ultimateOctopus');
+ assert.equal(e.cast,'cardsCage');
  assert.equal(e.signatureUsed,true);
  assert.equal(e.year,8);
  assert.equal(e.castCount,1);

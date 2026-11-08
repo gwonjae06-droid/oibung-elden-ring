@@ -1,3 +1,4 @@
+import {arsenalProjectile} from './gyuwon-arsenal.mjs';
 import {bossMaxHp} from './balance.mjs';
 export const GYUWON_RULES=Object.freeze({name:'정답을 찾지 못한 자 최규원',phaseName:'무두의 사유 최규원',radius:30,hp:bossMaxHp(4),transition:3});
 export const GYUWON_PATTERNS=Object.freeze({
@@ -37,6 +38,7 @@ export const gyuwonPool=(phase,space='white')=>phase===1
 import {hazardContains as ordinaryContains,hazardPosition as ordinaryPosition} from './blood-data.mjs';
 import {sampleRide,tentacleYaw} from './gyuwon-year-choreography.mjs';
 export function hazardPosition(h){
+ if(h.arsenal&&h.vx!==undefined)return arsenalProjectile(h);
  if(h.rideSegment)return sampleRide(h.rideSegment,h.age);
  if(h.topple){
   const q=Math.max(0,Math.min(1,(h.age-h.warn)/h.life));
@@ -45,6 +47,7 @@ export function hazardPosition(h){
  return ordinaryPosition(h);
 }
 export function hazardContains(h,p){
+ if(h.arsenal&&h.vx!==undefined){const c=arsenalProjectile(h);return Math.hypot(p.x-c.x,p.z-c.z)<=h.r+.28;}
  if(h.visual==='year-tentacle'){
   const yaw=tentacleYaw(h),dx=p.x-h.originX,dz=p.z-h.originZ;
   const along=dx*Math.sin(yaw)+dz*Math.cos(yaw),q=Math.max(0,Math.min(1,along/h.length));

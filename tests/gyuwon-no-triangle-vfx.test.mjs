@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -46,7 +47,7 @@ test('the shared Gyuwon renderer never draws a pointed triangular hazard panel i
 test('all five exam subjects cause no attack warnings or damage',()=>{
  const stage=new THREE.Group(),fx=createGyuwonHazardFx(stage,{coarse:true});
  const g=game(1),e=g.gyuwon.years;
- e.season=48;e.signatureUsed=true;e.cast=null;e.recover=0;
+ g.boss.hp=annualFloor(g);e.season=48;e.signatureUsed=true;e.cast=null;e.recover=0;
  stepGyuwon(g,.03);assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
   fx.update(g);assert.equal(g.gyuwon.hazards.length,0);

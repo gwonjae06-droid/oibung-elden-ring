@@ -1,3 +1,4 @@
+import {arsenalKind} from './gyuwon-arsenal.mjs';
 import * as THREE from 'three';
 import {ridePose,rideFrame,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {createGyuwonHandIk} from './gyuwon-hand-ik.mjs';
@@ -214,7 +215,6 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const roll=s.years?.dodge;
   if(roll)root.rotation.z=Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
-  if(s.years?.year===5&&g.status==='playing')root.scale.set(1+.065*Math.sin(t*3.7),1-.095*Math.sin(t*3.7),1+.05*Math.sin(t*2.8));
   torso.rotation.set(weapon.rifle?0:mounted?.28:p.lean*.42,weapon.rifle?0:p.twist*.28,weapon.rifle?0:p.twist*.10+(p.weightShift||0)*.035);
   const breath=weapon.rifle?0:Math.sin(t*1.9)*.007;
   torso.position.y=(years?.mode==='exam'?1.54:1.95+rideBlend*.36)-p.steps*.035+breath;
@@ -270,7 +270,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    leg.knee.x+=(leg.side*.63-leg.knee.x)*rideBlend;
    leg.knee.y+=(1.12-leg.knee.y)*rideBlend;
    leg.knee.z+=(.68-leg.knee.z)*rideBlend;
-   if(years?.year===7&&years.cast&&!mounted){
+   if(years?.year===7&&!arsenalKind(years.year)&&years.cast&&!mounted){
     const step=Math.sin((years.castT-1.2)*Math.PI*2/.67+(leg.side<0?0:Math.PI));
     const lift=Math.max(0,step)*.26;
     leg.ankle.y+=lift;leg.ankle.z+=Math.max(0,step)*.20;leg.knee.y+=lift*.4;

@@ -361,14 +361,14 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   bodyslime.visible=false;
   flameAura.visible=false;
   flameAura.position.set(b.x,0,b.z);
-  dollRoot.visible=e.mode==='combat'&&(e.year===6||e.cast==='nightmare365'&&e.castT>=6.5&&e.castT<8);
-  streamSet.visible=e.mode==='combat'&&(e.year===7||e.cast==='nightmare365'&&e.castT>=7.8&&e.castT<9.5);
+  dollRoot.visible=e.mode==='combat'&&((e.year===6&&!e.weaponPlan&&!!e.cast)||e.cast==='nightmare365'&&e.castT>=6.5&&e.castT<8);
+  streamSet.visible=e.mode==='combat'&&((e.year===7&&!e.weaponPlan&&!!e.cast)||e.cast==='nightmare365'&&e.castT>=7.8&&e.castT<9.5);
   if(streamSet.visible){
    streamSet.position.set(b.x,0,b.z);streamSet.rotation.y=b.yaw;
    const liveEnergy=e.cast==='donation'?1:.3;
    light.scale.setScalar(1+liveEnergy*.12*Math.sin(g.time*6));
   }
-  tentacleRoot.visible=e.mode==='combat'&&(e.year===8||e.cast==='nightmare365'&&e.castT>=9.2&&e.castT<11.2);
+  tentacleRoot.visible=e.mode==='combat'&&((e.year===8&&!e.weaponPlan&&!!e.cast)||e.cast==='nightmare365'&&e.castT>=9.2&&e.castT<11.2);
   if(mounted){const frame=rideFrame(mounted);for(const vehicle of [motorcycle,scooter]){vehicle.position.set(frame.x,frame.y+(b.floorY||0),frame.z);vehicle.rotation.set(frame.pitch,frame.yaw,frame.bank,'YXZ');}}
   bodyslime.position.set(b.x,0,b.z);
   if(flameAura.visible)for(let i=0;i<auraFlames.length;i++){
@@ -471,7 +471,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
     book.rotation.y=(h.id%7)*.14;piles.push(book);
     if(piles.length>26)bookPiles.remove(piles.shift());
    }
-   if(v==='year-omr-floor')continue;
+   if(v==='year-omr-floor'||h.arsenal)continue;
    if(v==='year-sludge-wave'||v==='year-water-wave'||v==='year-vehicle'||v==='year-bullet'||
     v==='year-tentacle'||v==='year-stream'||v==='year-smoke')continue;
    live.add(h.id);let item=dynamic.get(h.id);

@@ -1,5 +1,6 @@
+import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,spawnArsenal,tickArsenal} from './gyuwon-arsenal.mjs';
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
-import {GYUWON_CALENDAR_SECONDS,annualClockRate,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
+import {GYUWON_CALENDAR_SECONDS,syncAnnualHealth,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,updateRideAim,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
 import {hazardContains} from './gyuwon-data.mjs';
@@ -24,17 +25,14 @@ export const GYUWON_YEAR_PATTERNS=Object.freeze({
  dance:[4.2,1.5],donation:[6.8,1.65],chatstorm:[4.3,1.4],
  octoStrike:[4.8,1.6],octoSweep:[5.1,1.7],octoInk:[4.5,1.5],
  recall:[5.9,1.8],recallMix:[7.0,2.0],recallAll:[8.6,2.2],
- ...GYUWON_SIGNATURE_SPECS
+ ...GYUWON_SIGNATURE_SPECS,...ARSENAL_PATTERNS
 });
 const YEAR_ROSTERS=Object.freeze({
  1:['bike','scooter','smoke'],
  2:['workbook','pencil','scooter'],
  3:['letters','bookfall'],
  4:['sniper','archery','crossfire'],
- 5:['sewageThrow','sewageWave','sewageBomb'],
- 6:['figures','photocard','merch'],
- 7:['dance','donation','chatstorm'],
- 8:['octoStrike','octoSweep','octoInk'],
+ ...ARSENAL_ROSTERS,
  9:['recall'],10:['recallMix'],11:['recallAll']
 });
 export const gyuwonYearRoster=year=>YEAR_ROSTERS[Math.min(11,Math.max(1,year))];
@@ -143,7 +141,7 @@ function startNextYear(g,emit){
  const e=g.gyuwon.years;
  e.year=e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
- e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);
+ e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);e.yearStartHp=g.boss.hp;e.weaponPlan=null;
  e.signatureUsed=false;e.nightmareUsed=false;e.rideTrack=[];
  e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);e.resultScene=null;
  g.gyuwon.hazards.length=0;
@@ -155,11 +153,13 @@ function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
  e.cast=id;e.lastCast=id;e.castT=0;e.castCount++;e.from={x:b.x,z:b.z};e.dodge=null;
  e.aim=a;g.gyuwon.t=0;g.gyuwon.pattern='year-'+id;
- e.rideTrack=[];
+ e.rideTrack=[];e.weaponPlan=null;
  if(GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)]===id){e.signatureUsed=true;if(e.year>=11)e.nightmareUsed=true;}
  g.boss.state='pattern';b.yaw=a;g.gyuwon.hazards=g.gyuwon.hazards.filter(h=>(h.persistent||h.lingering)&&h.age<h.warn+h.life);
  const dx=Math.sin(a),dz=Math.cos(a);
- if(Object.values(GYUWON_YEAR_SIGNATURES).includes(id)){
+ if(spawnArsenal(g,id,add)){
+  // All weapon contacts were authored in the shared arsenal module.
+ }else if(Object.values(GYUWON_YEAR_SIGNATURES).includes(id)||id.startsWith('ultimate')||id==='nightmare365'){
   spawnGyuwonSignature(g,id,{add,mark,line,mapHazards,playerAim,makeRide});
  }else if(id==='bike'||id==='scooter'){
   makeRide(g,{add,scooter:id==='scooter'});
@@ -310,13 +310,12 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
    else spawnExamSubject(g,e.subject+1);
   }return;
  }
- e.season=Math.min(GYUWON_YEAR_SECONDS,e.season+dt*annualClockRate(g));
- e.day=Math.max(0,Math.ceil(365*(1-e.season/GYUWON_YEAR_SECONDS)));
+ syncAnnualHealth(g);
  if(s.stun>0)return;
  if(e.cast){
   e.castT+=dt;s.t=e.castT;
   if(e.cast==='ultimateMarksman')tickMarksmanBarrage(g,add);
-  updateRideAim(g);
+  tickArsenal(g);updateRideAim(g);
   const mounted=ridePose(e);
   if(mounted){b.x=mounted.x;b.z=mounted.z;b.yaw=mounted.yaw;}
   tickHazards(g,dt,hurt,emit);
@@ -350,9 +349,9 @@ export function tickGyuwonYears(g,dt,{hurt,emit}){
   b.x=d.fromX+(d.toX-d.fromX)*k;b.z=d.fromZ+(d.toZ-d.fromZ)*k;
   if(d.t>=.72)e.dodge=null;
  }
+ if(e.day===0&&b.hp<=annualFloor(g)+1e-7){beginExam(g,emit);return;}
  if(e.recover>0)return;
- if(e.day===0){if(!e.signatureUsed){beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;}beginExam(g,emit);return;}
- if(!e.signatureUsed&&(e.season>=9.2||e.year>=11&&b.hp/b.maxHp<=.36)){
+ if(!e.signatureUsed&&e.season>=GYUWON_YEAR_SECONDS*.55){
   beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;
  }
  const choices=gyuwonYearRoster(e.year);

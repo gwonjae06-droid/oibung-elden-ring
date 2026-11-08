@@ -96,7 +96,7 @@ test('waves clear the horizon fog and camera cutaway is reserved for the perimet
 });
 test('a close collectible cannot obscure the player, and clears again when moving away',()=>{
  const root=new THREE.Group(),fx=createGyuwonYearsFx(root,{coarse:true}),g=game(6),camera=new THREE.PerspectiveCamera();
- try{camera.position.set(0,7,23);g.player.x=0;g.player.z=14;fx.update(g);fx.occlude(camera,g);
+ try{camera.position.set(0,7,23);g.player.x=0;g.player.z=14;startGyuwonYearCast(g,'photocard');fx.update(g);fx.occlude(camera,g);
   const art=root.getObjectByName('gyuwon-2d-anime-girl-illustration');assert.ok(art.material.opacity<.5);
   g.player.x=20;fx.occlude(camera,g);assert.equal(art.material.opacity,1);
  }finally{fx.dispose();}

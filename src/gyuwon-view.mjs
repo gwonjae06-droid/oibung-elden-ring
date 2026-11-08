@@ -1,3 +1,4 @@
+import {createArsenalFx} from './gyuwon-arsenal-view.mjs';
 import {createGyuwonYearWorld} from './gyuwon-year-world.mjs';
 import {createGyuwonRecallMaps} from './gyuwon-recall-maps.mjs';
 import * as THREE from 'three';
@@ -41,7 +42,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  const recall=createGyuwonRecallMaps(scene,{coarse,reduced});
  // All attack warnings are 3D material fractures bound to authoritative collision footprints.
  const hazardFx=createGyuwonHazardFx(stage,{coarse});
- const yearsFx=createGyuwonYearsFx(stage,{coarse,reduced});
+ const yearsFx=createGyuwonYearsFx(stage,{coarse,reduced}),arsenalFx=createArsenalFx(stage);
  const annualWorld=createGyuwonYearWorld(scene,{coarse,artMaterials:yearsFx.artMaterials,fragment:recall.fragment});
  const shadowHand=createGyuwonShadowHand(stage,{coarse});
  const absorbFx=createGyuwonAbsorbFx(stage,{coarse,reduced});
@@ -82,7 +83,7 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
    floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);
   spectacle.update(g,dt,deathElapsed);recall.update(g,dt);if(!s.years)philosophy.update(g,dt);
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
-  if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
+  if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);arsenalFx.update(g);annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
  }
  async function prewarmProgressive(renderer,camera,{companions=[]}={}){
   await yearsFx.ready;if(disposed)return;
@@ -95,6 +96,6 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   finally{proxy.removeFromParent();proxy.dispose();if(!disposed){annualWorld.root.visible=rootVisible;for(const [o,v]of visible)o.visible=v;}}
   if(!disposed)await annualWorld.prewarmProgressive(renderer,camera);
  }
- return {root,update,clear,prewarmProgressive,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(camera,g){annualWorld.setCamera(camera);yearsFx.occlude(camera,g);},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),world:annualWorld.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){if(disposed)return;disposed=true;clear();annualWorld.dispose();hazardFx.dispose();yearsFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
+ return {root,update,clear,prewarmProgressive,prewarm:(renderer,camera)=>{recall.prewarm(renderer,camera);spectacle.prewarm(renderer,camera,scene);},event(){},shake(){},occlude(camera,g){annualWorld.setCamera(camera);yearsFx.occlude(camera,g);},quality:'adaptive',stats:()=>({warnings:hazardFx.stats().liveHazards,hazardFx:hazardFx.stats(),years:yearsFx.stats(),world:annualWorld.stats(),recall:recall.stats(),stageFX:spectacle.stats(),philosophy:philosophy.stats()}),dispose(){if(disposed)return;disposed=true;clear();annualWorld.dispose();hazardFx.dispose();yearsFx.dispose();arsenalFx.dispose();shadowHand.dispose();absorbFx.dispose();headGeo.dispose();actor.dispose?.();recall.dispose();philosophy.dispose();spectacle.dispose();}};
 }
 

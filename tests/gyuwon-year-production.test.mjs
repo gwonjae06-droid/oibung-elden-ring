@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -31,7 +32,7 @@ test('every year-specific attack has a visible anticipation preceding its first 
 
 test('the exam is a short five-subject rest with no hazards',()=>{
  const g=game();g.gyuwon.years.cast=null;g.gyuwon.years.recover=0;
- g.gyuwon.years.season=48;g.gyuwon.years.signatureUsed=true;
+ g.boss.hp=annualFloor(g);g.gyuwon.years.season=48;g.gyuwon.years.signatureUsed=true;
  stepGyuwon(g,.03);assert.equal(g.gyuwon.years.mode,'exam');
  assert.equal(GYUWON_SUBJECT_SECONDS,.9);assert.equal(g.gyuwon.hazards.length,0);
 });

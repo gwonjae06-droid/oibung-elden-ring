@@ -1,8 +1,10 @@
+import {createArsenalHands} from './gyuwon-arsenal-view.mjs';
 import * as THREE from 'three';
 import {gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 // Actual handheld objects on the sculpted actor's wrist joints. No duplicate
 // 4th-year dual-wield remains physically attached to the original wrist rig.
 export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
+ const arsenal=createArsenalHands(wrists);
  const materials=[],geometries=[],groups=[];
  const material=(color,opts={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.65,...opts});materials.push(m);return m;};
  const geo=g=>{geometries.push(g);return g;};
@@ -90,12 +92,12 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   'gyuwon-bow-feather-fletching',0,.06,-.01);feathers.rotation.z=.4;
  let disposed=false;
  function update(g){
-  if(disposed)return;
+  if(disposed)return;arsenal.update(g);
   const e=g?.gyuwon?.years,year=e?.year,cast=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
   const pose=gyuwonWeaponPose(e,g.gyuwon?.hazards);
   cigarette.visible=pose.cigarette;gun.visible=pose.rifle;
   supportingHand.visible=gun.visible&&!pose.dual;
-  bow.visible=pose.bow;arrow.visible=pose.nocked;
+  bow.visible=pose.bow;arrow.visible=pose.nocked;bow.rotation.x=cast==='bowRain'?-.9:0;
   repeatingBow.visible=pose.dual;guide.visible=pose.dual;
   autoArrow.visible=pose.autoNocked;autoTip.visible=pose.autoNocked;
   const smoking=Math.max(0,Math.min(1,t/1.2));
@@ -125,7 +127,7 @@ export function createGyuwonYearWeaponProps({wrists,coarse=false}={}){
   arrow.position.z=.18-pull*.54;arrow.rotation.x=.12*pull;
   autoArrow.position.z=1.13-pull*.39;autoTip.position.z=1.73-pull*.39;
  }
- function dispose(){if(disposed)return;disposed=true;
+ function dispose(){if(disposed)return;disposed=true;arsenal.dispose();
   groups.forEach(g=>g.removeFromParent());
   for(const geo of geometries)geo.dispose();
   for(const mat of materials)mat.dispose();

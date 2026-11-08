@@ -31,7 +31,7 @@ export function createGyuwonYearsHud(doc,shell){
   const cls=e.mode==='result'?e.grade:'';
   if(selected&&previous!==selected+cls){hero.textContent=selected;hero.className='gy-dday-hero '+cls;
    hero.style.animation='none';void hero.offsetWidth;hero.style.animation='';previous=selected+cls;}
-  chat.hidden=e.year!==7||e.mode!=='combat';
+  chat.hidden=e.year!==7||e.mode!=='combat'||!['dance','donation','chatstorm','ultimateGacha'].includes(e.cast);
   if(!chat.hidden){
    const shift=Math.floor(g.time/1.55);const messages=viewers.slice();
    if(e.cast==='donation')messages.unshift('5,000원 후원 감사합니다!');

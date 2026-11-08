@@ -1,3 +1,4 @@
+import {annualFloor} from '../src/gyuwon-annual-progress.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -15,7 +16,7 @@ const game=(year=1)=>{
 test('five short exam rounds are nonviolent',()=>{
  const g=game(1),e=g.gyuwon.years;
  g.player.x=21;g.player.z=19;g.boss.x=-3;g.boss.z=-2;
- e.cast=null;e.recover=0;e.season=48;e.signatureUsed=true;
+ e.cast=null;e.recover=0;g.boss.hp=annualFloor(g);e.season=48;e.signatureUsed=true;
  stepGyuwon(g,.03);assert.equal(e.mode,'exam');
  for(let i=0;i<5;i++){
   assert.equal(e.subject,i);assert.equal(g.gyuwon.hazards.length,0);

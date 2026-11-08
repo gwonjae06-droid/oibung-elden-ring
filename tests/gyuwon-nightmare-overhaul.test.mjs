@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createGyuwonGame,damageGyuwon,stepGyuwon,actGyuwon,strikeGyuwonWard} from '../src/gyuwon-combat.mjs';
-import {annualFloor,annualBudget,applyAnnualCarry,annualDisplay} from '../src/gyuwon-annual-progress.mjs';
+import {annualFloor,annualBudget,applyAnnualCarry,annualDisplay,syncAnnualHealth} from '../src/gyuwon-annual-progress.mjs';
 import {startGyuwonYearCast,resolveGyuwonExamGrade,GYUWON_YEAR_SECONDS,gyuwonMapInterval} from '../src/gyuwon-years.mjs';
 import {GYUWON_YEAR_SIGNATURES} from '../src/gyuwon-year-signatures.mjs';
 import {resolveAnnualProjectileCover} from '../src/gyuwon-nightmare-mechanics.mjs';
@@ -14,17 +14,17 @@ import {bossTrack} from '../src/boss-tracks.mjs';
 const make=(year=1,weapon='sword')=>{const g=createGyuwonGame(weapon,{yearMode:true,seed:811});g.gyuwon.years.year=year;g.player.invuln=1e7;return g;};
 const advance=(g,t)=>{for(let i=0;i<Math.ceil(t*60);i++)stepGyuwon(g,1/60);};
 
-test('unlimited damage cannot skip any annual signature or kill through the last answer',()=>{
+test('HP milestones preserve the eleven years without forcing signatures or a last-answer wait',()=>{
  for(const weapon of ['sword','hammer','bow','cards']){
   const g=make(1,weapon),seen=new Set();
   for(let i=0;i<45000&&g.status==='playing';i++){
    damageGyuwon(g,1e6);stepGyuwon(g,.025);
    for(const e of g.events)if(e.type==='gyuwon-warning')seen.add(e.pattern?.slice(5));
    g.events.length=0;
-   if(!g.gyuwon.years.endingUnlocked)assert.ok(g.boss.hp>0);
+   if(g.gyuwon.years.year<11)assert.ok(g.boss.hp>0);
   }
   assert.equal(g.status,'won',weapon);assert.equal(g.gyuwon.years.year,11);
-  for(const id of Object.values(GYUWON_YEAR_SIGNATURES))assert.ok(seen.has(id),weapon+'/'+id);
+  assert.ok(!g.gyuwon.years.endingUnlocked,'burst damage may win without waiting for the finale');
  }
 });
 
@@ -43,11 +43,11 @@ test('ordinary weapon actions, ammo and stamina keep advancing all eleven years'
    if(g.gyuwon.years.year>=12)break;
   }
   assert.equal(years.has(11),true,weapon);assert.ok(g.stats.hits>30,weapon);
-  for(const id of Object.values(GYUWON_YEAR_SIGNATURES))assert.ok(signatures.has(id),weapon+'/'+id);
+  assert.ok(years.has(5)&&years.has(8),weapon+' must progress through the weapon years');
  }}finally{Math.random=random;}
 });
 
-test('annual HP floor converts overflow to visibly faster D-day instead of immunity',()=>{
+test('annual HP threshold is complete without requiring extra clock-pressure hits',()=>{
  const g=make(),max=g.boss.maxHp,e=g.gyuwon.years,budget=annualBudget(g);
  const first=damageGyuwon(g,max*100),dayAfterFirst=e.day;
  assert.equal(g.boss.hp,annualFloor(g));
@@ -56,20 +56,20 @@ test('annual HP floor converts overflow to visibly faster D-day instead of immun
  assert.ok(dayAfterFirst<365&&e.season>0,'a heavy hit visibly advances the day counter');
  const after=damageGyuwon(g,120),dayAfterSecond=e.day;
  assert.equal(after,0,'HP damage stays zero while the calendar moves');
- assert.ok(dayAfterSecond<dayAfterFirst,'extra hits advance the actual displayed time');
+ assert.equal(dayAfterSecond,dayAfterFirst,'extra hits cannot manufacture HP progress');
  assert.equal(g.boss.hp,annualFloor(g),'the next year is still protected');
  assert.equal(e.damageBank,budget*.5,'overflow is not banked twice');
  g.gyuwon.years.year=2;
  const before=g.boss.hp,spent=applyAnnualCarry(g);
  assert.ok(Math.abs(before-g.boss.hp-spent)<1e-9);assert.equal(applyAnnualCarry(g),0);
 });
-test('normal hits, dots and eleventh-year clock distortion obey the pressure rules',()=>{
+test('normal hits and DoT use identical actual HP progress without clock distortion',()=>{
  const game=make(),e=game.gyuwon.years;
  assert.equal(e.season,0);
  damageGyuwon(game,100);assert.ok(e.season>0&&e.day<365,'normal hits move the calendar');
  const normalAdvance=e.season;
  const dots=make();damageGyuwon(dots,100,null,{dot:true});
- assert.ok(dots.gyuwon.years.season>0&&dots.gyuwon.years.season<normalAdvance,'DoT pressure is smaller');
+ assert.equal(dots.gyuwon.years.season,normalAdvance,'equal HP damage means equal progress');
  const last=make(11);last.gyuwon.years.season=0;last.gyuwon.years.day=365;
  assert.equal(annualDisplay(last).day,365);
  damageGyuwon(last,100);
@@ -91,7 +91,7 @@ test('memory time accumulates during attacks and switches only after the live ca
 test('exam countdown is shorter and has no incoming attacks',()=>{
  const g=make(),e=g.gyuwon.years;
  g.boss.x=0;g.boss.z=0;g.player.x=0;g.player.z=25;
- e.season=GYUWON_YEAR_SECONDS;e.signatureUsed=true;e.recover=0;
+ g.boss.hp=annualFloor(g);e.season=48;e.signatureUsed=true;e.recover=0;
  stepGyuwon(g,.025);assert.equal(e.mode,'exam');
  assert.equal(g.gyuwon.hazards.length,0);advance(g,1.1);
  assert.equal(e.subject,1);assert.equal(g.gyuwon.hazards.length,0);
@@ -213,15 +213,12 @@ test('successful and normal exam HP gains persist unchanged into the next year',
 test('calendar pressure is visible but cannot become fake player DPS or weapon healing',()=>{
  const g=make(1,'cards'),e=g.gyuwon.years;
  g.boss.hp=annualFloor(g);e.damageBank=annualBudget(g)*.5;
- const day=e.day;
+ syncAnnualHealth(g);const day=e.day;
  assert.equal(g.applyBonusDamage(80),0);
  assert.equal(g.stats.damage,0);assert.equal(g.stats.hits,0);
- assert.ok(e.day<day&&g.events.some(q=>q.type==='gyuwon-calendar-hit'));
+ assert.equal(e.day,day,'overflow does not change an HP-based display');
  assert.ok(!g.events.some(q=>q.type==='boss-hit'));
- g.events.length=0;e.recover=5;g.player.z=g.boss.z+2;
- assert.ok(actGyuwon(g,'light'));
- advance(g,.85);
- assert.equal(g.stats.damage,0,'the HP bar did not move so damage stats must not rise');
- assert.ok(g.stats.hits>=1,'landed weapon contact still counts as a hit');
- assert.equal(g.boss.hp,annualFloor(g));
+ stepGyuwon(g,.025);assert.equal(e.mode,'exam','HP completion enters the exam without extra attacks');
+ assert.equal(g.stats.damage,0);
+
 });

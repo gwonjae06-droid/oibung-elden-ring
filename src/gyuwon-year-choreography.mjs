@@ -119,10 +119,10 @@ export function gyuwonWeaponPose(e,hazards=[]){
  const id=e?.mode==='combat'?e.cast:null,t=e?.castT||0;
  const rifle=id==='sniper'||id==='crossfire'&&t<3.65||id==='ultimateMarksman'||id==='nightmare365'&&t>=4.25&&t<5.9;
  const dual=id==='ultimateMarksman';
- const bow=dual||id==='archery'||id==='crossfire'&&t>=3.65;
+ const bow=dual||e?.year===7&&e?.mode==='combat'||id==='archery'||id==='crossfire'&&t>=3.65;
  const cigarette=id==='smoke';
  const bulletShots=hazards.filter(h=>h.visual==='year-bullet');
- const arrowShots=hazards.filter(h=>h.visual==='year-arrow');
+ const arrowShots=hazards.filter(h=>h.visual==='year-arrow'||h.visual==='arsenal-arrow'||h.visual==='arsenal-falling-arrow');
  const latestRifle=bulletShots.findLast(h=>h.age>=h.warn);
  const nextArrow=arrowShots.find(h=>h.age<h.warn);
  const latestArrow=arrowShots.findLast(h=>h.age>=h.warn);
@@ -133,7 +133,7 @@ export function gyuwonWeaponPose(e,hazards=[]){
  // the rifle hand does not teleport across to its string.
  const recoil=sinceRifle>=0&&sinceRifle<.24?Math.sin(Math.PI*sinceRifle/.24):0;
  const draw=bow&&nextArrow?smooth(1-(nextArrow.warn-nextArrow.age)/.38):0;
- return {rifle,bow,dual,cigarette,recoil,draw,
+ return {rifle,bow,dual,cigarette,recoil,draw,arsenal:e?.mode==='combat'?({5:'hammer',6:'sword',7:'bow',8:'cards'})[e?.year]:undefined,
   nocked:bow&&!dual&&!!nextArrow&&sinceArrow>.10,
   autoNocked:dual&&!!nextArrow};
 }
