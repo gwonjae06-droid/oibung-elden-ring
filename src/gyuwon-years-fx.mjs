@@ -102,16 +102,27 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const bookPiles=new THREE.Group();bookPiles.name='gyuwon-bookfall-stacks';root.add(bookPiles);
  const piles=[],piled=new Set();let activePileYear=0;
  const dollRoot=new THREE.Group();dollRoot.name='gyuwon-figurines-and-photocards';root.add(dollRoot);
+ const skirtGeometry=geo(new THREE.ConeGeometry(.79,1.35,coarse?16:32,3));
+ const dollHat=geo(new THREE.TorusGeometry(.48,.11,coarse?8:12,coarse?16:32));
  for(let i=0;i<6;i++){
-  const angle=i*Math.PI/3,fig=new THREE.Group();fig.position.set(Math.sin(angle)*13,0,Math.cos(angle)*13);
-  dollRoot.add(fig);mobiles.push(fig);
+  const angle=i*Math.PI/3,fig=new THREE.Group();
+  fig.position.set(Math.sin(angle)*14,0,Math.cos(angle)*14);
+  fig.userData.index=i;dollRoot.add(fig);mobiles.push(fig);
+  const suit=dollOutfits[i];
   mesh(fig,cylinder,steel,0,.12,0,1.3,.25,1.3);
-  mesh(fig,cylinder,purple,0,1.05,0,.7,1.25,.7);
-  mesh(fig,sphere,paper,0,2,0,.82,.86,.75);
-  const hair=mesh(fig,sphere,graphite,0,2.26,-.13,.84,.48,.8);
-  for(const sign of [-1,1]){
-   mesh(fig,cylinder,purple,sign*.75,1.1,0,.18,1.05,.18).rotation.z=sign*.3;
+  mesh(fig,skirtGeometry,suit,0,1.18,0,1,1,1,'gyuwon-figurine-dress-skirt');
+  mesh(fig,cylinder,suit,0,1.73,0,.54,.72,.54,'gyuwon-figurine-bodice');
+  mesh(fig,sphere,wax,0,2.39,0,.77,.89,.75,'gyuwon-figurine-face');
+  mesh(fig,sphere,graphite,0,2.73,-.13,.84,.48,.8,'gyuwon-figurine-sculpted-hair');
+  mesh(fig,dollHat,purple,0,2.82,.06,1,1,1,'gyuwon-figurine-headpiece').rotation.x=.34;
+  for(const side of [-1,1]){
+   const arm=mesh(fig,cylinder,wax,side*.72,1.66,0,.19,.88,.19,'gyuwon-figurine-pose-arm');
+   arm.rotation.z=side*.35;
+   mesh(fig,cylinder,purple,side*.27,.52,0,.19,.65,.19,'gyuwon-figurine-stockings');
+   mesh(fig,sphere,graphite,side*.19,2.42,.60,.075,.11,.04,'gyuwon-figurine-anime-eye');
+   mesh(fig,sphere,purple,side*.42,2.95,-.11,.21,.26,.23,'gyuwon-figurine-hair-bow');
   }
+  fig.scale.setScalar(coarse?.82:1);
  }
  const tentacleRoot=new THREE.Group();tentacleRoot.name='gyuwon-eight-octopus-arms';root.add(tentacleRoot);
  const tentacles=[];const stages=coarse?4:7;
@@ -247,7 +258,18 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
   if(bodyslime.visible)for(let i=0;i<gameParts.length;i++){
    gameParts[i].scale.y=.5+.3*Math.sin(g.time*4+i);
   }
-  if(dollRoot.visible)mobiles.forEach((fig,i)=>{fig.rotation.y=g.time*.62+i;fig.position.y=.15*Math.sin(g.time*3+i)});
+  if(dollRoot.visible)mobiles.forEach((fig,i)=>{
+    const a=i*Math.PI/3,h=s.hazards.find(x=>x.visual==='year-figure'&&Math.abs(x.x-Math.sin(a)*14)<.1&&Math.abs(x.z-Math.cos(a)*14)<.1);
+    fig.position.set(Math.sin(a)*14,0,Math.cos(a)*14);
+    if(h){
+     const ready=Math.min(1,h.age/Math.max(.1,h.warn));
+     // The model itself falls and contacts the identical center as the hit.
+     fig.position.y=6*(1-ready)+(h.age>=h.warn?-.15*Math.sin(Math.min(1,(h.age-h.warn)/.35)*Math.PI):0);
+     fig.rotation.y=i*.3+(1-ready)*.75;
+    }else{
+     fig.position.y=.14*Math.sin(g.time*2.5+i);fig.rotation.y=g.time*.30+i*.20;
+    }
+   });
   if(tentacleRoot.visible){
    let cup=0;
    for(let i=0;i<8;i++){
