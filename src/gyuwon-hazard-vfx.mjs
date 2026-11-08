@@ -72,52 +72,45 @@ export const gyuwonHazardFootprint=h=>h?.shape==='wave'?null:bloodHazardFootprin
 
 // Every fragment is upright and irregular. Its base touches the floor and its tip rises BEFORE the
 // hit, like lifting stone, pages or broken glass. lang picks the body: page, crystal, ember or plain.
+// Each visible hazard boundary is made from ROUND-TOPPED solid fragments,
+// never single triangular planes or tapered three-sided spires.
+// The rock's 8/10-sided perimeter consists of flat quadrilateral side faces
+// and horizontal caps; triangulation is solely an internal GPU representation.
+// The centers are sampled from exactly the authoritative collision footprint.
 function fragments(h,f,coarse=false,lang='plain'){
- const points=[];
+ const points=[],sides=coarse?8:10;
  const add=(x,z,tx,tz,i,variation=0)=>{
-  const len=(coarse?.36:.44)+(i%4)*.10;
-  const height=.38+(i%7)*.14+variation;
-  const off=(i%3-1)*.07;
-  const y0=.025;
-  if(lang==='page'){
-   const w=len*1.1,hh=height*.95,lean=(i%5-2)*.06;
-   const ax=x-tx*w,az=z-tz*w,bx=x+tx*w,bz=z+tz*w;
-   const cx=ax-tz*lean,cz=az+tx*lean,dx=bx-tz*lean,dz=bz+tx*lean;
-   points.push(ax,y0,az, bx,y0,bz, dx,hh,dz, ax,y0,az, dx,hh,dz, cx,hh*.92,cz);
-  }else if(lang==='crystal'){
-   const l=len*.55,hh=height*1.5;
-   points.push(
-    x-tx*l,y0,z-tz*l, x+tx*l,y0,z+tz*l, x+tx*off,hh,z+tz*off,
-    x+tz*l,y0,z-tx*l, x-tz*l,y0,z+tx*l, x+tx*off,hh,z+tz*off
-   );
-  }else if(lang==='ember'){
-   const r=len*.8,ap=height*1.35;
-   const p0x=x+tx*r,p0z=z+tz*r;
-   const p1x=x-tx*r*.5-tz*r*.87,p1z=z-tz*r*.5+tx*r*.87;
-   const p2x=x-tx*r*.5+tz*r*.87,p2z=z-tz*r*.5-tx*r*.87;
-   const ax=x+off,az=z+off;
-   points.push(
-    p0x,y0,p0z, p1x,y0,p1z, ax,ap,az,
-    p1x,y0,p1z, p2x,y0,p2z, ax,ap,az,
-    p2x,y0,p2z, p0x,y0,p0z, ax,ap,az
-   );
-  }else{
-   points.push(
-    x-tx*len, y0, z-tz*len,
-    x+tx*len, y0, z+tz*len,
-    x+tx*off, height, z+tz*off
-   );
+  const radius=(coarse?.20:.24)+(i%4)*.038;
+  const height=.33+(i%7)*.13+variation;
+  const elongate=lang==='page'?1.85:lang==='crystal'?1.18:1.0;
+  const width=lang==='page'?.48:lang==='ember'?1.13:1.0;
+  const topWidth=lang==='page'?.88:.73;
+  const y0=.025,top=y0+height*(lang==='crystal'?1.3:1);
+  const firstAngle=Math.atan2(tz,tx);
+  const point=(k,y,taper)=>{
+   const angle=firstAngle+2*Math.PI*k/sides;
+   const forward=Math.cos(angle)*radius*elongate*taper;
+   const aside=Math.sin(angle)*radius*width*taper;
+   return [x+tx*forward-tz*aside,y,z+tz*forward+tx*aside];
+  };
+  // Openly rectangular/rounded natural stone silhouette, not a triangular cue.
+  const centreBottom=[x,y0,z],centreTop=[x,top,z];
+  for(let j=0;j<sides;j++){
+   const a=point(j,y0,1),b=point(j+1,y0,1),
+    c=point(j,top,topWidth),d=point(j+1,top,topWidth);
+   points.push(...a,...b,...c,...b,...d,...c);
+   points.push(...centreBottom,...b,...a);
+   points.push(...centreTop,...c,...d);
   }
  };
  if(f.kind===1||f.kind===2){
   const rings=f.kind===2?[Math.max(.12,f.r-f.halfWidth),f.r+f.halfWidth]:[f.r];
-  const count=coarse?12:20;
+  const count=coarse?10:16;
   rings.forEach((r,k)=>{for(let i=0;i<count;i++){
-   const a=(i+(k?.42:0))*Math.PI*2/count,si=Math.sin(a),co=Math.cos(a);
-   add(si*r,co*r,co,-si,i+k*3,k*.09);
+   const a=(i+(k?.42:0))*Math.PI*2/count;
+   add(Math.sin(a)*r,Math.cos(a)*r,Math.cos(a),-Math.sin(a),i+k*3,k*.09);
   }});
  }else if(f.kind===3){
-  // Local z is the lane axis; rotation.y follows the exact collision yaw.
   const length=Math.max(.1,f.halfLength),count=coarse?9:15;
   for(const side of [-1,1])for(let i=0;i<count;i++){
    const z=-length+2*length*(i+.35)/(count+.7);
@@ -128,10 +121,12 @@ function fragments(h,f,coarse=false,lang='plain'){
    add(x,side*length,1,0,j+(side+1)*4,.03);
   }
  }else if(f.kind===4){
+  // Curved smoke attacks still reference the actual sector boundaries, but
+  // this renderer draws only natural rock fragments, never a sector surface.
   const count=coarse?10:18,r=Math.max(.2,f.r);
   for(let i=0;i<=count;i++){
-   const angle=-f.arc+2*f.arc*i/count,si=Math.sin(angle),co=Math.cos(angle);
-   add(si*r,co*r,co,-si,i,.15);
+   const a=-f.arc+2*f.arc*i/count;
+   add(Math.sin(a)*r,Math.cos(a)*r,Math.cos(a),-Math.sin(a),i,.15);
   }
   for(const side of [-1,1])for(let j=0;j<9;j++){
    const rj=f.inner+(r-f.inner)*(j+.4)/9,a=side*f.arc;
@@ -154,6 +149,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse,lang),3));
   geo.computeVertexNormals();
+  geo.userData.silhouette='capped-rounded-stone-no-triangle-warnings';
   const material=new THREE.MeshPhysicalMaterial({
    color:COLOR[pattern]||0x9c9ca5,roughness:.62,metalness:.14,
    emissive:COLOR[pattern]||0x9c9ca5,emissiveIntensity:.12,
@@ -169,6 +165,7 @@ export function createGyuwonHazardFx(stage,{coarse=false}={}){
   const geo=new THREE.BufferGeometry();
   geo.setAttribute('position',new THREE.BufferAttribute(fragments(h,f,coarse,'crystal'),3));
   geo.computeVertexNormals();
+  geo.userData.silhouette='capped-rounded-stone-no-triangle-warnings';
   const material=new THREE.MeshPhysicalMaterial({
    color:CORRIDOR_COLOR,roughness:.6,metalness:.1,emissive:CORRIDOR_COLOR,emissiveIntensity:.12,
    side:THREE.DoubleSide,transparent:true,opacity:.1,depthWrite:false
