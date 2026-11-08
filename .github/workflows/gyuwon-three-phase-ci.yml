@@ -5,6 +5,9 @@ on:
       - 'src/gyuwon-combat.mjs'
       - 'src/gyuwon-motion.mjs'
       - 'src/gyuwon-view.mjs'
+      - 'src/gyuwon-exam.mjs'
+      - 'src/gyuwon-exam-view.mjs'
+      - 'tests/gyuwon-exam.test.mjs'
       - 'tests/gyuwon-choreography.test.mjs'
       - '.github/workflows/gyuwon-three-phase-ci.yml'
   workflow_dispatch:
@@ -26,10 +29,14 @@ jobs:
           node --check src/gyuwon-combat.mjs
           node --check src/gyuwon-motion.mjs
           node --check src/gyuwon-view.mjs
+          node --check src/gyuwon-exam.mjs
+          node --check src/gyuwon-exam-view.mjs
+          node --check tests/gyuwon-exam.test.mjs
           node --check tests/gyuwon-choreography.test.mjs
       - name: Verify three-phase patterns, motion, damage and memory framing
         run: |
           node --test \
+            tests/gyuwon-exam.test.mjs \
             tests/gyuwon-choreography.test.mjs \
             tests/gyuwon.test.mjs \
             tests/gyuwon-pattern-exposure.test.mjs \
