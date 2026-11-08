@@ -55,6 +55,7 @@ jobs:
       - name: Check D-day, exams, grade odds, hitboxes and old boss regressions
         run: |
           node --test \
+            tests/gyuwon-player-projectiles.test.mjs \
             tests/gyuwon-years.test.mjs \
             tests/gyuwon-year-production.test.mjs \
             tests/gyuwon-marksman-dual.test.mjs \

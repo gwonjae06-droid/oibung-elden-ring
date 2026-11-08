@@ -70,7 +70,7 @@ export function tickWeaponBurn(game,dt){
 }
 export function launchHammer(game,action){
  const p=game.player,rank=evolutionCount(game,'blood-hammer');
- game.projectiles.push({id:game.nextId++,kind:'hammer-throw',x:p.x,z:p.z,y:1.5,yaw:action.yaw,
+ game.projectiles.push({id:game.nextId++,kind:'hammer-throw',x:p.x,z:p.z,y:1.5+(p.floorY||0),yaw:action.yaw,
   speed:21,life:3.3,damage:WEAPONS.hammer.damage*(rank>=2?1.2:1),
   poise:WEAPONS.hammer.poise*HAMMER_THROW_POISE,
   maxRange:18,travel:0,returning:false,returningHammer:true,

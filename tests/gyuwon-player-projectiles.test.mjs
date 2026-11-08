@@ -62,8 +62,12 @@ test('Gyuwon renderer supports returning hammer and lit bow variants as physical
  const scene=new THREE.Scene(),view=createPlayerProjectileView(scene);
  try{
   const g=createGyuwonGame('hammer',{yearMode:true});
-  g.projectiles.push({id:1,kind:'hammer-throw',x:0,z:8,y:1.5,yaw:0,life:2,
-   returningHammer:true,returning:false,travel:0,maxRange:18,speed:21});
+  g.player.floorY=1.7;g.evolutions=['blood-hammer'];
+  assert.equal(actGyuwon(g,'skill'),true,'real returning-hammer skill must activate');
+  tickPlayerAction(g,.26,WEAPONS.hammer);
+  assert.equal(g.projectiles.length,1);
+  assert.equal(g.projectiles[0].kind,'hammer-throw');
+  assert.equal(g.projectiles[0].y,3.2,'hammer flies above the folded floor');
   view.update(g);
   assert.equal(view.stats().active,1);
   assert.equal(view.root.children[0].name,'player-returning-hammer');

@@ -56,7 +56,7 @@ export function tickPlayerAction(game,dt,weapon,{roll=()=>{},backstep=()=>{},mel
     if(rank){
      spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*(rank>=2?.9:.6)},{basicLifetime:1.3});
      const q=game.projectiles.at(-1);
-     q.kind='wave';q.speed=24;q.y=1.2;
+     q.kind='wave';q.speed=24;q.y=1.2+(game.player.floorY||0);
     }
    }
   }
