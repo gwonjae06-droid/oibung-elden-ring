@@ -75,7 +75,7 @@ export function rideFrame(pose){
 function lockRideTarget(prep,target){
  const rush=prep.rush,escape=prep.escape,from=rush.from;
  const yaw=Math.atan2(target.x-from.x,target.z-from.z),dx=Math.sin(yaw),dz=Math.cos(yaw),dot=from.x*dx+from.z*dz;
- const distance=Math.max(0,-dot+Math.sqrt(Math.max(0,dot*dot+25*25-from.x*from.x-from.z*from.z)));
+ const distance=Math.max(0,-dot+Math.sqrt(Math.max(0,dot*dot+28*28-from.x*from.x-from.z*from.z)));
  rush.to={x:from.x+dx*distance,z:from.z+dz*distance};prep.aimYaw=yaw;
  escape.from={...rush.to};escape.curve[0]={...rush.to};
  prep.target={x:target.x,z:target.z};

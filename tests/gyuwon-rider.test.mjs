@@ -48,6 +48,15 @@ test('standing on the warned line is hit once while a sideways escape avoids the
  }
 });
 
+test('a player outside the cruising circle can still be reached by the committed rush',()=>{
+ for(const id of ['bike','scooter'])for(const x of [-28.8,28.8]){
+  const g=fixture(id),e=g.gyuwon.years,prep=e.rideTrack.find(s=>s.stage==='windup');
+  g.player.x=x;g.player.z=0;until(g,prep.start+.01);g.player.invuln=0;const hp=g.player.hp;
+  until(g,prep.rush.end+.01);assert.ok(g.player.hp<hp,'perimeter parking must not nullify the attack');
+  assert.ok(Math.hypot(prep.rush.to.x,prep.rush.to.z)<=28.001,'the vehicle stays inside the actual arena');
+ }
+});
+
 test('the rider, spinning wheels and raised vehicle share a rear-axle transform and reset after dismount',()=>{
  for(const id of ['bike','scooter']){
   const g=fixture(id),e=g.gyuwon.years,scene=new THREE.Group(),actor=createGyuwonActor(scene,{coarse:true}),fx=createGyuwonYearsFx(scene,{coarse:true});

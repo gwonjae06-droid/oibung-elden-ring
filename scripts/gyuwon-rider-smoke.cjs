@@ -39,7 +39,7 @@ const {chromium}=require('playwright-core');
      await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
      return {id:e.cast,stage,pose:ridePose(e),time:g.time,diagnostics:s.diagnostics()};
     },stage);
-    assert.ok(report.pose);assert.ok(Math.hypot(report.pose.x,report.pose.z)<=27.1);
+    assert.ok(report.pose);assert.ok(Math.hypot(report.pose.x,report.pose.z)<=28.1);
     if(stage==='windup')assert.ok(report.pose.wheelie>.35);
     reports.push(report);await page.screenshot({path:path.join(out,id+'-'+stage+'.png')});
    }
