@@ -68,7 +68,7 @@ try{
   const s=window.__seraphSession(),g=s.game;
   skipBloodTransition(g);stepBlood(g,.03);
   if(g.boss.state!=='recovery')throw Error('3P cinematic did not complete');
-  if(!startBloodPattern(g,'seraphWings'))throw Error('3P first wing pattern unavailable');
+  if(!startBloodPattern(g,'seraphWingCross'))throw Error('3P wing-wheel pattern unavailable');
   return {phase:g.boss.phase,pattern:g.blood.pattern,warnings:g.blood.hazards.map(h=>h.warn)};
  });
  await page.waitForFunction(()=>{
@@ -81,7 +81,7 @@ try{
    pattern:s.game.blood.pattern,phaseLabel:root.getElementById('phase-label')?.textContent};
  });
  assert.equal(live.phase,3);
- assert.equal(live.pattern,'seraphWings');
+ assert.equal(live.pattern,'seraphWingCross');
  assert.equal(live.view.seraph.visible,true);
  assert.ok(live.view.hazards>=3);
  assert.match(live.phaseLabel,/세 번째/);
@@ -92,7 +92,7 @@ try{
   const {stepBlood,startBloodPattern}=await import('./src/blood-combat.mjs');
   const g=window.__seraphSession().game;
   g.boss.state='recovery';g.blood.hazards.length=0;
-  if(!startBloodPattern(g,'seraphGaze'))throw Error('eye phase pattern unavailable');
+  if(!startBloodPattern(g,'seraphSweep'))throw Error('face sweep pattern unavailable');
   const first=g.blood.hazards[0].warn;
   for(let left=first+.08;left>1e-7;left-=.04)stepBlood(g,Math.min(.04,left));
   return {pattern:g.blood.pattern,warn:first,phase:g.boss.phase};

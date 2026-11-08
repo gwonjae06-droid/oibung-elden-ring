@@ -73,14 +73,14 @@ test('Blood King keeps original total health and enters true third phase at 25%'
  assert.equal(g.boss.maxHp,max);
  assert.ok(g.events.filter(e=>e.type==='phase').length===2);
 });
-test('distinct 3P wing, heart, lance, halo and last hymn attacks are all telegraphed and finite',()=>{
- const patterns=['seraphWings','seraphPulse','seraphLances','seraphCrown',
-  'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale'];
+test('six NEW Seraph-only patterns and final hymn all telegraph, stay dodgeable and finish',()=>{
+ const patterns=['seraphSweep','seraphWingCross','seraphInwardPillars',
+  'seraphFrenzy','seraphHaloProcession','seraphBloodRosette','seraphFinale'];
  assert.deepEqual(bloodPool(3),patterns);
  for(const id of patterns){
   const g=p3(),spec=BLOOD_PATTERNS[id];
   assert.ok(startBloodPattern(g,id),id);
-  assert.ok(g.blood.hazards.length>=3,id);
+  assert.ok(g.blood.hazards.length>=1,id);
   assert.ok(g.blood.hazards.every(h=>h.warn>=1&&h.damage>0),id);
   assert.equal(!!spec.air,false,'phase three cannot kite players in the air: '+id);
   for(let t=0;t<spec.duration;t+=.25){
@@ -117,19 +117,19 @@ test('finale is selected on low HP without looping or reintroducing healing',()=
  assert.equal(g.boss.hp,hp,'phase-three healing must be disabled');
  assert.equal(g.blood.siphon.heals,0);
 });
-test('3P pattern shuffler exhausts eight UNIQUE attacks before repeating, reserving last hymn',()=>{
+test('3P pattern shuffler exhausts six UNIQUE non-legacy attacks before repeating, reserving last hymn',()=>{
  const deck=createBloodPatternDeck(473),expected=bloodPool(3).filter(p=>p!=='seraphFinale');
  let previous=null;
  for(let cycle=0;cycle<5;cycle++){
   const picks=Array.from({length:expected.length},()=>nextBloodPattern(deck,3));
   assert.deepEqual(picks.slice().sort(),expected.slice().sort());
   assert.ok(!picks.includes('seraphFinale'));
-  if(cycle===0)assert.deepEqual(picks.slice(0,2),['seraphWings','seraphGaze']);
+  if(cycle===0)assert.deepEqual(picks.slice(0,2),['seraphSweep','seraphWingCross']);
   if(previous)assert.notEqual(picks[0],previous,'avoid back-to-back duplicates across deck boundaries');
   previous=picks.at(-1);
  }
 });
-test('colossal angel rig consists of six 3D feather joints and a real eye, and disposes cleanly',()=>{
+test('colossal Blood Seraph uses sculpted Baeseojun photo-face and six independent wing joints',()=>{
  const scene=new THREE.Scene(),seraph=createBloodSeraph(scene,{coarse:true,reduced:true});
  const first=seraph.stats();
  assert.equal(first.decorativeOnly,false,'the angel itself must be the combat model');
@@ -139,8 +139,13 @@ test('colossal angel rig consists of six 3D feather joints and a real eye, and d
  assert.equal(first.haloRings,3);
  assert.ok(first.featherInstances>=60);
  assert.equal(first.damageSources,0);
- assert.ok(scene.getObjectByName('blood-seraph-eye-pupil')?.isMesh);
- assert.ok(scene.getObjectByName('blood-seraph-crimson-iris')?.isMesh);
+ assert.equal(first.hasFace,true);
+ assert.equal(first.hasEye,false);
+ assert.equal(first.photoAsset,'assets/baeseojun.png');
+ assert.ok(scene.getObjectByName('blood-seraph-baeseojun-photo-visage')?.isGroup);
+ assert.ok(scene.getObjectByName('baeseojun-sculpted-head')?.isMesh);
+ assert.equal(scene.getObjectByName('blood-seraph-eye-pupil'),undefined);
+ assert.ok(scene.getObjectByName('blood-seraph-sacred-face-ring')?.isMesh);
  const wings=[];scene.traverse(o=>{if(o.isInstancedMesh&&o.name.includes('blood-seraph-layered-feathers'))wings.push(o);});
  assert.equal(wings.length,6);
  const g=p3();g.boss.state='transition';g.blood.t=3.75;
@@ -155,23 +160,23 @@ test('colossal angel rig consists of six 3D feather joints and a real eye, and d
 test('real cathedral draws 3P warnings, hands and eye without creating hitboxes in the apparition',()=>{
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true,reduced:true}),g=p3();
  try{
-  assert.ok(startBloodPattern(g,'seraphWings'));
+  assert.ok(startBloodPattern(g,'seraphSweep'));
   view.update(g,.025);
   assert.equal(view.stats().seraph.visible,true);
   assert.ok(view.stats().seraph.featherInstances>=60);
-  assert.ok(view.stats().hazards>=3);
+  assert.ok(view.stats().hazards>=1);
   const floor=scene.getObjectByName('blood-hazard-dark-and-safe-liquid');
   assert.ok(floor?.visible,'new patterns need visible geometry for their exact footprints');
   assert.equal(scene.getObjectByName('blood-third-phase-crimson-seraph').userData.decorativeOnly,false);
   assert.equal(view.root.visible,false,'the old 2P humanoid MUST be hidden in phase three');
   assert.ok(bloodHurtShapes(g).every(h=>h.id.startsWith('seraph-')));
   assert.equal(bloodAimPart(g).id,'seraph-chest');
-  for(const id of ['seraphPulse','seraphLances','seraphCrown',
-   'seraphGaze','seraphFeathers','seraphEmbrace','seraphDescent','seraphFinale']){
+  for(const id of ['seraphWingCross','seraphInwardPillars','seraphFrenzy',
+   'seraphHaloProcession','seraphBloodRosette','seraphFinale']){
    g.boss.state='recovery';g.blood.hazards.length=0;
    assert.ok(startBloodPattern(g,id));
    view.update(g,.025);
-   assert.ok(view.stats().hazards>=3,id);
+   assert.ok(view.stats().hazards>=1,id);
   }
  }finally{view.dispose();}
 });
@@ -215,13 +220,13 @@ test('seraph lower robe is targetable at ground height; its eye owns the upper l
 test('eye laser uses each real impact clock and is invisible in safe windup and recovery',()=>{
  const scene=new THREE.Scene(),view=buildBloodView(scene,{coarse:true,reduced:true}),g=p3();
  try{
-  assert.ok(startBloodPattern(g,'seraphGaze'));
+  assert.ok(startBloodPattern(g,'seraphSweep'));
   view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,false);
   const warning=g.blood.hazards[0].warn;
   advance(g,warning+.04);view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,true);
-  advance(g,.62);view.update(g,.025);
+  advance(g,3.3);view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,false);
   const first=g.blood.hazards[0];
   assert.equal(first.shape,'lane');

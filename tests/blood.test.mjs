@@ -6,8 +6,8 @@ import {freshProfile,loadProfile,newRun,finishAttempt,advanceJourney} from '../s
 import {createEncounterStore} from '../src/encounter-state.mjs';
 import {score} from '../src/boss-score.mjs';
 const advance=(g,seconds,input={})=>{for(let t=0;t<seconds-1e-8;t+=.01)stepBlood(g,.01,input);};
-test('all thirty-six patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
- assert.equal(bloodPool(1).length,13);assert.equal(bloodPool(2).length,14);assert.equal(bloodPool(3).length,9);
+test('all forty-two patterns have warnings, bounded shapes, a safe point and melee recovery',()=>{
+ assert.equal(bloodPool(1).length,13);assert.equal(bloodPool(2).length,14);assert.equal(bloodPool(3).length,7);
  for(const[id,spec]of Object.entries(BLOOD_PATTERNS)){
   const g=createBloodGame();g.boss.phase=spec.phase;g.player.x=8;g.player.z=8;g.player.hp=g.player.maxHp=1e6;
   assert.ok(startBloodPattern(g,id));assert.ok(g.blood.hazards.length);assert.ok(g.blood.hazards.every(h=>h.warn>=.6));
