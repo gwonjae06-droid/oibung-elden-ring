@@ -223,12 +223,11 @@ test('eye laser uses each real impact clock and is invisible in safe windup and 
   assert.ok(startBloodPattern(g,'seraphSweep'));
   view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,false);
-  const warning=g.blood.hazards[0].warn;
+  const first=g.blood.hazards[0],warning=first.warn;
   advance(g,warning+.04);view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,true);
   advance(g,3.3);view.update(g,.025);
   assert.equal(view.stats().seraph.eyeRayVisible,false);
-  const first=g.blood.hazards[0];
   assert.equal(first.shape,'lane');
   assert.ok(first.damage>0);
  }finally{view.dispose();}
