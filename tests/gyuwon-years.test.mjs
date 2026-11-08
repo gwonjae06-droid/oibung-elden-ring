@@ -158,3 +158,30 @@ test('legacy engine fixtures remain isolated, while the published encounter uses
  assert.equal(modern.gyuwon.years.mode,'combat');
 });
 
+
+test('exam arrival settles delayed damage before the score and inquiry heal',()=>{
+ for(const [roll,delta] of [[.05,.05],[.5,.02]]){
+  const g=annual(),e=g.gyuwon.years;
+  g.boss.maxHp=7000;g.boss.hp=7000;
+  damageGyuwon(g,5000);
+  const bank=e.damageBank,hp=g.boss.hp;
+  assert.ok(bank>0);
+  nextExam(g);
+  assert.equal(e.mode,'exam');
+  assert.ok(Math.abs(g.boss.hp-(hp-bank))<1e-8);
+  assert.equal(e.damageBank,0,'no queued HP debt after the exam starts');
+  // Contact during the exam cannot queue a surprise debt for the next year.
+  const examHit=damageGyuwon(g,120);
+  assert.equal(examHit,60);
+  assert.equal(e.damageBank,0);
+  const beforeGrade=g.boss.hp;
+  resolveGyuwonExamGrade(g,roll);
+  assert.ok(Math.abs(g.boss.hp-(beforeGrade+7000*delta))<1e-8,
+   'the displayed success HP must rise by the full declared grade benefit');
+  const shown=g.boss.hp;
+  advance(g,3.05);
+  assert.equal(e.year,2);
+  assert.ok(Math.abs(g.boss.hp-shown)<1e-8,
+   'the next year may not withdraw part of the success healing');
+ }
+});

@@ -13,9 +13,13 @@ export const annualClockRate=g=>1+Math.min(1.4,(g.gyuwon.years.calendarDamage||0
 export function acceptAnnualDamage(g,amount,{dot=false}={}){
  const e=g.gyuwon.years,b=g.boss,budget=annualBudget(g);
  const damage=Math.max(0,Number.isFinite(amount)?amount:0);
- const health=Math.max(0,Math.min(damage,b.hp-annualFloor(g)));b.hp-=health;
- // One capped next-year carry; never grant the same overflow twice.
- const credit=e.year<11?Math.max(0,Math.min(damage-health,budget*.5-(e.damageBank||0))):0;
+ // Once the exam begins, the previous year's deferred hits are already
+ // settled. Examination-time attacks use the following year's allowance,
+ // and must not create another post-exam charge against the grade reward.
+ const floor=e.mode==='exam'?annualFloorForYear(g,e.year+1):annualFloor(g);
+ const health=Math.max(0,Math.min(damage,b.hp-floor));b.hp-=health;
+ const credit=e.mode==='combat'&&e.year<11?
+  Math.max(0,Math.min(damage-health,budget*.5-(e.damageBank||0))):0;
  e.damageBank=(e.damageBank||0)+credit;
  e.yearDamage=(e.yearDamage||0)+health+credit;
  // All real weapon hits accelerate the day counter, even after HP and bank

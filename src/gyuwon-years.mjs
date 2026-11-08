@@ -103,6 +103,9 @@ function spawnExamSubject(g,index){
 }
 function beginExam(g,emit){
  const e=g.gyuwon.years;
+ // The previous year's deferred hits are resolved BEFORE any subject reward
+ // or Suneung grade. Never silently lower the HP after announcing recovery.
+ settleAnnualCarryBeforeGrade(g);
  e.mode='exam';e.cast=null;e.subject=0;e.subjectT=0;e.day=0;
  g.boss.state='pattern';g.gyuwon.elevation=0;
  spawnExamSubject(g,0);
