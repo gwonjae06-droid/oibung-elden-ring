@@ -4,7 +4,7 @@ import {hazardPosition} from './gyuwon-data.mjs';
 // Reusable scenery/props for the D-day encounter. Never owns gameplay damage.
 // Existing battle hazards are the sole source of collision shapes and timing.
 export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
- const root=new THREE.Group();root.name='gyuwon-dday-examination-world';stage.add(root);
+ const root=new THREE.Group();root.name='gyuwon-dday-examination-world';root.visible=false;stage.add(root);
  const materials=[],geometries=[],textures=[];
  function geo(g){geometries.push(g);return g;}
  function mat(color,extra={}){const m=new THREE.MeshPhysicalMaterial({
@@ -18,6 +18,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
  const wavewater=mat(0x5d867d,{roughness:.22,metalness:.24,transparent:true,opacity:.73,side:THREE.DoubleSide});
  const purple=mat(0xb19eb9,{roughness:.29,clearcoat:.8});
  const neon=mat(0xe5bf61,{roughness:.34,emissive:0x5b351a,emissiveIntensity:.8});
+ const glyphPlane=geo(new THREE.PlaneGeometry(3.6,1.8));
  const box=geo(new THREE.BoxGeometry(1,1,1)),cylinder=geo(new THREE.CylinderGeometry(.5,.5,1,coarse?10:18)),
   sphere=geo(new THREE.SphereGeometry(.5,coarse?10:18,coarse?8:12)),
   ring=geo(new THREE.TorusGeometry(1,.09,6,coarse?18:36));
@@ -89,7 +90,7 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    limbs.push(part);
   }tentacles.push(limbs);
  }
- const dynamic=new Map();const wordTex=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
+ const dynamic=new Map();const wordTex=new Map(),wordMats=new Map();let waveId=null,waves=[],wave=null,owned=null,disposed=false;
  const portrait=["청산별곡","관동별곡","어즈버","사미인곡"];
  const glyphSets={
   'year-korean':portrait,
@@ -132,9 +133,10 @@ export function createGyuwonYearsFx(stage,{coarse=false,reduced=false}={}){
    mesh(group,box,purple,0,0,.045,1.18,1.55,.015);
   }else if(glyphSets[v]){
    const tex=wordTexture(v,h.id%4);
-   const m=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
-   if(m!==paper)materials.push(m);
-   parts.push(mesh(group,geo(new THREE.PlaneGeometry(3.6,1.8)),m,0,0,0));
+   const key=v+(h.id%4);
+   if(!wordMats.has(key)){const m=tex?new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}):paper;
+    wordMats.set(key,m);if(m!==paper)materials.push(m);}
+   parts.push(mesh(group,glyphPlane,wordMats.get(key),0,0,0));
   }else if(v==='year-figure'){
    mesh(group,sphere,purple,0,0,0,2.1,2.1,2.1);
   }else if(v==='year-fire'){
