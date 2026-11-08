@@ -19,6 +19,7 @@ on:
       - 'tests/clown-act-two-revival.test.mjs'
       - 'tests/clown-marionette-reinforcements.test.mjs'
       - 'tests/clown-troupe-independent-cadence.test.mjs'
+      - 'tests/clown-uncanny-circus.test.mjs'
       - 'scripts/clown-marionette-browser-smoke.mjs'
       - '.github/workflows/clown-act2-revival.yml'
   workflow_dispatch:

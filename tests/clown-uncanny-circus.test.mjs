@@ -26,6 +26,9 @@ for(const [id,phase,stage,minHits] of newRituals){
    stepClown(g,1/120);
    if(g.clown.punish)punish=true;
    for(const z of g.clown.zones){
+    // These assertions target the authored ringmaster ritual; independent
+    // troupe and miniature attacks have their own separate warning tests.
+    if(['troupe','troupe-melee','legacyEcho'].includes(z.source))continue;
     if(z.damage>0&&!z.visual){
      seen.set(z.id,z);
      assert.ok(z.warn>=1.30,'unwarned blow: '+id);
