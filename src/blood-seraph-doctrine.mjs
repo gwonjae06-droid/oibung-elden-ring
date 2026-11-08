@@ -13,7 +13,13 @@ const TAU=Math.PI*2;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function seraphHazardTarget(h){
  const t=Math.max(0,(h.age||0)-(h.warn||0));
- return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t};
+ if(h.seraphAngularSweep){
+  const u=clamp(t/Math.max(.01,h.life),0,1);
+  const yaw=h.yawStart+(h.yawEnd-h.yawStart)*u;
+  return {x:h.x+Math.sin(yaw)*h.length*.5,
+   z:h.z+Math.cos(yaw)*h.length*.5,yaw};
+ }
+ return {x:h.x+(h.vx||0)*t,z:h.z+(h.vz||0)*t,yaw:h.yaw};
 }
 export function seraphTelegraphRemaining(h,time=0){
  return Math.max(0,(h.warn||0)-(h.age??time));
@@ -26,8 +32,10 @@ export function spawnSeraphDoctrine(g,id,spawn){
  if(id==='seraphSweep'){
   // One long floor-to-ceiling beam: scans LEFT to RIGHT, with no instant
   // map-wide hit. The physical danger travels at precisely the beam rate.
-  spawn('lane',{x:-29,z:0,yaw:0,width:1.05,length:64,
-   vx:58/3.25,vz:0,warn:1.75,life:3.25,damage:34,seraphCue:'sweep'});
+  spawn('lane',{x:b.x,z:b.z,yaw:aim-1.45,
+   yawStart:aim-1.45,yawEnd:aim+1.45,seraphAngularSweep:true,
+   width:1.12,length:56,warn:1.75,life:3.25,
+   damage:34,seraphCue:'sweep'});
  }
  if(id==='seraphWingCross')for(let i=0;i<4;i++){
   // A separate wing halo departs the arena. Three/Four straight passes
