@@ -195,6 +195,8 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const transition=b.state==='transition';
   root.position.set(b.x,g.status==='won'?death*death*1.5:0,b.z);
   root.rotation.y=p.facing;
+  const roll=s.years?.dodge;
+  root.rotation.z=roll?Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7:0;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
   if(s.years?.year===5&&g.status==='playing')root.scale.set(1+.065*Math.sin(t*3.7),1-.095*Math.sin(t*3.7),1+.05*Math.sin(t*2.8));
   torso.rotation.set(p.lean*.42,p.twist*.28,p.twist*.10+(p.weightShift||0)*.035);
