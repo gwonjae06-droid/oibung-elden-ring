@@ -14,7 +14,10 @@ export const GYUWON_MOTION_STYLE=Object.freeze({
  paradox:[.37,.58,-.35,1.4],erasure:[-.44,-.47,.38,1.25],
  counterproof:[.27,-.62,.36,1.37],
  sword:[.45,-.5,-.42,1.4],circus:[-.38,.7,.4,1.3],gamble:[.35,-.66,-.15,1.5],
- tsunami:[-.52,.2,.5,1.5],chalk:[-.25,.52,-.5,1.25]
+ tsunami:[-.52,.2,.5,1.5],chalk:[-.25,.52,-.5,1.25],
+ 'exam-first':[-.28,.12,.38,.7],'exam-retake':[-.36,-.21,.24,1],
+ 'exam-third':[.21,.47,-.2,1.1],'exam-shooter':[.36,-.55,-.32,1.45],
+ 'exam-sewage':[-.62,.2,.49,1.65],'exam-figurines':[.27,.69,-.4,1.55]
 });
 // Distinct articulated casting silhouettes for every question, judgment and memory.
 export const GYUWON_GESTURES=Object.freeze({
@@ -22,7 +25,10 @@ export const GYUWON_GESTURES=Object.freeze({
  choice:[1.20,.72,.09],contradiction:[.80,1.32,.12],timetable:[1.34,.36,.20],blank:[.66,.60,-.25],
  negate:[.82,1.28,-.18],verdict:[1.27,1.31,-.24],mirror:[1.39,.50,.20],axiom:[1.20,1.20,-.20],
  reverse:[.62,1.39,.24],stop:[1.28,.38,-.22],paradox:[1.18,1.30,.18],erasure:[1.42,.52,-.16],counterproof:[.40,1.44,.23],
- sword:[1.32,1.42,-.35],circus:[.58,1.48,.27],gamble:[.45,1.55,-.20],tsunami:[1.48,1.42,-.30],chalk:[1.36,.54,.20]
+ sword:[1.32,1.42,-.35],circus:[.58,1.48,.27],gamble:[.45,1.55,-.20],tsunami:[1.48,1.42,-.30],chalk:[1.36,.54,.20],
+ 'exam-first':[1.24,.56,-.21],'exam-retake':[1.4,.72,.2],
+ 'exam-third':[1.45,1.17,-.2],'exam-shooter':[.35,1.48,-.3],
+ 'exam-sewage':[1.5,1.27,.18],'exam-figurines':[.72,1.6,-.18]
 });
 // Phase one is the frightened student, not yet a god: trembling wrists, hurried
 // page-flicks and nervous glances. Purely cosmetic; ramps in from t=0 so idle poses are unchanged.
