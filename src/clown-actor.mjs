@@ -37,6 +37,7 @@ export function createClownActor({coarse=false}={}){
  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
  tex.anisotropy=coarse?2:8;
  const ball=mesh(new THREE.SphereGeometry(2.6,coarse?32:72,coarse?24:48),new THREE.MeshPhysicalMaterial({map:tex,roughness:.87,sheen:.38,transparent:true}),0,2.6,0,root);
+ ball.name='actual-legacy-circus-ball';
  const sculpt=points=>new THREE.LatheGeometry(points.map(([r,y])=>new THREE.Vector2(r,y)),coarse?28:64);
  const torso=mesh(sculpt([[0,-1],[.56,-.98],[.78,-.78],[.81,-.45],[.67,-.18],[.79,.22],[.94,.57],[.73,.83],[.3,1],[0,1.03]]),red,0,2.25,0);torso.scale.set(1,1.2,.72);
  const lowerCoat=mesh(sculpt([[0,-.5],[.48,-.48],[.67,-.38],[.73,-.12],[.60,.28],[.3,.39],[0,.4]]),red,0,1.1,0);lowerCoat.scale.y=.7;
