@@ -13,7 +13,7 @@ export function bossTrack(state){
   if(state.boss==='gyuwon'){const section=gyuwonMusicSection(state.year),asset=BOSS_TRACKS.gyuwon[section];return asset?{key:'gyuwon:'+section,url:new URL('../assets/music/'+asset,import.meta.url).href}:null;}
   const phase=state.phase>=2?2:1;
   // Phase three reuses the second dice MP3 at a faster tempo, never the phase-one track.
-  const keyPhase=state.boss==='dice'&&state.phase===3?3:phase;
+  const keyPhase=(state.boss==='dice'||state.boss==='blood')&&state.phase===3?3:phase;
   return {key:state.boss+':'+keyPhase,url:new URL('../assets/music/'+BOSS_TRACKS[state.boss][phase-1],import.meta.url).href};
 }
 export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,now=()=>win?.performance?.now?.()??Date.now(),fadeMs=1200,volume=.5}={}){

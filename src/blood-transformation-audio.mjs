@@ -18,7 +18,7 @@ export function createBloodTransformationAudio({AudioClass=globalThis.Audio,stor
   }catch{/* Direct playback remains available when spatial processing is unsupported. */}
  }
  function update(g,{running=true,muted=false}={}){
-  if(disposed)return;const active=g.boss.state==='transition';
+  if(disposed)return;const active=g.boss.state==='transition'&&g.boss.phase===2;
   if(!active){if(wasActive)stop();wasActive=false;return;}
   if(!wasActive){fired.clear();wasActive=true;for(const v of clips.values()){v.started=v.failed=false;v.attempts=0;}}
   if(gate)gate.gain.value=running&&!muted?1:0;

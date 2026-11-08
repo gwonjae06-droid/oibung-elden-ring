@@ -115,14 +115,23 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
    sun.intensity=2.25*(1+storm.flash*.6);
    chapel.root.rotation.x=chapel.root.rotation.z=0;impact.bossPose(chapel.root);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*4.7);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
    quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
-   if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const grand=g.boss.phase===2&&g.boss.state==='pattern'&&['wave','eclipse','tide','requiem','cross','judgement','ritual','wingGenesis'].includes(g.blood.pattern);const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
+   if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const grand=g.boss.state==='pattern'&&(
+   g.boss.phase===2&&['wave','eclipse','tide','requiem','cross','judgement','ritual','wingGenesis'].includes(g.blood.pattern)||
+   g.boss.phase===3&&['seraphCrown','seraphFinale','seraphWings'].includes(g.blood.pattern));const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
   player:p,boss:g.boss,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
   headHeight:3+Math.max(0,g.blood.elevation||0)*.55,
-  extraDistance:grand?3:0 // Preserve readability of arena-scale blood magic.
+  extraDistance:grand?4:g.boss.phase===3?2.6:0 // Preserve contact and the 3P six-wing silhouette.
  });
  desired.set(frame.position.x,frame.position.y,frame.position.z);
  camera.position.lerp(desired,1-Math.exp(-6*dt));
- target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseBloodCamera(camera,target,g,{reduced});epic.pose(camera,target,g);chapel.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);chapel.occlude(camera,g);atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.blood.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
+ target.set(frame.focus.x,frame.focus.y,frame.focus.z);poseBloodCamera(camera,target,g,{reduced});epic.pose(camera,target,g);
+  if(g.boss.phase===3&&g.boss.state==='transition'&&!reduced){
+   const t=g.blood.t,weight=.82*Math.sin(Math.min(1,t/4.65)*Math.PI)**2;
+   const vx=p.x-g.boss.x,vz=p.z-g.boss.z,n=Math.hypot(vx,vz)||1,nx=vx/n,nz=vz/n;
+   camera.position.lerp({x:g.boss.x+nx*24+nz*4,y:20,z:g.boss.z+nz*24-nx*4},weight);
+   target.lerp({x:g.boss.x-nx*12,y:16,z:g.boss.z-nz*12},weight);
+  }
+  chapel.shake(camera);camera.lookAt(target);impact.camera(camera);}$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);chapel.occlude(camera,g);atmosphere.cameraReaction(camera);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.blood.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   warmup=createBattleVisualWarmup({renderer,scene,camera,container:d});startup.own('Blood visual warmup',()=>warmup.dispose());const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Blood frame failed',error);close();}});startup.own('Blood loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,view:chapel.stats(),epic:epic.stats(),quality:chapel.quality,audio:transformationAudio.fired,audioState:transformationAudio.state,frameMs:[...samples]})}:{})}));startup.own('Blood session',unbind);hud.mode(mode);loop.start();resizeBattleViewport(renderer,camera,canvas,quality.scale);warmup.start().then(()=>{if(!closed)introGate.whenReady(!g.introControlled);});return {close,dispose:close,get closed(){return closed;}};
  });
