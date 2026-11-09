@@ -36,7 +36,7 @@ test('the crimson face cannon really rotates left-to-right and only damages its 
  const g=sample('seraphSweep'),h=g.blood.hazards[0];
  assert.equal(g.blood.hazards.length,1);
  assert.equal(h.seraphAngularSweep,true);
- assert.ok(h.width>=2.1&&h.length>=60,'sweep must be enormous and thick');
+ assert.ok(h.width>=4&&h.length>=64,'sweep must be enormous and thick');
  assert.ok(h.warn>=1&&h.life>=3);
  const start=hazardPosition(h);
  assert.ok(Math.abs(start.yaw-h.yawStart)<1e-6);
@@ -58,7 +58,7 @@ test('the wing-disc leaves the map and crosses FOUR distinct warned lanes',()=>{
  assert.equal(hs.length,4);
  assert.deepEqual(hs.map(h=>h.pass),[0,1,2,3]);
  assert.ok(hs.every(h=>Math.abs(h.x)>32&&h.shape==='lane'));
- assert.ok(hs.every(h=>h.width>=3.4&&h.length>=11),'wider ring needs a wider visible hit volume');
+ assert.ok(hs.every(h=>h.width>=5.6&&h.length>=14.8),'wider ring needs a wider visible hit volume');
  assert.ok(hs.every(h=>h.warn>=1.2&&h.life>.7));
  assert.ok(hs.every((h,i)=>i===0||h.warn-hs[i-1].warn>.75));
  const scene=new THREE.Scene(),rig=createBloodSeraph(scene,{coarse:true,reduced:true});
@@ -83,7 +83,7 @@ test('four concentric blood-pillar rings encircle the entire map but stop before
  assert.ok(hs.every(h=>h.shape==='ring'&&h.seraphCue==='blood-pillar-ring'));
  for(let rank=0;rank<4;rank++){
   const h=hs[rank];assert.equal(h.x,0);assert.equal(h.z,0);
-  assert.ok(h.width>=3.4&&h.warn>=1.3);
+  assert.ok(h.width>=5&&h.warn>=1.3);
   if(rank){assert.ok(h.r<hs[rank-1].r);assert.ok(h.warn>hs[rank-1].warn);}
   assert.ok(h.r-h.width*.72>=5,'inner sanctuary must remain open');
   h.age=h.warn+.03;
@@ -110,7 +110,7 @@ test('four concentric blood-pillar rings encircle the entire map but stop before
 test('the frantic face cannon fires eleven distinct warned rays, without all warning at once',()=>{
  const g=sample('seraphFrenzy'),hs=g.blood.hazards;
  assert.equal(hs.length,11);
- assert.ok(hs.every(h=>h.shape==='lane'&&h.seraphCue==='frenzy'&&h.warn>1&&h.width>=1.75));
+ assert.ok(hs.every(h=>h.shape==='lane'&&h.seraphCue==='frenzy'&&h.warn>1&&h.width>=3));
  assert.equal(bloodFloorField(g),null,
   'the floor must not display eleven future shots simultaneously');
  hs[0].age=hs[0].warn-.65;
@@ -123,10 +123,10 @@ test('the frantic face cannon fires eleven distinct warned rays, without all war
 test('celestial wheels and martyr-rose have different movement and hitbox geometries',()=>{
  const halos=sample('seraphHaloProcession').blood.hazards;
  assert.equal(halos.length,4);
- assert.ok(halos.every(h=>h.shape==='ring'&&Math.abs(h.vx)>0&&h.r>=4.5&&h.width>=1.95));
+ assert.ok(halos.every(h=>h.shape==='ring'&&Math.abs(h.vx)>0&&h.r>=6.5&&h.width>=3.2));
  const petals=sample('seraphBloodRosette').blood.hazards;
  assert.equal(petals.length,6);
- assert.ok(petals.every(h=>h.shape==='cone'&&h.innerR>=5&&h.arc>=.32&&h.r>=29));
+ assert.ok(petals.every(h=>h.shape==='cone'&&h.innerR>=5&&h.arc>=.52&&h.r>=30));
  assert.ok(petals.every((h,i)=>i===0||h.warn>petals[i-1].warn));
 });
 

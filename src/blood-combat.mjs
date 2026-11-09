@@ -246,9 +246,9 @@ export function startBloodPattern(g,id){
  }
  if(id==='seraphFinale'){
   for(let i=0;i<4;i++)hazard(g,'cone',{x:b.x,z:b.z,
-   yaw:aim+[-.95,.95,-.38,.38][i],arc:.46,innerR:3.5,r:28,
+   yaw:aim+[-.95,.95,-.38,.38][i],arc:.61,innerR:3.5,r:30,
    warn:1.48+i*.85,life:.48,damage:38});
-  for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:1.9,grow:14,
+  for(let i=0;i<2;i++)hazard(g,'ring',{x:b.x,z:b.z,r:5+i*1.8,width:2.8,grow:14,
    warn:5.15+i*.94,life:1.2,damage:38});
  }
  // Every seraph attack shares its geometry and warning clock with the renderer.

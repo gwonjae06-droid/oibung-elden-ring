@@ -33,23 +33,23 @@ export function spawnSeraphDoctrine(g,id,spawn){
   // map-wide hit. The physical danger travels at precisely the beam rate.
   spawn('lane',{x:b.x,z:b.z,yaw:aim-1.45,
    yawStart:aim-1.45,yawEnd:aim+1.45,seraphAngularSweep:true,
-   width:2.15,length:60,warn:1.75,life:3.25,
+   width:4.1,length:64,warn:1.9,life:3.25,
    damage:39,seraphCue:'sweep'});
  }
  if(id==='seraphWingCross')for(let i=0;i<4;i++){
   // A separate wing halo departs the arena. Three/Four straight passes
   // appear in the world as a spinning disc using the same live hazard.
   const sign=i%2?-1:1,z=[-11,8,-3,13][i];
-  spawn('lane',{x:-sign*37,z,yaw:Math.PI/2,width:3.45,length:11.0,
-   vx:sign*74/.88,vz:0,warn:1.65+i*1.28,life:.88,
+  spawn('lane',{x:-sign*37,z,yaw:Math.PI/2,width:5.65,length:14.8,
+   vx:sign*74/.88,vz:0,warn:1.85+i*1.32,life:.88,
    damage:34,seraphCue:'wing-pass',pass:i});
  }
  if(id==='seraphInwardPillars'){
   // Four 360-degree waves; the last inner edge stays clear of the caster.
   // Each annular hitbox is outlined by a circle of real 3D blood pillars.
   for(let rank=0;rank<4;rank++)spawn('ring',{
-   x:b.x,z:b.z,r:27-rank*5.65,width:3.4,
-   warn:1.6+rank*.93,life:.62,damage:34,
+   x:b.x,z:b.z,r:27-rank*5.65,width:5.05,
+   warn:1.75+rank*.96,life:.62,damage:34,
    seraphCue:'blood-pillar-ring',rank
   });
  }
@@ -60,7 +60,7 @@ export function spawnSeraphDoctrine(g,id,spawn){
    const offset=[0,.62,-.52,1.23,-1.14,2.05,-2.06,2.7,-2.77,.28,-.29][i],
     angle=aim+offset;
    spawn('lane',{x:b.x+Math.sin(angle)*17,z:b.z+Math.cos(angle)*17,
-    yaw:angle,width:1.75,length:39.0,warn:1.55+i*.48,
+    yaw:angle,width:3.05,length:45.0,warn:1.8+i*.48,
     life:.31,damage:25,seraphCue:'frenzy',shot:i});
   }
  }
@@ -68,15 +68,15 @@ export function spawnSeraphDoctrine(g,id,spawn){
   // Rolling 3D holy rings move on their own straight trajectories,
   // unlike the circular shockwaves of the first two phases.
   const side=i%2?-1:1,z=[-14,-4,10,18][i];
-  spawn('ring',{x:-side*27,z,r:4.5,width:1.95,
-   vx:side*18,vz:0,warn:1.6+i*.83,life:2.95,
+  spawn('ring',{x:-side*27,z,r:6.55,width:3.25,
+   vx:side*18,vz:0,warn:1.85+i*.88,life:2.95,
    damage:33,seraphCue:'rolling-halo',pass:i});
  }
  if(id==='seraphBloodRosette')for(let i=0;i<6;i++){
   // Flower of six crimson judgement petals from the celestial crown.
   // Sequential thin fan-sectors with gaps, NOT a 1P fountain or 2P wave.
   spawn('cone',{x:b.x,z:b.z,yaw:aim+i*TAU/6,
-   arc:.33,innerR:5.3,r:29,warn:1.68+i*.66,life:.53,
+   arc:.53,innerR:5.3,r:30,warn:1.85+i*.69,life:.53,
    damage:35,seraphCue:'rose-petal',petal:i});
  }
  return g.blood.hazards;

@@ -173,7 +173,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  const wingWheel=new THREE.Group();wingWheel.name='blood-seraph-independent-crossing-wings';
  scene.add(wingWheel);wingWheel.visible=false;
  for(let i=0;i<3;i++){
-  const m=makeMesh(wingWheel,new THREE.TorusGeometry(3.2+i*.23,.22,7,coarse?32:52),
+  const m=makeMesh(wingWheel,new THREE.TorusGeometry(4.75+i*.27,.29,7,coarse?32:52),
    i===1?pearl:edging,'blood-seraph-gyroscopic-wing-'+i);
   m.rotation.x=Math.PI/2+i*.3;
  }
@@ -181,8 +181,8 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  wheelFeathers.name='blood-seraph-wheel-feathers';wingWheel.add(wheelFeathers);
  for(let i=0;i<wheelFeathers.count;i++){
   const a=i*Math.PI*2/wheelFeathers.count;
-  dummy.position.set(Math.cos(a)*3.35,0,Math.sin(a)*3.35);
-  dummy.rotation.set(Math.PI/2,0,a);dummy.scale.set(.66,3.25,.96);
+  dummy.position.set(Math.cos(a)*4.85,0,Math.sin(a)*4.85);
+  dummy.rotation.set(Math.PI/2,0,a);dummy.scale.set(.82,3.85,1.05);
   dummy.updateMatrix();wheelFeathers.setMatrixAt(i,dummy.matrix);
  }
  wheelFeathers.instanceMatrix.needsUpdate=true;
@@ -190,14 +190,14 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  const guideMat=new THREE.MeshBasicMaterial({color:0xf44f7b,transparent:true,
   opacity:.0,depthWrite:false,side:THREE.DoubleSide});
  const guides=Array.from({length:4},(_,i)=>{
-  const mesh=makeMesh(scene,new THREE.PlaneGeometry(66,7.46).rotateX(-Math.PI/2),
+  const mesh=makeMesh(scene,new THREE.PlaneGeometry(66,12.1).rotateX(-Math.PI/2),
    guideMat.clone(),'blood-seraph-wing-pass-warning-'+i);
   mesh.position.y=.19;mesh.visible=false;return mesh;
  });
  const haloWheel=new THREE.Group();haloWheel.name='blood-seraph-rolling-holy-halo';
  scene.add(haloWheel);haloWheel.visible=false;
  for(let i=0;i<2;i++)makeMesh(haloWheel,
-  new THREE.TorusGeometry(4.5+i*.2,.24,8,coarse?36:58),
+  new THREE.TorusGeometry(6.55+i*.23,.34,8,coarse?36:58),
   i===0?edging:pearl,'blood-seraph-holy-halo-wheel-'+i).rotation.y=i*.3;
  const clouds=new THREE.InstancedMesh(cloudGeo,cloudMat,coarse?7:13);
  clouds.name='blood-seraph-crimson-vapour';clouds.frustumCulled=false;
@@ -268,7 +268,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    // pose; this exactly matches the shared damage/warning footprint.
    const now=hazardPosition(activeRay);
    const yaw=now.yaw??activeRay.yaw,
-    distance=activeRay.seraphAngularSweep?29.5:activeRay.length/2;
+    distance=activeRay.seraphAngularSweep?31.5:activeRay.length/2;
    const tx=now.x+Math.sin(yaw)*distance,tz=now.z+Math.cos(yaw)*distance;
    const dx=tx-b.x,dz=tz-b.z,ca=Math.cos(b.yaw||0),sa=Math.sin(b.yaw||0);
    const end=vec((dx*ca-dz*sa)/scale,-5.1/scale,(dx*sa+dz*ca)/scale);
@@ -335,13 +335,15 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    const h=(s.hazards||[]).find(h=>h.seraphCue==='wing-pass'&&h.pass===i);
    guide.visible=pattern==='seraphWingCross'&&!!h&&h.age>=h.warn-1.05&&h.age<h.warn;
    if(h){guide.position.z=h.z;
+    // Physical warning thickness remains proportional to real impact lane.
+    guide.scale.z=(h.width*2.08)/12.1;
     guide.material.opacity=guide.visible?.13+.13*(1-(h.warn-h.age)/1.05):0;}
   });
   const halo=(s.hazards||[]).find(h=>h.seraphCue==='rolling-halo'&&
    h.age>=h.warn-.45&&h.age<h.warn+h.life);
   haloWheel.visible=pattern==='seraphHaloProcession'&&!!halo;
   if(halo){const q=hazardPosition(halo);
-   haloWheel.position.set(q.x,4.5,q.z);haloWheel.rotation.set(t*3,t*.9,t*2.9);}
+   haloWheel.position.set(q.x,6.55,q.z);haloWheel.rotation.set(t*3,t*.9,t*2.9);}
 
  }
  function clear(){shown=0;root.visible=false;beamPivot.visible=false;

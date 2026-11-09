@@ -33,7 +33,7 @@ export function createBloodSeraphPillars(scene,{coarse=false,reduced=false}={}){
     const a=i*Math.PI*2/n+(h.rank%2)*(Math.PI/n);
     dummy.position.set(h.x+Math.sin(a)*h.r,height*.5,h.z+Math.cos(a)*h.r);
     dummy.rotation.set(0,a+(reduced?0:Math.sin((g.time||0)*1.4+a)*.025),0);
-    dummy.scale.set(h.width*.97,height,h.width*.97);
+    dummy.scale.set(h.width*.92,height,h.width*.92);
     dummy.updateMatrix();mesh.setMatrixAt(count++,dummy.matrix);
    }
   }
