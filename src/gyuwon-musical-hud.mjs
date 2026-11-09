@@ -144,6 +144,18 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
   const hasNote=!m.reference&&!!m.note&&!m.note.done&&m.kind==='rhythm';beat.hidden=!hasNote;if(hasNote){beat.style.transform='scale('+(1+Math.max(0,m.note.time/1.05))+')';beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';}
   audioRetry.hidden=m.clock?.source!=='error';
   const cue=gyuwonSubtitleAt(gyuwonSongKey(m),m.time);dialogue.hidden=!cue;english.textContent=cue?.en||'';korean.textContent=cue?.ko||'';wrap.style.background=m.finishing?'rgba(0,0,0,'+Math.max(0,Math.min(1,(m.curtain-GYUWON_SONGS.ending.duration*.9)/(GYUWON_SONGS.ending.duration*.1)))+')':'';
+  if(isTurn&&cue&&shell.clientHeight<=500){
+   // Keep sung words and actual selectable part buttons separate on narrow
+   // stages. Measure once, then move only a label that would cover the lyric.
+   const bounds=shell.getBoundingClientRect(),lyric=dialogue.getBoundingClientRect();
+   const labels=targetButtons.filter(b=>!b.hidden).map(b=>({b,r:b.getBoundingClientRect()}));
+   for(const {b,r}of labels){if(r.right<=lyric.left||r.left>=lyric.right||r.bottom<=lyric.top||r.top>=lyric.bottom)continue;
+    const right=lyric.right+8+r.width/2,left=lyric.left-8-r.width/2;
+    if(right+r.width/2<=bounds.right-8)b.style.left=(right-bounds.left)+'px';
+    else if(left-r.width/2>=bounds.left+65)b.style.left=(left-bounds.left)+'px';
+    else b.style.top=(lyric.bottom-bounds.top+8+r.height)+'px';
+   }
+  }
  }
  return {update,onAction(fn){onAction=fn;},dispose(){wrap.remove();style.remove();}};
 }

@@ -44,7 +44,7 @@ export const ACT_FIVE_INK_UI=`
 [data-ink-ui="on"] #pause-screen .small-panel{border:3px solid #e2b779;background:#182b3ff5;box-shadow:5px 5px #0d1422;border-radius:12px 6px 17px 8px;color:#fff0d6}
 [data-ink-ui="on"] #pause-screen button{border:2px solid #312b3b;border-radius:7px 14px 9px 6px;background:#f2dfb9;color:#252435;box-shadow:2px 2px #070e1b;font-family:inherit}
 @media(max-height:500px){
- [data-ink-ui="on"] .gy-theater-progress{padding:3px 8px;left:43%;width:45%;max-width:none;box-sizing:border-box}
+ [data-ink-ui="on"] .gy-theater-progress{padding:3px 8px;left:43%;width:40%;max-width:none;box-sizing:border-box}
  [data-ink-ui="on"] .gy-musical-top{left:77%;top:3%;max-width:25%;gap:3px}
  [data-ink-ui="on"] .gy-musical-title{font-size:10px;padding:4px 9px}
  [data-ink-ui="on"] .gy-musical-info{font-size:9px;padding:3px 6px}

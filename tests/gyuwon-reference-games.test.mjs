@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import {createGyuwonGame,stepGyuwon,actGyuwon,damageGyuwon} from '../src/gyuwon-combat.mjs';
 import {REFERENCE_UNIT_TYPES,usesReference2d,referenceKeyAction} from '../src/gyuwon-reference-rules.mjs';
 import {gyuwonFightScene,gyuwonFightGround,GYUWON_FIGHT_SET_PIECES} from '../src/gyuwon-fight-director.mjs';
+import {GYUWON_LYRIC_ACTIONS,GYUWON_LYRIC_ACTION_YEARS,GYUWON_LYRIC_ACTION_COUNT,gyuwonLyricActionAt,gyuwonLyricActionsCrossed} from '../src/gyuwon-lyric-actions.mjs';
+import {GYUWON_ALIGNED_CAPTIONS} from '../src/gyuwon-aligned-captions.mjs';
+import {GYUWON_LYRIC_SCENARIOS} from '../src/gyuwon-lyric-action-scenarios.mjs';
+import {gyuwonLyricActorMotion} from '../src/gyuwon-lyric-actor-motion.mjs';
+import {gyuwonLyricStagePose} from '../src/gyuwon-lyric-3d-art.mjs';
+import {gyuwonLyricMouthAt} from '../src/gyuwon-lyric-photo-mouth.mjs';
 const advance=(g,s,input={})=>{for(let i=0;i<Math.ceil(s*120);i++)stepGyuwon(g,1/120,input);};
 function at(year){const g=createGyuwonGame('sword',{yearMode:true,seed:843}),e=g.gyuwon.years;e.year=year;stepGyuwon(g,.008);const m=e.musical;m.transition=0;g.player.invuln=0;g.player.x=m.entry.tx;g.player.z=m.entry.tz;g.boss.x=m.entry.btx;g.boss.z=m.entry.btz;g.boss.hp=({5:6000,6:5300,7:4600,8:3900,9:3200,10:2500,11:1800})[year];return {g,m};}
 test('only the supplied 2D genres select Canvas2D, while act five and finale remain 3D',()=>{for(let y=5;y<=11;y++){const {g,m}=at(y);assert.equal(usesReference2d(m),y>=6&&y<=10);assert.equal(damageGyuwon(g,99999),0);}});
@@ -83,7 +89,7 @@ test('11수 is an unskippable, nonviolent musical curtain call',()=>{
 test('act nine lyric acts transform ground, identities and fighting rules at source-master anchors',()=>{
  assert.equal(gyuwonFightScene(2).kind,'handoff');
  assert.equal(gyuwonFightScene(19).role,'king');
- assert.equal(gyuwonFightScene(28).role,'clown');
+ assert.equal(gyuwonFightScene(21).role,'clown');assert.equal(gyuwonFightScene(28).arena,'rooftop');
  assert.equal(gyuwonFightScene(50).arena,'rooftop');
  assert.equal(gyuwonFightScene(99).quiet,true);
  assert.equal(gyuwonFightScene(118).arena,'mirror');
@@ -114,4 +120,74 @@ test('early KO enables limited playable encore and does not auto-repeat fight ro
  const before=m.encoreCollected;assert.ok(actGyuwon(g,'light'));assert.equal(m.encoreCollected,before+1);
  assert.equal(actGyuwon(g,'light'),false);
  reachSong(g,m,42);assert.equal(m.fightRound,2);assert.equal(m.fightReset,0);
+});
+
+test('all 170 authored line-specific lyric actions use the original aligned audio times',()=>{
+ assert.equal(GYUWON_LYRIC_ACTION_COUNT,170);
+ assert.deepEqual(GYUWON_LYRIC_ACTION_YEARS,['5','6','8','9','11','ending']);
+ assert.equal(GYUWON_LYRIC_ACTIONS[7],undefined);
+ assert.equal(GYUWON_LYRIC_ACTIONS[10],undefined);
+ const seen=new Set();
+ for(const key of GYUWON_LYRIC_ACTION_YEARS){
+  const actions=GYUWON_LYRIC_ACTIONS[key],captions=GYUWON_ALIGNED_CAPTIONS[key];
+  assert.equal(actions.length,captions.length);
+  for(let i=0;i<actions.length;i++){
+   const a=actions[i],source=captions[i];
+   assert.ok(a.id&&!seen.has(a.id));seen.add(a.id);
+   assert.equal(a.start,source.start);assert.equal(a.end,source.end);
+   assert.equal(a.ko,source.ko);assert.equal(a.en,source.en);
+   assert.equal(a.stagingRule,GYUWON_LYRIC_SCENARIOS[key][i].instruction);
+   assert.ok(a.stagingRule.length>=15,'each lyric must carry its source acting rule');
+   assert.ok(a.actors.length&&a.worldEvents.length&&a.gesture&&a.actionId);
+   const middle=(a.start+a.end)/2;
+   assert.equal(gyuwonLyricActionAt(key,middle)?.id,a.id);
+   assert.equal(gyuwonLyricActionAt(key,a.start)?.id,a.id);
+   assert.ok(gyuwonLyricActionAt(key,a.end-1e-5)?.phase>.9);
+  }
+ }
+ assert.equal(seen.size,170);
+});
+test('timed lyric contact is seek-safe and excluded acts remain unaffected',()=>{
+ for(const y of [7,10]){
+  assert.equal(gyuwonLyricActionAt(y,33),null);
+  assert.deepEqual(gyuwonLyricActionsCrossed(y,31,32),[]);
+  const {g,m}=at(y);reachSong(g,m,32);
+  assert.equal(m.lyricAction,null);
+ }
+ assert.deepEqual(gyuwonLyricActionsCrossed(9,2,112),[],'seek cannot queue attacks from past lyrics');
+ assert.deepEqual(gyuwonLyricActionsCrossed(9,111.75,111.95).map(a=>a.actionId),['roundEcho1']);
+});
+test('real media time selects matching 6, 8, and 9 gestures and affects fighter set pieces',()=>{
+ const samples=[[6,25.5,'rainDance','spin'],[6,28.5,'mountainLeap','jump'],
+  [8,29.3,'leftStep','stepleft'],[8,31.5,'rightStep','stepright'],
+  [9,34.0,'leftSwingRight','stepstrike'],[9,118.5,'roundEcho3','blade'],
+  [11,40,'runAndFight','fight']];
+ for(const [year,time,action,gesture] of samples){
+  const {g,m}=at(year);g.player.invuln=9999;
+  reachSong(g,m,time);
+  assert.equal(m.lyricAction?.actionId,action,String(year)+' at '+time);
+  assert.equal(m.lyricAction?.gesture,gesture);
+ }
+ for(const at of [111.9,114.26,118.28,121.28,122.42])
+  assert.ok(GYUWON_FIGHT_SET_PIECES.some(c=>c.at===at&&c.wind>=.65));
+ assert.equal(GYUWON_FIGHT_SET_PIECES.find(c=>c.at===114.26).damage,0);
+});
+test('eleventh-year and ending anatomical gestures do not need animation timers',()=>{
+ const f=gyuwonLyricActionAt(11,41.5),m=gyuwonLyricActorMotion(f,41.5);
+ assert.ok(m);assert.ok(Number.isFinite(m.leftArm));
+ assert.equal(gyuwonLyricStagePose(11,41.5)?.id,f.id);
+ const e=gyuwonLyricActionAt('ending',116.5),motion=gyuwonLyricActorMotion(e,116.5);
+ assert.equal(e?.actionId,'stopRunning');
+ assert.ok(motion);assert.equal(motion.step,0);
+ assert.ok(gyuwonLyricStagePose('ending',173)?.instrumental);
+});
+
+test('last song and original ending mouth react only to actual lyric words',()=>{
+ const singing=gyuwonLyricMouthAt(11,40.1);
+ assert.ok(singing.openness>=0&&singing.openness<=1);
+ assert.ok(singing.cue?.startsWith('11-'));
+ assert.equal(gyuwonLyricMouthAt(11,10).openness,0);
+ assert.equal(gyuwonLyricMouthAt('ending',30).openness,0);
+ assert.ok(gyuwonLyricMouthAt('ending',138.1).cue?.startsWith('ending-'));
+ assert.equal(gyuwonLyricMouthAt(7,40).openness,0);
 });

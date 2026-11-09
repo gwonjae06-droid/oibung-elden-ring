@@ -30,7 +30,7 @@ export function setupReferenceMinigame(g,m){
  if(m.year===5){
   setupGiantRaid(g,m,REFERENCE_PARTY);
  }else if(m.year===6){
-  g.player.x=-10;g.player.z=0;runnerInitMotion(m);m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;m.guideRescues=0;m.guideBridgesLeft=0;m.guideAction='';m.guideActionUntil=0;m.guideScene='overture';m.runnerLyric=null;
+  g.player.x=-10;g.player.z=0;runnerInitMotion(m);m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;m.guideRescues=0;m.guideBridgesLeft=0;m.guideAction='';m.guideActionUntil=0;m.guideScene='overture';m.runnerLyric=null;m.lyricObstacleKeys=new Set();m.runnerPreviousAudio=0;
  }else if(m.year===7){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;m.armyVerseRecruits=0;m.armyCaptainRecruits=0;
  }else if(m.year===8){
@@ -57,7 +57,7 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
-  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';m.playerWeapon=g.weapon||'sword';
+  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';m.fightLastLyricActionId=null;m.fightLyricMotion=null;m.playerWeapon=g.weapon||'sword';
  }else if(m.year===10){
   g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
@@ -193,6 +193,26 @@ function tickReferenceRunner(g,m,dt,c){
   m.platforms.sort((a,b)=>a.x-b.x);
  }
  p.floorY=m.jumpY;
+ // Make the literal mountain/curtain lyrics affect REAL existing collision
+ // geometry, but never silently place a hazard during a seek or in a road gap.
+ const lyric=m.lyricAction,priorAudio=m.runnerPreviousAudio||0;
+ const regularFrame=m.time>=priorAudio&&m.time-priorAudio<.18;
+ if(lyric&&regularFrame&&m.time-lyric.start<.20&&
+    !m.lyricObstacleKeys.has(lyric.id)){
+  m.lyricObstacleKeys.add(lyric.id);
+  const event=lyric.attackEvents.find(e=>e.type==='runner-obstacle');
+  const kind=event?.kind;
+  if(kind&&!relief&&!opening){
+   const position=p.x+17.5;
+   if(m.platforms.some(a=>position>=a.x+1&&position<=a.end-1)){
+    m.obstacles.push({id:g.nextId++,x:position,kind,
+     variant:event.variant,width:1.8,hit:false,
+     section:scene.key,spawnTime:m.time,lyricId:lyric.id});
+    m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
+   }
+  }
+ }
+ m.runnerPreviousAudio=m.time;
  // Every obstacle is born offscreen right, with a real approach interval.
  if(!relief&&!opening){
   m.runnerSpawn-=dt;
@@ -420,7 +440,7 @@ function tickReferenceFighter(g,m,dt,input,c){
  if(nextRound!==m.fightRound){
   m.fightRound=nextRound;m.fightReset=0;m.roundWait=false;m.encoreOrbs=[];m.encoreCollected=0;
   for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=f.maxHp;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;f.combo=0;}
-  m.enemyThink=1.35;
+  m.enemyThink=1.35;m.fightLyricMotion=null;
  }
  if(scene.kind!==m.fightPriorScene){
   // Continue the duel at lower intensity through quieter passages.
@@ -428,7 +448,34 @@ function tickReferenceFighter(g,m,dt,input,c){
  }
  m.fightParryWindow=Math.max(0,m.fightParryWindow-dt);
  m.fightParryFlash=Math.max(0,m.fightParryFlash-dt);
- p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
+ // A sung phrase changes actual boss positioning / motion once. It is not
+ // an artificial playback timer; seeking past an event cannot replay attacks.
+ const verse=m.lyricAction;
+ if(verse&&verse.id!==m.fightLastLyricActionId){
+  m.fightLastLyricActionId=verse.id;
+  if(t-verse.start<.25){
+   if(verse.actionId==='leftSwingRight'){
+    m.fightLyricMotion={from:b.x,to:clamp(b.x-1.2,-16,16),start:t,duration:.65};
+    if(!b.action&&b.stun<=0&&fighterAttack(b,'kick'))b.action.wind=.75;
+   }else if(['runAndFly','smileAndFly'].includes(verse.actionId)){
+    b.vy=Math.max(b.vy,9.5);
+    m.fightLyricMotion={from:b.x,to:clamp(b.x+Math.sign(p.x-b.x)*1.4,-16,16),start:t,duration:.92};
+   }else if(['roundEcho1','roundEcho2','roundEcho3','roundEcho4','roundEcho5'].includes(verse.actionId)){
+    // Echo attack hitboxes are scheduled separately in the same authored
+    // scene score; lyric entrance here only arranges the physical cast.
+    b.facing=b.x<p.x?1:-1;
+   }else if(verse.actionId==='danceOrFight'){
+    m.fightLyricMotion={from:b.x,to:clamp(b.x-.75,-16,16),start:t,duration:.55};
+   }
+  }
+ }
+  if(m.fightLyricMotion){
+  const move=m.fightLyricMotion,q=clamp((t-move.start)/move.duration,0,1),
+   s=q*q*(3-2*q);
+  b.x=move.from+(move.to-move.from)*s;
+  if(q>=1)m.fightLyricMotion=null;
+ }
+  p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
  if((input.z||0)>.48&&!m.fightJumpLatch&&p.y<=0&&p.stun<=0&&!m.fightReset){p.vy=10;m.fightJumpLatch=true;}
  if((input.z||0)<.2)m.fightJumpLatch=false;
  if(!p.action&&p.stun<=0)p.x=clamp(p.x+(input.x||0)*(p.crouch?3:7)*dt,-16,16);
@@ -459,6 +506,7 @@ function tickReferenceFighter(g,m,dt,input,c){
   const age=t-h.at;
   if(age<h.wind||age>h.wind+.28||h.hit)continue;
   h.hit=true;
+  if(h.damage<=0)continue; // Short echo phrases show preparation without instant damage.
   if(Math.abs(p.x-h.x)<=h.radius&&p.y+(p.floorY||0)<1.6){
    if(p.guard){m.fightParryFlash=.28;p.meter=Math.min(100,p.meter+12);}
    else c.take(g,h.damage,c.emit);
@@ -470,7 +518,7 @@ function tickReferenceFighter(g,m,dt,input,c){
   m.enemyThink-=dt;
   const d=Math.abs(b.x-p.x);
   if(!b.action&&b.stun<=0){
-   if(d>3.1)b.x=clamp(b.x+Math.sign(p.x-b.x)*(m.fightRound>=2?4.2:3.6)*dt,-16,16);
+   if(d>3.1&&!m.fightLyricMotion)b.x=clamp(b.x+Math.sign(p.x-b.x)*(m.fightRound>=2?4.2:3.6)*dt,-16,16);
    else if(m.enemyThink<=0){
     const n=m.turnCount++,kind=b.meter>=100&&m.fightRound===3?'super':
      m.fightRound===1?['light','kick','light','skill'][n%4]:

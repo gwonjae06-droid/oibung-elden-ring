@@ -1,6 +1,8 @@
 import {gyuwonPhotoGeometry,gyuwonPhotoMaterial} from './gyuwon-photo-face.mjs';
 import {arsenalKind} from './gyuwon-arsenal.mjs';
 import * as THREE from 'three';
+import {gyuwonLyricActorMotion} from './gyuwon-lyric-actor-motion.mjs';
+import {createGyuwonLyricPhotoMouth} from './gyuwon-lyric-photo-mouth.mjs';
 import {ridePose,rideFrame,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {createGyuwonHandIk} from './gyuwon-hand-ik.mjs';
 import {createGyuwonMotionDirector} from './gyuwon-motion.mjs';
@@ -147,6 +149,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  for(let i=0;i<uv.count;i++)uv.setZ(i,Math.sin(uv.getX(i)*7)*.038+Math.cos(uv.getY(i)*5)*.02);
  pageGeo.computeVertexNormals();
  for(let i=0;i<6;i++)pages.push(mesh(root,pageGeo,new THREE.MeshStandardMaterial({color:0xd4bd83,side:THREE.DoubleSide,transparent:true,opacity:.8,roughness:.86}),0,0,0,'gyuwon-floating-page'));
+ const lyricMouth=createGyuwonLyricPhotoMouth(head,{coarse});
  const yearRig=createGyuwonYearRig({torso,head,wrists,coarse});
  const handIk=createGyuwonHandIk({arms,forearms,wrists,torso});
  let rideBlend=0;
@@ -154,6 +157,9 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  return {root,update(g,death=0,dt=0){
   const s=g.gyuwon,b=g.boss,p=motion.update(g,dt),t=s.years?.musical?.time??(Number.isFinite(g.time)?g.time:0);
   const years=s.years,weapon=gyuwonWeaponPose(years,s.hazards);
+  const lyricMotion=(years?.year===11||years?.musical?.finishing)
+   ?gyuwonLyricActorMotion(years?.musical?.lyricAction,t):null;
+  lyricMouth.update(years?.musical?.finishing?'ending':years?.year===11?11:null,t);
   const mounted=ridePose(years);
   const mountTarget=mounted?1:0;
   rideBlend+=(mountTarget-rideBlend)*(1-Math.exp(-Math.min(.05,Math.max(0,dt))*10));
@@ -172,9 +178,11 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   if(roll)root.rotation.z=Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
   torso.rotation.set(weapon.rifle?0:mounted?.28:p.lean*.42,weapon.rifle?0:p.twist*.28,weapon.rifle?0:p.twist*.10+(p.weightShift||0)*.035);
+  if(lyricMotion){torso.rotation.x+=lyricMotion.torsoX;torso.rotation.y+=lyricMotion.torsoY;
+   torso.rotation.z+=lyricMotion.torsoZ;root.rotation.y+=lyricMotion.twist;}
   const breath=weapon.rifle?0:Math.sin(t*1.9)*.007;
-  torso.position.y=(years?.mode==='exam'?1.54:1.95+rideBlend*.36)-p.steps*.035+breath;
-  head.rotation.set(p.headPitch,p.headYaw,Math.sin(t*2)*.012);
+  torso.position.y=(years?.mode==='exam'?1.54:1.95+rideBlend*.36)-p.steps*.035+breath+(lyricMotion?.lift||0);
+  head.rotation.set(p.headPitch+(lyricMotion?.headX||0),p.headYaw+(lyricMotion?.headY||0),Math.sin(t*2)*.012);
   neck.rotation.z=(p.weightShift||0)*.018;
   // Year nine memories must never trigger the legacy headless final phase.
   // The same human student remains fully visible through every retake.
@@ -188,8 +196,10 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   divineFace.scale.setScalar(.78+.05*Math.sin(t*.8));
   arms[0].rotation.set(p.leftArm,0,p.twist*.12);
   arms[1].rotation.set(p.rightArm,0,-p.twist*.18);
+  if(lyricMotion){arms[0].rotation.x+=lyricMotion.leftArm;arms[1].rotation.x+=lyricMotion.rightArm;}
   forearms[0].rotation.set(p.leftElbow??-.1,0,0);
   forearms[1].rotation.set(p.rightElbow??-.1,0,0);
+  if(lyricMotion){forearms[0].rotation.x+=lyricMotion.leftElbow;forearms[1].rotation.x+=lyricMotion.rightElbow;}
   wrists[0].rotation.set(p.leftWrist??0,0,0);
   wrists[1].rotation.set(p.rightWrist??0,0,0);
   if(years)handIk.update(years,weapon,mounted);
@@ -208,7 +218,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    }
   for(const leg of legs){
    const phase=t*7.2+(leg.side<0?0:Math.PI),
-    swing=Math.sin(phase)*p.steps,
+    swing=Math.sin(phase)*(p.steps+(lyricMotion?.step||0)),
     lift=Math.max(0,swing)*.18;
    // Knees always join the current thigh and calf. The shoe never sinks
    // below the table and returns to the same planted rest coordinates.
@@ -242,6 +252,6 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    item.visible=!years&&b.phase>1;item.position.set(Math.sin(a)*1.6,2+Math.sin(a*2)*.4,Math.cos(a)*1.6);
    item.rotation.set(.3+Math.sin(t+i)*.08,a,.2);
   }
- },dispose(){yearRig.dispose();photo?.dispose();faceSkin.dispose();}};
+ },dispose(){lyricMouth.dispose();yearRig.dispose();photo?.dispose();faceSkin.dispose();}};
 }
 
