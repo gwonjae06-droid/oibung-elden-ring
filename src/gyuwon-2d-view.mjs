@@ -49,6 +49,16 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const bg=c.createLinearGradient(0,0,0,720);
   bg.addColorStop(0,p[0]);bg.addColorStop(.58,p[1]);bg.addColorStop(1,p[2]);
   c.fillStyle=bg;c.fillRect(0,0,1280,720);
+  // Lightweight lyric-sensitive celestial architecture; no extra particles
+  // or collision objects. Match the source audio scene clock.
+  if((sky||quiet||dawn||lyric?.kind==='dream'||lyric?.kind==='world')&&t>8){
+   const x=quiet?570:sky?790:1060,y=quiet?210:160,r=quiet?112:sky?175:125;
+   c.save();c.translate(x,y);c.rotate(t*.018);
+   c.strokeStyle=quiet?'#d5caf0b0':sky?'#f2f7ffb0':'#ffe4af9e';
+   c.lineWidth=5;c.beginPath();c.ellipse(0,0,r,r*.36,.22,0,TAU);c.stroke();
+   c.strokeStyle='#fffde98c';c.lineWidth=2;c.beginPath();
+   c.ellipse(0,0,r*.69,r*.62,-.54,0,TAU);c.stroke();c.restore();
+  }
   if(quiet||sky||biome==='finale'){
    for(let i=0;i<58;i++){
     const x=((i*157-d*.18)%1390+1390)%1390-40,y=30+(i*71)%310;
