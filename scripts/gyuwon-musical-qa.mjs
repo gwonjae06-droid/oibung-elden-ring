@@ -35,6 +35,31 @@ try{
   await page.screenshot({path:`qa-output/musical/act-${y}.png`,timeout:30000});console.log('Verified act',y);
   results.push(await page.evaluate(()=>{const s=window.__session();return {year:s.game.gyuwon.years.year,hp:s.game.boss.hp,clock:s.game.gyuwon.years.musical.clock,graphics:s.diagnostics()};}));
   assert.equal(results.at(-1).graphics.livingDoodle.applied,y===5,'ink overlay must be 5수 only');
+  if(y===5){
+   // End of the 3D show must open the actual luminous path before 6수.
+   await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-11;});
+   await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.time>160,null,{timeout:15000});
+   await page.screenshot({path:'qa-output/musical/act-5-curtain-to-road.png',timeout:30000});
+  }
+  if(y===6){
+   const entrance=await page.evaluate(()=>{
+    const r=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+    const s=window.__session(),m=s.game.gyuwon.years.musical;
+    return {weapon:s.game.weapon,biome:m.runnerBiome,canvas:r.querySelector('.gy-reference-canvas')?.hidden,
+      opacity:parseFloat(r.querySelector('.gy-reference-canvas')?.style.opacity||'1'),
+      dash:!!r.querySelector('[data-musical-action="dash"]')};
+   });
+   assert.equal(entrance.weapon,'sword','keep the original knight weapon');
+   assert.equal(entrance.biome,'theater');
+   assert.equal(entrance.canvas,false);
+   assert.equal(entrance.dash,true);
+   assert.ok(entrance.opacity>=0&&entrance.opacity<=1);
+   await page.screenshot({path:'qa-output/musical/act-6-ink-to-knight.png',timeout:30000});
+   await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=145;});
+   await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.runnerBiome==='skyroad',null,{timeout:15000});
+   await page.screenshot({path:'qa-output/musical/act-6-skyroad.png',timeout:30000});
+  }
+
   if(y===11){
    assert.equal(await page.evaluate(()=>window.__session().game.gyuwon.years.musical.curtainCall.actor),'kwon');
    await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=110;});

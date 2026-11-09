@@ -2,6 +2,7 @@ import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
+import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady} from './gyuwon-runner-director.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
  {name:'턱검 기사',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
  {name:'광대 인형',cost:80,hp:195,attack:10,range:1.6,speed:1.1,cool:3.5},
@@ -25,7 +26,7 @@ export function setupReferenceMinigame(g,m){
  if(m.year===5){
   setupGiantRaid(g,m,REFERENCE_PARTY);
  }else if(m.year===6){
-  g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;
+  g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;
  }else if(m.year===7){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;
  }else if(m.year===8){
@@ -65,6 +66,7 @@ export function actReferenceMinigame(g,m,type,c){
   if(['light','roll','jump'].includes(type)&&m.jumpCount<2){m.jumpV=m.jumpCount?8:9.2;m.jumpCount++;m.slide=0;m.slideHeld=false;return true;}
   if(type==='skill'||type==='slide'){m.slide=.95;m.slideHeld=true;return true;}
   if(type==='slide-end'){m.slide=0;m.slideHeld=false;return true;}
+  if(type==='dash'&&gyuwonRunnerDashReady(m)){m.starCharge-=55;m.dashCooldown=2.7;m.dashTime=.62;m.bonus=Math.max(m.bonus,.62);return true;}
   return false;
  }
  if(m.year===7){
@@ -101,26 +103,83 @@ export function actReferenceMinigame(g,m,type,c){
  return false;
 }
 function tickReferenceRunner(g,m,dt,c){
- const p=g.player,progress=m.actProgress||0,scene=gyuwonMasterScene(6,m.time).kind,relief=scene==='quiet';
- m.runnerBiome=['overture','meadow','bridge'].includes(scene)?'meadow':scene==='rain'?'rain':scene==='quiet'?'quiet':'sunrise';
- const speed=m.bonus>0?17:relief?11:13;
- m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;m.energy=Math.max(0,m.energy-dt*1.35);m.slide=m.slideHeld?.95:Math.max(0,m.slide-dt);
+ const p=g.player,scene=gyuwonRunnerScene(m.time,m.clock?.duration||GYUWON_SONGS[6].duration);
+ const previous=m.runnerScene?.key;
+ m.runnerScene=scene;m.runnerBiome=scene.biome;m.runnerGuided=true;
+ const relief=scene.relief,opening=scene.opening>.01,
+  accent=gyuwonRunnerAccent(scene.time);
+ if(previous!==scene.key&&(scene.key==='quiet'||scene.key==='exit')){
+  // A calm orchestral phrase is a real pause, not an unavoidable leftover hit.
+  m.obstacles.length=0;m.runnerSpawn=2.4;
+ }
+ m.dashTime=Math.max(0,m.dashTime-dt);
+ m.dashCooldown=Math.max(0,m.dashCooldown-dt);
+ const dash=m.dashTime>0,speed=scene.speed+(dash?5:0)+(m.bonus>0&&!dash?2:0);
+ m.runnerSpeed=speed;
+ m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;
+ m.energy=Math.max(0,m.energy-dt*(relief?.5:1.25));
+ m.slide=m.slideHeld?.95:Math.max(0,m.slide-dt);
+ m.fallRecovery=Math.max(0,m.fallRecovery-dt);
  for(const platform of m.platforms){platform.x-=speed*dt;platform.end-=speed*dt;}
  m.platforms=m.platforms.filter(a=>a.end>-35);
- let last=m.platforms.at(-1);if(last&&last.end<37){const gap=relief?0:m.pickups%3===1?5.2:3.6;m.platforms.push({x:last.end+gap,end:last.end+gap+18+(m.pickups%3)*3,y:0});}
+ let last=m.platforms.at(-1);
+ if(!last){m.platforms.push({x:p.x+4,end:p.x+23,y:0});last=m.platforms[0];} // The fall must still register before a rescue platform appears.
+ if(last.end<37){
+  const gap=gyuwonRunnerGap(scene,m.pickups);
+  m.platforms.push({x:last.end+gap,end:last.end+gap+21+(m.pickups%3)*2,y:0});
+ }
  const grounded=m.platforms.some(a=>p.x>=a.x&&p.x<=a.end);
  m.jumpY+=m.jumpV*dt;m.jumpV-=24*dt;
  if(grounded&&m.jumpY<=0&&m.jumpV<=0){m.jumpY=0;m.jumpV=0;m.jumpCount=0;}
- if(m.jumpY<-5){c.take(g,25,c.emit);m.energy=Math.max(0,m.energy-12);m.jumpY=2.8;m.jumpV=0;m.jumpCount=0;m.platforms.push({x:p.x-3,end:p.x+10,y:0});}
+ if(m.jumpY<-5){
+  if(m.fallRecovery<=0)c.take(g,25,c.emit);
+  m.energy=Math.max(0,m.energy-12);m.jumpY=2.8;m.jumpV=0;m.jumpCount=0;
+  m.fallRecovery=1.4;m.platforms.push({x:p.x-3,end:p.x+12,y:0});
+ }
  p.floorY=m.jumpY;
- if(!relief){m.runnerSpawn-=dt;if(m.runnerSpawn<=0){m.runnerSpawn=progress>.77?1.55:2.1+(m.pickups%4)*.2;m.obstacles.push({id:g.nextId++,x:24,kind:m.nextId%2?'low':'high',width:1.3,hit:false});m.nextId=(m.nextId||0)+1;}}else m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
- m.runnerRecoverClock-=dt;if(m.runnerRecoverClock<=0){m.runnerRecoverClock=14;m.jellies.push({id:g.nextId++,x:22,y:1.1,kind:'heart'});}
- for(const o of m.obstacles){o.x-=speed*dt;const bottom=m.jumpY,top=bottom+(m.slide>0?.72:2.1),lo=o.kind==='low'?1.5:0,hi=o.kind==='low'?3.6:1.2;
-  if(!o.hit&&Math.abs(o.x-p.x)<1.02&&top>lo&&bottom<hi){o.hit=true;m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);}
+ // Intro / quiet / outro are designed breathers, including the handoff.
+ if(!relief&&!opening){
+  m.runnerSpawn-=dt;
+  if(m.runnerSpawn<=0){
+   m.runnerSpawn=scene.key==='final-sprint'?1.25:scene.key==='bridge'?1.9:scene.key==='rain'?1.7:2.1+(m.pickups%4)*.14;
+   const index=m.nextId||0;
+   m.obstacles.push({id:g.nextId++,x:24,kind:index%2?'low':'high',
+     variant:gyuwonRunnerObstacleVariant(scene,index),width:1.3,hit:false});
+   m.nextId=index+1;
+  }
+ }else m.runnerSpawn=Math.max(m.runnerSpawn,opening?1.9:1.4);
+ m.runnerRecoverClock-=dt;
+ if(m.runnerRecoverClock<=0){
+  m.runnerRecoverClock=14;
+  m.jellies.push({id:g.nextId++,x:22,y:1.1,kind:'heart'});
+ }
+ for(const o of m.obstacles){
+  o.x-=speed*dt;
+  const bottom=m.jumpY,top=bottom+(m.slide>0?.72:2.1),lo=o.kind==='low'?1.5:0,hi=o.kind==='low'?3.6:1.2;
+  if(!o.hit&&Math.abs(o.x-p.x)<1.02&&top>lo&&bottom<hi){
+   o.hit=true;
+   if(dash){m.success++;m.starCharge=Math.min(100,m.starCharge+2);c.deal(g,75,c.emit);}
+   else{m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);}
+  }
  }
  m.obstacles=m.obstacles.filter(o=>o.x>-30);
- m.jellySpawn-=dt;if(m.jellySpawn<=0){m.jellySpawn=.26;const i=m.pickups+(m.jellies.length||0);m.jellies.push({id:g.nextId++,x:25,y:.7+Math.sin(i*.4)*.55+(i%9<3?1.8:0),kind:i%17===0?'heart':i%7===0?'gold':'jelly'});}
- for(const j of m.jellies){j.x-=speed*dt;if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slide>0?.4:1)))<1){j.collected=true;m.pickups++;m.energy=Math.min(100,m.energy+(j.kind==='heart'?18:.55));c.deal(g,j.kind==='gold'?150:45,c.emit);if(m.pickups%30===0)m.bonus=4;}}
+ m.jellySpawn-=dt;
+ if(m.jellySpawn<=0){
+  m.jellySpawn=scene.key==='quiet'?.45:.26;
+  const i=m.pickups+(m.jellies.length||0);
+  m.jellies.push({id:g.nextId++,x:25,y:.7+Math.sin(i*.4)*.55+(i%9<3?1.8:0),
+   kind:i%17===0?'heart':i%7===0||accent.star&&i%4===0?'gold':'jelly'});
+ }
+ for(const j of m.jellies){
+  j.x-=speed*dt;
+  if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slide>0?.4:1)))<1){
+   j.collected=true;m.pickups++;
+   m.energy=Math.min(100,m.energy+(j.kind==='heart'?18:.55));
+   m.starCharge=Math.min(100,m.starCharge+(j.kind==='gold'?15:j.kind==='heart'?6:1.6));
+   c.deal(g,j.kind==='gold'?150:45,c.emit);
+   if(m.pickups%30===0)m.bonus=4;
+  }
+ }
  m.jellies=m.jellies.filter(j=>!j.collected&&j.x>-30);
  if(m.energy===0){c.take(g,8,c.emit);m.energy=20;}
 }
@@ -220,7 +279,7 @@ export function tickReferenceMinigame(g,m,dt,input,c){
 export function referenceKeyAction(m,code){
  if(!m?.reference)return null;
  if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'support',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
- if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide'}[code]||null;
+ if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide',KeyK:'dash',ShiftLeft:'dash',ShiftRight:'dash'}[code]||null;
  if(m.year===7)return {Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
  if(m.year===9)return {KeyK:'kick',KeyI:'guard',KeyO:'super',Space:'jump',KeyW:'jump',ArrowUp:'jump'}[code]||null;
  if(m.year===10)return {Space:'bomb',KeyB:'bomb'}[code]||null;
