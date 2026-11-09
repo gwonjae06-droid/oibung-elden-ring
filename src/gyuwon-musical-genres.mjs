@@ -63,7 +63,16 @@ function locate(g,m){
 export function enterGyuwonMusical(g,emit=()=>{}){
  const e=g?.gyuwon?.years;
  if(!e||!isGyuwonMusicalYear(e.year))return false;
+ const previous=e.musical;
  const m=newState(e.year);
+ // Preserve a concrete cast from the last seconds of VII instead of replacing
+ // them with anonymous dancers at the VIII opening. The original song clocks
+ // remain independent; the image carryover is a normal, unskippable transition.
+ if(e.year===8&&previous?.year===7){
+  m.danceHandoff=previous.armyFinale||{
+   count:Math.max(3,Math.min(6,previous.units?.filter(u=>u.team===1&&u.hp>0).length||4)),
+   kinds:previous.units?.filter(u=>u.team===1&&u.hp>0).slice(0,6).map(u=>u.type)||[]};
+ }
  if(e.year===5){m.transition=5.8;m.entryDuration=5.8;m.overture=true;}else m.entryDuration=2.7;
  m.bpm=GYUWON_BEATS[e.year]?.bpm||GYUWON_SONGS[e.year].bpm;m.chartIndex=0;
  const from={px:g.player.x,pz:g.player.z,bx:g.boss.x,bz:g.boss.z};
