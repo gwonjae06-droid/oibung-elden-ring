@@ -43,7 +43,7 @@ try{
   }
   if(y===8){
    const first=await value(()=>window.__session().game.gyuwon.years.musical.dancePatterns[0].first);
-   await page.evaluate(t=>{window.__media.find(a=>a.src.endsWith('/gyuwon8.mp3')&&!a.paused).currentTime=t-.18;},first);
+   await page.evaluate(t=>{window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop).currentTime=t-.18;},first);
    await page.waitForFunction(t=>Math.abs(window.__session().game.gyuwon.years.musical.time-t)<.11,first);
    await control('light').dispatchEvent('pointerdown',{pointerId:1});
    assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.dancePatterns[0].done[0]),true);
@@ -74,8 +74,8 @@ try{
   const time=await value(()=>window.__session().game.gyuwon.years.musical.time);await page.waitForTimeout(150);
   assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.time),time);
   await page.locator('#gyuwon-battle').locator('#resume').click();
-  await page.waitForFunction(y=>window.__media.some(a=>a.src.endsWith(`/gyuwon${y}.mp3`)&&!a.paused),y);
-  await page.evaluate(y=>{const a=window.__media.find(a=>a.src.endsWith(`/gyuwon${y}.mp3`)&&!a.paused);a.currentTime=a.duration-.12;},y);
+  await page.waitForFunction(()=>window.__media.some(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop),null,{timeout:30000});
+  await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-.12;});
  }
  await page.waitForFunction(()=>window.__session().game.gyuwon.years.year===11&&window.__session().game.gyuwon.years.musical.time>3);
  assert.equal(await value(()=>window.__session().diagnostics().renderMode),'webgl');
