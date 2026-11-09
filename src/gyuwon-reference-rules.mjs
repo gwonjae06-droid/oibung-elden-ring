@@ -2,7 +2,7 @@ import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
-import {gyuwonDanceScene,gyuwonDanceAction} from './gyuwon-dance-director.mjs';
+import {gyuwonDanceScene,gyuwonDanceJudge,gyuwonDanceNextCue,GYUWON_DANCE_WINDOWS} from './gyuwon-dance-director.mjs';
 import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
 import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
 import {runnerInitMotion,runnerPressJump,runnerPressSlide,runnerReleaseSlide,runnerStepMotion,runnerObstacleContact,runnerGuideReset,runnerGuideBridge,runnerGuideCatch,runnerGuideWarning} from './gyuwon-runner-physics.mjs';
@@ -51,7 +51,8 @@ export function setupReferenceMinigame(g,m){
   }
   m.dancePose=0;m.dancePoseKind='dance';m.danceFacing=1;m.danceFlash=0;
   m.danceLastCue=-1;m.danceCue='';m.danceError=0;m.danceEnergy=0;
-  m.danceRivalScore=0;m.danceScene=gyuwonDanceScene(0);m.note=null;
+  m.danceRivalScore=0;m.danceScene=gyuwonDanceScene(0);m.danceCueId='';
+  m.dancePreviousTime=0;m.danceHit=null;m.note=null;
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
@@ -96,24 +97,31 @@ export function actReferenceMinigame(g,m,type,c){
   m.money-=spec.cost;m.unitCooldowns[n]=spec.cool;m.units.push({id:g.nextId++,team:1,type:n,x:-17,z:0,hp:spec.hp,maxHp:spec.hp,attack:spec.attack,range:spec.range,speed:spec.speed,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:n===2||n===4?'ranged':'melee',lane:m.deployLane||0});return true;
  }
  if(m.year===8){
-  // J = regular/quick step; L = turn. There is never a third dance button.
-  const wanted={light:'light',skill:'skill'}[type];if(!wanted)return false;
-  let best=null,error=Infinity,slot=-1;
-  for(const pattern of m.dancePatterns)for(let i=0;i<pattern.count;i++){
-   if(pattern.done[i]||pattern.misses[i])continue;
-   const delta=Math.abs(m.time-(pattern.first+i*pattern.spacing*m.dancePeriod));
-   if(delta<error){best=pattern;error=delta;slot=i;}
-  }
-  if(!best||gyuwonDanceAction(best.kind)!==wanted||error>.24){
-   if(best&&error<.6){m.combo=0;m.danceError=.4;}
+  // The score, anticipation pose and physical note all read one clock/cue.
+  // Two buttons only: J is a standard/quick step, L is the turn.
+  const judgement=gyuwonDanceJudge(m.dancePatterns,m.time,type,m.dancePeriod);
+  if(!judgement)return false;
+  if(!judgement.accepted){
+   if(judgement.error<=GYUWON_DANCE_WINDOWS.good){
+    m.combo=0;m.danceError=.4;
+   }
    return false;
   }
-  best.done[slot]=true;m.dancePose=.52;
-  m.dancePoseKind=best.kind==='turn'?'turn':best.kind==='quick'?'quick':'dance';
-  m.danceFacing=best.kind==='turn'?-m.danceFacing:best.facing;
-  m.danceFlash=.44;m.danceEnergy=Math.min(100,(m.danceEnergy||0)+(error<.075?13:8));
-  m.success++;m.judgement=error<.075?'PERFECT':'GOOD';
-  m.judgementUntil=m.time+.5;c.deal(g,error<.075?150:100,c.emit);return true;
+  const p=judgement.pattern;
+  p.done[judgement.index]=true;
+  m.dancePose=.52;
+  m.dancePoseKind=p.kind==='turn'?'turn':p.kind==='quick'?'quick':'dance';
+  m.danceFacing=p.kind==='turn'?-m.danceFacing:p.facing;
+  m.danceFlash=.44;
+  m.danceEnergy=Math.min(100,(m.danceEnergy||0)+(judgement.grade==='PERFECT'?13:8));
+  m.success++;
+  m.judgement=judgement.grade;m.judgementUntil=m.time+.5;
+  // The burst is attached to the ACTUAL accepted press, never just a flash
+  // that looks like a hit but fails to score.
+  m.danceHit={at:m.time,action:judgement.action,grade:judgement.grade,facing:m.danceFacing,
+   scheduledAt:judgement.at,kind:p.kind};
+  c.deal(g,judgement.grade==='PERFECT'?150:100,c.emit);
+  return true;
  }
  if(m.year===9){
   const f=m.fighters[0];if(m.fightReset>0)return false;
@@ -368,23 +376,34 @@ function tickReferenceArmy(g,m,dt,c){
 }
 function tickReferenceDance(g,m,dt,c){
  m.danceScene=gyuwonDanceScene(m.time);
+ const skipped=m.time-(m.dancePreviousTime??m.time)>.35;
+ m.dancePreviousTime=m.time;
  m.dancePose=Math.max(0,m.dancePose-dt);m.danceFlash=Math.max(0,m.danceFlash-dt);
  m.danceError=Math.max(0,m.danceError-dt);
  m.danceEnergy=Math.max(0,(m.danceEnergy||0)-dt*.9);
  for(const p of m.dancePatterns){
-  if(m.time>=p.cue&&m.time<p.first&&m.danceLastCue!==p.id){
-   m.danceLastCue=p.id;m.danceCue=p.kind;
-   c.emit('gyuwon-dance-cue',{kind:p.kind});
-  }
   for(let i=0;i<p.count;i++){
    const at=p.first+i*p.spacing*m.dancePeriod;
-   if(!p.done[i]&&!p.misses[i]&&m.time>at+.24){
-    p.misses[i]=true;m.combo=0;m.danceRivalScore++;
-    m.danceError=.6;c.take(g,14,c.emit);
+   // Never inflict surprise hits from notes the audio clock jumped over.
+   if(!p.done[i]&&!p.misses[i]&&m.time>at+GYUWON_DANCE_WINDOWS.expired){
+    p.misses[i]=true;
+    if(skipped)continue;
+    m.combo=0;m.danceRivalScore++;m.danceError=.6;
+    c.take(g,14,c.emit);
    }
   }
  }
- m.danceCurrent=m.dancePatterns.find(p=>m.time>=p.cue&&m.time<=p.first+(p.count-1)*p.spacing*m.dancePeriod+.3)||null;
+ const next=gyuwonDanceNextCue(m.dancePatterns,m.time,m.dancePeriod);
+ m.danceCurrent=next?.pattern||null;
+ if(next?.active){
+  const key=next.pattern.id+':'+next.index;
+  // Audio instruction is never necessary: the leader also demonstrates
+  // the winding arm/feet; the timing is identical in Canvas and input.
+  if(m.danceCueId!==key&&next.remaining>.25){
+   m.danceCueId=key;m.danceCue=next.kind;
+   c.emit('gyuwon-dance-cue',{kind:next.kind});
+  }
+ }
 }
 function tickReferenceFighter(g,m,dt,input,c){
  const [p,b]=m.fighters;
