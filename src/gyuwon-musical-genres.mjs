@@ -6,9 +6,12 @@ import {playerIncomingDamage} from './weapon-stats.mjs';
 import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
+import {gyuwonMasterScene,gyuwonMasterRhythmNotes} from './gyuwon-master-director.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
 export const gyuwonStageProgress=m=>clamp((m?.time||0)/(m?.clock?.duration||GYUWON_SONGS[gyuwonSongKey(m)]?.duration||180),0,1);
+const FINALE_SCENES=Object.freeze({solo:0,memory:0,actors:1,runner:2,parade:2,breather:3,stars:4,'grand-chorus':5,'curtain-call':5,bow:5});
+export const gyuwonFinaleMemoryPhase=time=>FINALE_SCENES[gyuwonMasterScene(11,time).kind]??0;
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.z-b.z)<r;
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 export const GYUWON_MUSICAL_ACTS=Object.freeze({
@@ -137,7 +140,18 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
   m.guard=Math.max(m.guard,.65);m.dash={left:.24,vx:(g.player.x>=g.boss.x?1:-1)*12};
   rhythmPress(g,m,type,emit);return true;
  }
- if(m.kind==='finale')return rhythmPress(g,m,type,emit);
+ if(m.kind==='finale'){
+  if(type==='heal')return heal(g,emit);
+  if(!['light','skill'].includes(type))return rhythmPress(g,m,type,emit);
+  const note=m.note;
+  if(note&&!note.done&&note.key===type&&Math.abs(note.time)<=.21)return rhythmPress(g,m,type,emit);
+  // Normal attacks in 3D must travel through a readable windup and reach.
+  if(m.playerStrike||m.shotCooldown>0)return false;
+  m.playerStrike={age:0,reach:type==='skill'?5.3:3.8,damage:type==='skill'?175:95,kind:type};
+  m.shotCooldown=type==='skill'?.9:.55;
+  emit('gyuwon-musical-cue',{kind:type==='skill'?'finale-skill':'finale-swing',wind:.44});
+  return true;
+ }
  if(type==='heal')return heal(g,emit);
  if(m.kind==='runner'){
   if(type==='roll'&&m.jumpY<.01){m.jumpV=9.4;return true;}
@@ -249,22 +263,9 @@ function tickArmy(g,m,dt,emit){
  g.player.x=-19;g.boss.x=19;
 }
 function tickRhythm(g,m,dt,emit,finale=false){
- // The archived reference beat map ends at 68s. Maintain a sparse interactive
- // ensemble through the remaining original recording, with breathing room in
- // the middle. These later accents are provisional until master-audio charting.
- if(finale&&!m.finaleChart){
-  const original=GYUWON_BEATS[11]?.notes||[],extra=[];
-  const beat=60/GYUWON_SONGS[11].bpm;
-  let next=original.at(-1)?.at||69,index=0;
-  while(next<GYUWON_SONGS[11].duration-5){
-   const quiet=next>GYUWON_SONGS[11].duration*.56&&next<GYUWON_SONGS[11].duration*.68;
-   next+=beat*(quiet?12:index%4===3?8:6);
-   if(next>=GYUWON_SONGS[11].duration-5)break;
-   if(next>GYUWON_SONGS[11].duration*.56&&next<GYUWON_SONGS[11].duration*.68)continue;
-   extra.push({at:+next.toFixed(3),key:['light','skill','light','roll'][index%4],lane:index%4});index++;
-  }
-  m.finaleChart=[...original,...extra];
- }
+ // Mapped beats from original-master excerpts; uncertain spans have sparse
+ // guide notes, which should be replaced after manual full-recording charting.
+ if(finale&&!m.finaleChart)m.finaleChart=gyuwonMasterRhythmNotes(11);
  const chart=finale?m.finaleChart:(GYUWON_BEATS[m.year]?.notes||[]);
  if(m.note){
   m.note.time=m.note.at-m.time;
@@ -276,10 +277,10 @@ function tickRhythm(g,m,dt,emit,finale=false){
   if(beat.at-m.time>1.05)break;
   m.chartIndex++;m.note={at:beat.at,time:beat.at-m.time,key:beat.key,index:beat.lane,done:false};
  }
- if(finale)m.finaleStep=Math.min(5,Math.floor(gyuwonStageProgress(m)*6));
+ if(finale)m.finaleStep=gyuwonFinaleMemoryPhase(m.time);
 }
 function tickFinaleScene(g,m,dt,input,emit){
- const phase=Math.min(5,Math.floor(gyuwonStageProgress(m)*6)),p=g.player,b=g.boss;
+ const phase=gyuwonFinaleMemoryPhase(m.time),p=g.player,b=g.boss;
  const drift=phase===3?4.5:6.8;
  p.x=clamp(p.x+(input.x||0)*drift*dt,-18,18);p.z=clamp(p.z-(input.z||0)*drift*dt,-13,13);
  b.x=Math.sin(m.time*.23)*5;b.z=-6+Math.sin(m.time*.33)*1.5;
@@ -294,7 +295,8 @@ function tickFinaleScene(g,m,dt,input,emit){
     m.finaleHazards.push({
      id:m.finaleCount++,kind:phase===1?'banner':phase===2?'runner':phase>=4?'star':'banner',
      x:clamp(p.x+Math.sin(an)*offset,-15,15),z:clamp(p.z+Math.cos(an)*offset,-10,10),
-     wind:phase===5?1.35:1.8,age:0,hit:false,radius:phase===5?1.9:2.3
+     fromX:phase>=4?p.x+Math.sin(an)*13:-18,fromZ:phase>=4?-15:p.z+Math.cos(an)*3,
+     fxX:0,fxZ:0,wind:phase===5?1.35:1.8,age:0,hit:false,radius:phase===5?1.9:2.3
     });
    }
    emit('gyuwon-musical-cue',{kind:'finale-memory',wind:1.8});
@@ -302,6 +304,9 @@ function tickFinaleScene(g,m,dt,input,emit){
  }
  for(const h of m.finaleHazards){
   h.age+=dt;
+  const q=clamp(h.age/h.wind,0,1);
+  h.fxX=(h.fromX??h.x)+(h.x-(h.fromX??h.x))*q*q*(3-2*q);
+  h.fxZ=(h.fromZ??h.z)+(h.z-(h.fromZ??h.z))*q*q*(3-2*q);
   if(h.age>=h.wind&&!h.hit){
    h.hit=true;
    if(Math.hypot(p.x-h.x,p.z-h.z)<h.radius)take(g,phase===5?20:14,emit);
@@ -392,6 +397,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  else m.time+=dt;
  const duration=m.clock?.duration||song.duration;
  m.actProgress=clamp(m.time/duration,0,1);
+ m.masterScene=gyuwonMasterScene(gyuwonSongKey(m),m.time);
  const ended=m.clock?m.clock.ended:m.time>=duration;
  if(m.finishing){
   m.curtain=m.time;
