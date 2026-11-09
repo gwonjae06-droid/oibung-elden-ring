@@ -11,12 +11,12 @@ test('invalid damage never mutates state',()=>{
 });
 test('weapon and fixed damage share phase transition cleanup',()=>{
  for(const developer of [false,true]){const g=game();g.clown={zones:[{}],bombs:[{}],waves:[{}]};
- assert.equal(damageArenaBoss(g,500,0,{developer}),300);assert.equal(g.boss.state,'transition');assert.equal(g.boss.phase,2);
+ assert.equal(damageArenaBoss(g,500,0,{developer}),500);assert.equal(g.boss.state,'transition');assert.equal(g.boss.phase,2);
  assert.deepEqual(g.clown.zones,[]);assert.deepEqual(g.projectiles,[]);assert.deepEqual(g.bossShots,[]);
  assert.equal(damageArenaBoss(g,1),0);assert.equal(g.events.filter(e=>e.type==='phase').length,1);}
 });
 test('death emits victory once and clears clown hazards',()=>{
- const g=game();g.boss.phase=3;g.clown={zones:[{}],bombs:[{}],waves:[{}]};
+ const g=game();g.boss.phase=2;g.clown={zones:[{}],bombs:[{}],waves:[{}]};
  assert.equal(damageArenaBoss(g,2000),1000);assert.equal(g.status,'won');assert.equal(g.clown.state,'defeated');
  assert.equal(damageStandard(g,500),0);assert.equal(g.events.filter(e=>e.type==='victory').length,1);assert.equal(g.stats.hits,1);
 });
@@ -31,26 +31,30 @@ test('cancelled or stale dispatch does not damage a boss after loading',async()=
  assert.equal(await applyBossDamage(g,100,{isCurrent:()=>false}),0);assert.equal(g.boss.hp,hp);
 });
 
-test('overkill damage cannot skip O Seulwoo phase two or three, even for developer or DoT hits',()=>{
+test('even massive hits and DoT can only enter one clown curtain at 50% HP',()=>{
  for(const opts of [{},{developer:true},{dot:true}]){
   const g=createClownGame('sword',{register:false});
   const max=g.boss.maxHp;
   const first=damageArenaBoss(g,max*8,0,opts);
-  assert.ok(Math.abs(first-max*.30)<.001,'first curtain should clamp to 70% HP');
+  assert.equal(first,max*.5,'first phase should stop at 50%');
+  assert.equal(g.boss.hp,max*.5);
   assert.equal(g.boss.phase,2);
   assert.equal(g.boss.state,'transition');
   assert.equal(g.status,'playing');
   g.boss.state='clown';g.clown.state='idle';
-  const second=damageArenaBoss(g,max*8,0,opts);
-  assert.ok(Math.abs(second-max*(.70-1/3))<.001,'second curtain should clamp to 33.3% HP');
-  assert.equal(g.boss.phase,3);
-  assert.equal(g.boss.state,'transition');
-  assert.equal(g.status,'playing');
-  assert.equal(g.clown.troupe.members.length,0);
-  g.boss.state='clown';g.clown.state='idle';
-  assert.ok(damageArenaBoss(g,max*8,0,opts)>0);
+  assert.equal(damageArenaBoss(g,max*8,0,opts),max*.5);
+  assert.equal(g.boss.phase,2,'must never enter phase three');
   assert.equal(g.status,'won');
-  assert.equal(g.events.filter(e=>e.type==='phase').length,2);
+  assert.equal(g.events.filter(e=>e.type==='phase').length,1);
   assert.equal(g.events.filter(e=>e.type==='victory').length,1);
  }
+});
+test('Kwon still transitions to phase three independently of clown rules',()=>{
+ const g=game();
+ g.boss.phase=2;
+ g.boss.hp=g.boss.maxHp*.34;
+ const damage=damageArenaBoss(g,50);
+ assert.equal(damage,50);
+ assert.equal(g.boss.phase,3);
+ assert.equal(g.boss.state,'transition');
 });

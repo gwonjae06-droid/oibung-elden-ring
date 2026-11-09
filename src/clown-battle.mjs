@@ -24,7 +24,6 @@ import {stepLargeClown as stepClown,CLOWN_SIZE,CLOWN_CAMERA} from './clown-size.
 import {act,skillView,WEAPONS,clamp} from './combat.mjs';
 import {buildPlayer,posePlayer,swayCape} from './models.mjs';
 import {createClownActor} from './clown-ringmaster-actor.mjs';
-import {createClownBalletDuet} from './clown-ballet-duet-view.mjs';
 import {createLegacyEchoView} from './clown-legacy-echo-view.mjs';
 import {createClownPhase2Performance} from './clown-phase2-performance.mjs';
 import {clownPhase2Beat} from './clown-phase2-score.mjs';
@@ -77,8 +76,6 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  startup.own('Clown act-two coronation',()=>coronation.dispose());
   const atmosphere=createBossAtmosphere(scene,{profile:'clown',coarse,reduced});startup.own('Clown silent atmosphere',()=>atmosphere.dispose());
  const actor=createClownActor({coarse});startup.own('Clown original face',()=>actor.disposePortrait?.());scene.add(actor.root);actor.root.scale.setScalar(CLOWN_SIZE);
- const ballet=createClownBalletDuet(scene,{coarse,reduced,originalPortrait:actor.head.portrait});
- startup.own('Clown last pas de deux',()=>ballet.dispose());
  const troupeView=createCircusTroupeView(scene,{coarse,reduced,
   onActorCreated:performer=>cinematic.apply(performer,{actor:true})});startup.own('Living circus troupe',()=>troupeView.dispose());
  const legacyEchoes=createLegacyEchoView(scene,{coarse,
@@ -117,7 +114,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  const aim=new THREE.Vector3(),camPos=new THREE.Vector3(),camTarget=new THREE.Vector3(),screen=new THREE.Vector3(),keys=new Set(),stick={x:0,z:0};
  function notice(_text){/* In-fight instructions and pattern names are forbidden. */}
  function floatText(text,x,y,z,player=false){screen.set(x,y,z).project(camera);if(Math.abs(screen.z)>1)return;const el=document.createElement('span');el.className='damage-number'+(player?' player':'');el.textContent=text;el.style.left=(screen.x*.5+.5)*canvas.clientWidth+'px';el.style.top=(-screen.y*.5+.5)*canvas.clientHeight+'px';$('damage-layer').appendChild(el);eventScope.setTimeout(()=>el.remove(),850);}
- function reset(replayIntro=false){ballet.reset();coronation.reset();legacyEchoes.clear();recordedFoley.stop();nightmare.reset();livingWorld.reset();shutterLeft=0;shutterFlash.style.opacity='0';introGate.arm();playerProjectiles.clear();atmosphere.reset();contactFx.reset();circus.reset();traitView.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();playerWeaponSfx.clear();winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});configure(g);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearBombs();clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,8,21);aim.set(0,CLOWN_CAMERA.target,5);freeLook.release();lock=true;yaw=Math.PI;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;canvas.focus();if(replayIntro)introGate.begin();}
+ function reset(replayIntro=false){coronation.reset();legacyEchoes.clear();recordedFoley.stop();nightmare.reset();livingWorld.reset();shutterLeft=0;shutterFlash.style.opacity='0';introGate.arm();playerProjectiles.clear();atmosphere.reset();contactFx.reset();circus.reset();traitView.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();playerWeaponSfx.clear();winBinding?.restore();winBinding=null;winAt=null;$('boss-hud').hidden=false;g=createClownGame(weapon,{register:false});configure(g);queued=null;paused=false;keys.clear();stick.x=stick.z=0;clearMap(zones);clearBombs();clearMap(shots);fx.clear();for(const p of particles)scene.remove(p.m);particles.length=0;$('result').hidden=$('pause-screen').hidden=true;$('pause').textContent='일시정지';$('damage-layer').replaceChildren();camera.position.set(0,8,21);aim.set(0,CLOWN_CAMERA.target,5);freeLook.release();lock=true;yaw=Math.PI;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;canvas.focus();if(replayIntro)introGate.begin();}
  let dragPointer=null;
  const freeLook=createFreeLookCamera({canvas,coarse,enabled:()=>ready&&!introGate.blocked&&!paused&&!closed&&g.status==='playing'&&!lock,
   getAngles:()=>({yaw,pitch}),setAngles:next=>{yaw=next.yaw;pitch=next.pitch;},minPitch:.08,maxPitch:1.18});
@@ -152,7 +149,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   ...contexts.map((context,i)=>['Clown audio context '+i,()=>context.close?.()]),
   ['Clown transient meshes',()=>{clearMap(zones);clearBombs();clearMap(shots);headPool.dispose();}],
   ['Living circus troupe',()=>troupeView.dispose()],['Original mini ringmasters',()=>legacyEchoes.dispose()],
-  ['Clown last pas de deux',()=>ballet.dispose()],['Clown act-two coronation',()=>coronation.dispose()],['Clown radiant circus',()=>circus.dispose()],['Clown living world',()=>livingWorld.dispose()],['Clown scene',()=>disposeScene(scene)],
+  ['Clown act-two coronation',()=>coronation.dispose()],['Clown radiant circus',()=>circus.dispose()],['Clown living world',()=>livingWorld.dispose()],['Clown scene',()=>disposeScene(scene)],
   ['Clown particles',()=>{confettiGeo.dispose();smokeGeo.dispose();bloodGeo.dispose();starGeo.dispose();for(const m of mats)m.dispose();}],
   ['Clown renderer',()=>renderer.dispose()],
   ['Clown dialog',()=>{d.close();d.remove();}],
@@ -172,8 +169,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
   const sceneryDt=sceneryElapsed;
   if(sceneryTick)sceneryElapsed=0;
   actor.update(g,impact.frozen?0:dt);
-  actor.root.visible=b.phase!==3||(b.state==='transition'&&b.t<1.7);
-  ballet.update(g,impact.frozen?0:dt);
+  actor.root.visible=true;
   if(sceneryTick){troupeView.update(g,sceneryDt);legacyEchoes.update(g,sceneryDt);}actor.root.scale.setScalar(CLOWN_SIZE);actor.root.position.y*=CLOWN_SIZE;actor.root.rotation.x=actor.root.rotation.z=0;impact.bossPose(actor.root);P.rig.position.set(p.x,0,p.z);P.rig.rotation.y=p.action?.yaw??p.yaw;const v=input(),walk=posePlayer(P,g.time*7,p.action?0:Math.hypot(v.x,v.z)*4.7);swayCape(P,g.time,0);P.body.position.y=1+walk.bob;P.body.rotation.x=0;P.pivot.rotation.x=0;const a=p.action;if(a&&(a.kind==='attack'||a.kind==='skill')){P.arms.R.rotation.x=0;P.pivot.rotation.x=-1.5+Math.sin(clamp(a.t/a.total,0,1)*Math.PI)*2.9;}else if(a?.kind==='charging'){P.pivot.rotation.x=-1.4;P.body.rotation.x=-.12;}else if(a?.kind==='roll')P.body.rotation.x=a.t/a.total*Math.PI*2;else if(a?.kind==='hurt')P.body.rotation.x=-.3;P.rig.rotation.x=P.rig.rotation.z=0;impact.playerPose(P.rig);mark.position.set(p.x,.06,p.z);
   const live=new Set();for(const z of c.zones){
     if(!clownDangerSpotlightCue(z))continue;
@@ -193,7 +189,7 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
    const frame=matchedBossCamera('clown',{
     player:p,boss:b,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
     headHeight:clownBeastPose(g).active?2.8:4.5,
-    extraDistance:big+phase2.cameraDistance+(b.phase===3?2.0:0) // Keep both dancers framed without stage rotation.
+    extraDistance:big+phase2.cameraDistance
    });
    camPos.set(frame.position.x,frame.position.y+big*.2+phase2.cameraLift,frame.position.z);
    camTarget.set(frame.focus.x,frame.focus.y+big*.2+phase2.cameraLift,frame.focus.z);camera.position.lerp(camPos,alpha);aim.lerp(camTarget,alpha);if(!reduced&&dt>0){shake=Math.max(0,shake-dt);camera.position.x+=(Math.random()-.5)*shake;camera.position.y+=(Math.random()-.5)*shake;}camera.lookAt(aim);impact.camera(camera);screen.set(b.x,clownBeastPose(g).active?2.9:4.8,b.z).project(camera);$('reticle').hidden=!lock||Math.abs(screen.z)>1||g.status!=='playing';$('reticle').style.left=((screen.x*.5+.5)*canvas.clientWidth-6)+'px';$('reticle').style.top=((-screen.y*.5+.5)*canvas.clientHeight-6)+'px';
@@ -223,17 +219,17 @@ export function launchClownBattle({weapon='sword',practice=false,configure=()=>{
  // Render the already-allocated second-act scenery, crossed puppet control,
  // original mini bodies and stage ensembles behind the visual loading veil.
  // They return to hidden standby before the player can move or see a cutscene.
- troupeView.prepareGpuWarmup();legacyEchoes.prepareGpuWarmup();ballet.prepareGpuWarmup();
+ troupeView.prepareGpuWarmup();legacyEchoes.prepareGpuWarmup();
  coronation.prepareGpuWarmup();actor.prewarmMarionette();
  try{coronation.prewarm(renderer,camera);}
  catch(error){console.warn('Clown coronation shader prewarm failed',error);}
  warmup.start().then(()=>{
-  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();ballet.finishGpuWarmup();
+  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();
   coronation.finishGpuWarmup();actor.finishPrewarmMarionette();
   if(closed)return;
   introGate.whenReady(!g.introControlled);
  }).catch(error=>{
-  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();ballet.finishGpuWarmup();
+  troupeView.finishGpuWarmup();legacyEchoes.finishGpuWarmup();
   coronation.finishGpuWarmup();actor.finishPrewarmMarionette();
   console.warn('Optional clown GPU warmup failed',error);
   if(!closed)introGate.whenReady(!g.introControlled);

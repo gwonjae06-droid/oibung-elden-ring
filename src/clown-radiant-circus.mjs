@@ -279,13 +279,7 @@ export function createClownCircusStage(scene,{coarse=false,reduced=false}={}){
  function event(e,g){
   if(disposed||!e)return;
   const type=e.type;machinery.event(e);
-  if(type==='clown-ballet-start'||type==='clown-ballet-armed'||(type==='phase'&&e.phase===3)){
-   recolor(3);pulse=.3;spotMode='gold';cueLeft=2.2;
-  }
-  else if(type==='clown-ballet-cue'){pulse=Math.max(pulse,.22);spotMode='gold';cueLeft=.7;
-   focus=Number.isFinite(e.x)&&Number.isFinite(e.z)?{x:e.x,z:e.z}:null;
-  }
-  else if(type==='clown-phase3'){recolor(3);pulse=.7;spotMode='crimson';cueLeft=2.2;}
+  if(type==='clown-phase3'){recolor(3);pulse=.7;spotMode='crimson';cueLeft=2.2;}
   else if(type==='clown-horror'){pulse=Math.max(pulse,.28);spotMode='crimson';cueLeft=Math.max(cueLeft,.55);focus=Number.isFinite(e.x)&&Number.isFinite(e.z)?{x:e.x,z:e.z}:null;}
   else if(type==='phase'||type==='clown-phase2'){recolor(2);pulse=.45;spotMode='frenzy';cueLeft=1.8;}
   else if(type==='clown-clap'||type==='clown-bounce'){pulse=Math.max(pulse,.5);spotMode='gold';cueLeft=.8;}

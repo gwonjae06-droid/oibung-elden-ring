@@ -8,7 +8,7 @@ import {createClownNightmareAnatomy} from '../src/clown-nightmare-anatomy.mjs';
 import {bossFoleySpec} from '../src/boss-foley-map.mjs';
 import {clownDangerSpotlightCue} from '../src/clown-danger-spotlight.mjs';
 
-test('fifty-five horror and ensemble routines keep actual windups, recoveries and three-act eligibility',()=>{
+test('fifty-five horror and ensemble routines keep actual windups, recoveries and three horror tiers',()=>{
  assert.equal(HORROR_PATTERNS.length,55);
  const phase1=HORROR_PATTERNS.filter(k=>PATTERNS[k].phases.includes(1));
  assert.equal(phase1.length,18);
@@ -27,17 +27,19 @@ test('fifty-five horror and ensemble routines keep actual windups, recoveries an
  assert.equal(horrorMinStage('stageRupture'),3);
 });
 
-test('the former 25% horror stage is replaced with a dedicated wooden ballet phase',()=>{
+test('O Seulwoo has two phases, with a nightmare crescendo inside phase two at 25% HP',()=>{
  const g=createClownGame('sword',{register:false,seed:91});
  g.boss.phase=2;g.clown.state='idle';g.clown.wait=900;
  g.boss.hp=g.boss.maxHp*.26;stepClown(g,1/120);
- assert.equal(g.clown.horrorStage,2,'phase two never silently becomes the finale');
- g.boss.phase=3;g.boss.state='clown';g.clown.state='idle';
+ assert.equal(g.clown.horrorStage,2);
+ assert.equal(g.boss.phase,2);
+ g.boss.hp=g.boss.maxHp*.24;
  stepClown(g,1/120);
- assert.equal(g.clown.horrorStage,3);
- assert.equal(g.events.filter(e=>e.type==='clown-ballet-start').length,1);
+ assert.equal(g.boss.phase,2,'there is no ballet phase three');
+ assert.equal(g.clown.horrorStage,3,'original horror pressure remains in phase two');
+ assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1);
  stepClown(g,1/120);
- assert.equal(g.events.filter(e=>e.type==='clown-ballet-start').length,1,'no repeated third-act cue');
+ assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1);
 });
 
 for(const name of HORROR_PATTERNS){
