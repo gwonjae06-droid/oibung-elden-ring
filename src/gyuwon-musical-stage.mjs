@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {gyuwonCurtainCallAt} from './gyuwon-curtain-call.mjs';
 
 // Instanced/cached primitive stagecraft. One rig for Gyuwon and one for the
 // player stay in the scene for every genre. Every moving prop here reads the
@@ -62,19 +63,24 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
    fabric.rotation.y=side*.2*draw;}
   lintel.visible=edgeLamps[0].visible=edgeLamps[1].visible=opening;
   for(let i=0;i<cues.length;i++){const o=cues[i];o.visible=false;o.geometry=i%9===0?torus:i%3===0?box:ball;}
-  // Reuse the 5수 guest cast instead of loading another set of 3D actors.
+  // The four prior-boss meshes return as actors, not hostile AI.
   if(kind==='finale'){
-   const alive=!m.finishing&&t>=37.92,entrance=THREE.MathUtils.smoothstep(t,37.92,48);
+   const f=m.curtainCall||gyuwonCurtainCallAt(t,m.clock?.duration||180);
    ensemble.forEach((role,i)=>{
     if(role.parent!==root)root.add(role);
-    role.visible=alive;
-    const x=-12+i*8,from=i%2?-24:24;
-    role.position.set(from+(x-from)*entrance,
-      .18+Math.sin(t*1.7+i)*.12*(alive?1:0),-9+Math.sin(i*2.4)*2);
-    role.rotation.y=Math.sin(t*.31+i)*.36;
-    role.rotation.x=0;
-    role.rotation.z=Math.sin(t*1.35+i*.9)*.06;
-    if(t>=124)role.rotation.z+=Math.sin(t*3+i)*.075;
+    role.visible=!m.finishing&&f.mode==='recollection'&&f.actorIndex===i;
+    if(!role.visible)return;
+    const slide=THREE.MathUtils.smoothstep(f.beat,0,.36);
+    const exit=THREE.MathUtils.smoothstep(f.beat,.82,1);
+    const side=i%2?-1:1;
+    role.position.set(side*(15-7*slide+7*exit),
+      .18+Math.sin(t*1.7+i)*.12,-9+Math.sin(i*2.4)*1.2);
+    role.rotation.y=side*(-.3+.27*slide);
+    const bow=f.phase===3?THREE.MathUtils.smoothstep(f.beat,.33,.9):0;
+    role.rotation.x=bow*.28*Math.sin(bow*Math.PI*.85);
+    role.rotation.z=f.prop==='die'||f.prop==='roulette'?Math.sin(t*5)*.16:
+      f.prop==='moon'||f.prop==='halo'?Math.sin(t*1.5)*.11:Math.sin(t*1.2+i)*.05;
+    role.scale.setScalar(.9+.1*slide);
    });
   }
   const beatPhase=t*1.7;
@@ -85,7 +91,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
    o.position.x=Math.sin(i*Math.PI/4+t*.13)*(kind==='finale'?14:10);
    o.position.z=Math.cos(i*Math.PI/4+t*.13)*9;
   }
-  stageRing.visible=kind==='rhythm'||kind==='finale';
+  stageRing.visible=kind==='rhythm';
   if(stageRing.visible){
    stageRing.position.set(0,5.5+(Math.sin(t*3)*.12),-12);stageRing.rotation.x=0;
    const pulse=1+Math.sin(t*(kind==='finale'?7:5))*.08;
@@ -121,48 +127,54 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     if(u.role==='skill')showAt((i+78)%cues.length,{x:u.x,y:1.8,z:u.team*.28,
       sx:.2,sy:.85,sz:.2,color:6});
    }
-  }else if(kind==='rhythm'||kind==='finale'){
-   for(let i=0;i<4;i++)showAt(i,{x:-9+i*5.5,y:.05,z:0,
-    sx:1.5,sy:1.5,sz:1.5,color:(i+color)%7,flat:true});
-   if(m.note){
-    const key=m.note.key,scale=Math.max(.6,Math.min(4,m.note.time*3));
-    showAt(11,{x:-9+m.note.index*5.5,y:.15,z:0,
-     sx:scale,sy:scale,sz:scale,color:key==='roll'?2:key==='skill'?0:5,flat:true});
-   }
-   if(kind==='finale'){
-    const memory=Math.min(5,m.finaleStep||0);
-    for(let j=0;j<7;j++){const a=j*Math.PI*2/7+t*.28;showAt(42+j,{x:Math.sin(a)*14,y:1.5+Math.sin(t*1.7+j)*1.1,z:Math.cos(a)*9,sx:memory===2?2.1:.9,sy:memory===2?1.7:.9,sz:.9,color:(j+memory)%7});}
-    for(let j=0;j<6;j++){const a=t*(memory===5?2.5:.6)+j*Math.PI/3;showAt(52+j,{x:Math.sin(a)*(6+memory),y:8+Math.cos(a*2)*2,z:-9+Math.cos(a)*2,sx:memory===4?1.4:.55,sy:.55,sz:.55,color:(memory+j+2)%7});}
-   }
-   if(kind==='finale'){
-    for(let i=0;i<Math.min(12,m.finaleHazards?.length||0);i++){
-     const h=m.finaleHazards[i],q=Math.min(1,h.age/h.wind),after=h.age>h.wind;
-     const star=h.kind==='star',banner=h.kind==='banner';
-     // Soft shadow is positioned at the exact contact center.
-     showAt(77+i,{x:h.x,y:.03,z:h.z,sx:h.radius||2.3,sy:1,sz:h.radius||2.3,
-      color:star?9:banner?2:6,flat:true});
-     cues[77+i].material=soft;cues[77+i].material.opacity=.17+.16*Math.sin(Math.min(1,q)*Math.PI/2);
-     // Airborne source approaches the marked contact point while the music plays.
-     showAt(60+i,{x:h.fxX??h.x,y:star?8.8*(1-q)+.6:banner?1.5:1.0,
-      z:h.fxZ??h.z,sx:star?1.0+q*1.1:1.3,sy:star?1.0+q*1.1:2.5,sz:star?1.0+q*1.1:1.3,
-      color:star?9:banner?0:2,rotate:t*.2});
-     cues[60+i].geometry=star?ball:banner?soldier:torus;
-     if(after)cues[60+i].scale.multiplyScalar(Math.max(.06,1-(h.age-h.wind)/.9));
+  }else if(kind==='rhythm'){
+    for(let i=0;i<4;i++)showAt(i,{x:-9+i*5.5,y:.05,z:0,
+     sx:1.5,sy:1.5,sz:1.5,color:(i+color)%7,flat:true});
+    if(m.note){
+     const key=m.note.key,scale=Math.max(.6,Math.min(4,m.note.time*3));
+     showAt(11,{x:-9+m.note.index*5.5,y:.15,z:0,
+      sx:scale,sy:scale,sz:scale,color:key==='roll'?2:key==='skill'?0:5,flat:true});
     }
-   }
-   if(kind==='finale'&&t>=124&&t<176.5){
-    for(let i=0;i<5;i++){
-     const a=i*Math.PI*2/5+t*.25;
-     showAt(72+i,{x:Math.sin(a)*16,y:8.5+Math.sin(t+i)*.7,z:-8+Math.cos(a)*7,
-      sx:.42,sy:1.6,sz:.42,color:(i+6)%7});
+   }else if(kind==='finale'){
+    const f=m.curtainCall||gyuwonCurtainCallAt(t,m.clock?.duration||180);
+    if(!m.finishing&&f.mode==='recollection'){
+     // Different remembered boss phases are expressed as harmless tableaux.
+     const c=[6,1,9,4,0][f.actorIndex],side=f.actorIndex%2?-1:1;
+     const rise=Math.sin(f.beat*Math.PI),shimmer=.5+.5*Math.sin(t*2.1);
+     for(let i=0;i<6;i++){const q=t*.25+i*Math.PI/3;
+      showAt(i,{x:side*(8+Math.sin(q)*1.4),y:2.2+Math.cos(q)*.8,z:-10,
+       sx:.24,sy:.7+shimmer*.5,sz:.24,color:c,rotate:q});}
+     if(f.prop==='sword'||f.prop==='jaw'||f.prop==='moon'){
+      showAt(15,{x:side*8,y:7+rise*3,z:-9,sx:.8,sy:4+rise*3,sz:.35,color:8,rotate:side*rise*.5});
+      if(f.prop==='moon')showAt(16,{x:-11,y:11,z:-15,sx:2.7,sy:2.7,sz:2.7,color:6});
+     }else if(f.prop==='circus'||f.prop==='puppets'||f.prop==='spotlight'){
+      for(let i=0;i<5;i++){const q=t*.65+i*Math.PI*2/5;
+       showAt(15+i,{x:side*8+Math.sin(q)*3,y:4+Math.cos(q)*2.2,z:-10,
+        sx:f.prop==='puppets'?.65:1.3,sy:1,sz:.33,color:i%2?1:6,rotate:q});}
+     }else if(f.prop==='die'||f.prop==='roulette'||f.prop==='table'){
+      for(let i=0;i<6;i++){const q=t*(f.prop==='roulette'?2:.7)+i;
+       showAt(15+i,{x:side*8+Math.sin(q)*3,y:4+(i%2)*2,z:-11,
+        sx:1,sy:1,sz:1,color:i%2?6:9,rotate:q});}
+     }else if(f.prop==='wave'||f.prop==='wings'||f.prop==='halo'){
+      for(let i=0;i<9;i++){const q=i*Math.PI/8+t*.2;
+       showAt(15+i,{x:side*8+(i-4)*1.3,y:3.6+Math.sin(q)*3,z:-12,
+        sx:.45,sy:1.5+Math.sin(q)*.4,sz:.28,color:i%2?4:1,rotate:q});}
+     }else{
+      for(let i=0;i<12;i++){const q=i*.83+t*.25;
+       showAt(15+i,{x:Math.sin(q)*8,y:2.2+i*.55,z:-11,
+        sx:.45,sy:.58,sz:.08,color:i%2?8:6,rotate:Math.sin(q)*.3});}
+     }
+     // Player reaction: visible steps, shield ring or a little bow.
+     for(let i=0;i<4;i++){const q=i*Math.PI/2+t*.3;
+      const defense=f.response==='guard'||f.response==='stand';
+      showAt(40+i,{x:Math.sin(q)*(defense?2.2:1.1),y:defense?2.2:1,z:5+Math.cos(q)*.7,
+       sx:defense?1:.46,sy:defense?1.8:.5,sz:.1,color:defense?6:8,rotate:q});}
+    }else if(!m.finishing){
+     // House lights retreat; scrolling names live in stable HTML over scene.
+     for(let i=0;i<8;i++)showAt(i,{x:(i-3.5)*4.4,y:.08,z:-9,
+      sx:.6,sy:.12,sz:.6,color:6,flat:true});
     }
-   }
-   if(kind==='finale')for(let i=0;i<5;i++){
-    const a=t*.7+i*1.26;
-    showAt(30+i,{x:Math.sin(a)*9,y:4+Math.sin(a)*1.4,z:Math.cos(a)*8,
-     sx:.85,sy:.85,sz:.85,color:(i+color)%7});
-   }
-  }else if(kind==='fighter'){
+   }else if(kind==='fighter'){
    if(m.fightAttack&&m.fightWind>0){
     // Readable physical attack cone at the location the boss will strike.
     showAt(6,{x:g.boss.x-2.6,y:1.3,z:0,
