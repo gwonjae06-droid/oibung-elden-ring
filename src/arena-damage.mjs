@@ -15,6 +15,7 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
  const damage=Math.min(b.hp,available,amount*(!developer&&b.state==='stagger'?1.25:1)),
   big=developer||damage>=150;
  b.hp-=damage;
+ if(nextCurtain!==null&&damage===available)b.hp=nextCurtain;
  if(g.stats){g.stats.damage+=damage;if(!dot)g.stats.hits++;}
  if(!developer&&!dot)b.poise+=poise;
  const impact=point&&[point.x,point.y,point.z].every(Number.isFinite)
