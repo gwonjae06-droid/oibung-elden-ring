@@ -13,6 +13,14 @@ const mix=(a,b,q)=>a+(b-a)*q;
 export function createGyuwonCinematicProps(parent,{coarse=false}={}){
  const root=new T.Group();root.name='gyuwon-cinematic-hero-props';parent.add(root);
  const geo=new Set(),mats=new Set(),groups=new Map(),rigs={};
+ // Two soft theatrical lights are aimed at the actor's current lyric focus.
+ // Shadows are intentionally disabled to avoid stutter and combat occlusion.
+ const lightTarget=new T.Object3D();root.add(lightTarget);
+ const keyLight=new T.SpotLight(0xffe8ca,.82,78,Math.PI/4,.92,1.6);
+ const rimLight=new T.SpotLight(0xc8d7ff,.52,78,Math.PI/4,.93,1.65);
+ keyLight.castShadow=false;rimLight.castShadow=false;
+ keyLight.target=lightTarget;rimLight.target=lightTarget;
+ root.add(keyLight,rimLight);
  const g=x=>(geo.add(x),x),m=x=>(mats.add(x),x);
  const gold=m(new T.MeshStandardMaterial({color:0xc8a060,metalness:.82,roughness:.29,emissive:0x60401c,emissiveIntensity:.18}));
  const ivory=m(new T.MeshStandardMaterial({color:0xf1e3c9,roughness:.69}));
@@ -238,6 +246,18 @@ export function createGyuwonCinematicProps(parent,{coarse=false}={}){
   o.scale.set(scale,scale,scale);
   o.rotation.set(0,0,0);o.position.y=0;
   const move=gyuwonCinematicMotionAt(key,t),sway=move?.pose?.bank||0;
+  // Shot lighting follows face / hands / feet / scenery. It never moves the
+  // camera or changes the collision-visible footprint of a boss attack.
+  const focus=move?.focus||'wide',giant=key==='5';
+  const targetY=giant?(focus==='face'?26:focus==='hands'?12:focus==='feet'?2:9):
+    focus==='face'?4.3:focus==='hands'?2.9:focus==='feet'?.8:3.8;
+  const targetZ=giant?-24:-11;
+  lightTarget.position.set(focus==='world'?3:0,targetY,targetZ);
+  keyLight.position.set(giant?-12:-8,giant?31:17,giant?-4:5);
+  rimLight.position.set(giant?13:8,giant?28:14,giant?-31:-23);
+  keyLight.intensity=.56+.25*lead+(focus==='face'?.2:0);
+  rimLight.intensity=.29+.21*lead;
+  keyLight.color.setHex(focus==='world'?0xffd5aa:focus==='sky'?0xe5e5ff:0xffe8ca);
   if(active==='doors'){
    for(let i=0;i<doorLeaves.length;i++){
     const side=i%2?-1:1;
