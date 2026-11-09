@@ -243,10 +243,26 @@ function tickArmy(g,m,dt,emit){
  g.player.x=-19;g.boss.x=19;
 }
 function tickRhythm(g,m,dt,emit,finale=false){
- const chart=GYUWON_BEATS[m.year]?.notes||[];
+ // The archived reference beat map ends at 68s. Maintain a sparse interactive
+ // ensemble through the remaining original recording, with breathing room in
+ // the middle. These later accents are provisional until master-audio charting.
+ if(finale&&!m.finaleChart){
+  const original=GYUWON_BEATS[11]?.notes||[],extra=[];
+  const beat=60/GYUWON_SONGS[11].bpm;
+  let next=original.at(-1)?.at||69,index=0;
+  while(next<GYUWON_SONGS[11].duration-5){
+   const quiet=next>GYUWON_SONGS[11].duration*.56&&next<GYUWON_SONGS[11].duration*.68;
+   next+=beat*(quiet?12:index%4===3?8:6);
+   if(next>=GYUWON_SONGS[11].duration-5)break;
+   if(next>GYUWON_SONGS[11].duration*.56&&next<GYUWON_SONGS[11].duration*.68)continue;
+   extra.push({at:+next.toFixed(3),key:['light','skill','light','roll'][index%4],lane:index%4});index++;
+  }
+  m.finaleChart=[...original,...extra];
+ }
+ const chart=finale?m.finaleChart:(GYUWON_BEATS[m.year]?.notes||[]);
  if(m.note){
   m.note.time=m.note.at-m.time;
-  if(m.note.time<-.27){if(!m.note.done){m.combo=0;take(g,finale?20:16,emit);}m.note=null;}
+  if(m.note.time<-.27){if(!m.note.done){m.combo=0;take(g,finale?10:16,emit);}m.note=null;}
  }
  while(!m.note&&m.chartIndex<chart.length){
   const beat=chart[m.chartIndex];
