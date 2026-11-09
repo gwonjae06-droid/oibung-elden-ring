@@ -6,6 +6,7 @@ import {actFivePerformanceAt,poseActFiveHands} from './gyuwon-act-five-score.mjs
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
+import {GYUWON_RUNNER_ENTER_SECONDS} from './gyuwon-runner-director.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {gyuwonMasterScene} from './gyuwon-master-director.mjs';
 import {gyuwonCurtainCallAt,isGyuwonCurtainCall} from './gyuwon-curtain-call.mjs';
@@ -390,6 +391,10 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  else if(m.clock?.source==='media')m.time=Math.max(m.time,m.clock.time);
  else m.time+=dt;
  if(m.giantRaid)m.songPerformance=actFivePerformanceAt(m.time);
+ // After the 2D road is fully opaque, release the entire prior 3D combat
+ // state so six-minute runs do not retain two sets of character data.
+ if(m.year===6&&m.handoffFromFive&&m.time>=GYUWON_RUNNER_ENTER_SECONDS)
+  m.handoffFromFive=null;
  const duration=m.clock?.duration||song.duration;
  m.actProgress=clamp(m.time/duration,0,1);
  m.masterScene=gyuwonMasterScene(gyuwonSongKey(m),m.time);
