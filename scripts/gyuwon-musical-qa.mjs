@@ -53,7 +53,7 @@ try{
    assert.equal(entrance.weapon,'sword','keep the original knight weapon');
    assert.equal(entrance.biome,'theater');
    assert.equal(entrance.canvas,false);
-   assert.equal(entrance.dash,true);
+   assert.equal(entrance.dash,false,'6수 now uses only the jump and slide buttons');
    assert.ok(entrance.opacity>=0&&entrance.opacity<=1);
    await page.screenshot({path:'qa-output/musical/act-6-ink-to-knight.png',timeout:30000});
    await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=145;});
@@ -87,6 +87,8 @@ try{
  await page.waitForTimeout(500);await page.screenshot({path:'qa-output/musical/ending-question.png'});
  await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-.12;});
  await page.waitForFunction(()=>window.__session().game.status==='won',{timeout:10000});
+ await page.waitForFunction(()=>{const r=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;return r?.querySelector('.gy-life-film')?.hidden===false;},{timeout:10000});
+ await page.screenshot({path:'qa-output/musical/ending-life-realization.png'});
  assert.equal(await page.evaluate(()=>window.__session().game.stats.damage),0);
  await page.evaluate(async()=>{window.__battle.close();window.__finale=(await import('./src/journey-finale.mjs')).playJourneyFinale(document,window);});
  await page.waitForTimeout(1800);await page.screenshot({path:'qa-output/musical/finale-seals.png'});
