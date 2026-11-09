@@ -35,11 +35,28 @@ try{
   await page.screenshot({path:`qa-output/musical/act-${y}.png`,timeout:30000});console.log('Verified act',y);
   results.push(await page.evaluate(()=>{const s=window.__session();return {year:s.game.gyuwon.years.year,hp:s.game.boss.hp,clock:s.game.gyuwon.years.musical.clock,graphics:s.diagnostics()};}));
   assert.equal(results.at(-1).graphics.livingDoodle.applied,y===5,'ink overlay must be 5수 only');
+  if(y===11){
+   assert.equal(await page.evaluate(()=>window.__session().game.gyuwon.years.musical.curtainCall.actor),'kwon');
+   await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=110;});
+   await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.curtainCall?.mode==='credits',{timeout:12000});
+   const closing=await page.evaluate(()=>{const shell=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;
+    const g=window.__session().game,m=g.gyuwon.years.musical;
+    return {credits:!shell.querySelector('.gy-curtain-credits').hidden,red:shell.querySelector('#vignette')?getComputedStyle(shell.querySelector('#vignette'),'::after').backgroundImage:null,
+     hero:{x:g.player.x,z:g.player.z},hazards:m.finaleHazards.length,actions:getComputedStyle(shell.querySelector('.gy-musical-actions')).display,year:m.year};});
+   assert.equal(closing.credits,true);assert.equal(closing.hazards,0);
+   assert.equal(closing.actions,'none');assert.equal(closing.red,'none');
+   assert.equal(closing.hero.x,0);assert.equal(closing.hero.z,5);
+   await page.screenshot({path:'qa-output/musical/act-11-credits.png',timeout:30000});
+  }
   await page.evaluate(y=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);if(!a)throw Error('missing playing master '+y);a.currentTime=a.duration-.12;},y);
   await page.waitForFunction(y=>y===11?window.__session().game.gyuwon.years.mode==='curtain':window.__session().game.gyuwon.years.year===y+1,y,{timeout:15000});
   assert.equal(await page.evaluate(()=>window.__session().game.boss.hp),[5300,4600,3900,3200,2500,1800,800][y-5]);
  }
  await page.waitForFunction(()=>window.__media.some(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop),{timeout:10000});
+ await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=8;});
+ await page.waitForFunction(()=>{const r=document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot;
+  return r?.querySelector('.gy-dedication')?.textContent==='거미 배역 이권재'&&!r.querySelector('.gy-dedication').hidden;},{timeout:10000});
+ await page.screenshot({path:'qa-output/musical/ending-cast-dedication.png'});
  await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=25;window.__session().game.gyuwon.years.musical.time=25;});
  await page.waitForTimeout(500);await page.screenshot({path:'qa-output/musical/ending-question.png'});
  await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-.12;});
