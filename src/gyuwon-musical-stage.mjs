@@ -17,6 +17,10 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  const curtainGeo=new THREE.PlaneGeometry(12,15,coarse?24:64,8),pos=curtainGeo.attributes.position;
  for(let i=0;i<pos.count;i++)pos.setZ(i,Math.sin(pos.getX(i)*3.2)*.35);curtainGeo.computeVertexNormals();
  for(const side of [-1,1]){const fabric=new THREE.Mesh(curtainGeo,drape);fabric.position.set(side*24,7,-10);root.add(fabric);}
+ // Mechanical house curtains sit between the audience and the actors.
+ const openingCurtains=[-1,1].map(side=>{const m=new THREE.Mesh(curtainGeo,drape);m.name=side<0?'house-curtain-left':'house-curtain-right';m.position.set(side*6,7.2,13);m.scale.set(1.03,1.07,1);root.add(m);return m;});
+ const lintel=new THREE.Mesh(box,drape);lintel.position.set(0,14.2,13);lintel.scale.set(34,2.1,.85);root.add(lintel);
+ const edgeLamps=[-1,1].map(side=>{const m=new THREE.Mesh(box,oak);m.position.set(side*22,6.6,13);m.scale.set(.85,13,.85);root.add(m);return m;});
  const materials=[
   0xf4d18a,0xe87eb4,0x69acd6,0xa18eea,0xe86a67,0x73bfa0,0xe4c583,
   0x2c354a,0xffffff,0xffb66e,0x88c5f1,0xe1a1ea
@@ -51,12 +55,17 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   root.visible=!!m&&g.status==='playing';
   if(!root.visible)return;
   const year=m.year,kind=m.kind,color=Math.max(0,year-5),t=m.time;
+  const opening=year===5&&!m.finishing&&t<8;
+  for(let i=0;i<2;i++){const side=i===0?-1:1,fabric=openingCurtains[i];fabric.visible=opening;
+   const draw=THREE.MathUtils.smoothstep(t,2.15,5.7);fabric.position.x=side*(6+13*draw);fabric.scale.x=1.03-.38*draw;
+   fabric.rotation.y=side*.2*draw;}
+  lintel.visible=edgeLamps[0].visible=edgeLamps[1].visible=opening;
   for(let i=0;i<cues.length;i++){const o=cues[i];o.visible=false;o.geometry=i%9===0?torus:i%3===0?box:ball;}
   const beatPhase=t*1.7;
   for(let i=0;i<spotlights.length;i++){
    const o=spotlights[i];
    o.visible=true;
-   o.material.opacity=m.finishing?.035:.12+Math.sin(beatPhase+i*1.2)*.035;
+   o.material.opacity=m.finishing?.035:opening?.06+Math.sin(beatPhase+i*1.2)*.015:.12+Math.sin(beatPhase+i*1.2)*.035;
    o.position.x=Math.sin(i*Math.PI/4+t*.13)*(kind==='finale'?14:10);
    o.position.z=Math.cos(i*Math.PI/4+t*.13)*9;
   }
@@ -68,6 +77,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   }
   left.visible=right.visible=kind==='army';
   if(kind==='turn'){
+   if(opening)for(let i=0;i<5;i++)showAt(77+i,{x:-12+i*6,y:4+Math.sin(t*1.1+i)*.6,z:-7,sx:.42,sy:.42,sz:.42,color:0});
    for(let i=0;i<6;i++){
     const a=i*Math.PI/3+t*.08;
     showAt(i,{x:Math.sin(a)*11,y:.08,z:Math.cos(a)*11,
@@ -102,6 +112,11 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     const key=m.note.key,scale=Math.max(.6,Math.min(4,m.note.time*3));
     showAt(11,{x:-9+m.note.index*5.5,y:.15,z:0,
      sx:scale,sy:scale,sz:scale,color:key==='roll'?2:key==='skill'?0:5,flat:true});
+   }
+   if(kind==='finale'){
+    const memory=Math.min(5,m.finaleStep||0);
+    for(let j=0;j<7;j++){const a=j*Math.PI*2/7+t*.28;showAt(42+j,{x:Math.sin(a)*14,y:1.5+Math.sin(t*1.7+j)*1.1,z:Math.cos(a)*9,sx:memory===2?2.1:.9,sy:memory===2?1.7:.9,sz:.9,color:(j+memory)%7});}
+    for(let j=0;j<6;j++){const a=t*(memory===5?2.5:.6)+j*Math.PI/3;showAt(52+j,{x:Math.sin(a)*(6+memory),y:8+Math.cos(a*2)*2,z:-9+Math.cos(a)*2,sx:memory===4?1.4:.55,sy:.55,sz:.55,color:(memory+j+2)%7});}
    }
    if(kind==='finale')for(let i=0;i<5;i++){
     const a=t*.7+i*1.26;
