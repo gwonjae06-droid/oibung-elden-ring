@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSS_TRACKS,bossTrack,createBossTracks,BLOOD_MUSIC_REPRISE_SECONDS} from '../src/boss-tracks.mjs';
+import {BOSS_TRACKS,bossTrack,createBossTracks,BLOOD_MUSIC_REPRISE_SECONDS,ORENA_MUSIC_URL} from '../src/boss-tracks.mjs';
 
 test('uploaded MP3 filenames map to the correct boss and phase',()=>{
   assert.deepEqual(BOSS_TRACKS.kwon,['swordbgm.mp3','swordbgm2.mp3']);
@@ -91,5 +91,34 @@ test('Blood 2P music continues over Seraph metamorphosis, then reprises from the
  assert.equal(FakeAudio.instances.length,1);
  tracks.reset();
  assert.equal(same.onended,null,'reset must detach stale replay handlers');
+ tracks.dispose();
+});
+
+
+test('Gyuwon school years 1-4 crossfade the two existing Oibung Arena MP3s',()=>{
+ const one=bossTrack({boss:'gyuwon',year:1}),two=bossTrack({boss:'gyuwon',year:2});
+ const three=bossTrack({boss:'gyuwon',year:3}),four=bossTrack({boss:'gyuwon',year:4});
+ assert.equal(one.key,'gyuwon:0');assert.equal(two.key,one.key);
+ assert.equal(three.key,'gyuwon:1');assert.equal(four.key,three.key);
+ assert.equal(one.url,ORENA_MUSIC_URL+'snowflower-night.mp3');
+ assert.equal(two.url,one.url);
+ assert.equal(three.url,ORENA_MUSIC_URL+'iron-sunlight.mp3');
+ assert.equal(four.url,three.url);
+ assert.equal(bossTrack({boss:'gyuwon',year:5}),null);
+ assert.equal(new Set(BOSS_TRACKS.gyuwon.filter(Boolean)).size,2);
+ assert.ok(ORENA_MUSIC_URL.startsWith('https://gwonjae06-droid.github.io/oibung-ballfight-base/assets/music/'));
+ FakeAudio.instances=[];let now=0;
+ const tracks=createBossTracks({Audio:FakeAudio},{now:()=>now,fadeMs:500});
+ assert.equal(tracks.update({boss:'gyuwon',year:1}),true);
+ now=800;tracks.update({boss:'gyuwon',year:2});
+ assert.equal(FakeAudio.instances.length,1,'years one and two share an uninterrupted track');
+ now=1100;tracks.update({boss:'gyuwon',year:3});
+ assert.equal(FakeAudio.instances.length,2,'year three crossfades to a different Arena track');
+ assert.equal(FakeAudio.instances[1].src,three.url);
+ now=1700;tracks.update({boss:'gyuwon',year:4});
+ assert.equal(FakeAudio.instances.length,2,'year four must not restart the music');
+ assert.equal(tracks.playingKey,'gyuwon:1');
+ tracks.update({boss:'gyuwon',year:5});
+ assert.equal(tracks.playingKey,'gyuwon:1','later years retain the previous audio state until managed by their own musical soundtrack');
  tracks.dispose();
 });
