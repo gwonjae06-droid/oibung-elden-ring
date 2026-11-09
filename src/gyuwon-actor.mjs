@@ -2,6 +2,7 @@ import {gyuwonPhotoGeometry,gyuwonPhotoMaterial} from './gyuwon-photo-face.mjs';
 import {arsenalKind} from './gyuwon-arsenal.mjs';
 import * as THREE from 'three';
 import {gyuwonLyricActorMotion} from './gyuwon-lyric-actor-motion.mjs';
+import {createGyuwonLyricPhotoMouth} from './gyuwon-lyric-photo-mouth.mjs';
 import {ridePose,rideFrame,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
 import {createGyuwonHandIk} from './gyuwon-hand-ik.mjs';
 import {createGyuwonMotionDirector} from './gyuwon-motion.mjs';
@@ -148,6 +149,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  for(let i=0;i<uv.count;i++)uv.setZ(i,Math.sin(uv.getX(i)*7)*.038+Math.cos(uv.getY(i)*5)*.02);
  pageGeo.computeVertexNormals();
  for(let i=0;i<6;i++)pages.push(mesh(root,pageGeo,new THREE.MeshStandardMaterial({color:0xd4bd83,side:THREE.DoubleSide,transparent:true,opacity:.8,roughness:.86}),0,0,0,'gyuwon-floating-page'));
+ const lyricMouth=createGyuwonLyricPhotoMouth(head,{coarse});
  const yearRig=createGyuwonYearRig({torso,head,wrists,coarse});
  const handIk=createGyuwonHandIk({arms,forearms,wrists,torso});
  let rideBlend=0;
@@ -157,6 +159,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const years=s.years,weapon=gyuwonWeaponPose(years,s.hazards);
   const lyricMotion=(years?.year===11||years?.musical?.finishing)
    ?gyuwonLyricActorMotion(years?.musical?.lyricAction,t):null;
+  lyricMouth.update(years?.musical?.finishing?'ending':years?.year===11?11:null,t);
   const mounted=ridePose(years);
   const mountTarget=mounted?1:0;
   rideBlend+=(mountTarget-rideBlend)*(1-Math.exp(-Math.min(.05,Math.max(0,dt))*10));
@@ -249,6 +252,6 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    item.visible=!years&&b.phase>1;item.position.set(Math.sin(a)*1.6,2+Math.sin(a*2)*.4,Math.cos(a)*1.6);
    item.rotation.set(.3+Math.sin(t+i)*.08,a,.2);
   }
- },dispose(){yearRig.dispose();photo?.dispose();faceSkin.dispose();}};
+ },dispose(){lyricMouth.dispose();yearRig.dispose();photo?.dispose();faceSkin.dispose();}};
 }
 
