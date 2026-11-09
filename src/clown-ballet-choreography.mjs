@@ -5,7 +5,7 @@ const clamp=(x,a,b)=>Math.min(b,Math.max(a,Number.isFinite(x)?x:a));
 const smooth=x=>{const t=clamp(x,0,1);return t*t*(3-2*t);};
 const finite=x=>Number.isFinite(x)?x:0;
 
-export function balletSculptPose({time=0,beat=0,active=false,pulse=0,lead=false,pattern='',reduced=false}={}){
+export function balletSculptPose({time=0,beat=0,active=false,pulse=0,lead=false,pattern='',reduced=false,showcase=0}={}){
  const t=Math.max(0,finite(time)),b=Math.max(0,finite(beat));
  const activity=active?clamp(pulse,0,1):0;
  const direction=lead?1:-1;
@@ -16,6 +16,11 @@ export function balletSculptPose({time=0,beat=0,active=false,pulse=0,lead=false,
  const pas=pattern==='balletPasDeDeux'?1:0;
  const fouette=pattern==='balletFouette'?1:0;
  const stage=activity*smooth((b-.18)/.55);
+ const reference=smooth((clamp(showcase,0,1)-.18)/.72);
+ // The photo-silhouette only peaks in the non-damaging opening dance. During
+ // combat, smaller motifs avoid decoupling the animated limbs from hurtboxes.
+ const echo=stage*(fouette?.16:pas?.12:.04);
+ const motif=Math.max(reference,echo);
  const turn=stage*fouette;
  const float=reduced?.5:1;
  // The mirrored arms never become independent looping windmills. One leads,
@@ -27,28 +32,42 @@ export function balletSculptPose({time=0,beat=0,active=false,pulse=0,lead=false,
  const legL=stage*Math.max(0,legPhrase)*(.20+.28*fouette);
  const legR=stage*Math.max(0,-legPhrase)*(.20+.28*fouette);
  return {
-  bodyLift:float*(.017*breath+stage*.055*(.5+.5*Math.cos(t*2.2))),
-  chestPitch:-.025-stage*(.065+.15*bow)*(.5+.5*Math.sin(t*1.6)),
-  chestRoll:stage*(direction*.065+.09*phrase)+.012*breath,
-  chestYaw:stage*(direction*.11+.08*Math.sin(t*1.6)),
-  pelvisYaw:stage*(-direction*.075+.035*phrase),
-  headYaw:stage*(-direction*.16+.05*Math.sin(t*1.45))-.026*breath,
-  headRoll:-stage*.075*direction-.012*breath,
-  headPitch:stage*(.045+bow*.09)-.015*breath,
-  leftReach:1.35+reach+armWave,
-  rightReach:1.35+reach-armWave,
-  leftArmY:2.96+lift+.20*phrase,
-  rightArmY:2.96+lift-.20*phrase,
-  leftArmZ:.25+stage*.20,
-  rightArmZ:.25+stage*.20,
-  leftWrist:-.15+stage*(.22+.12*phrase),
-  rightWrist:.15-stage*(.22-.12*phrase),
-  leftLegLift:legL,
-  rightLegLift:legR,
-  leftLegTrail:stage*(.15*legPhrase+.20*turn),
-  rightLegTrail:stage*(-.15*legPhrase-.20*turn),
-  leftPointe:.26+stage*(.15+.18*Math.max(0,legPhrase)),
-  rightPointe:.26+stage*(.15+.18*Math.max(0,-legPhrase)),
+  bodyLift:float*(.017*breath+stage*.055*(.5+.5*Math.cos(t*2.2)))+
+   (lead?.43:.06)*reference,
+  chestPitch:-.025-stage*(.065+.15*bow)*(.5+.5*Math.sin(t*1.6))+
+   (lead?-.28:-.18)*reference,
+  chestRoll:stage*(direction*.065+.09*phrase)+.012*breath+
+   (lead?.48:-.28)*reference,
+  chestYaw:stage*(direction*.11+.08*Math.sin(t*1.6))+(lead?-.13:.09)*reference,
+  pelvisYaw:stage*(-direction*.075+.035*phrase)+(lead?.18:-.15)*reference,
+  headYaw:stage*(-direction*.16+.05*Math.sin(t*1.45))-.026*breath+
+   (lead?-.23:.11)*reference,
+  headRoll:-stage*.075*direction-.012*breath+(lead?.20:-.15)*reference,
+  headPitch:stage*(.045+bow*.09)-.015*breath+reference*(lead?.16:.21),
+  leftReach:1.35+reach+armWave+reference*(lead?-.77:-.55),
+  rightReach:1.35+reach-armWave+reference*(lead?.59:-.48),
+  leftArmY:2.96+lift+.20*phrase+reference*(lead?1.92:1.91),
+  rightArmY:2.96+lift-.20*phrase+reference*(lead?-.27:2.07),
+  leftArmZ:.25+stage*.20+reference*(lead?-.20:.07),
+  rightArmZ:.25+stage*.20+reference*(lead?.26:-.11),
+  leftWrist:-.15+stage*(.22+.12*phrase)-reference*.26,
+  rightWrist:.15-stage*(.22-.12*phrase)+reference*.38,
+  leftLegLift:legL+motif*(lead?.76:0),
+  rightLegLift:legR+motif*(lead?.20:1.14),
+  leftLegTrail:stage*(.15*legPhrase+.20*turn)+reference*(lead?-.35:0),
+  rightLegTrail:stage*(-.15*legPhrase-.20*turn)+reference*(lead?.35:.20),
+  leftPointe:.26+stage*(.15+.18*Math.max(0,legPhrase))+
+   motif*(lead?.27:.80),
+  rightPointe:.26+stage*(.15+.18*Math.max(0,-legPhrase))+
+   motif*(lead?.55:.36),
+  // The outside knee of a high passe rotates out and up, without shortening
+  // femur/shin. The rear foot returns close to the supporting knee.
+  leftAnkleX:reference*(lead?.25:0),
+  rightAnkleX:reference*(lead?-.20:-.30),
+  leftKneeOut:motif*(lead?.43:0),
+  rightKneeOut:motif*(lead?.10:.90),
+  leftKneeUp:motif*(lead?.65:0),
+  rightKneeUp:motif*(lead?.1:.88),
   silkFloat:float*stage*(.10+.09*Math.sin(t*2.3)),
  };
 }
