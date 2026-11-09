@@ -174,7 +174,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    const musical=g.gyuwon.years?.musical;
    if(musical){
     const genre=musical.kind,closing=musical.finishing;
-    const fov=closing?40:genre==='army'?58:genre==='shooter'?61:52;
+    const fov=closing?40:musical.year===5?turnStage.cameraFrame(musical,camera.aspect).fov:genre==='army'?58:genre==='shooter'?61:52;
     if(Math.abs(camera.fov-fov)>.02){
      camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3.2));
      camera.updateProjectionMatrix();
