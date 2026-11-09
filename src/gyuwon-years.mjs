@@ -1,3 +1,4 @@
+import {beginGyuwonReverie,tickGyuwonReverie} from './gyuwon-reverie.mjs';
 import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,spawnArsenal,tickArsenal} from './gyuwon-arsenal.mjs';
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
 import {GYUWON_CALENDAR_SECONDS,syncAnnualHealth,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
@@ -144,6 +145,7 @@ function pickMemoryMap(g){
 }
 function startNextYear(g,emit){
  const e=g.gyuwon.years;
+ if(beginGyuwonReverie(g,emit))return;
  e.year=e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
  e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);e.yearStartHp=g.boss.hp;e.weaponPlan=null;
@@ -293,6 +295,7 @@ function tickHazards(g,dt,hurt,emit){
 }
 export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
  const b=g.boss,s=g.gyuwon,e=s.years;
+ if(e.mode==='reverie'){if(tickGyuwonReverie(g,dt,emit))startNextYear(g,emit);return;}
  if(!e.legacyAnnual&&isGyuwonMusicalYear(e.year)&&e.mode==='combat'&&!e.musical)enterGyuwonMusical(g,emit);
  if(e.mode==='musical'||e.mode==='curtain'){
   tickGyuwonMusical(g,dt,{emit,input,advance:()=>startNextYear(g,emit)});

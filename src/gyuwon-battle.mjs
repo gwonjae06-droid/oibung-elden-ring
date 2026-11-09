@@ -1,3 +1,4 @@
+import {createGyuwonReverieView} from './gyuwon-reverie-view.mjs';
 import {createDanceCueAudio} from './gyuwon-dance-cues.mjs';
 import {referenceKeyAction,usesReference2d} from './gyuwon-reference-rules.mjs';
 import {createGyuwon2dView} from './gyuwon-2d-view.mjs';
@@ -60,6 +61,7 @@ const playerProjectiles=createPlayerProjectileView(scene);
 startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);const traitView=createBossHitTraitView(scene,player.body,shell,{reduced});startup.own('Gyuwon trait view',()=>traitView.dispose());const camera=new THREE.PerspectiveCamera(KWON_CAMERA_REFERENCE.fov,1,.1,1000);
   const turnStage=createGyuwonTurnStage(scene,{player,boss:study.root,coarse});startup.own('Gyuwon reference turn stage',()=>turnStage.dispose());musicalStage.setEnsemble(turnStage.ensembleRoles);
+  const reverieView=createGyuwonReverieView(scene,{boss:study.root,player,shell,coarse});startup.own('Gyuwon reverie film',()=>reverieView.dispose());
   const flatView=createGyuwon2dView(document,shell,{onPointer:point=>{const m=g.gyuwon.years?.musical;if(m)m.pointerTarget=point;},focus:()=>{if(ready&&mode==='playing')sound();}});startup.own('Gyuwon true 2D view',()=>flatView.dispose());
   const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const ctx=new C();contexts.push(ctx);if(startup.pending)startup.own('Gyuwon audio context',()=>ctx.close?.());return ctx;};
   const musicalScore=createGyuwonMusicalScore();
@@ -70,21 +72,21 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   startup.own('Gyuwon school bell',()=>{bellAudio.pause();bellAudio.removeAttribute('src');bellAudio.load?.();});
   const audio=createAudio(makeAudio),skillAudio=createSkillAudio(makeAudio),weaponSfx=createPlayerWeaponSfx(),fx=createPlayerPolish(scene,{mobile:coarse,reduced}),recoverySfx=createRecoverySfx(),damageFeedback=createPlayerHitFeedback(shell),impact=createCombatImpact({shell,root,boss:'gyuwon',reduced});startup.own('Gyuwon heal sfx',()=>recoverySfx.dispose());startup.own('Gyuwon damage flash',()=>damageFeedback.dispose());startup.own('Gyuwon impacts',()=>impact.dispose());startup.own('Gyuwon effects',()=>fx.dispose());startup.own('Gyuwon weapon sounds',()=>weaponSfx.dispose());startup.own('Gyuwon sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);});
   let g=createGyuwonGame(weapon,{yearMode:true}),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=KWON_CAMERA_REFERENCE.pitch,lock=true,zoom=0,dragPointer=null,stickPointer=null,w=0,h=0;
-  const keys=new Set(),stick={x:0,z:0},desired=new THREE.Vector3(),target=new THREE.Vector3();configure(g);camera.position.set(0,7,20);
+  const keys=new Set(),stick={x:0,z:0},desired=new THREE.Vector3(),target=new THREE.Vector3();configure(g);camera.position.set(0,7,20);let reverieClockAt=null;
    const introGate=createBossIntroGate(document,shell,'gyuwon',{ready:()=>ready&&!closed,focus:()=>{canvas.focus({preventScroll:true});if(document.hidden||!document.hasFocus())pause.pause();},reduced});
    startup.own('Invalidate gyuwon battle',()=>{closed=true;introGate.cancel();});
   const musicalInput=()=>({x:Math.max(-1,Math.min(1,(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+stick.x)),z:Math.max(-1,Math.min(1,(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0)+stick.z)),guard:keys.has('KeyI')});
   const input=()=>cameraMovement(keys,stick,yaw,lock),muted=()=>{try{return localStorage.getItem('oibung-muted')==='1';}catch{return false;}};
   const freeLook=createFreeLookCamera({canvas,coarse,
-   enabled:()=>ready&&!introGate.blocked&&mode==='playing'&&!closed&&!lock&&!g.gyuwon.years?.musical,
+   enabled:()=>ready&&!introGate.blocked&&mode==='playing'&&!closed&&!lock&&!g.gyuwon.years?.musical&&g.gyuwon.years?.mode!=='reverie',
    getAngles:()=>({yaw,pitch}),setAngles:next=>{yaw=next.yaw;pitch=next.pitch;},
    minPitch:.08,maxPitch:1.18});
   startup.own('Gyuwon free-look camera',()=>freeLook.dispose());
   const sound=()=>{audio.setEnabled(!muted());skillAudio.setEnabled(!muted());};
-  function clearInput(){flatView.clearInput?.();const mini=g.gyuwon.years?.musical;if(mini){mini.guardHeld=false;mini.slideHeld=false;mini.slide=0;mini.pointerTarget=null;}clearMovement(keys,stick);releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickPointer);dragPointer=stickPointer=null;$('thumb').style.transform='';if(g.player.action?.kind==='charging')g.player.action=null;}
+  function clearInput(){reverieClockAt=null;flatView.clearInput?.();const mini=g.gyuwon.years?.musical;if(mini){mini.guardHeld=false;mini.slideHeld=false;mini.slide=0;mini.pointerTarget=null;}clearMovement(keys,stick);releaseCapturedPointer(canvas,dragPointer);releaseCapturedPointer($('stick'),stickPointer);dragPointer=stickPointer=null;$('thumb').style.transform='';if(g.player.action?.kind==='charging')g.player.action=null;}
   function setMode(value){if(value!=='playing')freeLook.release();mode=value;hud.mode(value);clearInput();}
   function request(type){
-   if(!ready||introGate.blocked||mode!=='playing')return;
+   if(!ready||introGate.blocked||mode!=='playing'||g.gyuwon.years?.mode==='reverie')return;
    if(type==='retry-audio'){musicalScore.retry();return;}
    sound();
    if(type==='lock'){lock=!lock;if(lock)freeLook.release();else freeLook.capture();return;}
@@ -96,11 +98,11 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(type==='heal'&&accepted)recoverySfx.event({type:'heal-start'});
   }
   hud.onMusicalAction(request);
-  const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{foley.clear();musicalScore.stop();bellAudio.pause();recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();if(!lock)freeLook.capture();}});
+  const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{reverieView.pause();foley.clear();musicalScore.stop();bellAudio.pause();recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();if(!lock)freeLook.capture();}});
   function reset(){musicalScore.stop();introGate.arm();playerProjectiles.clear();traitView.clear();study.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();g=createGyuwonGame(weapon,{yearMode:true});configure(g);freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();introGate.begin();}
   const close=createBattleCleanup(()=>[
    ['Gyuwon dancer cues',()=>danceCues.dispose()],
-   ['Gyuwon reference graphics',()=>{flatView.dispose();turnStage.dispose();musicalStage.dispose();}],
+   ['Gyuwon reference graphics',()=>{doodle.dispose();reverieView.dispose();flatView.dispose();turnStage.dispose();musicalStage.dispose();}],
    ['Gyuwon physical foley',()=>foley.dispose()],
    ['Stop gyuwon battle',()=>{closed=true;freeLook.dispose();introGate.cancel();loop.dispose();unbind();}],['Gyuwon callbacks',()=>scope.dispose()],['Gyuwon input',clearInput],['Gyuwon effects',()=>fx.dispose()],['Gyuwon sounds',()=>{musicalScore.dispose();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.dispose();recoverySfx.dispose();damageFeedback.dispose();bellAudio.pause();}],
    ...contexts.map((ctx,i)=>['Gyuwon audio context '+i,()=>ctx.close?.()]),['Gyuwon trait view',()=>traitView.dispose()],['Gyuwon player projectiles',()=>playerProjectiles.dispose()],['Gyuwon view',()=>study.dispose()],['Gyuwon scene',()=>disposeScene(scene)],['Gyuwon renderer',()=>renderer.dispose()],['Gyuwon HUD',()=>hud.dispose()],['Gyuwon close callback',()=>onClose({weapon:g.weapon,status:g.status})]
@@ -115,11 +117,11 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   $('sound').onclick=()=>{document.getElementById('sound')?.click();sound();};$('theme').onclick=()=>document.getElementById('theme')?.click();
   function move(e){const r=$('stick').getBoundingClientRect();let x=e.clientX-r.left-r.width/2,z=r.top+r.height/2-e.clientY;const n=Math.max(1,Math.hypot(x,z)/40);x/=n;z/=n;stick.x=x/40;stick.z=z/40;$('thumb').style.transform=`translate(${x}px,${-z}px)`;}
   $('stick').onpointerdown=e=>{e.preventDefault();stickPointer=e.pointerId;$('stick').setPointerCapture(stickPointer);move(e);};$('stick').onpointermove=e=>{if(e.pointerId===stickPointer)move(e);};$('stick').onpointerup=$('stick').onpointercancel=()=>{releaseCapturedPointer($('stick'),stickPointer);stickPointer=null;stick.x=stick.z=0;$('thumb').style.transform='';};
-  installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&mode==='playing'&&!g.gyuwon.years?.musical,listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
+  installChargeInput(shell,{getGame:()=>g,isActive:()=>ready&&!introGate.blocked&&mode==='playing'&&!g.gyuwon.years?.musical&&g.gyuwon.years?.mode!=='reverie',listen:(...args)=>scope.listen(...args),act:actPlayer});scope.ownHandlers(shell);
   hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
     // First-use GPU shader compilation belongs behind the initial loading
     // gate, never in the middle of a phase-three memory map transition.
-    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);doodle.prewarm();}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);await reverieView.prewarm(renderer,camera);doodle.prewarm();}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
     if(closed)return;hud.loading(false);ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
@@ -130,7 +132,9 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    foley.update(g,{active:!introGate.blocked&&mode==='playing'&&!document.hidden,muted:muted()});
    const visualDt=!document.hidden&&mode!=='paused'?dt:0;
 
-   musicalScore.update(g,{enabled:ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace,muted:muted()});
+   const reverie=g.gyuwon.years?.reverie,reverieActive=ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace;
+   if(reverie&&reverieActive){if(reverieClockAt!==null)reverie.clock=(reverie.clock??reverie.time)+Math.max(0,(now-reverieClockAt)/1000);reverieClockAt=now;}else reverieClockAt=null;
+   musicalScore.update(g,{enabled:ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace&&!reverie,muted:muted()});
    if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,{...(g.gyuwon.years?.musical?musicalInput():input()),lock,cameraYaw:yaw});if(g.status!=='playing')setMode('ending');}
    if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?(g.gyuwon.years?.musical?1.5:8):1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'최규원 토벌':'마지막 문제 앞에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'정답이 없는 밤에도, 그는 처음으로 문제집을 덮었다.':'';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}
    for(const e of g.events){if(e.type==='victory')playBossCue('die');
@@ -138,6 +142,13 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     if(e.type==='gyuwon-exam-bell'&&!muted()){bellAudio.pause();bellAudio.currentTime=0;bellAudio.play()?.catch(()=>{});}
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
+   const wasReverie=reverieView.active,inReverie=g.gyuwon.years?.mode==='reverie';
+   if(inReverie&&!wasReverie){musicalScore.stop();foley.clear();clearInput();freeLook.release();fx.clear();playerProjectiles.clear();study.update(g,0);}
+   if(inReverie){quality.sample(realDt,reverieActive);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;}
+   if(reverieView.update(g,camera,{active:reverieActive,muted:muted(),dt:visualDt})){
+    doodle.suspend();flatView.canvas.hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);renderer.render(scene,camera);return;
+   }
+   if(wasReverie){clearInput();const frame=turnStage.cameraFrame(g.gyuwon.years.musical,camera.aspect);camera.position.set(frame.position.x,frame.position.y,frame.position.z);camera.lookAt(frame.target.x,frame.target.y,frame.target.z);}
    const referenceMini=g.gyuwon.years?.musical;
    if(usesReference2d(referenceMini)){doodle.suspend();flatView.render(g);turnStage.root.visible=false;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);return;}
    flatView.canvas.hidden=true;
@@ -202,6 +213,6 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.calls,triangles:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.triangles,
  camera:{x:camera.position.x,y:camera.position.y,z:camera.position.z,fov:camera.fov},
- view:study.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),livingDoodle:doodle.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
+ view:study.stats(),reverie:reverieView.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),livingDoodle:doodle.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
  });
 }

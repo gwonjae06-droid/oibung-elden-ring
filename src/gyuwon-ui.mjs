@@ -28,7 +28,7 @@ export function createGyuwonUi({coarse=false,doc=globalThis.document}={}){
    const fill=$('boss-fill');
    fill.style.background=s.years.musical?s.years.musical.color:'';
    const musical=!!s.years.musical;
-   shell.dataset.musical=musical?'on':'off';shell.dataset.reference2d=usesReference2d(s.years.musical)?'on':'off';shell.dataset.referenceTurn=s.years.musical?.reference&&s.years.year===5?'on':'off';shell.dataset.referenceYear=String(s.years.year);shell.dataset.musicalEnding=musical&&g.status==='won'?'on':'off';shell.style.background=musical&&g.status==='won'?'#000':'';
+   shell.dataset.reverie=s.years.mode==='reverie'?'on':'off';shell.dataset.musical=musical?'on':'off';shell.dataset.reference2d=usesReference2d(s.years.musical)?'on':'off';shell.dataset.referenceTurn=s.years.musical?.reference&&s.years.year===5?'on':'off';shell.dataset.referenceYear=String(s.years.year);shell.dataset.musicalEnding=musical&&g.status==='won'?'on':'off';shell.style.background=musical&&g.status==='won'?'#000':'';
    $('controls').hidden=musical;
    const closing=s.years.musical?.finishing,fade=closing?Math.max(0,1-(s.years.musical.curtain-27)/9):1;
    $('boss-hud').style.opacity=$('player-hud').style.opacity=String(fade);

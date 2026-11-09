@@ -8,6 +8,8 @@ on:
       - 'tests/gyuwon-reference-games.test.mjs'
       - 'scripts/gyuwon-reference-qa.mjs'
       - 'scripts/gyuwon-giant-raid-qa.mjs'
+      - 'scripts/gyuwon-reverie-qa.mjs'
+      - 'tests/gyuwon-reverie.test.mjs'
       - 'tests/gyuwon-giant-raid.test.mjs'
       - 'tests/gyuwon-caption-sync.test.mjs'
       - 'scripts/gyuwon-musical-qa.mjs'
@@ -34,11 +36,13 @@ jobs:
             node --check "$f"
           done
       - name: Simulate all seven actual playable genres and final 800 HP
-        run: node --test tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/journey-controller.test.mjs
+        run: node --test tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/journey-controller.test.mjs
       - run: npx playwright-core install --with-deps chromium
       - name: Native musical clocks, 3D party and five actual 2D genres
         run: |
           node scripts/gyuwon-musical-browser-smoke.mjs
+      - name: Fourth-year reflection and uninterrupted imagination entry
+        run: node scripts/gyuwon-reverie-qa.mjs
       - name: Full original 5su raid with native UI combat
         run: node scripts/gyuwon-giant-raid-qa.mjs
       - uses: actions/upload-artifact@v4
@@ -49,5 +53,6 @@ jobs:
             qa-output/musical/
             qa-output/reference/
             qa-output/giant-raid/
+            qa-output/reverie/
           if-no-files-found: warn
           retention-days: 7

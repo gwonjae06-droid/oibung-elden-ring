@@ -61,7 +61,7 @@ test('final exam subject cannot restore boss HP and attacks cannot lower HP duri
  assert.equal(g.boss.hp,6750);
  assert.equal(e.inquiry,null);
 });
-test('three short exams and fourth-year seamless entry into the musical leave 6000 HP',()=>{
+test('three short exams and fourth-year reflection lead into the musical with 6000 HP',()=>{
  const g=create(),e=g.gyuwon.years;
  for(let year=1;year<=4;year++){
   assert.equal(e.year,year);
@@ -85,6 +85,7 @@ test('three short exams and fourth-year seamless entry into the musical leave 60
    assert.equal(e.mode,'combat');
    assert.equal(g.boss.hp,floor);
   }else{
+   assert.equal(e.year,4);assert.equal(e.mode,'reverie');assert.equal(g.boss.hp,6000);advance(g,58.1);
    assert.equal(e.year,5);
    assert.equal(e.mode,'musical');
    assert.equal(e.grade,null);

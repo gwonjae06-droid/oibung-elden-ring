@@ -38,7 +38,7 @@ export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
  return game;
 }
 export function actGyuwon(g,type,input={}){
- if(g.status!=='playing'||g.boss.state==='transition'||['result','curtain'].includes(g.gyuwon.years?.mode))return false;
+ if(g.status!=='playing'||g.boss.state==='transition'||['result','curtain','reverie'].includes(g.gyuwon.years?.mode))return false;
  if(g.gyuwon.years?.mode==='musical')return actGyuwonMusical(g,type,(name,data={})=>emit(g,name,data));
  if(!g.player.action){
   const x=Number.isFinite(input.x)?input.x:0,z=Number.isFinite(input.z)?input.z:0;
@@ -57,7 +57,7 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  // during the five-subject exam only, incoming damage is halved.
  if(g.gyuwon.years){
   const b=g.boss,s=g.gyuwon,e=s.years;
-  if(e.mode==='result'||e.mode==='curtain'||e.mode==='exam'&&!e.legacyAnnual)return 0;
+  if(e.mode==='result'||e.mode==='curtain'||e.mode==='reverie'||e.mode==='exam'&&!e.legacyAnnual)return 0;
   // The sixth-year shrine is breakable. Intact figures absorb a modest portion
   // of incoming boss damage until the player clears them or the cast ends.
   const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;
@@ -412,11 +412,11 @@ export function stepGyuwon(g,dt,input={}){
   else if(g.gyuwon.years?.mode==='result'){
    g.player.action=null;g.projectiles.length=0;tickBoss(g,h);
   }
-  else if(['musical','curtain'].includes(g.gyuwon.years?.mode)){
+  else if(['musical','curtain','reverie'].includes(g.gyuwon.years?.mode)){
    g.player.action=null;g.projectiles.length=0;tickBoss(g,h,input);
   }
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
-  if(g.gyuwon.years&&!['musical','curtain'].includes(g.gyuwon.years.mode)){g.boss.floorY=annualFloorHeight(g,g.boss.x,g.boss.z);const p=g.player,ground=annualFloorHeight(g,p.x,p.z);if((p.floorY||0)-ground>.2){p.floorV=(p.floorV||0)-20*h;p.floorY=Math.max(ground,p.floorY+p.floorV*h);}else{p.floorY=ground;p.floorV=0;}}
+  if(g.gyuwon.years&&!['musical','curtain','reverie'].includes(g.gyuwon.years.mode)){g.boss.floorY=annualFloorHeight(g,g.boss.x,g.boss.z);const p=g.player,ground=annualFloorHeight(g,p.x,p.z);if((p.floorY||0)-ground>.2){p.floorV=(p.floorV||0)-20*h;p.floorY=Math.max(ground,p.floorY+p.floorV*h);}else{p.floorY=ground;p.floorV=0;}}
   // A safeguard for future fifth-year effects deducting HP without hurt().
   if(gyuwonPlayerHpFloor(g)>0&&g.player.hp<1)g.player.hp=1;
   left-=h;
