@@ -1,3 +1,4 @@
+import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
 // Time anchors are production cues; the full master lyric/beat transcription needs listening QA.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -34,6 +35,24 @@ export function gyuwonDanceScene(time=0){
   handoff:1-clamp(t/9),ring:clamp((t-174.5)/5.5)};
 }
 export const gyuwonDanceAction=kind=>kind==='turn'?'skill':'light';
+export const GYUWON_DANCE_WINDOWS=Object.freeze({perfect:.075,good:.22,expired:.24});
+// One ordered source of truth for the visible cue and the J/L contact test.
+// A note that never had a visible preparation cannot inflict damage.
+export function gyuwonDanceNextCue(patterns,time,period=.5){
+ let best=null;
+ for(const p of patterns||[]){
+  const cue=gyuwonDanceTelegraph(p,time,period);
+  if(!cue?.active)continue;
+  if(!best||cue.at<best.at)best={...cue,pattern:p};
+ }
+ return best;
+}
+export function gyuwonDanceJudge(patterns,time,action,period=.5){
+ const cue=gyuwonDanceNextCue(patterns,time,period);
+ if(!cue)return null;
+ const error=Math.abs(time-cue.at),grade=error<=GYUWON_DANCE_WINDOWS.perfect?'PERFECT':'GOOD';
+ return {...cue,error,grade,accepted:error<=GYUWON_DANCE_WINDOWS.good&&cue.action===action};
+}
 export function gyuwonDanceTelegraph(pattern,time,period=.5){
  if(!pattern)return null;
  let index=-1;
@@ -43,7 +62,7 @@ export function gyuwonDanceTelegraph(pattern,time,period=.5){
  const start=index===0?pattern.cue:at-Math.max(1.1,period*2.4);
  return {kind:pattern.kind,action:gyuwonDanceAction(pattern.kind),
   at,lead:clamp((time-start)/Math.max(.01,at-start)),remaining:at-time,
-  active:time>=start&&time<=at+.18,index,count:pattern.count};
+  active:time>=start&&time<=at+GYUWON_DANCE_WINDOWS.expired,index,count:pattern.count};
 }
 function oval(c,x,y,rx,ry,fill){c.fillStyle=fill;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();}
 function beam(c,x,target,color,alpha){
@@ -52,9 +71,11 @@ function beam(c,x,target,color,alpha){
 }
 export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  const s=gyuwonDanceScene(m.time),t=s.time;
+ const lyric=gyuwonDanceLyricMoment(t);
  const sky=c.createLinearGradient(0,0,0,615);
  sky.addColorStop(0,s.sky);sky.addColorStop(.85,s.horizon);
  c.fillStyle=sky;c.fillRect(0,0,1280,720);
+ drawGyuwonDanceLyricBackdrop(c,s,m);
  // Star ceiling, rising dawn, and distant architecture: visual changes are music-led.
  if(s.stars||s.quiet){
   for(let i=0;i<58;i++){const x=(i*197+36)%1280,y=30+(i*71)%350;
@@ -84,6 +105,8 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  c.lineTo(640+(i-7)*94,720);c.stroke();}
  for(let i=0;i<5;i++){const y=510+i*i*12;c.beginPath();c.moveTo(100-i*28,y);c.lineTo(1180+i*28,y);c.stroke();}
  c.globalAlpha=1;
+ const tele=gyuwonDanceNextCue(m.dancePatterns,t,m.dancePeriod||.5);
+ drawGyuwonDanceLyricFloor(c,s,m,tele);
  // Curtain material from Act VII remains visible at the opening.
  const curtains=s.handoff>0?.88:s.quiet?.3:.54;
  for(const side of [-1,1]){
@@ -126,7 +149,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   oval(c,x,467+(i%3)*6,14+(i%2)*4,23,'#1c243b95');
   c.fillStyle='#252c4877';c.fillRect(x-9,470,18,40);
  }
- const pat=m.danceCurrent,tele=gyuwonDanceTelegraph(pat,t,m.dancePeriod||.5);
+ const pat=tele?.pattern||m.danceCurrent;
  const nowAction=pat?.kind==='turn'?'turn':pat?.kind==='quick'?'quick':'dance';
  const guidePose=s.quiet?'idle':tele?.active?nowAction:'dance';
  const activePose=m.dancePose>0?(m.dancePoseKind||'dance'):'idle';
@@ -140,18 +163,20 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   stars:'#7ba6b7',ensemble:'#794267',grand:'#b881a6',encore:'#7f87b9',
   rain:'#5981a7',reunion:'#a57b93',sunrise:'#c68d79',bow:'#e1b48c'};
  stagePerson(c,315,530,{scale:1.70,t:t+.12,pose:guidePose,
-  face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait});
+  face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
+  theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null});
  stagePerson(c,670,530,{scale:1.68,t,pose:activePose,face:m.danceFacing||1,
-  color:'#c8ddef',miss:m.danceError>0});
+  color:'#c8ddef',miss:m.danceError>0,theater:true,
+  choreography:m.dancePose>0?{kind:m.dancePoseKind||'dance',lead:1,remaining:0}:null});
  if(!s.quiet)stagePerson(c,1050,530,{scale:1.50,t:t+.28,
-  pose:tele?.active?nowAction:'dance',face:-1,color:rivalColors[s.key]||'#60446d'});
+  pose:tele?.active?nowAction:'dance',face:-1,color:rivalColors[s.key]||'#60446d',theater:true});
  // The army's four familiar silhouettes return in each large chorus,
  // transformed into distinct moving partners instead of anonymous minions.
  const chorus=['ensemble','grand','encore','reunion','sunrise','bow'].includes(s.key);
  for(let i=0;i<(chorus?4:2);i++){
   const x=438+i*142,y=510+(i%2)*10,variant=['#7297bc','#c4a071','#c4c4a7','#b17f9a'][i];
   stagePerson(c,x,y,{scale:chorus?.84:.66,t:t+i*.17,
-   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant});
+   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant,theater:true});
   if(!chorus)continue;
   c.save();c.translate(x,y-88);
   if(i===0){ // sword-keeper's golden sash and tiny diagonal blade
@@ -194,6 +219,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   const beatPulse=clamp(1-Math.abs(tele.remaining)/.3);
   if(beatPulse>0){oval(c,670,542,37+beatPulse*34,9,'rgba(255,240,190,'+(.15+beatPulse*.6)+')');}
  }
+ drawGyuwonDanceLyricForeground(c,s,m,tele);
  if(response){
   for(let i=0;i<15;i++){const a=i*TAU/15+t*.22;
    oval(c,670+Math.cos(a)*115,432+Math.sin(a)*70,3+(m.combo%4),3,s.light);}
@@ -210,5 +236,5 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   for(let i=0;i<3;i++){c.strokeStyle='rgba(240,198,162,'+(.45*s.ring)+')';
    c.lineWidth=3;c.beginPath();c.moveTo(240,495-i*31);c.lineTo(1110,495-i*31);c.stroke();}
  }
- return {scene:s,telegraph:tele};
+ return {scene:s,telegraph:tele,lyric};
 }
