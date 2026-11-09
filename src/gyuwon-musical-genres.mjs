@@ -6,7 +6,8 @@ import {playerIncomingDamage} from './weapon-stats.mjs';
 import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
-import {gyuwonMasterScene,gyuwonMasterRhythmNotes} from './gyuwon-master-director.mjs';
+import {gyuwonMasterScene} from './gyuwon-master-director.mjs';
+import {gyuwonCurtainCallAt,isGyuwonCurtainCall} from './gyuwon-curtain-call.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
 export const gyuwonStageProgress=m=>clamp((m?.time||0)/(m?.clock?.duration||GYUWON_SONGS[gyuwonSongKey(m)]?.duration||180),0,1);
@@ -54,8 +55,9 @@ function locate(g,m){
  else if(m.kind==='army'){p.x=-19;p.z=0;b.x=19;b.z=0;}
  else if(m.kind==='shooter'){p.x=-9;p.z=0;b.x=10;b.z=0;}
  else if(m.kind==='turn'){p.x=-7;p.z=0;b.x=7;b.z=0;}
+ else if(m.kind==='finale'){p.x=0;p.z=5;b.x=0;b.z=-8;}
  else {p.x=-7;p.z=0;b.x=7;b.z=0;}
- p.yaw=Math.PI/2;b.yaw=-Math.PI/2;
+ p.yaw=m.kind==='finale'?Math.PI:Math.PI/2;b.yaw=m.kind==='finale'?0:-Math.PI/2;
 }
 export function enterGyuwonMusical(g,emit=()=>{}){
  const e=g?.gyuwon?.years;
@@ -135,13 +137,8 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
  if(m.reference)return actReferenceMinigame(g,m,type,{deal,take,heal,emit});
  if(m.kind==='turn')return turnChoice(g,m,type,emit);
  if(m.kind==='rhythm')return rhythmPress(g,m,type,emit);
- if(m.kind==='finale'&&type==='roll'){
-  // Dodge independently of rhythm grading; keep the 3D theatrical fight playable.
-  m.guard=Math.max(m.guard,.65);m.dash={left:.24,vx:(g.player.x>=g.boss.x?1:-1)*12};
-  rhythmPress(g,m,type,emit);return true;
- }
- if(m.kind==='finale'){
-  if(type==='heal')return heal(g,emit);
+ if(m.kind==='finale')return false; // 11수 is an unskippable, noncombat curtain call.
+ if(type==='heal')return heal(g,emit);
   if(!['light','skill'].includes(type))return rhythmPress(g,m,type,emit);
   const note=m.note;
   if(note&&!note.done&&note.key===type&&Math.abs(note.time)<=.21)return rhythmPress(g,m,type,emit);
@@ -279,40 +276,14 @@ function tickRhythm(g,m,dt,emit,finale=false){
  }
  if(finale)m.finaleStep=gyuwonFinaleMemoryPhase(m.time);
 }
-function tickFinaleScene(g,m,dt,input,emit){
- const phase=gyuwonFinaleMemoryPhase(m.time),p=g.player,b=g.boss;
- const drift=phase===3?4.5:6.8;
- p.x=clamp(p.x+(input.x||0)*drift*dt,-18,18);p.z=clamp(p.z-(input.z||0)*drift*dt,-13,13);
- b.x=Math.sin(m.time*.23)*5;b.z=-6+Math.sin(m.time*.33)*1.5;
- p.yaw=angle(p,b);b.yaw=angle(b,p);
- if(m.time>=m.finaleNext&&!m.songEnded){
-  const quiet=phase===0||phase===3,finalChorus=phase>=4;
-  m.finaleNext=m.time+(quiet?6.5:finalChorus?3.5:5.2);
-  if(!quiet){
-   const count=phase===5?2:1;
-   for(let i=0;i<count;i++){
-    const an=(m.finaleCount*2.4+i*2.2),offset=(i===0?0:6);
-    m.finaleHazards.push({
-     id:m.finaleCount++,kind:phase===1?'banner':phase===2?'runner':phase>=4?'star':'banner',
-     x:clamp(p.x+Math.sin(an)*offset,-15,15),z:clamp(p.z+Math.cos(an)*offset,-10,10),
-     fromX:phase>=4?p.x+Math.sin(an)*13:-18,fromZ:phase>=4?-15:p.z+Math.cos(an)*3,
-     fxX:0,fxZ:0,wind:phase===5?1.35:1.8,age:0,hit:false,radius:phase===5?1.9:2.3
-    });
-   }
-   emit('gyuwon-musical-cue',{kind:'finale-memory',wind:1.8});
-  }
- }
- for(const h of m.finaleHazards){
-  h.age+=dt;
-  const q=clamp(h.age/h.wind,0,1);
-  h.fxX=(h.fromX??h.x)+(h.x-(h.fromX??h.x))*q*q*(3-2*q);
-  h.fxZ=(h.fromZ??h.z)+(h.z-(h.fromZ??h.z))*q*q*(3-2*q);
-  if(h.age>=h.wind&&!h.hit){
-   h.hit=true;
-   if(Math.hypot(p.x-h.x,p.z-h.z)<h.radius)take(g,phase===5?20:14,emit);
-  }
- }
- m.finaleHazards=m.finaleHazards.filter(h=>h.age<h.wind+.9);
+function tickCurtainCall(g,m,duration){
+ // No enemy patterns, rhythm misses, damage, camera chases or attacks:
+ // the hero watches five performers revisit each earlier boss phase.
+ m.curtainCall=gyuwonCurtainCallAt(m.time,duration);
+ m.finaleHazards.length=0;m.finaleNext=Infinity;m.note=null;m.playerStrike=null;
+ m.hitFlash=0;m.dash=null;m.guard=0;
+ g.player.action=null;g.player.x=0;g.player.z=5;g.player.floorY=0;
+ g.player.yaw=Math.PI;g.boss.x=0;g.boss.z=-8;g.boss.yaw=0;
 }
 function tickFighter(g,m,dt,input,emit){
  const p=g.player,b=g.boss;
@@ -398,6 +369,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  const duration=m.clock?.duration||song.duration;
  m.actProgress=clamp(m.time/duration,0,1);
  m.masterScene=gyuwonMasterScene(gyuwonSongKey(m),m.time);
+ if(isGyuwonCurtainCall(m))tickCurtainCall(g,m,m.clock?.duration||song.duration);
  const ended=m.clock?m.clock.ended:m.time>=duration;
  if(m.finishing){
   m.curtain=m.time;
@@ -440,6 +412,6 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  else if(m.kind==='rhythm')tickRhythm(g,m,dt,emit);
  else if(m.kind==='fighter')tickFighter(g,m,dt,input||{},emit);
  else if(m.kind==='shooter')tickShooter(g,m,dt,input||{},emit);
- else if(m.kind==='finale'){tickRhythm(g,m,dt,emit,true);tickFinaleScene(g,m,dt,input||{},emit);}
+ else if(m.kind==='finale')tickCurtainCall(g,m,duration);
  e.day=Math.max(0,Math.ceil(365*(1-m.time/duration)));
 }
