@@ -6,6 +6,7 @@ on:
       - 'src/gyuwon-*.mjs'
       - 'tests/gyuwon-musical-genres.test.mjs'
       - 'tests/gyuwon-reference-games.test.mjs'
+      - 'tests/gyuwon-dance-director.test.mjs'
       - 'tests/gyuwon-runner-handoff.test.mjs'
       - 'scripts/gyuwon-reference-qa.mjs'
       - 'scripts/gyuwon-giant-raid-qa.mjs'
@@ -36,11 +37,11 @@ jobs:
         run: npm install --no-save --no-package-lock --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Check stage, white world, combat, UI, music and tests
         run: |
-          for f in src/gyuwon-musical-genres.mjs src/gyuwon-musical-stage.mjs src/gyuwon-musical-hud.mjs src/gyuwon-musical-score.mjs src/gyuwon-musical-narrator.mjs src/gyuwon-years.mjs src/gyuwon-battle.mjs src/gyuwon-combat.mjs src/gyuwon-view.mjs src/gyuwon-ui.mjs src/gyuwon-year-rig.mjs src/gyuwon-year-world.mjs src/gyuwon-years-hud.mjs src/gyuwon-annual-progress.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-opening-pacing.test.mjs; do
+          for f in src/gyuwon-dance-director.mjs src/gyuwon-2d-view.mjs src/gyuwon-reference-rules.mjs src/gyuwon-musical-genres.mjs src/gyuwon-musical-stage.mjs src/gyuwon-musical-hud.mjs src/gyuwon-musical-score.mjs src/gyuwon-musical-narrator.mjs src/gyuwon-years.mjs src/gyuwon-battle.mjs src/gyuwon-combat.mjs src/gyuwon-view.mjs src/gyuwon-ui.mjs src/gyuwon-year-rig.mjs src/gyuwon-year-world.mjs src/gyuwon-years-hud.mjs src/gyuwon-annual-progress.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-opening-pacing.test.mjs; do
             node --check "$f"
           done
       - name: Simulate all seven actual playable genres and final 800 HP
-        run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-act-five-acting.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/journey-controller.test.mjs
+        run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-act-five-acting.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-dance-director.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/journey-controller.test.mjs
       - run: npx playwright-core install --with-deps chromium
       - name: Native musical clocks, 3D party and five actual 2D genres
         run: |
