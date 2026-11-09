@@ -35,7 +35,8 @@ export function gyuwonDanceScene(time=0){
 export const gyuwonDanceAction=kind=>kind==='turn'?'skill':'light';
 export function gyuwonDanceTelegraph(pattern,time,period=.5){
  if(!pattern)return null;
- const index=pattern.done.findIndex((d,i)=>!d&&!pattern.misses[i]);
+ let index=-1;
+ for(let i=0;i<pattern.count;i++)if(!pattern.done[i]&&!pattern.misses[i]){index=i;break;}
  if(index<0)return null;
  const at=pattern.first+index*pattern.spacing*period;
  const start=index===0?pattern.cue:at-Math.max(1.1,period*2.4);
