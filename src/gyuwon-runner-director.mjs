@@ -45,7 +45,7 @@ export function gyuwonRunnerLyricStage(time){
   /sunshine/.test(en)?'sunlight':
   /rain/.test(en)?'shower':
   /mountains/.test(en)?'mountains':
-  /answers|none that i/.test(en)?'questions':
+  /answer|none that i/.test(en)?'questions':
   /curtains/.test(en)?'curtains':
   /sea/.test(en)?'sea':
   /lucky star/.test(en)?'star':
