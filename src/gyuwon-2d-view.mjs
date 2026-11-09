@@ -6,12 +6,14 @@ import {gyuwonRunnerScene,gyuwonRunnerBridgeAt,gyuwonRunnerGuideAt,gyuwonRunnerA
 import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
 import {createGyuwonArmyDoodle} from './gyuwon-army-doodle.mjs';
 import {drawGyuwonDanceWorld} from './gyuwon-dance-director.mjs';
+import {drawGyuwonFightWorld} from './gyuwon-fight-art.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const TAU=Math.PI*2;
 export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={}){
  const canvas=doc.createElement('canvas');canvas.className='gy-reference-canvas';canvas.setAttribute('aria-label','최규원 2D 미니게임');canvas.tabIndex=0;canvas.hidden=true;canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:12;touch-action:none;background:#080c12';shell.appendChild(canvas);
  const portrait=doc.createElement('img');portrait.src=GYUWON_FACE_URL;portrait.decoding='async';
  const lastRunnerFrame=doc.createElement('canvas');const lastRunner2d=lastRunnerFrame.getContext('2d');
+ const lastDanceFrame=doc.createElement('canvas');const lastDance2d=lastDanceFrame.getContext('2d');
  const armyDoodle=createGyuwonArmyDoodle(doc,{reducedMotion:!!doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches});
  const c=canvas.getContext('2d',{alpha:false}),state={g:null,width:1280,height:720,scale:1,left:0,top:0,active:false},report={mode:'canvas2d',drawMs:0,sprites:0,width:0,height:0};
  let pointer=null;
@@ -347,40 +349,8 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    label(c,m.judgement,1090,260,33,m.judgement==='PERFECT'?'#ffe8aa':'#b8f8eb','center',4);
   standardHeader(g,m,{color:m.danceScene?.quiet?'#d8e0ff':'#f6d5f2'});
  }
- function fighter(g,m){
-  c.fillStyle=['#3c6170','#53536a','#593f62'][Math.min(2,Math.max(0,m.fightRound-1))];c.fillRect(0,0,1280,720);
-  for(let layer=0;layer<3;layer++)for(let i=0;i<12;i++){
-   const x=i*133+Math.sin(i*4)*30-layer*12,y=95+(i%5)*29;const color=['#526e73','#76908a','#a5ac8d'][layer];
-   round(c,x,y,96,260+layer*75,2,color,'#263e49',3);for(let j=0;j<6;j++){round(c,x+14,y+24+j*35,18,21,2,j%2?'#d7cb8f':'#263f50','#31454c',2);round(c,x+55,y+24+j*35,17,21,2,'#304952','#31454c',2);}
-  }
-  c.strokeStyle='#222d35';c.lineWidth=18;for(let i=0;i<4;i++){c.beginPath();c.moveTo(i*390-40,140);c.lineTo(i*390+170,520);c.stroke();}
-  c.fillStyle='#a17e58';c.beginPath();c.moveTo(0,526);c.lineTo(1280,526);c.lineTo(1280,720);c.lineTo(0,720);c.fill();
-  c.strokeStyle='#4f4d43';c.lineWidth=4;for(let i=0;i<18;i++){c.beginPath();c.moveTo(i*92,526);c.lineTo(i*103-70,720);c.stroke();}
-  c.strokeStyle='#27363d';c.lineWidth=9;c.beginPath();c.moveTo(0,504);c.lineTo(1280,504);c.stroke();
-  const sx=x=>640+x*33;
-  for(let i=0;i<2;i++){
-   const f=m.fighters[i],a=f.action,pose=f.stun>0?'guard':a?(a.t<a.wind?'wind':a.t<a.wind+a.live?'strike':'idle'):f.guard?'guard':f.crouch?'crouch':f.y>0?'jump':Math.abs(f.x-(i?7:-7))>.01?'run':'idle';
-   stagePerson(c,sx(f.x),580-f.y*45,{scale:1.65,t:m.time,pose,face:f.facing,color:i?'#9d7f8f':'#638ba8',gyuwon:!!i,portrait,reach:a?Math.min(120,a.range*33/1.65):76});
-   if(a&&a.t>=a.wind&&a.t<a.wind+a.live&&a.kind==='skill'){c.save();c.translate(sx(f.x)+f.facing*50,440-f.y*45);c.scale(f.facing,1);c.strokeStyle='#fff2c7';c.lineWidth=10;c.beginPath();c.ellipse(0,0,127,47,-.25,-1.3,1.3);c.stroke();c.restore();}
-   if(f.combo>1)label(c,f.combo+' HIT',i?1090:165,225,33,'#fff0b8','center',4);
-  }
-  for(const s of m.hitSparks)burst(c,sx(s.x),580-s.y*65,45*(1-s.age/.4),m.time,s.blocked?'#9fe6ec':'#ffeb9a');
-  const [a,b]=m.fighters;round(c,32,22,1216,103,24,'#1b2730dc','#a5a88a',3);
-  bar(c,130,41,425,23,a.hp,a.maxHp,'#e6b35d','#7a3f47');bar(c,725,41,425,23,b.hp,b.maxHp,'#e6b35d','#7a3f47');
-  label(c,'서약의 검사',135,94,22,'#e8e0c7');label(c,'최규원',1145,94,22,'#e8e0c7','right');
-  c.fillStyle='#18212a';c.beginPath();c.arc(640,70,59,0,TAU);c.fill();c.strokeStyle='#b79863';c.lineWidth=7;c.stroke();label(c,Math.max(0,Math.ceil((m.clock?.duration||44)-m.time)),640,68,42,'#f1d5a7','center');
-  bar(c,85,652,325,14,a.meter,100,'#7ed1dd');bar(c,870,652,325,14,b.meter,100,'#a49cdc');
-  label(c,'ROUND '+m.fightRound,640,134,17,'#e7d5aa','center',3);label(c,m.score.toLocaleString(),640,684,22,'#fff0c7','center',4);
-  if(m.fightReset>0){label(c,a.hp<=0?'DOWN':'K.O.',640,325,94,'#f3d99e','center',9);
-   for(let i=0;i<22;i++)flower(c,280+(i*53)%720,260+(i*31)%160,.17,'#ffd99f');
-  }
-  if(m.masterScene?.kind==='breather'){
-   c.fillStyle='#dcd3de24';c.fillRect(0,138,1280,380);
-   for(let i=0;i<7;i++){c.strokeStyle='#f3d9ae';c.lineWidth=2;c.beginPath();
-    c.arc(640+i*30-90,270+Math.sin(m.time*.5+i)*8,16,Math.PI*.4,Math.PI*1.4);c.stroke();}
-  }
- }
- function shooter(g,m){
+ function fighter(g,m){drawGyuwonFightWorld(c,g,m,{portrait});}
+  function shooter(g,m){
   c.imageSmoothingEnabled=false;const sky=m.actProgress>.74?'#121a3c':m.actProgress>.45?'#2b4263':'#4f646a';c.fillStyle=sky;c.fillRect(0,0,540,900);
    if(m.actProgress>.45){for(let i=0;i<75;i++){const x=(i*97)%540,y=(i*131+m.scroll*(i%3+2))%900;c.fillStyle=i%5===0?'#fbe8b8':'#dde9ff88';c.fillRect(x,y,i%7===0?3:2,i%7===0?3:2);}}
   if(m.actProgress<.45){
@@ -461,7 +431,18 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   if(m.year===6)runner(g,m);else if(m.year===7)army(g,m);else if(m.year===8)dance(g,m);else if(m.year===9)fighter(g,m);else if(m.year===10)shooter(g,m);c.restore();
    // Preserve the final VI frame in an offscreen surface. The same painted
    // hill and banners dissolve into VII instead of a black genre cut.
-   if(m.year===6&&m.runnerScene?.biome==='exit'&&lastRunner2d){
+   if(m.year===8&&m.time>=172&&lastDance2d){
+     if(lastDanceFrame.width!==canvas.width||lastDanceFrame.height!==canvas.height){
+      lastDanceFrame.width=canvas.width;lastDanceFrame.height=canvas.height;
+     }
+     lastDance2d.clearRect(0,0,lastDanceFrame.width,lastDanceFrame.height);
+     lastDance2d.drawImage(canvas,0,0);
+    }else if(m.year===9&&m.time<5.9&&lastDanceFrame.width>0){
+     const q=clamp(m.time/5.9,0,1);
+     c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=(1-q)*.88;
+     c.drawImage(lastDanceFrame,0,0,canvas.width,canvas.height);c.restore();
+    }
+    if(m.year===6&&m.runnerScene?.biome==='exit'&&lastRunner2d){
     if(lastRunnerFrame.width!==canvas.width||lastRunnerFrame.height!==canvas.height){
      lastRunnerFrame.width=canvas.width;lastRunnerFrame.height=canvas.height;
     }

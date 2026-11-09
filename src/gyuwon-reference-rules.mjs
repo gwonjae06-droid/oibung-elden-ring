@@ -1,6 +1,7 @@
 import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
+import {gyuwonFightScene,gyuwonFightGround,GYUWON_FIGHT_SET_PIECES} from './gyuwon-fight-director.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
 import {gyuwonDanceScene,gyuwonDanceJudge,gyuwonDanceNextCue,GYUWON_DANCE_WINDOWS} from './gyuwon-dance-director.mjs';
 import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
@@ -56,7 +57,7 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
-  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;
+  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';
  }else if(m.year===10){
   g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
@@ -124,11 +125,22 @@ export function actReferenceMinigame(g,m,type,c){
   return true;
  }
  if(m.year===9){
-  const f=m.fighters[0];if(m.fightReset>0)return false;
-  if(type==='jump'||type==='roll'){if(f.y>0||f.stun>0)return false;f.vy=10;return true;}
-  if(type==='guard'){m.guardHeld=true;return true;}
+  const f=m.fighters[0];
+  if(type==='guard'){m.guardHeld=true;m.fightParryWindow=.22;return true;}
   if(type==='guard-end'){m.guardHeld=false;return true;}
-  return fighterAttack(f,{light:'light',kick:'kick',skill:'skill',super:'super'}[type]||'light');
+  if(m.fightReset>0){
+   if(type!=='light'||m.encoreCollected>=6)return false;
+   const orb=m.encoreOrbs.find(o=>!o.collected&&Math.abs(o.x-f.x)<2.9);
+   if(!orb)return false;
+   orb.collected=true;m.encoreCollected++;f.meter=Math.min(100,f.meter+8);
+   c.deal(g,24,c.emit);return true;
+  }
+  if(type==='jump'||type==='roll'){if(f.y>0||f.stun>0)return false;f.vy=10;return true;}
+  if(type==='super')return fighterAttack(f,'super'); // older programmatic commands
+  if(type==='kick'||type==='skill')return fighterAttack(f,type);
+  if(type!=='light')return false;
+  const combo=f.combo||0;
+  return fighterAttack(f,f.meter>=100?'super':combo>=4?'skill':combo>=2?'kick':'light');
  }
  if(m.year===10){
   if(type==='roll'||type==='bomb'){if(!m.bombs)return false;m.bombs--;m.bombEffect=1.1;m.enemyShots=[];m.guard=1.2;for(const e of m.shooterTargets){e.hp-=90;c.deal(g,90,c.emit);}return true;}
@@ -406,29 +418,109 @@ function tickReferenceDance(g,m,dt,c){
  }
 }
 function tickReferenceFighter(g,m,dt,input,c){
- const [p,b]=m.fighters;
- const progress=m.actProgress||0,cut=m.fightRound===1?41/180:m.fightRound===2?108/180:1;
- if(m.fightReset>0){
-  if(progress>=cut&&m.fightRound<3){for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.fightReset=0;m.enemyThink=1.35;}
-  else{m.fightReset=1;return;}
+ const [p,b]=m.fighters,t=m.time,scene=gyuwonFightScene(t);
+ m.fightWorld=scene;
+ const nextRound=m.fightRound===1&&t>=41?2:m.fightRound===2&&t>=108?3:m.fightRound;
+ if(nextRound!==m.fightRound){
+  m.fightRound=nextRound;m.fightReset=0;m.roundWait=false;m.encoreOrbs=[];m.encoreCollected=0;
+  for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=f.maxHp;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;f.combo=0;}
+  m.enemyThink=1.35;
  }
- if((m.fightRound===1&&m.time>=41)||(m.fightRound===2&&m.time>=108)){
-  for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.enemyThink=1.1;
+ if(scene.kind!==m.fightPriorScene){
+  if(scene.quiet){p.action=null;b.action=null;m.enemyThink=1.4;}
+  m.fightPriorScene=scene.kind;
  }
- p.crouch=(input.z||0)<-.35;p.guard=!!input.guard||!!m.guardHeld||((input.x||0)*p.facing<-.3);p.facing=p.x<b.x?1:-1;b.facing=-p.facing;
- if(!p.action&&p.stun===0)p.x=clamp(p.x+(input.x||0)*(p.crouch?2.1:7)*dt,-16,16);
- m.enemyThink-=dt;if(!b.action&&b.stun===0){const d=Math.abs(b.x-p.x);if(d>3.4)b.x+=Math.sign(p.x-b.x)*3.8*dt;else if(m.enemyThink<=0){fighterAttack(b,['light','kick','skill'][m.turnCount++%3]);m.enemyThink=1.4;}b.guard=!!p.action&&p.action.t<p.action.wind+p.action.live&&m.turnCount%3===0;}
- for(let i=0;i<2;i++){const f=m.fighters[i],enemy=m.fighters[1-i];f.comboTimer=Math.max(0,(f.comboTimer||0)-dt);if(f.comboTimer===0)f.combo=0;f.stun=Math.max(0,f.stun-dt);f.y=Math.max(0,f.y+f.vy*dt);f.vy=f.y>0?f.vy-24*dt:0;
-  const a=f.action;if(!a)continue;a.t+=dt;
-  if(!a.hit&&a.t>=a.wind&&a.t<a.wind+a.live){a.hit=true;const reach=Math.abs(enemy.x-f.x),height=Math.abs(enemy.y-f.y),inFront=(enemy.x-f.x)*f.facing>-.3;
-   if(reach<a.range&&height<a.reachY&&inFront&&!(enemy.crouch&&a.kind==='light'&&enemy.y<.1)){const blocked=enemy.guard&&enemy.y<.1&&(a.kind!=='kick'||enemy.crouch),damage=a.damage*(blocked?.13:1);enemy.hp=Math.max(0,enemy.hp-damage);enemy.stun=blocked?.1:.22;enemy.x=clamp(enemy.x+f.facing*(blocked?.18:.6),-16,16);f.meter=Math.min(100,f.meter+12);f.combo++;f.comboTimer=1.05;enemy.combo=0;enemy.comboTimer=0;m.hitSparks.push({x:(f.x+enemy.x)/2,y:1+enemy.y,age:0,blocked});if(i===0)c.deal(g,Math.round(damage*13),c.emit);else c.take(g,blocked?3:damage,c.emit);}
+ m.fightParryWindow=Math.max(0,m.fightParryWindow-dt);
+ m.fightParryFlash=Math.max(0,m.fightParryFlash-dt);
+ p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
+ if((input.z||0)>.48&&!m.fightJumpLatch&&p.y<=0&&p.stun<=0&&!m.fightReset){p.vy=10;m.fightJumpLatch=true;}
+ if((input.z||0)<.2)m.fightJumpLatch=false;
+ if(!p.action&&p.stun<=0)p.x=clamp(p.x+(input.x||0)*(p.crouch?3:7)*dt,-16,16);
+ p.facing=p.x<b.x?1:-1;b.facing=-p.facing;
+ p.floorY=gyuwonFightGround(t,p.x);b.floorY=gyuwonFightGround(t,b.x);
+ for(const f of m.fighters){
+  f.stun=Math.max(0,f.stun-dt);f.comboTimer=Math.max(0,(f.comboTimer||0)-dt);
+  if(f.comboTimer===0)f.combo=0;
+  f.y=Math.max(0,f.y+f.vy*dt);f.vy=f.y>0?f.vy-24*dt:0;
+ }
+ if(m.fightReset){
+  m.roundWait=true;
+  if(m.encoreNext<=t&&m.encoreCollected<6&&m.encoreOrbs.every(o=>o.collected)){
+   const x=[-11,0,10,-5,5,0][m.encoreCollected];
+   m.encoreOrbs=[{x,collected:false,created:t}];m.encoreNext=t+2.8;
+  }
+  g.player.x=p.x;g.player.floorY=(p.floorY||0)+p.y;g.boss.x=b.x;
+  return;
+ }
+ // Start each music-specific attack once and only when its authored verse plays.
+ for(let i=0;i<GYUWON_FIGHT_SET_PIECES.length;i++){
+  const cue=GYUWON_FIGHT_SET_PIECES[i];
+  if(t<cue.at||m.fightCueKeys.has(i))continue;
+  m.fightCueKeys.add(i);
+  if(t-cue.at<1.35)m.fightHazards.push({...cue,x:clamp(p.x,-13,13),hit:false});
+ }
+ for(const h of m.fightHazards){
+  const age=t-h.at;
+  if(age<h.wind||age>h.wind+.28||h.hit)continue;
+  h.hit=true;
+  if(Math.abs(p.x-h.x)<=h.radius&&p.y+(p.floorY||0)<1.6){
+   if(p.guard){m.fightParryFlash=.28;p.meter=Math.min(100,p.meter+12);}
+   else c.take(g,h.damage,c.emit);
+  }
+ }
+ m.fightHazards=m.fightHazards.filter(h=>t-h.at<h.wind+.65);
+ if(!scene.quiet&&t>8.8){
+  b.meter=Math.min(100,b.meter+dt*(m.fightRound===3?11:3));
+  m.enemyThink-=dt;
+  const d=Math.abs(b.x-p.x);
+  if(!b.action&&b.stun<=0){
+   if(d>3.1)b.x=clamp(b.x+Math.sign(p.x-b.x)*(m.fightRound>=2?4.2:3.6)*dt,-16,16);
+   else if(m.enemyThink<=0){
+    const n=m.turnCount++,kind=b.meter>=100&&m.fightRound===3?'super':
+     m.fightRound===1?['light','kick','light','skill'][n%4]:
+     m.fightRound===2?['kick','skill','light','kick'][n%4]:
+     ['skill','kick','light','super'][n%4];
+    fighterAttack(b,kind==='super'&&b.meter<100?'skill':kind);
+    m.enemyThink=m.fightRound===3?1.35:1.55;
+   }
+  }
+  b.guard=!!p.action&&p.action.t<p.action.wind+p.action.live&&m.turnCount%4===0;
+ }else b.guard=false;
+ b.floorY=gyuwonFightGround(t,b.x);
+ if(Math.abs(b.x-p.x)<1.9){const mid=(b.x+p.x)/2;p.x=clamp(mid-p.facing*.95,-16,16);b.x=clamp(mid+p.facing*.95,-16,16);}
+ p.floorY=gyuwonFightGround(t,p.x);b.floorY=gyuwonFightGround(t,b.x);
+ for(let i=0;i<2;i++){
+  const f=m.fighters[i],enemy=m.fighters[1-i],a=f.action;if(!a)continue;
+  a.t+=dt;
+  if(!a.hit&&a.t>=a.wind&&a.t<a.wind+a.live){
+   a.hit=true;
+   const reach=Math.abs(enemy.x-f.x),
+    height=Math.abs(((enemy.floorY||0)+enemy.y)-((f.floorY||0)+f.y)),
+    inFront=(enemy.x-f.x)*f.facing>-.3;
+   if(reach<a.range&&height<a.reachY&&inFront&&!(enemy.crouch&&a.kind==='light'&&enemy.y<.1)){
+    const parry=enemy.guard&&enemy.y<.1&&i===1&&m.fightParryWindow>0;
+    const blocked=enemy.guard&&enemy.y<.1&&(a.kind!=='kick'||enemy.crouch);
+    const damage=a.damage*(parry?0:blocked?.13:1);
+    enemy.hp=Math.max(0,enemy.hp-damage);
+    enemy.stun=parry?.7:blocked?.1:.22;
+    enemy.x=clamp(enemy.x+f.facing*(blocked?.18:.6),-16,16);
+    f.meter=Math.min(100,f.meter+12);f.combo++;f.comboTimer=1.35;
+    enemy.combo=0;enemy.comboTimer=0;
+    m.hitSparks.push({x:(f.x+enemy.x)/2,y:1+(enemy.floorY||0)+enemy.y,age:0,blocked:blocked||parry});
+    if(parry){m.fightParryWindow=0;m.fightParryFlash=.35;p.meter=Math.min(100,p.meter+24);c.deal(g,30,c.emit);}
+    if(i===0)c.deal(g,Math.round(damage*13),c.emit);
+    else if(!parry)c.take(g,blocked?3:damage,c.emit);
+   }else if(i===0)f.combo=0;
   }
   if(a.t>=a.wind+a.live+a.recovery)f.action=null;
  }
- if(Math.abs(b.x-p.x)<1.9){const mid=(b.x+p.x)/2;p.x=mid-p.facing*.95;b.x=mid+p.facing*.95;}
- m.hitSparks=m.hitSparks.filter(s=>(s.age+=dt)<.35);
- if((p.hp<=0||b.hp<=0)&&!m.fightReset){m.roundWins[p.hp<=0?1:0]++;m.fightReset=1;}
- g.player.x=p.x;g.player.z=0;g.player.floorY=p.y;g.boss.x=b.x;g.boss.z=0;
+ m.hitSparks=m.hitSparks.filter(s=>(s.age+=dt)<.4);
+ if((p.hp<=0||b.hp<=0)&&!m.fightReset){
+  m.roundWins[p.hp<=0?1:0]++;m.fightReset=1;m.roundWait=true;
+  m.encoreNext=t+1.5;m.encoreOrbs=[];m.encoreCollected=0;p.action=null;b.action=null;
+ }
+ g.player.x=p.x;g.player.z=0;g.player.floorY=(p.floorY||0)+p.y;
+ g.boss.x=b.x;g.boss.z=0;
 }
 function tickReferenceShooter(g,m,dt,input,c){
  const p=g.player;if(m.pointerTarget){const dx=m.pointerTarget.x-p.x,dz=m.pointerTarget.z-p.z,d=Math.hypot(dx,dz),q=Math.min(1,dt*26/Math.max(.001,d));p.x+=dx*q;p.z+=dz*q;}p.x=clamp(p.x+(input.x||0)*10*dt,-11,11);p.z=clamp(p.z-(input.z||0)*10*dt,-8,16);m.scroll+=dt*5;m.bombEffect=Math.max(0,m.bombEffect-dt);m.chainTime=Math.max(0,m.chainTime-dt);if(m.chainTime===0)m.chain=0;
@@ -474,7 +566,7 @@ export function referenceKeyAction(m,code){
  if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide',KeyK:'dash',ShiftLeft:'dash',ShiftRight:'dash'}[code]||null;
  if(m.year===7)return {KeyT:'lane',Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
  if(m.year===8)return {KeyJ:'light',KeyL:'skill'}[code]||null;
- if(m.year===9)return {KeyK:'kick',KeyI:'guard',KeyO:'super',Space:'jump',KeyW:'jump',ArrowUp:'jump'}[code]||null;
+ if(m.year===9)return {KeyJ:'light',KeyK:'guard'}[code]||null;
  if(m.year===10)return {Space:'bomb',KeyB:'bomb'}[code]||null;
  return null;
 }
