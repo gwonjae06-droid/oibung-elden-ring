@@ -1,5 +1,7 @@
 import {gyuwonMusicSection} from './gyuwon-music.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
+import {createBloodSeraphChoirProbe,publishBloodSeraphChoir,
+ resetBloodSeraphChoir} from './blood-seraph-choir.mjs';
 // The original 4m23s phase-two recording plays through its final measure.
 // After it finishes, reprise a musical midsection rather than the intro.
 export const BLOOD_MUSIC_REPRISE_SECONDS=130;
@@ -22,11 +24,34 @@ export function bossTrack(state){
 }
 export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,now=()=>win?.performance?.now?.()??Date.now(),fadeMs=1200,volume=.5}={}){
   let current=null,outgoing=null,suspendedAt=null,disposed=false;
+  let choirProbe=null,choirAudio=null,lastProbeAttempt=-Infinity;
   const failed=new Set();
+  function clearChoir(){
+    choirProbe?.dispose();choirProbe=null;choirAudio=null;
+    lastProbeAttempt=-Infinity;resetBloodSeraphChoir();
+  }
+  function observeChoir(entry,time){
+    if(entry?.key!=='blood:2'||entry.audio.paused){
+      resetBloodSeraphChoir();return;
+    }
+    // A captured stream is separate from the audible music player, so
+    // unavailable devices will never silence the original MP3.
+    if(choirAudio!==entry.audio){clearChoir();choirAudio=entry.audio;}
+    if(!choirProbe&&time-lastProbeAttempt>=1200){
+      lastProbeAttempt=time;
+      choirProbe=createBloodSeraphChoirProbe(win,entry.audio);
+      choirProbe?.unlock();
+    }
+    const measurement=choirProbe?.sample();
+    publishBloodSeraphChoir(measurement||{
+      seconds:entry.audio.currentTime,source:'none'
+    });
+  }
   const entries=()=>[current,outgoing].filter(Boolean);
   function release(entry){
     if(!entry||!entry.alive)return;
     entry.alive=false;entry.audio.onerror=null;entry.audio.onended=null;
+    if(choirAudio===entry.audio)clearChoir();
     try{entry.audio.pause();entry.audio.currentTime=0;entry.audio.removeAttribute?.('src');entry.audio.load?.();}catch{}
   }
   function fail(entry){
@@ -49,10 +74,12 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     }
   }
   function pause(){
+    resetBloodSeraphChoir();
     if(suspendedAt===null)suspendedAt=now();
     for(const entry of entries())try{entry.audio.pause();}catch{}
   }
   function reset(){
+    clearChoir();
     for(const entry of entries())release(entry);
     current=outgoing=null;suspendedAt=null;
   }
@@ -96,6 +123,7 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
     if(!current)return false;
     const progress=Math.min(1,Math.max(0,(time-current.started)/Math.max(1,fadeMs)));
     current.audio.volume=volume*audioChannelGain('music',win?.localStorage)*progress*Math.max(0,Math.min(1,state.gain??1));
+    observeChoir(current,time);
     if(outgoing){
       outgoing.audio.volume=Math.min(1,outgoing.from??volume)* (1-progress);
       if(progress>=1){release(outgoing);outgoing=null;}
@@ -104,7 +132,11 @@ export function createBossTracks(win=globalThis.window,{AudioClass=win?.Audio,no
   }
   return {
     update,reset,
-    unlock(){for(const entry of entries())entry.blocked=false;if(suspendedAt===null)for(const entry of entries())play(entry);},
+    unlock(){
+      for(const entry of entries())entry.blocked=false;
+      choirProbe?.unlock();
+      if(suspendedAt===null)for(const entry of entries())play(entry);
+    },
     dispose(){if(disposed)return;disposed=true;reset();},
     get playingKey(){return current?.key??null;},
     get state(){return entries().map(e=>({key:e.key,volume:e.audio.volume,time:e.audio.currentTime,paused:e.audio.paused}));},
