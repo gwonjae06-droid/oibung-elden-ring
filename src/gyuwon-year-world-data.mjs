@@ -24,7 +24,11 @@ export function annualWorldLayers(year,seed=1){
 // raise the next world. No input skip or new combat invulnerability is added.
 export function annualWorldBlend(g){
  const e=g.gyuwon.years;
- if(e.mode==='result')return {from:e.year,to:e.year+1,t:worldEase((e.gradeT-.65)/2.35)};
+ if(e.mode==='result'){
+  // Compress the grade-to-next-world dissolve with the shortened exam.
+  const t=e.legacyAnnual?(e.gradeT-.65)/2.35:(e.gradeT-.10)/.75;
+  return {from:e.year,to:e.year+1,t:worldEase(t)};
+ }
  return {from:e.year,to:e.year,t:1};
 }
 export const OMR_FLOOR_PANELS=Object.freeze([-1,1].map(side=>Object.freeze({side,hingeX:side*21,width:6,length:42})));

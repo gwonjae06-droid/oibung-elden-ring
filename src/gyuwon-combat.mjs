@@ -1,6 +1,6 @@
 import {annualFloorHeight,resolveAnnualWorldMotion} from './gyuwon-year-world-data.mjs';
 import {pushOutAnnualCover} from './gyuwon-nightmare-mechanics.mjs';
-import {acceptAnnualDamage} from './gyuwon-annual-progress.mjs';
+import {acceptAnnualDamage,GYUWON_MUSICAL_TOTAL_HP} from './gyuwon-annual-progress.mjs';
 import {tickBossHitTraits} from './boss-hit-traits.mjs';
 import {playerWalkSpeed,playerRollSpeed,playerRolling} from './player-movement-rules.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
@@ -21,8 +21,9 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
 export function createGyuwonGame(weapon='sword',{seed,yearMode=false}={}){
  if(!Object.hasOwn(WEAPONS,weapon))throw Error('Unknown weapon');
+ const totalHp=yearMode?GYUWON_MUSICAL_TOTAL_HP:R.hp;
  const game={bossId:'gyuwon',weapon,time:0,status:'playing',nextId:1,events:[],projectiles:[],stats:{hits:0,damage:0,dodges:0},player:createPlayerState({x:0,z:14,weapon}),
-  boss:{x:0,z:-5,hp:R.hp,maxHp:R.hp,phase:1,state:'recovery',yaw:0},
+  boss:{x:0,z:-5,hp:totalHp,maxHp:totalHp,phase:1,state:'recovery',yaw:0},
   gyuwon:{patternDeck:createPatternShuffle(seed),pattern:null,index:0,t:0,recover:1.2,motionBeats:[],hazards:[],elevation:0,slow:0,stun:0,transitioned:false,phasePending:false,deathTime:0,memory:[],space:'white',spaceTime:0,stageTime:0,stageIndex:0,stageMemory:null,memoryVariant:0,memoryRun:0,memoryRunTarget:2,proofQueue:[],proofIndex:0,whiteQuota:2,whiteCycle:0,casts:0,lastWarpCast:-1,teleport:null}};
  if(yearMode){game.gyuwon.years=createGyuwonYears();game.gyuwon.years.worldSeed=game.gyuwon.patternDeck.seed;}
  // All weapon skills (card sigils, burning arrows, hammer guard and throw)
@@ -55,7 +56,7 @@ export function damageGyuwon(g,amount,impact=null,{dot=false}={}){
  // during the five-subject exam only, incoming damage is halved.
  if(g.gyuwon.years){
   const b=g.boss,s=g.gyuwon,e=s.years;
-  if(e.mode==='result'||e.mode==='curtain')return 0;
+  if(e.mode==='result'||e.mode==='curtain'||e.mode==='exam'&&!e.legacyAnnual)return 0;
   // The sixth-year shrine is breakable. Intact figures absorb a modest portion
   // of incoming boss damage until the player clears them or the cast ends.
   const shield=e.cast==='ultimateShrine'&&e.wards?.some(w=>w.hp>0)?0.78:1;

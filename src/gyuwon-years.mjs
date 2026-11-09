@@ -12,8 +12,10 @@ import {GYUWON_YEAR_SIGNATURES,GYUWON_SIGNATURE_SPECS,
 // code for old tools/tests and are not selected by the published year-mode fight.
 export const GYUWON_YEAR_SECONDS=GYUWON_CALENDAR_SECONDS;
 export const GYUWON_EXAM_SUBJECTS=Object.freeze(['국어','수학','영어','한국사','탐구']);
-export const GYUWON_SUBJECT_SECONDS=.9;
-export const GYUWON_RESULT_SECONDS=3;
+export const GYUWON_SUBJECT_SECONDS=.9; // Legacy yearly boss challenge.
+ export const GYUWON_RESULT_SECONDS=3;
+ export const GYUWON_LIVE_SUBJECT_SECONDS=.35;
+ export const GYUWON_LIVE_RESULT_SECONDS=.85;
 export const GYUWON_MIN_TELEGRAPH=1.05;
 export const GYUWON_EXAM_MAX_REACH=6.2;
 export const GYUWON_YEAR_PATTERNS=Object.freeze({
@@ -91,7 +93,7 @@ function spawnExamSubject(g,index){
  // The exam is a short peaceful interlude, with a desk and physical OMR.
  g.gyuwon.hazards.length=0;
  e.subject=index;e.subjectT=0;e.subjectLabel=GYUWON_EXAM_SUBJECTS[index];
- if(index===4){
+ if(index===4&&e.legacyAnnual){
   const benefit=drawPatternShuffle(g.gyuwon.patternDeck,'gyuwon-inquiry',['attack','heal','speed']);
   e.inquiry=benefit;
   if(benefit==='attack')e.attackBuff=5;
@@ -114,18 +116,20 @@ export function resolveGyuwonExamGrade(g,random=Math.random(),emit=()=>{}){
  const e=g.gyuwon.years;
  const r=clamp(Number.isFinite(random)?random:.5,0,1-Number.EPSILON);
  const result=r<.30?'great':r<.70?'normal':'failure';
- const max=g.boss.maxHp,delta=max*(result==='great'?.05:result==='normal'?.02:-.04);
+ const max=g.boss.maxHp,delta=e.legacyAnnual?max*(result==='great'?.05:result==='normal'?.02:-.04):0;
  // Apply any earlier overflow before success/normal/failure adjustments.
  // The HP shown during the result cinematic must match the next-year HP.
  settleAnnualCarryBeforeGrade(g);
  // Failures can reduce HP into the *next* year's allowance. Never resurrect
  // an already-lower HP value or kill the boss before the last annual ultimate.
- const lower=delta<0?Math.min(g.boss.hp,annualFloorForYear(g,e.year+1)):0;
- g.boss.hp=clamp(g.boss.hp+delta,lower,max);
+ if(e.legacyAnnual){
+  const lower=delta<0?Math.min(g.boss.hp,annualFloorForYear(g,e.year+1)):0;
+  g.boss.hp=clamp(g.boss.hp+delta,lower,max);
+ }
  e.grade=result;e.gradeT=0;e.gradeAt=g.time;e.scoreFlash=1;e.mode='result';e.subjectLabel=null;
  e.cast=null;g.gyuwon.pattern=null;g.gyuwon.hazards.length=0;
  e.examCount++;e.failures+=(result==='failure'?1:0);e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);
- e.resultScene={grade:result,fromYear:e.year,nextYear:e.year+1,duration:GYUWON_RESULT_SECONDS};
+ e.resultScene={grade:result,fromYear:e.year,nextYear:e.year+1,duration:e.legacyAnnual?GYUWON_RESULT_SECONDS:GYUWON_LIVE_RESULT_SECONDS};
  e.wards=[];g.boss.state='recovery';
  emit('gyuwon-exam-grade',{result,delta,year:e.year});
  if(g.boss.hp<=0){g.status='won';g.boss.state='dead';emit('victory');}
@@ -305,14 +309,14 @@ export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
   if(e.mapPending&&!e.cast){pickMemoryMap(g);emit('memory-stage',{memory:s.stageMemory});}
  }
  if(e.mode==='result'){
-  e.gradeT+=dt;if(e.gradeT>=GYUWON_RESULT_SECONDS)startNextYear(g,emit);
+  e.gradeT+=dt;if(e.gradeT>=(e.legacyAnnual?GYUWON_RESULT_SECONDS:GYUWON_LIVE_RESULT_SECONDS))startNextYear(g,emit);
   return;
  }
  if(e.mode==='exam'){
   e.subjectT+=dt;s.t=e.subjectT;
   tickHazards(g,dt,hurt,emit);
   if(g.status!=='playing')return;
-  if(e.subjectT>=GYUWON_SUBJECT_SECONDS){
+  if(e.subjectT>=(e.legacyAnnual?GYUWON_SUBJECT_SECONDS:GYUWON_LIVE_SUBJECT_SECONDS)){
    if(e.subject===GYUWON_EXAM_SUBJECTS.length-1)resolveGyuwonExamGrade(g,Math.random(),emit);
    else spawnExamSubject(g,e.subject+1);
   }return;
