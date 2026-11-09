@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
-import {drawGyuwonLyricStageProps} from './gyuwon-lyric-3d-art.mjs';
+import {createGyuwonCinematicProps} from './gyuwon-cinematic-3d-props.mjs';
 
 // Instanced/cached primitive stagecraft. One rig for Gyuwon and one for the
 // player stay in the scene for every genre. Every moving prop here reads the
@@ -13,6 +13,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  const plane=new THREE.CircleGeometry(1,coarse?20:40);
  const soldier=new THREE.LatheGeometry([[0,0],[.35,0],[.38,.12],[.18,.18],[.24,.6],[.32,.85],[.16,1],[.22,1.07],[.25,1.3],[.18,1.5],[0,1.52]].map(p=>new THREE.Vector2(...p)),coarse?16:32);
  const boards=new THREE.Group();root.add(boards);
+ const cinematic=createGyuwonCinematicProps(root,{coarse});
  const oak=new THREE.MeshStandardMaterial({color:0x66503b,roughness:.72,metalness:.03});
  for(let i=0;i<24;i++){const plank=new THREE.Mesh(box,oak);plank.position.set((i-11.5)*1.8,-.15,0);plank.scale.set(1.78,.22,28);plank.receiveShadow=true;boards.add(plank);}
  const drape=new THREE.MeshStandardMaterial({color:0x471d28,roughness:1,side:THREE.DoubleSide});
@@ -166,22 +167,22 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
      sx:charge,sy:charge,sz:charge,color:4});
    }
   }
-  if(!m.finishing&&(year===5||year===11))drawGyuwonLyricStageProps(showAt,m);
+  // Full physical set pieces are owned by a separate, pooled scene graph.
+  cinematic.update(m);
   if(m.finishing){
    for(const o of cues)o.visible=false;
    stageRing.visible=false;left.visible=false;right.visible=false;
    for(const o of spotlights)o.visible=false;
    showAt(0,{x:g.boss.x,y:.015,z:g.boss.z,
     sx:4,sy:4,sz:4,color:6,flat:true});
-   // The quiet ending still physically builds each lyric's memories and home.
-   drawGyuwonLyricStageProps(showAt,m);
+   // The quiet ending is handled by the same physical hero-prop scene graph.
   }
  }
  function dispose(){
-  if(disposed)return;disposed=true;root.removeFromParent();
+  if(disposed)return;disposed=true;cinematic.dispose();root.removeFromParent();
   for(const geo of [box,ball,torus,plane,soldier,curtainGeo,horizon.geometry,horizonLight.geometry])geo.dispose();oak.dispose();drape.dispose();roadMaterial.dispose();horizonLight.material.dispose();
   for(const mat of materials)mat.dispose();
   soft.dispose();for(const s of spotlights)s.material.dispose();
  }
- return {root,update,dispose};
+ return {root,update,dispose,cinematicStats:()=>cinematic.stats()};
 }
