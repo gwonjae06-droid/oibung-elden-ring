@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
+import {drawGyuwonLyricStageProps} from './gyuwon-lyric-3d-art.mjs';
 
 // Instanced/cached primitive stagecraft. One rig for Gyuwon and one for the
 // player stay in the scene for every genre. Every moving prop here reads the
@@ -165,12 +166,15 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
      sx:charge,sy:charge,sz:charge,color:4});
    }
   }
+  if(!m.finishing&&(year===5||year===11))drawGyuwonLyricStageProps(showAt,m);
   if(m.finishing){
    for(const o of cues)o.visible=false;
    stageRing.visible=false;left.visible=false;right.visible=false;
    for(const o of spotlights)o.visible=false;
    showAt(0,{x:g.boss.x,y:.015,z:g.boss.z,
     sx:4,sy:4,sz:4,color:6,flat:true});
+   // The quiet ending still physically builds each lyric's memories and home.
+   drawGyuwonLyricStageProps(showAt,m);
   }
  }
  function dispose(){
