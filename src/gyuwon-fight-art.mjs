@@ -1,6 +1,7 @@
 import {gyuwonFightScene,gyuwonFightGroundScreen} from './gyuwon-fight-director.mjs';
 import {stagePerson,round,bar,label,burst,flower} from './gyuwon-2d-art.mjs';
 import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
+import {drawArmoredRunner} from './gyuwon-runner-art.mjs';
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const sx=x=>640+x*33;
 function glow(c,x,y,r,color,alpha=.7){
@@ -100,9 +101,10 @@ function fightActor(c,f,i,m,scene,portrait){
   c.globalAlpha=.3;for(let j of [-1,1])stagePerson(c,x+j*165,feetY+7,{scale:1.35,t:t+j,pose:'guard',face:-j,color:'#7d85a5',gyuwon:false});
   c.globalAlpha=1;
  }
- stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:!!i,portrait,reach:a?Math.min(170,a.range*33/1.65):76,
-  lyric:i&&!a?m.lyricAction:null});
- if(i)drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
+ if(i){
+  stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:true,portrait,reach:a?Math.min(170,a.range*33/1.65):76,lyric:!a?m.lyricAction:null});
+  drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
+ }else drawArmoredRunner(c,x,feetY,{scale:1.22,t,pose:f.y>0?'jump':f.crouch?'slide':a?'run':'walk',weapon:m.playerWeapon||'sword',slideAmount:f.crouch?1:0});
  if(i&&scene.role==='king'){
   c.fillStyle='#f7d68c';c.beginPath();c.moveTo(x-30,feetY-204);c.lineTo(x-20,feetY-242);c.lineTo(x-4,feetY-219);c.lineTo(x+9,feetY-251);c.lineTo(x+22,feetY-220);c.lineTo(x+35,feetY-244);c.lineTo(x+30,feetY-202);c.closePath();c.fill();
  }else if(i&&scene.role==='clown'){

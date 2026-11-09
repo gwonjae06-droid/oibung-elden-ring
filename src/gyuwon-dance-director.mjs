@@ -1,3 +1,5 @@
+import {drawArmoredRunner} from './gyuwon-runner-art.mjs';
+import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
 import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
@@ -119,6 +121,14 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
    c.lineTo(x+side*(i+1)*18,0);c.fill();}
  }
  c.globalAlpha=1;
+ // A subtle venue-wide light pulse on the actual song BPM; prompts and
+ // judgments still share the same score clock and remain visible above it.
+ const beatTime=t*(GYUWON_BEATS[8].bpm/60),pulse=Math.pow(Math.max(0,Math.cos(beatTime*Math.PI*2)),6);
+ if(pulse>.06){
+  c.save();c.globalAlpha=pulse*.13;c.fillStyle=s.light;c.fillRect(0,0,1280,480);
+  c.strokeStyle=s.light;c.lineWidth=4;c.beginPath();
+  c.ellipse(640,500,200+pulse*80,23+pulse*9,0,0,TAU);c.stroke();c.restore();
+ }
  // Stage beams have no telegraph privilege: the actual cue below owns the timing.
  for(let i=0;i<5;i++){
   const x=240+i*190+Math.sin(t*.45+i)*21;
@@ -145,7 +155,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   c.restore();
  }
  // Arrivals and shadows become more numerous in later choruses, without extra CPU simulations.
- const crowd=s.quiet?2:3+Math.round(s.crowd*10)+Math.round(s.dawn*5);
+ const crowd=s.quiet?6:3+Math.round(s.crowd*10)+Math.round(s.dawn*5);
  for(let i=0;i<crowd;i++){
   const x=38+i*(1200/Math.max(1,crowd-1));
   oval(c,x,467+(i%3)*6,14+(i%2)*4,23,'#1c243b95');
@@ -153,7 +163,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  }
  const pat=tele?.pattern||m.danceCurrent;
  const nowAction=pat?.kind==='turn'?'turn':pat?.kind==='quick'?'quick':'dance';
- const guidePose=s.quiet?'idle':tele?.active?nowAction:'dance';
+ const guidePose=tele?.active?nowAction:'dance';
  const activePose=m.dancePose>0?(m.dancePoseKind||'dance'):'idle';
  const response=m.judgementUntil>t&&m.judgement==='PERFECT';
  const introAlpha=clamp((t-2.1)/5.5);
@@ -173,10 +183,11 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
   theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null,
   lyric:tele?.active?null:m.lyricAction});
- stagePerson(c,670,530,{scale:1.68,t,pose:activePose,face:m.danceFacing||1,
-  color:'#c8ddef',miss:m.danceError>0,theater:true,
-  choreography:m.dancePose>0?{kind:m.dancePoseKind||'dance',lead:1,remaining:0}:null});
- if(!s.quiet)stagePerson(c,1050,530,{scale:1.50,t:t+.28,
+ // The playable dancer is the same fully enclosed armored knight as Act VI.
+ drawArmoredRunner(c,670,554,{scale:1.10,t,pose:m.dancePose>0?'run':'walk',weapon:m.playerWeapon||'sword',energy:m.danceEnergy||0});
+ if(m.dancePose>0){c.save();c.strokeStyle=s.light;c.lineWidth=5;c.globalAlpha=.7;
+  c.beginPath();c.arc(670,431,62,0,Math.PI*1.6);c.stroke();c.restore();}
+ stagePerson(c,1050,530,{scale:1.50,t:t+.28,
   pose:tele?.active?nowAction:'dance',face:-1,color:rivalColors[s.key]||'#60446d',theater:true});
  // The army's four familiar silhouettes return in each large chorus,
  // transformed into distinct moving partners instead of anonymous minions.
@@ -184,7 +195,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  for(let i=0;i<(chorus?4:2);i++){
   const x=438+i*142,y=510+(i%2)*10,variant=['#7297bc','#c4a071','#c4c4a7','#b17f9a'][i];
   stagePerson(c,x,y,{scale:chorus?.84:.66,t:t+i*.17,
-   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant,theater:true,
+   pose:tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant,theater:true,
    lyric:tele?.active?null:m.lyricAction});
   if(!chorus)continue;
   c.save();c.translate(x,y-88);
@@ -206,7 +217,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  c.restore();
  // Preview BOTH actions as choreography, never as a textual pattern instruction.
  // Step/quick: clearly alternating illuminated feet. Turn: wind-up + rotating trail.
- if(tele?.active&&!s.quiet){
+ if(tele?.active){
   const lead=tele.lead;
   beam(c,315,670,s.light,.09+.14*lead);
   if(tele.action==='light'){
@@ -235,7 +246,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
    oval(c,670+Math.cos(a)*115,432+Math.sin(a)*70,3+(m.combo%4),3,s.light);}
  }
  if(s.quiet){
-  c.fillStyle='#080c1b60';c.fillRect(0,0,1280,400);
+  c.fillStyle='#080c1b28';c.fillRect(0,0,1280,260);
   beam(c,315,315,'#b2afd9',.21);
   for(let i=0;i<6;i++)oval(c,535+i*43,580+Math.sin(i+t)*3,4,4,'#d4d9ff99');
  }

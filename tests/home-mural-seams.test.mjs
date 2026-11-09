@@ -10,7 +10,7 @@ test('main mural uses one photographic layer with no duplicate wallpaper or whit
  assert.equal(markup,JOURNEY_ART);
  assert.match(markup,/j-stone-wall/);
  assert.equal((markup.match(/class="j-stone-wall"/g)||[]).length,2,'responsive alternatives, only one visible');
- assert.match(markup,/preserveAspectRatio="xMidYMid slice"/);
+ assert.match(markup,/preserveAspectRatio="xMidYMid meet"/);
  assert.doesNotMatch(markup,/j-relief-sheen|stone-hot-inlay|stone-passing-light/);
  assert.doesNotMatch(css,/\.j-photographic\{background:[^}]*url\(/);
  assert.match(css,/#journey \.j-photographic\{background-color:#090c0d;background-image:none\}/);
@@ -57,14 +57,14 @@ test('the five photographic seals fit at once while their stone wall covers the 
  assert.equal((markup.match(/class="j-stone-wall"/g)||[]).length,2);
  assert.equal((markup.match(/class="j-wall-wide j-relief-layer"/g)||[]).length,1);
  assert.equal((markup.match(/class="j-wall-tall j-relief-layer"/g)||[]).length,1);
- assert.equal((markup.match(/preserveAspectRatio="xMidYMid meet"/g)||[]).length,2);
- assert.equal((markup.match(/preserveAspectRatio="xMidYMid slice"/g)||[]).length,2);
+ assert.equal((markup.match(/preserveAspectRatio="xMidYMid meet"/g)||[]).length,4);
+ assert.equal((markup.match(/preserveAspectRatio="xMidYMid slice"/g)||[]).length,0);
  assert.match(css,/@media\(max-width:900px\) and \(orientation:portrait\)/);
  assert.doesNotMatch(css,/j-wall-tall \[data-emblem=.*?\]\{transform:/);
  assert.match(css,/#journey \.j-temple\{min-height:0\}/);
  assert.deepEqual(Object.keys(MURAL_PORTRAIT_SEALS).sort(),MURAL_SEALS.map(x=>x.id).sort());
  for(const [width,height] of [[1920,1080],[1366,768],[2560,1080],[844,390],[640,360],[390,844],[375,667],[320,568],[768,1024]]){
-  const tall=width<=900&&height>width,box=tall?{x:560,y:0,w:480,h:1000}:{x:0,y:0,w:1600,h:1000};
+  const tall=width<=900&&height>width,box={x:0,y:0,w:1600,h:1000};
   const factor=Math.min(width/box.w,height/box.h),ox=(width-box.w*factor)/2,oy=(height-box.h*factor)/2;
   for(const seal of MURAL_SEALS){
    const anchor=tall?MURAL_PORTRAIT_SEALS[seal.id]:seal,r=105*(anchor.scale??1)*factor;

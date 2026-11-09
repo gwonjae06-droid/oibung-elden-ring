@@ -1,4 +1,5 @@
 import {createGyuwonCurtainEnsemble} from './gyuwon-curtain-ensemble.mjs';
+import {createGyuwonLifeEpilogue} from './gyuwon-life-epilogue.mjs';
 import {createGyuwonRouteTransition} from './gyuwon-route-transition.mjs';
 import {createGyuwonReverieView} from './gyuwon-reverie-view.mjs';
 import {createDanceCueAudio} from './gyuwon-dance-cues.mjs';
@@ -78,6 +79,11 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   startup.own('Gyuwon school bell',()=>{bellAudio.pause();bellAudio.removeAttribute('src');bellAudio.load?.();});
   const audio=createAudio(makeAudio),skillAudio=createSkillAudio(makeAudio),weaponSfx=createPlayerWeaponSfx(),fx=createPlayerPolish(scene,{mobile:coarse,reduced}),recoverySfx=createRecoverySfx(),damageFeedback=createPlayerHitFeedback(shell),impact=createCombatImpact({shell,root,boss:'gyuwon',reduced});startup.own('Gyuwon heal sfx',()=>recoverySfx.dispose());startup.own('Gyuwon damage flash',()=>damageFeedback.dispose());startup.own('Gyuwon impacts',()=>impact.dispose());startup.own('Gyuwon effects',()=>fx.dispose());startup.own('Gyuwon weapon sounds',()=>weaponSfx.dispose());startup.own('Gyuwon sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);});
   let g=createGyuwonGame(weapon,{yearMode:true}),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=KWON_CAMERA_REFERENCE.pitch,lock=true,zoom=0,dragPointer=null,stickPointer=null,w=0,h=0;
+  let finalPhoto=null;
+  const lifeFilm=createGyuwonLifeEpilogue(document,shell,{onComplete:()=>{
+   try{window.localStorage.setItem('oibung.gyuwon.ending-watched','1');if(finalPhoto)window.localStorage.setItem('oibung.gyuwon.ensemble-photo',finalPhoto);}catch(error){console.warn('Ending photo save unavailable',error);}
+   close();
+  }});startup.own('Gyuwon life epilogue',()=>lifeFilm.dispose());
   const keys=new Set(),stick={x:0,z:0},desired=new THREE.Vector3(),target=new THREE.Vector3();configure(g);camera.position.set(0,7,20);let reverieClockAt=null;
    const introGate=createBossIntroGate(document,shell,'gyuwon',{ready:()=>ready&&!closed,focus:()=>{canvas.focus({preventScroll:true});if(document.hidden||!document.hasFocus())pause.pause();},reduced});
    startup.own('Invalidate gyuwon battle',()=>{closed=true;introGate.cancel();});
@@ -105,8 +111,9 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   }
   hud.onMusicalAction(request);
   const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{reverieView.pause();foley.clear();musicalScore.stop();bellAudio.pause();recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();if(!lock)freeLook.capture();}});
-  function reset(){musicalScore.stop();introGate.arm();playerProjectiles.clear();traitView.clear();study.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();g=createGyuwonGame(weapon,{yearMode:true});configure(g);freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();introGate.begin();}
+  function reset(){musicalScore.stop();introGate.arm();playerProjectiles.clear();traitView.clear();study.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();g=createGyuwonGame(weapon,{yearMode:true});configure(g);freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;finalPhoto=null;lifeFilm.reset();fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();introGate.begin();}
   const close=createBattleCleanup(()=>[
+   ['Gyuwon life epilogue',()=>lifeFilm.dispose()],
    ['Gyuwon dancer cues',()=>danceCues.dispose()],
    ['Gyuwon reference graphics',()=>{curtainEnsemble.dispose();routeTransition.dispose();doodle.dispose();reverieView.dispose();flatView.dispose();turnStage.dispose();musicalStage.dispose();}],
    ['Gyuwon physical foley',()=>foley.dispose()],
@@ -114,8 +121,8 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    ...contexts.map((ctx,i)=>['Gyuwon audio context '+i,()=>ctx.close?.()]),['Gyuwon trait view',()=>traitView.dispose()],['Gyuwon player projectiles',()=>playerProjectiles.dispose()],['Gyuwon view',()=>study.dispose()],['Gyuwon scene',()=>disposeScene(scene)],['Gyuwon renderer',()=>renderer.dispose()],['Gyuwon HUD',()=>hud.dispose()],['Gyuwon close callback',()=>onClose({weapon:g.weapon,status:g.status})]
   ]);
   scope.listen(window,'blur',()=>pause.pause());scope.listen(document,'visibilitychange',()=>{if(document.hidden)pause.pause();});scope.listen(window,'pagehide',e=>{if(!e.persisted)close();});
-  scope.listen(d,'cancel',e=>{e.preventDefault();if(mode==='playing'||mode==='paused')pause.toggle();else close();});
-  scope.listen(d,'keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();pause.toggle();return;}if(e.composedPath().some(n=>['BUTTON','SELECT','INPUT'].includes(n.tagName)))return;if(mode!=='playing')return;if(e.code==='Semicolon'){e.preventDefault();if(!e.repeat&&ready&&mode==='playing'){if(g.gyuwon.years?.mode==='musical')request('skip-act');else if(g.gyuwon.years?.year===1)jumpGyuwonToFifthYear(g,(type,data={})=>g.events.push({type,...data}));}return;}const inFight=g.gyuwon.years?.musical?.year===9;const type=inFight?({KeyJ:'light',KeyK:'guard'}[e.code]||null):(referenceKeyAction(g.gyuwon.years?.musical,e.code)||{KeyJ:'light',KeyL:'skill',Space:'roll',KeyE:'heal',KeyQ:'lock'}[e.code]);if(type){e.preventDefault();if(!e.repeat){keys.add(e.code);request(type);}}else{if(e.code.startsWith('Arrow'))e.preventDefault();keys.add(e.code);}});
+  scope.listen(d,'cancel',e=>{e.preventDefault();if(mode==='epilogue')return;if(mode==='playing'||mode==='paused')pause.toggle();else close();});
+  scope.listen(d,'keydown',e=>{e.stopPropagation();if(e.code==='Escape'){e.preventDefault();pause.toggle();return;}if(e.composedPath().some(n=>['BUTTON','SELECT','INPUT'].includes(n.tagName)))return;if(mode!=='playing')return;if(e.code==='Semicolon'){e.preventDefault();if(!e.repeat&&ready&&mode==='playing'){if(g.gyuwon.years?.mode==='musical')request('skip-act');else if(g.gyuwon.years?.year===1)jumpGyuwonToFifthYear(g,(type,data={})=>g.events.push({type,...data}));}return;}const inFight=g.gyuwon.years?.musical?.year===9;const type=inFight?({KeyJ:'light',KeyK:'guard',Space:'jump'}[e.code]||null):(referenceKeyAction(g.gyuwon.years?.musical,e.code)||{KeyJ:'light',KeyL:'skill',Space:'roll',KeyE:'heal',KeyQ:'lock'}[e.code]);if(type){e.preventDefault();if(!e.repeat){keys.add(e.code);request(type);}}else{if(e.code.startsWith('Arrow'))e.preventDefault();keys.add(e.code);}});
   scope.listen(d,'keyup',e=>{e.stopPropagation();keys.delete(e.code);if(e.code==='KeyK'&&g.gyuwon.years?.musical?.year===9)request('guard-end');if(['KeyL','KeyS','ArrowDown'].includes(e.code)&&g.gyuwon.years?.musical?.year===6)request('slide-end');});
   canvas.oncontextmenu=e=>e.preventDefault();canvas.onpointerdown=e=>{if(e.pointerType!=='mouse')return;if(e.button===0)request('light');if(e.button===2)request(g.gyuwon.years?.musical?.year===9?'guard':'skill');if(e.button===1){e.preventDefault();dragPointer=e.pointerId;canvas.setPointerCapture(e.pointerId);}};canvas.onpointermove=e=>{if(dragPointer!==e.pointerId)return;if(lock)pitch=Math.max(.2,Math.min(.9,pitch+e.movementY*.004));};canvas.onpointerup=canvas.onpointercancel=e=>{if(e?.button===2&&g.gyuwon.years?.musical?.year===9)request('guard-end');releaseCapturedPointer(canvas,dragPointer);dragPointer=null;};canvas.onwheel=e=>{zoom=Math.max(-5,Math.min(12,zoom+Math.sign(e.deltaY)));};
   for(const b of shell.querySelectorAll('[data-act]'))b.onpointerdown=e=>{e.preventDefault();request(b.dataset.act);};$('pause').onclick=$('resume').onclick=()=>pause.toggle();$('retry').onclick=reset;$('change').onclick=$('quit').onclick=close;
@@ -141,13 +148,17 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    const reverie=g.gyuwon.years?.reverie,reverieActive=ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace;
    if(reverie&&reverieActive){if(reverieClockAt!==null)reverie.clock=(reverie.clock??reverie.time)+Math.max(0,(now-reverieClockAt)/1000);reverieClockAt=now;}else reverieClockAt=null;
    musicalScore.update(g,{enabled:ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace&&!reverie,muted:muted()});
-   if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,{...(g.gyuwon.years?.musical?musicalInput():input()),lock,cameraYaw:yaw});if(g.status!=='playing')setMode('ending');}
+   if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,{...(g.gyuwon.years?.musical?musicalInput():input()),lock,cameraYaw:yaw});if(g.status!=='playing'){
+     if(g.status==='won'&&g.gyuwon.years?.musical?.finishing){setMode('epilogue');lifeFilm.start();}
+     else setMode('ending');
+    }}
    if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?(g.gyuwon.years?.musical?1.5:8):1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'최규원 토벌':'마지막 문제 앞에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'정답이 없는 밤에도, 그는 처음으로 문제집을 덮었다.':'';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}
    for(const e of g.events){if(e.type==='victory')playBossCue('die');
     danceCues.event(e,g);study.event(e,g);recoverySfx.event(e);damageFeedback.hit(e);impact.event(e,g);fx.event(e,g);weaponSfx.event(e,g);
     if(e.type==='gyuwon-exam-bell'&&!muted()){bellAudio.pause();bellAudio.currentTime=0;bellAudio.play()?.catch(()=>{});}
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
+   if(mode==='epilogue'){lifeFilm.update(visualDt);return;}
    routeTransition.update(g);
    const wasReverie=reverieView.active,inReverie=g.gyuwon.years?.mode==='reverie';
    if(inReverie&&!wasReverie){musicalScore.stop();foley.clear();clearInput();freeLook.release();fx.clear();playerProjectiles.clear();study.update(g,0);}
@@ -158,7 +169,11 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(wasReverie){clearInput();const frame=turnStage.cameraFrame(g.gyuwon.years.musical,camera.aspect);camera.position.set(frame.position.x,frame.position.y,frame.position.z);camera.lookAt(frame.target.x,frame.target.y,frame.target.z);}
    const referenceMini=g.gyuwon.years?.musical;
    if(usesReference2d(referenceMini)){
-    quality.sample(realDt,ready&&mode==='playing'&&!document.hidden);resizeBattleViewport(renderer,camera,canvas,quality.scale);
+    quality.sample(realDt,ready&&mode==='playing'&&!document.hidden);
+    // Canvas2D remains sharp and fully interactive at the native frame rate.
+    // The full-screen secondary WebGL ink/composite is the expensive stage: draw
+    // that one at a smaller adaptive backbuffer instead of paying twice at 1:1.
+    resizeBattleViewport(renderer,camera,canvas,Math.max(.58,quality.scale*.78));
     // Keep the actual 3D theater alive beneath the VI runner's painted gate.
     const handoff=referenceMini.year===6&&referenceMini.handoffFromFive
      &&referenceMini.time<GYUWON_RUNNER_ENTER_SECONDS;
@@ -261,7 +276,15 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
  }
  camera.position.lerp(desired,1-Math.exp(-4.6*dt));
    }
- study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);doodle.render(scene,camera,{active:!!g.gyuwon.years,time:referenceMini?.time??g.time});audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
+ study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);doodle.render(scene,camera,{active:!!g.gyuwon.years,time:referenceMini?.time??g.time});
+   // The final frame is a real in-game ensemble still. Save it only at the end.
+   if(!finalPhoto&&referenceMini?.year===11&&!referenceMini.finishing&&referenceMini.curtainCall?.mode==='credits'&&referenceMini.curtainCall.creditsProgress>.91){
+    try{const snapshot=document.createElement('canvas');snapshot.width=960;snapshot.height=540;
+     const ctx=snapshot.getContext('2d');ctx.drawImage(canvas,0,0,snapshot.width,snapshot.height);
+     const photo=snapshot.toDataURL('image/jpeg',.78);if(photo.length>6000)finalPhoto=photo;
+    }catch(error){console.warn('Ensemble photo capture unavailable',error);}
+   }
+   audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  camera:{x:camera.position.x,y:camera.position.y,z:camera.position.z,fov:camera.fov},

@@ -42,6 +42,17 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   const scroll=preserve?dialog.scrollTop:0;
   if(dialog.dataset){dialog.dataset.screen=screen;dialog.dataset.defeated=(profile.defeated||[]).join(' ');}
   dialog.innerHTML=JOURNEY_ART+`<div class="j-shell"><header class="j-top">${screen==='ready'?back():'<span>다섯 소망. 하나의 서약.</span>'}${flameCounter(profile)}</header><main class="j-main">${content}</main></div>`+MOBILE_LANDSCAPE_GATE_HTML;
+  // Replace the initial stone mural with the real last ensemble still only when
+  // the entire post-credit family ending has been watched to completion.
+  if(screen==='home'&&pref('oibung.gyuwon.ending-watched','0')==='1'){
+   const image=pref('oibung.gyuwon.ensemble-photo','');
+   if(image.startsWith('data:image/jpeg;base64,')&&image.length<900000){
+    const backdrop=doc.createElement('div');backdrop.className='j-completed-cast';
+    backdrop.setAttribute('role','img');backdrop.setAttribute('aria-label','모든 보스와 갑옷기사들이 함께 무대에서 카메라를 향해 서 있는 엔딩 기념사진');
+    backdrop.style.backgroundImage='linear-gradient(90deg,#080b10e6,#080b1055 65%,#080b1022),url('+JSON.stringify(image)+')';
+    dialog.querySelector('.j-scene')?.replaceWith(backdrop);
+   }
+  }
   if(!dialog.open)dialog.showModal();
   syncMusic();
   const buttons=Array.from(dialog.querySelectorAll?.('[data-j]')||[]);

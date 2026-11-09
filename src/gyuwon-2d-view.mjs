@@ -50,6 +50,16 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const bg=c.createLinearGradient(0,0,0,720);
   bg.addColorStop(0,p[0]);bg.addColorStop(.58,p[1]);bg.addColorStop(1,p[2]);
   c.fillStyle=bg;c.fillRect(0,0,1280,720);
+  // Lightweight lyric-sensitive celestial architecture; no extra particles
+  // or collision objects. Match the source audio scene clock.
+  if((sky||quiet||dawn||lyric?.kind==='dream'||lyric?.kind==='world')&&t>8){
+   const x=quiet?570:sky?790:1060,y=quiet?210:160,r=quiet?112:sky?175:125;
+   c.save();c.translate(x,y);c.rotate(t*.018);
+   c.strokeStyle=quiet?'#d5caf0b0':sky?'#f2f7ffb0':'#ffe4af9e';
+   c.lineWidth=5;c.beginPath();c.ellipse(0,0,r,r*.36,.22,0,TAU);c.stroke();
+   c.strokeStyle='#fffde98c';c.lineWidth=2;c.beginPath();
+   c.ellipse(0,0,r*.69,r*.62,-.54,0,TAU);c.stroke();c.restore();
+  }
   if(quiet||sky||biome==='finale'){
    for(let i=0;i<58;i++){
     const x=((i*157-d*.18)%1390+1390)%1390-40,y=30+(i*71)%310;
@@ -203,7 +213,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    }else{
     // Ground hazards always remain visible where their *actual* hitbox is.
     c.strokeStyle='#465653';c.lineWidth=4;
-    c.beginPath();c.moveTo(x,ground);c.lineTo(x,ground-72);c.stroke();
+    c.beginPath();c.moveTo(x,ground);c.lineTo(x,ground-52*(o.height||1.3));c.stroke();
     if(v==='mountain'){
      // Physical collider is 1.8m wide and 1.3m tall. This mountain is
      // painted at precisely that same footprint and visual height.
@@ -218,8 +228,9 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
      c.strokeStyle=v==='puddle'?'#537fa0':'#d1a44a';c.lineWidth=3;c.stroke();
     }else{
      c.fillStyle=v==='bramble'||v==='thorn'?'#8b6084':'#7aaa6c';
-     c.beginPath();c.moveTo(x-22,ground);c.lineTo(x-16,ground-44);
-     c.lineTo(x,ground-71);c.lineTo(x+16,ground-44);c.lineTo(x+24,ground);c.closePath();c.fill();
+     const spike=52*(o.height||1.3);
+     c.beginPath();c.moveTo(x-22,ground);c.lineTo(x-16,ground-spike*.64);
+     c.lineTo(x,ground-spike);c.lineTo(x+16,ground-spike*.64);c.lineTo(x+24,ground);c.closePath();c.fill();
      c.strokeStyle='#47564d';c.stroke();
     }
    }
@@ -229,7 +240,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   for(const o of m.obstacles){
    if(o.hit||o.x<=g.player.x||o.x-g.player.x>21)continue;
    const near=1-(o.x-g.player.x)/21,
-    x=sx(o.x),y=sy(o.kind==='low'?2.55:.77);
+    x=sx(o.x),y=sy(o.kind==='low'?2.55:(o.height||1.3)*.55);
    c.save();c.globalAlpha=.20+near*.65;c.strokeStyle='#ffe2a0';
    c.lineWidth=2+near*2;c.beginPath();c.arc(x,y,21+6*Math.sin(t*7),0,TAU);c.stroke();
    for(let i=0;i<4;i++){const a=i*TAU/4+t*.3;
@@ -238,11 +249,10 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   }
   for(const j of m.jellies)jelly(c,sx(j.x),sy(j.y),j.kind,m.time);
   drawArmoredRunner(c,sx(g.player.x),sy(m.jumpY),{
-   scale:.68,t,pose:m.dashTime>0?'dash':m.runnerPose==='run'&&t<4?'walk':m.runnerPose||'run',
+   scale:.68,t,pose:m.runnerPose==='run'&&t<4?'walk':m.runnerPose||'run',
    weapon:g.weapon||'sword',inkAmount:scene.opening,energy:m.starCharge||0,
    slideAmount:m.slideVisual||0,landTime:m.landTime||0,jumpVelocity:m.jumpV||0});
-  if(m.dashTime>0){for(let i=0;i<10;i++)flower(c,sx(g.player.x)-20-i*25,sy(m.jumpY+1)+Math.sin(i*1.6+t*14)*17,.14,'#ffefa7');}
-  else if(m.bonus>0){for(let i=0;i<7;i++)flower(c,sx(g.player.x)-35-i*18,sy(m.jumpY+1)+Math.sin(i+t*12)*20,.15,'#fff6b8');}
+  if(m.bonus>0){for(let i=0;i<7;i++)flower(c,sx(g.player.x)-35-i*18,sy(m.jumpY+1)+Math.sin(i+t*12)*20,.15,'#fff6b8');}
   // Act 5's real velvet proscenium visually folds into the first 2D road.
   if(scene.opening>.001){
    const q=scene.opening;
@@ -432,13 +442,14 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   label(c,Math.round(g.boss.hp)+' / '+g.boss.maxHp,270,887,14,'#e3eff0','center',3);
  }
  const ellipseNoStroke=(c,x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();};
+ let pixelFactor=1,slowFrames=0,fastFrames=0;
  function render(g){
   const m=g?.gyuwon?.years?.musical,active=usesReference2d(m)&&g.status!=='won';canvas.hidden=!active;state.g=g;state.active=active;
   // Hold the composited final 3D theater shot underneath the 2D canvas. Its
   // last visible frame dissolves into the painted road without a black cut.
   canvas.style.opacity=active&&m.year===6&&m.handoffFromFive?String(gyuwonRunnerBridgeAt(m.time).paint):'1';
   if(!active)return false;
-  const started=performance.now(),rect=shell.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height)),ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
+  const started=performance.now(),w=Math.max(1,Math.round(shell.clientWidth)),h=Math.max(1,Math.round(shell.clientHeight)),cap=Math.min(1.2,globalThis.devicePixelRatio||1,Math.sqrt(1500000/(w*h))),ratio=Math.max(.6,cap*pixelFactor);
   if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)){canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);}
   const vw=m.year===10?540:1280,vh=m.year===10?900:720,scale=Math.min(w/vw,h/vh),left=(w-vw*scale)/2,top=(h-vh*scale)/2;
   Object.assign(state,{width:vw,height:vh,scale,left,top,ratio});c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#080d16';c.fillRect(0,0,w,h);c.translate(left,top);c.scale(scale,scale);c.save();c.beginPath();c.rect(0,0,vw,vh);c.clip();
@@ -467,7 +478,10 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     c.globalAlpha=1-clamp(m.time/4.5,0,1);
     c.drawImage(lastRunnerFrame,0,0,canvas.width,canvas.height);c.restore();
    }
-  report.ink=m.year===7?armyDoodle.stats():null;report.drawMs=performance.now()-started;report.width=w;report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
+  report.ink=m.year===7?armyDoodle.stats():null;report.drawMs=performance.now()-started;report.pixelRatio=ratio;report.width=w;
+  if(report.drawMs>17){slowFrames++;fastFrames=0;}else if(report.drawMs<8){fastFrames++;slowFrames=Math.max(0,slowFrames-1);}else{slowFrames=Math.max(0,slowFrames-1);fastFrames=0;}
+  if(slowFrames>=30){pixelFactor=Math.max(.65,pixelFactor-.1);slowFrames=0;}
+  if(fastFrames>=240){pixelFactor=Math.min(1,pixelFactor+.08);fastFrames=0;}report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
  }
  return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();portrait.removeAttribute('src');armyDoodle.dispose();canvas.remove();}};
 }

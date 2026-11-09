@@ -45,7 +45,7 @@ test('fighter strikes require range and contact time; far attacks never score',(
 test('fighter supports jumping, held guard and a resource-gated super move',()=>{const {g,m}=at(9),p=m.fighters[0];assert.equal(actGyuwon(g,'super'),false);assert.ok(actGyuwon(g,'jump'));advance(g,.12);assert.ok(p.y>0);assert.ok(actGyuwon(g,'guard'));assert.equal(m.guardHeld,true);assert.ok(actGyuwon(g,'guard-end'));p.action=null;p.meter=100;assert.ok(actGyuwon(g,'super'));assert.equal(p.meter,0);});
 test('vertical shooter auto-fires, scores only on target contact and has finite bombs',()=>{const {g,m}=at(10);g.player.invuln=100;g.player.x=10;advance(g,.7);assert.ok(m.bullets.length>0);assert.equal(m.score,0);g.player.x=-6;advance(g,1.3);assert.ok(m.score>0);assert.equal(g.boss.hp,2500);m.enemyShots=[{x:0,z:0,vx:0,vz:1,life:3}];assert.ok(actGyuwon(g,'bomb'));assert.equal(m.bombs,2);assert.equal(m.enemyShots.length,0);m.bombs=0;assert.equal(actGyuwon(g,'bomb'),false);});
 test('shooter drag position moves physically and weapon switching does not grant power',()=>{const {g,m}=at(10);m.pointerTarget={x:8,z:5};advance(g,.1);assert.ok(g.player.x>0&&g.player.x<8);assert.ok(g.player.z<13);const power=m.power;actGyuwon(g,'skill');assert.equal(m.power,power);assert.equal(m.weaponMode,'laser');});
-test('genre-specific keyboard commands match the visible native controls',()=>{assert.equal(referenceKeyAction(at(5).m,'KeyQ'),'light');assert.equal(referenceKeyAction(at(5).m,'Digit4'),'ultimate3');assert.equal(referenceKeyAction(at(6).m,'Space'),'jump');assert.equal(referenceKeyAction(at(7).m,'Digit6'),'summon5');assert.equal(referenceKeyAction(at(8).m,'KeyJ'),'light');assert.equal(referenceKeyAction(at(8).m,'KeyL'),'skill');assert.equal(referenceKeyAction(at(8).m,'Space'),null);assert.equal(referenceKeyAction(at(9).m,'KeyK'),'guard');assert.equal(referenceKeyAction(at(9).m,'KeyJ'),'light');assert.equal(referenceKeyAction(at(9).m,'KeyO'),null);assert.equal(referenceKeyAction(at(10).m,'Space'),'bomb');});
+test('genre-specific keyboard commands match the visible native controls',()=>{assert.equal(referenceKeyAction(at(5).m,'KeyQ'),'light');assert.equal(referenceKeyAction(at(5).m,'Digit4'),'ultimate3');assert.equal(referenceKeyAction(at(6).m,'Space'),'jump');assert.equal(referenceKeyAction(at(7).m,'Digit6'),'summon5');assert.equal(referenceKeyAction(at(8).m,'KeyJ'),'light');assert.equal(referenceKeyAction(at(8).m,'KeyL'),'skill');assert.equal(referenceKeyAction(at(8).m,'Space'),null);assert.equal(referenceKeyAction(at(6).m,'KeyK'),null);assert.equal(referenceKeyAction(at(9).m,'Space'),'jump');assert.equal(referenceKeyAction(at(9).m,'KeyK'),'guard');assert.equal(referenceKeyAction(at(9).m,'KeyJ'),'light');assert.equal(referenceKeyAction(at(9).m,'KeyO'),null);assert.equal(referenceKeyAction(at(10).m,'Space'),'bomb');});
 test('runner slide remains held beyond one second and releases immediately',()=>{const {g,m}=at(6);g.player.invuln=999;actGyuwon(g,'slide');advance(g,1.4);assert.ok(m.slide>.9);actGyuwon(g,'slide-end');assert.equal(m.slide,0);assert.equal(m.slideHeld,false);});
 test('an empty target wave cannot consume or create turn-combat resources',()=>{const {g,m}=at(5);for(const e of m.enemies)e.hp=0;const sp=m.skillPoints;m.party[0].energy=100;assert.equal(actGyuwon(g,'light'),false);assert.equal(actGyuwon(g,'skill'),false);assert.equal(m.skillPoints,sp);assert.equal(actGyuwon(g,'ultimate0'),false);assert.equal(m.party[0].energy,100);});
 
@@ -100,9 +100,11 @@ test('act nine lyric acts transform ground, identities and fighting rules at sou
  assert.ok(gyuwonFightGround(120,0)>.5);
  assert.ok(GYUWON_FIGHT_SET_PIECES.every((x,i,all)=>x.wind>.5&&x.radius>0&&(i===0||all[i-1].at<x.at)));
 });
-test('act nine exposes a two-action control scheme and world changes follow media time',()=>{
+test('act nine exposes three actions with a physical jump and lyric-synced world changes',()=>{
  const {g,m}=at(9);assert.equal(referenceKeyAction(m,'KeyK'),'guard');
  assert.equal(referenceKeyAction(m,'KeyL'),null);
+ assert.equal(referenceKeyAction(m,'Space'),'jump');
+ assert.ok(actGyuwon(g,'jump'));assert.ok(m.fighters[0].vy>0);
  assert.ok(actGyuwon(g,'guard'));assert.equal(m.guardHeld,true);
  assert.ok(actGyuwon(g,'guard-end'));
  reachSong(g,m,50);assert.equal(m.fightRound,2);assert.equal(m.fightWorld.arena,'rooftop');

@@ -5,7 +5,7 @@ import {gyuwonFightScene,gyuwonFightGround,GYUWON_FIGHT_SET_PIECES} from './gyuw
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
 import {gyuwonDanceScene,gyuwonDanceJudge,gyuwonDanceNextCue,GYUWON_DANCE_WINDOWS} from './gyuwon-dance-director.mjs';
 import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
-import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
+import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
 import {runnerInitMotion,runnerPressJump,runnerPressSlide,runnerReleaseSlide,runnerStepMotion,runnerObstacleContact,runnerGuideReset,runnerGuideBridge,runnerGuideCatch,runnerGuideWarning} from './gyuwon-runner-physics.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
  {name:'턱검 기사',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
@@ -35,29 +35,29 @@ export function setupReferenceMinigame(g,m){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;m.armyVerseRecruits=0;m.armyCaptainRecruits=0;
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
-  m.dancePeriod=period;m.dancePatterns=[];let start=9.4,index=0;
+  m.dancePeriod=period;m.dancePatterns=[];let start=5.2,index=0;
   while(start+period*8<174.5){
    // Source-clocked figures with advance body/footstep preparation; no notes
-   // during the exposed quiet bridge or the last unskippable bow.
-   if(start>=92&&start<112){start=112.6;continue;}
-   const kind=['pose','turn','quick','pose','turn','pose'][index%6];
-   const count=kind==='quick'?2:index%3===1?4:3;
+   // including its intimate bridge; only the last unskippable bow is exempt.
+
+   const kind=['pose','quick','turn','pose','quick','turn','pose','quick'][index%8];
+   const count=kind==='quick'?3:index%3===1?4:3;
    const first=gyuwonAlignDanceBeat(start+period*(kind==='turn'?5:6));
    const cue=Math.max(start,first-Math.max(1.35,period*3.4));
    if(first+(count-1)*(kind==='pose'?2:1)*period>=174.5)break;
    m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,
     done:[],misses:[],facing:index%2?-1:1});
-   start=first+period*((count-1)*(kind==='pose'?2:1)+(index%4===3?5:2.8));
+   start=first+period*((count-1)*(kind==='pose'?2:1)+(index%4===3?2.4:1.5));
    index++;
   }
   m.dancePose=0;m.dancePoseKind='dance';m.danceFacing=1;m.danceFlash=0;
   m.danceLastCue=-1;m.danceCue='';m.danceError=0;m.danceEnergy=0;
   m.danceRivalScore=0;m.danceScene=gyuwonDanceScene(0);m.danceCueId='';
-  m.dancePreviousTime=0;m.danceHit=null;m.note=null;
+  m.dancePreviousTime=0;m.danceHit=null;m.note=null;m.playerWeapon=g.weapon||'sword';
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
-  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';m.fightLastLyricActionId=null;m.fightLyricMotion=null;
+  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';m.fightLastLyricActionId=null;m.fightLyricMotion=null;m.playerWeapon=g.weapon||'sword';
  }else if(m.year===10){
   g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
@@ -77,7 +77,7 @@ export function actReferenceMinigame(g,m,type,c){
   if(['light','roll','jump'].includes(type))return runnerPressJump(m);
   if(type==='skill'||type==='slide')return runnerPressSlide(m);
   if(type==='slide-end')return runnerReleaseSlide(m);
-  if(type==='dash'&&gyuwonRunnerDashReady(m)){m.starCharge-=55;m.dashCooldown=2.7;m.dashTime=.62;m.bonus=Math.max(m.bonus,.62);return true;}
+
   return false;
  }
  if(m.year===7){
@@ -161,9 +161,8 @@ function tickReferenceRunner(g,m,dt,c){
   if(relief){m.obstacles.length=0;m.runnerSpawn=2.4;}
   else m.runnerSpawn=Math.max(m.runnerSpawn,1.2);
  }
- m.dashTime=Math.max(0,m.dashTime-dt);
- m.dashCooldown=Math.max(0,m.dashCooldown-dt);
- const dash=m.dashTime>0,speed=scene.speed+(dash?5:0)+(m.bonus>0&&!dash?2:0);
+ m.dashTime=0;m.dashCooldown=0;
+ const speed=scene.speed+(m.bonus>0?1.2:0);
  m.runnerSpeed=speed;
  m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;
  m.energy=Math.max(0,m.energy-dt*(relief?.5:1.25));
@@ -218,14 +217,16 @@ function tickReferenceRunner(g,m,dt,c){
  if(!relief&&!opening){
   m.runnerSpawn-=dt;
   if(m.runnerSpawn<=0){
-   const period=scene.key==='final-sprint'?.86:
-    scene.key==='skyroad'?1.1:scene.key==='bridge'?1.28:scene.key==='rain'?1.34:
-    scene.key==='sunrise'?1.44:1.8;
+   const period=scene.key==='final-sprint'?.94:
+   scene.key==='skyroad'?1.12:scene.key==='bridge'?1.18:scene.key==='rain'?1.19:
+   scene.key==='sunrise'?1.24:1.38;
    m.runnerSpawn=period+(m.nextId%4===3?.25:0);
    const index=m.nextId||0;
-   const kind=index%2?'low':'high';
-   m.obstacles.push({id:g.nextId++,x:24,kind,
-    variant:gyuwonRunnerObstacleVariant(scene,index),width:1.3,hit:false,
+   const pattern=scene.key==='rain'?['low','high','low','spire','high','low']:
+    ['high','low','high','spire','low','high'];
+   const challenge=pattern[index%pattern.length],kind=challenge==='low'?'low':'high';
+   m.obstacles.push({id:g.nextId++,x:24,kind,challenge,height:challenge==='spire'?2.33:1.30,
+    variant:gyuwonRunnerObstacleVariant(scene,index),width:challenge==='spire'?1.5:1.3,hit:false,
     section:scene.key,spawnTime:m.time});
    m.nextId=index+1;
   }
@@ -239,14 +240,9 @@ function tickReferenceRunner(g,m,dt,c){
  for(const o of m.obstacles){
   o.x-=speed*dt;
   if(!o.hit&&runnerObstacleContact(m,p.x,o)){
-   o.hit=true;
-   if(dash){
-    m.success++;m.starCharge=Math.min(100,m.starCharge+2);
-    c.deal(g,75,c.emit);
-   }else{
-    m.combo=0;c.take(g,20,c.emit);
-    m.energy=Math.max(0,m.energy-8);
-   }
+   o.hit=true;m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);
+  }else if(!o.hit&&!o.cleared&&o.x<p.x-(o.width||1.3)){
+   o.cleared=true;m.success++;m.combo++;c.deal(g,o.challenge==='spire'?150:95,c.emit);
   }
  }
  m.obstacles=m.obstacles.filter(o=>o.x>-30);
@@ -447,7 +443,7 @@ function tickReferenceFighter(g,m,dt,input,c){
   m.enemyThink=1.35;m.fightLyricMotion=null;
  }
  if(scene.kind!==m.fightPriorScene){
-  if(scene.quiet){p.action=null;b.action=null;m.enemyThink=1.4;}
+  // Continue the duel at lower intensity through quieter passages.
   m.fightPriorScene=scene.kind;
  }
  m.fightParryWindow=Math.max(0,m.fightParryWindow-dt);
@@ -517,7 +513,7 @@ function tickReferenceFighter(g,m,dt,input,c){
   }
  }
  m.fightHazards=m.fightHazards.filter(h=>t-h.at<h.wind+.65);
- if(!scene.quiet&&t>8.8){
+ if(t>5.9){
   b.meter=Math.min(100,b.meter+dt*(m.fightRound===3?11:3));
   m.enemyThink-=dt;
   const d=Math.abs(b.x-p.x);
@@ -529,7 +525,7 @@ function tickReferenceFighter(g,m,dt,input,c){
      m.fightRound===2?['kick','skill','light','kick'][n%4]:
      ['skill','kick','light','super'][n%4];
     fighterAttack(b,kind==='super'&&b.meter<100?'skill':kind);
-    m.enemyThink=m.fightRound===3?1.35:1.55;
+    m.enemyThink=scene.quiet?2.35:m.fightRound===3?1.35:1.55;
    }
   }
   b.guard=!!p.action&&p.action.t<p.action.wind+p.action.live&&m.turnCount%4===0;
@@ -611,10 +607,10 @@ export function tickReferenceMinigame(g,m,dt,input,c){
 export function referenceKeyAction(m,code){
  if(!m?.reference)return null;
  if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'support',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
- if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide',KeyK:'dash',ShiftLeft:'dash',ShiftRight:'dash'}[code]||null;
+ if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide'}[code]||null;
  if(m.year===7)return {KeyT:'lane',Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
  if(m.year===8)return {KeyJ:'light',KeyL:'skill'}[code]||null;
- if(m.year===9)return {KeyJ:'light',KeyK:'guard'}[code]||null;
+ if(m.year===9)return {KeyJ:'light',KeyK:'guard',Space:'jump'}[code]||null;
  if(m.year===10)return {Space:'bomb',KeyB:'bomb'}[code]||null;
  return null;
 }

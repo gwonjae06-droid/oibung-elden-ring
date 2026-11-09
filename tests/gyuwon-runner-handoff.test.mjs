@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGyuwonGame,actGyuwon,stepGyuwon} from '../src/gyuwon-combat.mjs';
-import {GYUWON_RUNNER_ENTER_SECONDS,gyuwonFiveToSixExit,gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGuideAt,gyuwonRunnerDashReady,gyuwonRunnerGap} from '../src/gyuwon-runner-director.mjs';
+import {referenceKeyAction} from '../src/gyuwon-reference-rules.mjs';
+import {GYUWON_RUNNER_ENTER_SECONDS,gyuwonFiveToSixExit,gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGuideAt,gyuwonRunnerGap} from '../src/gyuwon-runner-director.mjs';
 
 function atSix(){
  const g=createGyuwonGame('sword',{yearMode:true,seed:1926});
@@ -59,23 +60,19 @@ test('opening and quiet phrases are real safe breathers with unchanged player id
  to(g,m,145);assert.equal(m.runnerBiome,'skyroad');
 });
 
-test('optional dash consumes collected light and changes obstacle outcomes but not game music clock',()=>{
+test('Act VI has exactly two visible abilities and no dash override, even with collected stars',()=>{
  const {g,m}=atSix();
- m.starCharge=54;
- assert.equal(gyuwonRunnerDashReady(m),false);
+ m.starCharge=100;
  assert.equal(actGyuwon(g,'dash'),false);
- m.starCharge=75;
- assert.equal(gyuwonRunnerDashReady(m),true);
- assert.equal(actGyuwon(g,'dash'),true);
- assert.equal(m.starCharge,20);
- assert.equal(m.dashCooldown,2.7);
- assert.ok(m.dashTime>0);
- assert.equal(actGyuwon(g,'dash'),false,'dash cannot be spammed');
- const hp=g.player.hp;
- m.obstacles=[{id:100,x:g.player.x+.1,kind:'high',hit:false}];
+ assert.equal(referenceKeyAction(m,'KeyK'),null);
+ assert.equal(referenceKeyAction(m,'ShiftLeft'),null);
+ assert.equal(referenceKeyAction(m,'Space'),'jump');
+ assert.equal(referenceKeyAction(m,'KeyL'),'slide');
+ assert.equal(actGyuwon(g,'jump'),true);
  stepGyuwon(g,1/60);
- assert.equal(m.obstacles[0].hit,true);
- assert.equal(g.player.hp,hp,'star dash is a real obstacle-clear action');
- assert.equal(m.starCharge,22);
- assert.equal(m.time>0,true,'movement and animations preserve original music-clock logic');
+ assert.equal(actGyuwon(g,'jump'),true);
+ assert.equal(actGyuwon(g,'jump'),false,'no third jump');
+ assert.equal(m.dashTime,0);
+ assert.equal(m.dashCooldown,0);
+ assert.ok(m.time>0,'original song clock continues during difficult jumps');
 });
