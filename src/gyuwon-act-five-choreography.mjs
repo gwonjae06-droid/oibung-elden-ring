@@ -2,7 +2,6 @@
 // clock is audio.currentTime via actFivePerformanceAt, never a second animation
 // timer. All hand targets are given to the existing collision simulation first;
 // the 3D actor must FOLLOW those positions, not draw a fake independent hand.
-import {actFivePerformanceAt} from './gyuwon-act-five-score.mjs';
 
 const PI=Math.PI;
 const ZERO=[0,0,0];
@@ -71,8 +70,8 @@ const mood=(style,beat,progress,side)=>{
  * One choreography sample shared by the simulation and the visual rig.
  * Returned targets are declarative (no Three.js, no world mutation).
  */
-export function actFiveChoreographyAt(time,performance=actFivePerformanceAt(time),{hitUntil=0,raidAttack=null,bpm=136}={}){
- const p=performance||actFivePerformanceAt(time),gesture=GYUWON_LYRIC_BLOCKING[p.gesture]?p.gesture:'idle';
+export function actFiveChoreographyAt(time,performance,{hitUntil=0,raidAttack=null,bpm=136}={}){
+ const p=performance||{gesture:'idle',weight:0,progress:0},gesture=GYUWON_LYRIC_BLOCKING[p.gesture]?p.gesture:'idle';
  const shape=GYUWON_LYRIC_BLOCKING[gesture],weight=clamp(p.weight),progress=clamp(p.progress),
   beat=Math.max(0,time)*Math.PI*2*bpm/60,scaleTime=clamp(time/180);
  const hit=clamp((hitUntil-time)/.35),wind=raidAttack?.wind||1;
