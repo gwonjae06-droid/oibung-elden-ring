@@ -10,7 +10,8 @@ export const GYUWON_DANCE_STAGES=Object.freeze([
  {at:47.6,key:'ensemble',sky:'#42255e',horizon:'#d68f99',floor:'#ac7d9b',light:'#ffdec2'},
  {at:73,key:'grand',sky:'#261a49',horizon:'#9e6cad',floor:'#875f96',light:'#ffe2b2'},
  {at:94,key:'silence',sky:'#090f24',horizon:'#283453',floor:'#303856',light:'#a2a7d6'},
- {at:112,key:'rain',sky:'#1b385b',horizon:'#638bab',floor:'#547b9b',light:'#c4eaff'},
+ {at:112,key:'encore',sky:'#122951',horizon:'#6f7fc4',floor:'#6586b9',light:'#f1eaff'},
+ {at:120,key:'rain',sky:'#1b385b',horizon:'#638bab',floor:'#547b9b',light:'#c4eaff'},
  {at:130,key:'reunion',sky:'#423e70',horizon:'#bf91ab',floor:'#987e9c',light:'#fff1c7'},
  {at:158,key:'sunrise',sky:'#b66f92',horizon:'#ffcd9e',floor:'#d4a47e',light:'#fff2b2'},
  {at:174.5,key:'bow',sky:'#b36a78',horizon:'#ffdfb0',floor:'#a07975',light:'#fff0c4'}
@@ -28,7 +29,7 @@ export function gyuwonDanceScene(time=0){
  return {key:now.key,time:t,fade,sky:mix(old.sky,now.sky,fade),
   horizon:mix(old.horizon,now.horizon,fade),floor:mix(old.floor,now.floor,fade),
   light:mix(old.light,now.light,fade),quiet:t>=94&&t<112,
-  rain:t>=112&&t<130,stars:t>=39.5&&t<94,
+  rain:t>=120&&t<130,stars:(t>=39.5&&t<94)||(t>=112&&t<120),
   crowd:clamp((t-47.6)/42),dawn:clamp((t-150)/24),
   handoff:1-clamp(t/9),ring:clamp((t-174.5)/5.5)};
 }
@@ -98,7 +99,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   const x=240+i*190+Math.sin(t*.45+i)*21;
   beam(c,x,x+Math.sin(t*.7+i)*60,s.light,.11+(m.combo%12)*.008);
  }
- if(s.key==='stars'||s.key==='grand'){
+ if(['stars','grand','encore'].includes(s.key)){
   for(let i=0;i<13;i++){const x=215+i*69,y=492+Math.sin(t*1.4+i)*9;
    oval(c,x,y,23+(i%3)*5,8,'#b7e8ff6a');
    if(s.key==='stars')oval(c,x,345+(i%4)*19,3,3,'#fff6cd');}
@@ -135,17 +136,38 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  // Articulated boss, player and shadow rivals. The boss demonstrates before contact.
  oval(c,315,549,51,13,'#140e3155');oval(c,670,549,59,14,'#140e3155');
  oval(c,1050,549,49,12,'#140e3155');
+ const rivalColors={handoff:'#7b6889',invitation:'#594176',footsteps:'#865e86',
+  stars:'#7ba6b7',ensemble:'#794267',grand:'#b881a6',encore:'#7f87b9',
+  rain:'#5981a7',reunion:'#a57b93',sunrise:'#c68d79',bow:'#e1b48c'};
  stagePerson(c,315,530,{scale:1.70,t:t+.12,pose:guidePose,
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait});
  stagePerson(c,670,530,{scale:1.68,t,pose:activePose,face:m.danceFacing||1,
   color:'#c8ddef',miss:m.danceError>0});
  if(!s.quiet)stagePerson(c,1050,530,{scale:1.50,t:t+.28,
-  pose:tele?.active?nowAction:'dance',face:-1,color:'#60446d'});
- for(let i=0;i<2+Math.round(s.crowd*3);i++){
-  const x=430+i*(145),y=508+(i%2)*9;
-  if(x>900)break;
-  stagePerson(c,x,y,{scale:.68,t:t+i*.18,
-   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:i%2?'#836e9c':'#b9a6ba'});
+  pose:tele?.active?nowAction:'dance',face:-1,color:rivalColors[s.key]||'#60446d'});
+ // The army's four familiar silhouettes return in each large chorus,
+ // transformed into distinct moving partners instead of anonymous minions.
+ const chorus=['ensemble','grand','encore','reunion','sunrise','bow'].includes(s.key);
+ for(let i=0;i<(chorus?4:2);i++){
+  const x=438+i*142,y=510+(i%2)*10,variant=['#7297bc','#c4a071','#c4c4a7','#b17f9a'][i];
+  stagePerson(c,x,y,{scale:chorus?.84:.66,t:t+i*.17,
+   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant});
+  if(!chorus)continue;
+  c.save();c.translate(x,y-88);
+  if(i===0){ // sword-keeper's golden sash and tiny diagonal blade
+   c.strokeStyle='#d6e9ec';c.lineWidth=4;c.beginPath();c.moveTo(0,4);c.lineTo(32,-34);c.stroke();
+  }else if(i===1){ // the clown's tall hat
+   c.fillStyle='#cc6382';c.beginPath();c.moveTo(-20,-30);c.lineTo(0,-66);c.lineTo(20,-30);c.fill();
+   oval(c,0,-65,6,6,'#f5d6a9');
+  }else if(i===2){ // a miniature casino die
+   c.fillStyle='#f5e8bd';c.fillRect(20,-18,23,23);
+   oval(c,32,-7,4,4,'#8676a8');
+  }else{ // the blood lord's two sweeping wings
+   c.strokeStyle='#d999b9';c.lineWidth=5;
+   for(const side of [-1,1]){c.beginPath();c.moveTo(0,10);
+    c.quadraticCurveTo(side*44,-42,side*71,-5);c.stroke();}
+  }
+  c.restore();
  }
  c.restore();
  // Preview BOTH actions as choreography, never as a textual pattern instruction.
