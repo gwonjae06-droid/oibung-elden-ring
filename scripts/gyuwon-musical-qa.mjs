@@ -15,6 +15,7 @@ try{
  // The visual test seeks over the non-skippable musical overture because software
  // WebGL in CI cannot reliably render six seconds of scene time in real time.
  // Engine tests cover the complete natural intro and action delay.
+ await page.waitForFunction(()=>window.__media.some(a=>a.src.includes('Welcome')&&!a.paused),null,{timeout:30000});
  await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('Welcome')&&!a.paused);if(!a)throw Error('5수 song missing');a.currentTime=8.5;});
  await page.waitForFunction(()=>{const m=window.__session()?.game?.gyuwon?.years?.musical;return m?.year===5&&m?.time>=8&&m?.transition<=.01&&m?.turn==='player';},null,{timeout:30000});
  const attack=page.locator('#gyuwon-battle').locator('[data-musical-action="light"]');await attack.click({force:true});
