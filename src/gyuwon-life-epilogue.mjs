@@ -70,6 +70,22 @@ const stageCss=`
 .gy-life-caption{position:absolute;left:8%;right:8%;bottom:7%;text-align:center;font:600 clamp(18px,2.8vw,37px)/1.6 "Malgun Gothic",system-ui;color:#fff9ee;text-shadow:0 2px 12px #000,0 0 22px #000a}
 .gy-life-film[data-shot="phone"] .gy-life-caption{opacity:0}
 .gy-life-film[data-shot="phone"] .gy-life-label{opacity:0}
+
+/* Each milestone has a recognizable prop, not just a new dialogue line. */
+.gy-life-prop{position:absolute;z-index:1;pointer-events:none}
+.gy-life-film[data-shot="study"] .gy-life-prop{left:53%;bottom:21%;width:20%;height:12%;border:1vmin solid #806449;background:linear-gradient(#f8ead2 0 17%,#8d795f 17% 100%);box-shadow:3vmin 3vmin 0 #342f31}
+.gy-life-film[data-shot="study"] .gy-life-prop:before{content:'';position:absolute;left:12%;bottom:25%;width:75%;height:43%;background:repeating-linear-gradient(90deg,#eac8a5 0 12%,#3a5062 12% 18%,#faf4dd 18% 31%,#c2a678 31% 35%)}
+.gy-life-film[data-shot="work"] .gy-life-prop{left:54%;bottom:22%;width:18%;height:14%;background:#394959;border:1.3vmin solid #9cabb1;border-bottom:3vmin solid #1c2a36;box-shadow:0 3vmin 0 #987e63}
+.gy-life-film[data-shot="work"] .gy-life-prop:after{content:'';position:absolute;left:15%;right:15%;top:15%;height:38%;background:repeating-linear-gradient(0deg,#88c4b7 0 18%,transparent 18% 40%);opacity:.8}
+.gy-life-film[data-shot="parttime"] .gy-life-prop{left:48%;bottom:19%;width:42%;height:22%;border-radius:1vmin 1vmin 0 0;background:repeating-linear-gradient(90deg,#7d4848 0 22%,#e6d0a5 22% 28%);box-shadow:0 -5vmin 0 #e6c8a4,inset 0 3vmin 0 #512e36}
+.gy-life-film[data-shot="parttime"] .gy-life-prop:after{content:'CAFE';position:absolute;left:22%;top:-5vmin;color:#4c2d31;font:900 4vmin Georgia,serif}
+.gy-life-film[data-shot="wedding"] .gy-life-prop{left:33%;bottom:20%;width:41%;height:49%;border:3vmin solid #f9e2c2;border-bottom:0;border-radius:50% 50% 0 0;box-shadow:0 0 6vmin #fff5d791}
+.gy-life-film[data-shot="wedding"] .gy-life-prop:after{content:'✿ ✿ ✿';position:absolute;top:-3vmin;left:7%;right:7%;text-align:center;color:#e2aeb0;font-size:5vmin;letter-spacing:1vmin}
+.gy-life-film[data-shot="love"] .gy-life-prop{left:44%;bottom:62%;width:10vmin;height:10vmin;background:#e7a7a699;transform:rotate(45deg);animation:gy-life-heart 2.4s ease-in-out infinite alternate}
+.gy-life-film[data-shot="love"] .gy-life-prop:before,.gy-life-film[data-shot="love"] .gy-life-prop:after{content:'';position:absolute;width:10vmin;height:10vmin;border-radius:50%;background:inherit}
+.gy-life-film[data-shot="love"] .gy-life-prop:before{left:-5vmin}.gy-life-film[data-shot="love"] .gy-life-prop:after{top:-5vmin}
+.gy-life-film:not([data-shot="study"]):not([data-shot="work"]):not([data-shot="parttime"]):not([data-shot="wedding"]):not([data-shot="love"]) .gy-life-prop{display:none}
+@keyframes gy-life-heart{to{transform:translateY(-2vmin) rotate(45deg);opacity:.55}}
 .gy-life-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 52% 55%,transparent 15%,#060917aa 100%);pointer-events:none}
 @keyframes gy-life-sun{to{transform:translate(3vw,-3vh);filter:brightness(1.12)}}
 @keyframes gy-life-breathe{50%{translate:0 -.7vmin}}
@@ -79,7 +95,7 @@ const stageCss=`
 export function createGyuwonLifeEpilogue(doc,shell,{onComplete=()=>{}}={}){
  const style=doc.createElement('style');style.textContent=stageCss;shell.appendChild(style);
  const layer=doc.createElement('div');layer.className='gy-life-film';layer.hidden=true;layer.setAttribute('aria-live','off');
- layer.innerHTML='<div class="gy-life-vista"><div class="gy-life-sun"></div><div class="gy-life-buildings"></div><div class="gy-life-school"></div><div class="gy-life-floor"></div><div class="gy-life-person"></div><div class="gy-life-person partner"></div><div class="gy-life-person child"></div><div class="gy-life-table"></div><div class="gy-life-phone"><div class="gy-life-screen"><div class="gy-life-phone-art>'+renderJourneyArt('gyuwon-phone')+'</div><strong>ODEN RING</strong><small>오든링 · 메인화면</small></div></div></div><div class="gy-life-vignette"></div><div class="gy-life-label"></div><div class="gy-life-caption"></div>';
+ layer.innerHTML='<div class="gy-life-vista"><div class="gy-life-sun"></div><div class="gy-life-buildings"></div><div class="gy-life-school"></div><div class="gy-life-floor"></div><div class="gy-life-prop"></div><div class="gy-life-person"></div><div class="gy-life-person partner"></div><div class="gy-life-person child"></div><div class="gy-life-table"></div><div class="gy-life-phone"><div class="gy-life-screen"><div class="gy-life-phone-art>'+renderJourneyArt('gyuwon-phone')+'</div><strong>ODEN RING</strong><small>오든링 · 메인화면</small></div></div></div><div class="gy-life-vignette"></div><div class="gy-life-label"></div><div class="gy-life-caption"></div>';
  const label=layer.querySelector('.gy-life-label'),caption=layer.querySelector('.gy-life-caption'),phone=layer.querySelector('.gy-life-phone');
  shell.appendChild(layer);
  let time=0,active=false,ended=false,priorShot='';
