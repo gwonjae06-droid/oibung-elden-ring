@@ -71,3 +71,14 @@ test('seven-act progress HUD keeps a live song clock and text-only caption style
  assert.match(hud,/gyuwonSubtitleAt\(gyuwonSongKey\(m\),m\.time\)/);
  assert.match(hud,/background:transparent;border:0/);
 });
+
+test('low frame rates cannot delay the curtain behind the original song clock',()=>{
+ const {score,g,sounds}=rig(),a=sounds[0],m=g.gyuwon.years.musical;
+ assert.equal(m.entryDuration,5.8);
+ a.currentTime=4;score.update(g);stepGyuwon(g,1/60);
+ assert.ok(m.transition>=1.79&&m.transition<=1.81, String(m.transition));
+ a.currentTime=6.25;score.update(g);stepGyuwon(g,1/60);
+ assert.equal(m.transition,0);
+ assert.ok(m.time>=6.25);
+ score.dispose();
+});
