@@ -5,6 +5,7 @@ import {REFERENCE_UNIT_TYPES,usesReference2d,referenceKeyAction} from '../src/gy
 import {gyuwonFightScene,gyuwonFightGround,GYUWON_FIGHT_SET_PIECES} from '../src/gyuwon-fight-director.mjs';
 import {GYUWON_LYRIC_ACTIONS,GYUWON_LYRIC_ACTION_YEARS,GYUWON_LYRIC_ACTION_COUNT,gyuwonLyricActionAt,gyuwonLyricActionsCrossed} from '../src/gyuwon-lyric-actions.mjs';
 import {GYUWON_ALIGNED_CAPTIONS} from '../src/gyuwon-aligned-captions.mjs';
+import {GYUWON_LYRIC_SCENARIOS} from '../src/gyuwon-lyric-action-scenarios.mjs';
 import {gyuwonLyricActorMotion} from '../src/gyuwon-lyric-actor-motion.mjs';
 import {gyuwonLyricStagePose} from '../src/gyuwon-lyric-3d-art.mjs';
 import {gyuwonLyricMouthAt} from '../src/gyuwon-lyric-photo-mouth.mjs';
@@ -133,6 +134,8 @@ test('all 170 authored line-specific lyric actions use the original aligned audi
    assert.ok(a.id&&!seen.has(a.id));seen.add(a.id);
    assert.equal(a.start,source.start);assert.equal(a.end,source.end);
    assert.equal(a.ko,source.ko);assert.equal(a.en,source.en);
+   assert.equal(a.stagingRule,GYUWON_LYRIC_SCENARIOS[key][i].instruction);
+   assert.ok(a.stagingRule.length>20,'every cue needs an actual movement description');
    assert.ok(a.actors.length&&a.worldEvents.length&&a.gesture&&a.actionId);
    const middle=(a.start+a.end)/2;
    assert.equal(gyuwonLyricActionAt(key,middle)?.id,a.id);
