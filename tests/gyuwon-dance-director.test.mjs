@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {GYUWON_DANCE_STAGES,gyuwonDanceScene,gyuwonDanceAction,gyuwonDanceTelegraph} from '../src/gyuwon-dance-director.mjs';
+import {GYUWON_DANCE_STAGES,gyuwonDanceScene,gyuwonDanceAction,gyuwonDanceTelegraph,GYUWON_DANCE_WINDOWS,gyuwonDanceNextCue,gyuwonDanceJudge} from '../src/gyuwon-dance-director.mjs';
 
 test('act eight lyric direction changes scene from army to dance to dawn to next arena',()=>{
  assert.equal(GYUWON_DANCE_STAGES[0].key,'handoff');
@@ -39,4 +39,29 @@ test('turns are visibly different from steps and completed cues disappear',()=>{
  assert.ok(cue?.active);
  p.done[0]=true;
  assert.equal(gyuwonDanceTelegraph(p,20.9,.5),null);
+});
+
+test('visualized note, input acceptance and expiry share one authoritative contact time',()=>{
+ const pattern={id:1,kind:'turn',cue:10,first:11.7,count:1,spacing:1,done:[],misses:[]};
+ const at=11.7;
+ const lead=gyuwonDanceNextCue([pattern],10.3,.5);
+ assert.ok(lead?.active);assert.equal(lead.action,'skill');
+ assert.ok(lead.remaining>1.35);
+ assert.equal(gyuwonDanceJudge([pattern],at-.25,'skill',.5)?.accepted,false);
+ assert.equal(gyuwonDanceJudge([pattern],at,'light',.5)?.accepted,false);
+ assert.equal(gyuwonDanceJudge([pattern],at,'skill',.5)?.grade,'PERFECT');
+ assert.equal(gyuwonDanceJudge([pattern],at+.20,'skill',.5)?.accepted,true);
+ assert.equal(gyuwonDanceJudge([pattern],at+GYUWON_DANCE_WINDOWS.expired+.01,'skill',.5),null);
+ pattern.done[0]=true;
+ assert.equal(gyuwonDanceNextCue([pattern],at,.5),null);
+});
+test('when a quick two-step follows a previous step, every note has its own cue',()=>{
+ const p={id:2,kind:'quick',cue:19.4,first:21,count:2,spacing:1,done:[],misses:[]};
+ let n=gyuwonDanceNextCue([p],20,.5);
+ assert.equal(n.index,0);assert.equal(n.action,'light');
+ p.done[0]=true;
+ n=gyuwonDanceNextCue([p],21.05,.5);
+ assert.equal(n.index,1);assert.equal(n.at,21.5);
+ assert.equal(gyuwonDanceJudge([p],21.50,'light',.5)?.accepted,true);
+ assert.equal(gyuwonDanceJudge([p],21.50,'skill',.5)?.accepted,false);
 });
