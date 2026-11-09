@@ -48,6 +48,11 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
  const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
  const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
+ // A real spotlight cues the incoming collision for the targeted ally.
+ // It is not a separate danger zone or a new hitbox.
+ const responseHalo=mesh(root,ring,glow,'raid-physical-call-and-response-halo');
+ responseHalo.rotation.x=-Math.PI/2;responseHalo.visible=false;
+ responseHalo.scale.setScalar(2.6);
  const bindings=Array.from({length:5},()=>{const m=mesh(root,ring,gold,'raid-circus-binding');m.scale.setScalar(2.7);m.visible=false;return m;});
  const fragments=Array.from({length:40},(_,i)=>{const p=mesh(root,i%3===0?box:geo(new T.TetrahedronGeometry(.4,0)),i%2?gold:cream,'raid-pooled-fragment');p.visible=false;return {mesh:p,at:-99,from:new T.Vector3(),index:i};});
  const seen=new Set(),project=new T.Vector3();let disposed=false,last=0,owner=null;
@@ -83,6 +88,17 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   for(let i=0;i<notes.length;i++){const n=notes[i];n.visible=!!a&&(a.part===1||a.part===3)&&a.age<a.impactAt;if(n.visible){const u=i/8;n.position.set(a.from.x+Math.sin(m.time*2+i)*3,a.from.y+Math.cos(m.time*2+i)*2,a.from.z+u*5);n.rotation.set(.4,m.time+i,.3);}}
   waves.forEach((w,i)=>{const contact=motion&&motion.age>=motion.hitAt&&motion.age<motion.hitAt+.4;w.visible=contact&&i===role.index||m.finishProgress>0&&m.finishProgress<.92;if(w.visible){const target=m.enemies[m.targetIndex];w.position.set(m.finishProgress>0?0:target.x,m.finishProgress>0?5:target.y,m.finishProgress>0?-9:target.z);w.scale.setScalar(m.finishProgress>0?2+m.finishProgress*(10+m.finishStrength*.4):1+(motion.age-motion.hitAt)*13);}});
   shields.forEach((o,i)=>{o.visible=m.shield>0;const p=m.party[i];o.position.set(p.x,2.5+(p.y||0),p.z-.6);o.rotation.y=Math.sin(m.time*1.5)*.15;});
+  const attack=m.raidAttack,ready=!!attack&&!attack.blocked
+   &&attack.age>=attack.wind*.28&&attack.age<=attack.wind+.12;
+  const answered=!!m.spotlightCounter&&m.spotlightCounter.until>=m.time;
+  responseHalo.visible=ready||answered;
+  if(responseHalo.visible){
+   const ally=m.party.find(p=>p.id===(ready?attack.victim:m.spotlightCounter.victim));
+   if(ally){
+    responseHalo.position.set(ally.x,.19,ally.z);
+    responseHalo.scale.setScalar(ready?2.15+.22*Math.sin(m.time*10):3.25);
+   }else responseHalo.visible=false;
+  }
   bindings.forEach((o,i)=>{const e=m.enemies[i];o.visible=e.bind>0&&!e.destroyed;o.position.set(e.x,e.y,e.z);o.rotation.set(m.time*.7,m.time*.3,0);});
   for(const h of m.raidHistory){if(h.event!=='destroy'||seen.has(h.part))continue;seen.add(h.part);const e=m.enemies[h.part];for(let i=0;i<8;i++){const f=fragments[h.part*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
   fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=age>=0&&age<3;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
