@@ -16,6 +16,7 @@ import {settlePlayerHit} from './player-hit.mjs';
 import {tickPlayerResources} from './player-tick.mjs';
 import {createGyuwonYears,tickGyuwonYears} from './gyuwon-years.mjs';
 import {actGyuwonMusical} from './gyuwon-musical-genres.mjs';
+import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 
 const emit=(g,type,data={})=>g.events.push({type,...data});
 const clampArena=p=>{const d=Math.hypot(p.x,p.z);if(d>R.radius-1){p.x*= (R.radius-1)/d;p.z*= (R.radius-1)/d;}};
@@ -274,8 +275,8 @@ function beginPhase(g){const s=g.gyuwon;g.boss.phase++;g.boss.state='transition'
 function hurt(g,h){
  const p=g.player,rolling=playerRolling(p);
  if(p.invuln>0||rolling){if(!h.dodged){g.stats.dodges++;h.dodged=true;}return;}
- const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage*(g.gyuwon.years?.attackBuff>0?1.25:1)));
- h.hit=true;p.hp=Math.max(0,p.hp-amount);p.invuln=.65;
+ const amount=applyGyuwonPlayerDamage(g,playerIncomingDamage(g,h.damage*(g.gyuwon.years?.attackBuff>0?1.25:1)));
+ h.hit=true;p.invuln=.65;
  p.action={kind:'hurt',t:0,total:.22};
  if(h.slow)g.gyuwon.slow=h.slow;
  emit(g,'hurt',{amount});
@@ -416,6 +417,8 @@ export function stepGyuwon(g,dt,input={}){
   }
   else{tickBossHitTraits(g,h);if(g.status!=='playing')return;tickPlayer(g,h,input);if(g.status==='playing')tickBoss(g,h);}
   if(g.gyuwon.years&&!['musical','curtain'].includes(g.gyuwon.years.mode)){g.boss.floorY=annualFloorHeight(g,g.boss.x,g.boss.z);const p=g.player,ground=annualFloorHeight(g,p.x,p.z);if((p.floorY||0)-ground>.2){p.floorV=(p.floorV||0)-20*h;p.floorY=Math.max(ground,p.floorY+p.floorV*h);}else{p.floorY=ground;p.floorV=0;}}
+  // A safeguard for future fifth-year effects deducting HP without hurt().
+  if(gyuwonPlayerHpFloor(g)>0&&g.player.hp<1)g.player.hp=1;
   left-=h;
  }
 }
