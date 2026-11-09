@@ -12,24 +12,27 @@ function segment(c,pts,color,width=5){
  c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();
 }
 const clamp=x=>Math.min(1,Math.max(0,Number.isFinite(x)?x:0));
-export function drawArmoredRunner(c,x,y,{t=0,scale=1,pose='run',weapon='sword',inkAmount=0,energy=0}={}){
+export function drawArmoredRunner(c,x,y,{t=0,scale=1,pose='run',weapon='sword',inkAmount=0,energy=0,slideAmount=0,landTime=0,jumpVelocity=0}={}){
  const ink=clamp(inkAmount);
  // Two drawings are deliberately layered during the ink-to-color reveal.
- if(ink>=.98){drawKnight(c,x,y,{t,scale,pose,weapon,ink:true,energy});return;}
- if(ink>.01){c.save();c.globalAlpha=ink;drawKnight(c,x,y,{t,scale,pose,weapon,ink:true,energy});c.restore();}
- c.save();c.globalAlpha*=1-ink;drawKnight(c,x,y,{t,scale,pose,weapon,ink:false,energy});c.restore();
+ if(ink>=.98){drawKnight(c,x,y,{t,scale,pose,weapon,ink:true,energy,slideAmount,landTime,jumpVelocity});return;}
+ if(ink>.01){c.save();c.globalAlpha=ink;drawKnight(c,x,y,{t,scale,pose,weapon,ink:true,energy,slideAmount,landTime,jumpVelocity});c.restore();}
+ c.save();c.globalAlpha*=1-ink;drawKnight(c,x,y,{t,scale,pose,weapon,ink:false,energy,slideAmount,landTime,jumpVelocity});c.restore();
 }
-function drawKnight(c,x,y,{t,scale,pose,weapon,ink,energy}){
- const run=pose==='run'||pose==='walk',jump=pose==='jump',slide=pose==='slide',dash=pose==='dash',
+function drawKnight(c,x,y,{t,scale,pose,weapon,ink,energy,slideAmount=0,landTime=0,jumpVelocity=0}){
+ const run=pose==='run'||pose==='walk'||pose==='landing',jump=['jump','takeoff','rising','apex','falling','double'].includes(pose),slide=pose.startsWith('slide'),dash=pose==='dash',
   pace=pose==='walk'?5:13,step=run?Math.sin(t*pace):0,lift=run?Math.max(0,Math.sin(t*pace*2))*(pose==='walk'?3:7):0;
  const outline=ink?'#303038':'#1b2633',steel=ink?'#e8e1d6':'#b9c9d5',
   light=ink?'#faf6ec':'#e3edf3',dark=ink?'#aaa49b':'#53677c',
   gold=ink?'#cec4b1':'#d2ae6c',cape=ink?'#d5ccc1':'#253e59';
  c.save();c.translate(x,y);
  c.fillStyle='#151d304a';c.beginPath();c.ellipse(0,1,38*(dash?1.7:1),6,0,0,TAU);c.fill();
- c.scale(scale,scale);
- c.translate(0,-lift+(slide?30:0));
- c.rotate(dash?.36:slide?.65:run?.12:jump?-.12:0);
+ // Sprite top is ~168 local px; rendered 0.68× => 114px, the same as
+ // the 2.1m physical hitbox (2.1×52=109px). A crouch is 0.72m high.
+ const crouch=clamp(slideAmount),landing=clamp(landTime/.15);
+ c.scale(scale*(1+crouch*.28),scale*(1-crouch*.65)*(1-landing*.07));
+ c.translate(0,-lift);
+ c.rotate(dash?.12:slide?-.055:jump?Math.max(-.12,Math.min(.10,-jumpVelocity*.012)):run?.03:0);
  // Cape is behind the armor, and follows steps rather than cycling its body.
  const wave=Math.sin(t*7)*4;
  polygon(c,[[-22,-93],[-41,-74],[-55-wave,-38],[-70-wave,-23],[-33,-29],[-22,-55]],
@@ -37,7 +40,7 @@ function drawKnight(c,x,y,{t,scale,pose,weapon,ink,energy}){
  segment(c,[[-34,-70],[-42-wave,-50],[-53-wave,-29]],ink?'#bcb1a9':'#5c7491',2);
  // Greaves and separate leg joints make jump/slide silhouettes readable.
  for(const side of [-1,1]){
-  const swing=jump?side*8:slide?side*25:step*side*16;
+  const swing=jump?side*8:slide?side*17:step*side*16;
   const knee=[side*10+swing,-43+(jump?-9:slide?12:0)],foot=[side*17+swing*1.55,-4+(jump?-9:slide?5:0)];
   segment(c,[[side*10,-57],knee,foot],outline,19);
   segment(c,[[side*10,-57],knee,foot],steel,13);
@@ -85,14 +88,33 @@ function drawKnight(c,x,y,{t,scale,pose,weapon,ink,energy}){
 }
 export function drawGyuwonRunnerGuide(c,x,y,{scale=1,t=0,opacity=1,gesture='open'}={}){
  c.save();c.globalAlpha*=clamp(opacity);c.translate(x,y);c.scale(scale,scale);
- const ink='#222c3b',coat='#3f3047',gold='#f1cf8e';
+ const ink='#222c3b',coat='#3f3047',gold='#f1cf8e',shine='#e9d4a8';
+ const running=gesture==='run',step=running?Math.sin(t*11)*12:Math.sin(t*2)*1.4;
  c.fillStyle='#20222c50';c.beginPath();c.ellipse(0,1,29,5,0,0,TAU);c.fill();
- polygon(c,[[-20,-100],[16,-101],[21,-57],[37,-8],[-9,-31],[-33,-8],[-22,-63]],coat,ink,2.5);
+ // Both legs animate under the same theatrical costume.
+ segment(c,[[-10,-54],[-12+step,-30],[-20+step*1.4,-5]],ink,11);
+ segment(c,[[10,-54],[12-step,-30],[20-step*1.4,-5]],ink,11);
+ polygon(c,[[-28,-8],[-8,-9],[-10,0],[-31,0]],'#c8bda7',ink,2);
+ polygon(c,[[8,-8],[28,-9],[31,0],[10,0]],'#c8bda7',ink,2);
+ polygon(c,[[-20,-100],[16,-101],[21,-57],[37+step*.3,-8],[-9,-31],[-33-step*.4,-8],[-22,-63]],coat,ink,2.5);
  polygon(c,[[-10,-100],[8,-99],[4,-64],[-4,-64]],'#eee3d3',ink,1.4);
  polygon(c,[[-3,-98],[2,-88],[-4,-68],[-8,-88]],gold,null);
- segment(c,[[-20,-93],[-31,-65],[-24,-25]],ink,10);
- const reach=gesture==='open'?45:gesture==='gate'?65:20;
- segment(c,[[17,-94],[26,-76],[reach,-94+Math.sin(t*1.4)*4]],ink,11);
+ segment(c,[[-20,-93],[-31-running*step*.25,-65],[-24-running*step*.6,-25]],ink,10);
+ const reach=gesture==='open'?45:gesture==='gate'?65:
+  gesture==='catch'?75:gesture==='bridge'?60:gesture==='warn'?60:running?32:20;
+ const handY=gesture==='catch'?-125:gesture==='warn'?-108:gesture==='bridge'?-66:
+  -94+Math.sin(t*1.4)*4;
+ segment(c,[[17,-94],[26+Math.sin(t*2)*2,-76],[reach,handY]],ink,11);
+ // The magic cue originates exactly at the actor's moving palm.
+ if(['catch','bridge','warn','gate'].includes(gesture)){
+  const pulse=.7+.3*Math.sin(t*8),r=8+pulse*6;
+  c.strokeStyle='#fff3bf';c.lineWidth=2.5;
+  c.beginPath();c.arc(reach,handY,r,0,TAU);c.stroke();
+  c.fillStyle=shine;c.beginPath();c.arc(reach,handY,4,0,TAU);c.fill();
+  for(let i=0;i<5;i++){const a=i*TAU/5+t*.22;
+   segment(c,[[reach+Math.cos(a)*r*1.2,handY+Math.sin(a)*r*1.2],
+    [reach+Math.cos(a)*r*1.8,handY+Math.sin(a)*r*1.8]],shine,1.8);}
+ }
  c.fillStyle='#f0d9ba';c.beginPath();c.arc(0,-121,21,0,TAU);c.fill();
  polygon(c,[[-22,-128],[-18,-146],[-7,-152],[13,-149],[24,-133],[18,-141],[7,-135],[-5,-141],[-14,-132]],ink,null);
  c.restore();
