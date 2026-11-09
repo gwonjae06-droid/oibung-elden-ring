@@ -13,7 +13,27 @@ test('runner slide clears hanging obstacles, but actual ground collisions cause 
 test('six unit cards enforce currency and cooldown, with upgradable passive income',()=>{const {g,m}=at(7);assert.equal(REFERENCE_UNIT_TYPES.length,6);assert.ok(actGyuwon(g,'summon0'));assert.equal(m.money,140);assert.equal(actGyuwon(g,'summon0'),false);assert.ok(actGyuwon(g,'upgrade'));assert.equal(m.workerLevel,2);const money=m.money;advance(g,.5);assert.ok(m.money>money);assert.ok(m.unitCooldowns[0]>0);});
 test('unit attack contact is delayed by its own windup, and the cannon sweeps through enemies',()=>{const {g,m}=at(7);m.money=500;actGyuwon(g,'summon0');const ally=m.units[0];ally.x=-.6;const enemy={...ally,id:99,team:-1,x:.6,hp:500,maxHp:500};m.units.push(enemy);m.enemySpawn=99;advance(g,.4);assert.equal(enemy.hp,500);advance(g,.3);assert.ok(enemy.hp<500);const after=enemy.hp;m.cannon=100;assert.ok(actGyuwon(g,'cannon'));advance(g,.6);assert.ok(enemy.hp>=after-30);advance(g,.5);assert.ok(enemy.hp<after-90);assert.equal(g.boss.hp,4600);});
 test('Backup Spotlight adaptation has distinct pose, turn and quick-turn cues with strict timing',()=>{const {g,m}=at(8);assert.deepEqual(new Set(m.dancePatterns.map(p=>p.kind)),new Set(['pose','turn','quick']));const p=m.dancePatterns[0];m.time=p.first;assert.equal(actGyuwon(g,'skill'),false);assert.ok(actGyuwon(g,'light'));assert.equal(p.done[0],true);assert.equal(m.judgement,'PERFECT');assert.equal(actGyuwon(g,'light'),false);const q=m.dancePatterns.find(p=>p.kind==='quick');m.time=q.first+.1;assert.equal(actGyuwon(g,'roll'),false);assert.ok(actGyuwon(g,'light'));assert.equal(q.done[0],true);assert.equal(m.dancePoseKind,'quick');});
-test('missing a dance beat breaks the combo and causes a short visible miss reaction',()=>{const {g,m}=at(8);m.combo=4;m.time=m.dancePatterns[0].first+.25;const hp=g.player.hp;advance(g,.01);assert.equal(m.combo,0);assert.ok(m.danceError>0);assert.ok(g.player.hp<hp);});
+test('a large audio clock jump never applies invisible dance misses',()=>{
+ const {g,m}=at(8);
+ const hp=g.player.hp;
+ m.time=m.dancePatterns[2].first+2.7;
+ advance(g,.0083);
+ assert.equal(g.player.hp,hp);
+ assert.ok(m.dancePatterns.slice(0,2).every(p=>p.misses.some(Boolean)));
+});
+test('accepted dance hits own the only bright impact burst and the two controls stay strict',()=>{
+ const {g,m}=at(8),p=m.dancePatterns[0];
+ m.time=p.first;
+ assert.equal(m.danceHit,null);
+ assert.equal(actGyuwon(g,'roll'),false);
+ assert.equal(m.danceHit,null);
+ assert.equal(actGyuwon(g,'light'),true);
+ assert.equal(m.danceHit.grade,'PERFECT');
+ assert.equal(m.danceHit.scheduledAt,p.first);
+ assert.equal(m.danceHit.action,'light');
+ assert.equal(actGyuwon(g,'light'),false);
+});
+test('missing a dance beat breaks the combo and causes a short visible miss reaction',()=>{const {g,m}=at(8);m.combo=4;m.time=m.dancePatterns[0].first+.25;m.dancePreviousTime=m.time-.1;const hp=g.player.hp;advance(g,.01);assert.equal(m.combo,0);assert.ok(m.danceError>0);assert.ok(g.player.hp<hp);});
 test('fighter strikes require range and contact time; far attacks never score',()=>{const {g,m}=at(9);m.enemyThink=99;m.turnCount=1;actGyuwon(g,'light');advance(g,.6);assert.equal(m.score,0);const [p,b]=m.fighters;p.x=0;b.x=2.7;p.action=null;const hp=b.hp;assert.ok(actGyuwon(g,'light'));advance(g,.15);assert.equal(b.hp,hp);advance(g,.13);assert.ok(b.hp<hp);assert.ok(m.score>0);assert.equal(g.boss.hp,3200);});
 test('fighter supports jumping, held guard and a resource-gated super move',()=>{const {g,m}=at(9),p=m.fighters[0];assert.equal(actGyuwon(g,'super'),false);assert.ok(actGyuwon(g,'jump'));advance(g,.12);assert.ok(p.y>0);assert.ok(actGyuwon(g,'guard'));assert.equal(m.guardHeld,true);assert.ok(actGyuwon(g,'guard-end'));p.action=null;p.meter=100;assert.ok(actGyuwon(g,'super'));assert.equal(p.meter,0);});
 test('vertical shooter auto-fires, scores only on target contact and has finite bombs',()=>{const {g,m}=at(10);g.player.invuln=100;g.player.x=10;advance(g,.7);assert.ok(m.bullets.length>0);assert.equal(m.score,0);g.player.x=-6;advance(g,1.3);assert.ok(m.score>0);assert.equal(g.boss.hp,2500);m.enemyShots=[{x:0,z:0,vx:0,vz:1,life:3}];assert.ok(actGyuwon(g,'bomb'));assert.equal(m.bombs,2);assert.equal(m.enemyShots.length,0);m.bombs=0;assert.equal(actGyuwon(g,'bomb'),false);});
