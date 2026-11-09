@@ -64,7 +64,7 @@ test('the five photographic seals fit at once while their stone wall covers the 
  assert.match(css,/#journey \.j-temple\{min-height:0\}/);
  assert.deepEqual(Object.keys(MURAL_PORTRAIT_SEALS).sort(),MURAL_SEALS.map(x=>x.id).sort());
  for(const [width,height] of [[1920,1080],[1366,768],[2560,1080],[844,390],[640,360],[390,844],[375,667],[320,568],[768,1024]]){
-  const tall=width<=900&&height>width,box=tall?{x:560,y:0,w:480,h:1000}:{x:0,y:0,w:1600,h:1000};
+  const tall=width<=900&&height>width,box={x:0,y:0,w:1600,h:1000};
   const factor=Math.min(width/box.w,height/box.h),ox=(width-box.w*factor)/2,oy=(height-box.h*factor)/2;
   for(const seal of MURAL_SEALS){
    const anchor=tall?MURAL_PORTRAIT_SEALS[seal.id]:seal,r=105*(anchor.scale??1)*factor;
