@@ -1,5 +1,6 @@
 import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
 import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
+import {drawGyuwonCinematic2dSet,drawGyuwonCinematicActorProp} from './gyuwon-cinematic-2d-props.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
 // Time anchors are production cues; the full master lyric/beat transcription needs listening QA.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -78,6 +79,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  c.fillStyle=sky;c.fillRect(0,0,1280,720);
  drawGyuwonDanceLyricBackdrop(c,s,m);
  drawGyuwonLyricBackdrop(c,m);
+ drawGyuwonCinematic2dSet(c,m);
  // Star ceiling, rising dawn, and distant architecture: visual changes are music-led.
  if(s.stars||s.quiet){
   for(let i=0;i<58;i++){const x=(i*197+36)%1280,y=30+(i*71)%350;
@@ -173,6 +175,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
   theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null,
   lyric:tele?.active?null:m.lyricAction});
+ drawGyuwonCinematicActorProp(c,m,{x:315+gyuwonStepX,y:530,scale:1.70});
  stagePerson(c,670,530,{scale:1.68,t,pose:activePose,face:m.danceFacing||1,
   color:'#c8ddef',miss:m.danceError>0,theater:true,
   choreography:m.dancePose>0?{kind:m.dancePoseKind||'dance',lead:1,remaining:0}:null});
