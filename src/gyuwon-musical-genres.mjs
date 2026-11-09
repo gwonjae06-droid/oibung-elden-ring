@@ -139,17 +139,6 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
  if(m.kind==='rhythm')return rhythmPress(g,m,type,emit);
  if(m.kind==='finale')return false; // 11수 is an unskippable, noncombat curtain call.
  if(type==='heal')return heal(g,emit);
-  if(!['light','skill'].includes(type))return rhythmPress(g,m,type,emit);
-  const note=m.note;
-  if(note&&!note.done&&note.key===type&&Math.abs(note.time)<=.21)return rhythmPress(g,m,type,emit);
-  // Normal attacks in 3D must travel through a readable windup and reach.
-  if(m.playerStrike||m.shotCooldown>0)return false;
-  m.playerStrike={age:0,reach:type==='skill'?5.3:3.8,damage:type==='skill'?175:95,kind:type};
-  m.shotCooldown=type==='skill'?.9:.55;
-  emit('gyuwon-musical-cue',{kind:type==='skill'?'finale-skill':'finale-swing',wind:.44});
-  return true;
- }
- if(type==='heal')return heal(g,emit);
  if(m.kind==='runner'){
   if(type==='roll'&&m.jumpY<.01){m.jumpV=9.4;return true;}
   if(type==='skill'){m.slide=.67;return true;}
