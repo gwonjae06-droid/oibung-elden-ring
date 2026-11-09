@@ -94,7 +94,23 @@ export function actFiveChoreographyAt(time,performance,{hitUntil=0,raidAttack=nu
  head[0]+=sin(beat*.31)*.025+hit*-.13-anticipation*.06;
  head[1]+=sin(beat*.19)*.026;
  head[2]+=sin(beat*.42)*.015+hit*.065;
- const bounce=sin(beat*.46)*.12+(response[0].bounce+response[1].bounce)*.5*weight;
- return {gesture,style:shape.style,weight,progress,torso,head,hands,palms:response,
+ // Exaggerated stage-scale waist and ribcage articulation, still inside
+ // controllable angular bounds. Independent shoulder joints follow the waist.
+ const phraseLift=weight*(.5+.5*sin(progress*PI)),drive=sin(beat*.25),side=sin(beat*.16);
+ torso[0]=clamp(torso[0]*2.15+sin(beat*.15)*.046*weight+anticipation*.07,-.47,.47);
+ torso[1]=clamp(torso[1]*2.0+side*.065*weight,-.45,.45);
+ torso[2]=clamp(torso[2]*2.1+drive*.075*weight,-.45,.45);
+ const waist=[clamp(torso[0]*.54+sin(beat*.20)*.028,-.33,.33),
+  clamp(torso[1]*.68,-.31,.31),clamp(torso[2]*.64,-.33,.33)];
+ const chest=[clamp(torso[0]*.78,-.34,.34),clamp(torso[1]*.65,-.34,.34),clamp(torso[2]*.76,-.34,.34)];
+ const lean={x:clamp(sin(beat*.20)*.55*weight+torso[2]*2.1,-1.3,1.3),
+  z:clamp(-torso[0]*2.8+.35*sin(beat*.13)*weight,-1.9,1.9)};
+ const shoulders=[-1,1].map(side=>({pitch:clamp(-torso[0]*.28+side*.055*drive,-.35,.35),
+  roll:clamp(side*phraseLift*.16+torso[2]*.34,-.28,.28),
+  twist:clamp(torso[1]*.36+side*.07*side,-.28,.28)}));
+ head[0]=clamp(head[0]*1.3,-.5,.5);
+ head[1]=clamp(head[1]*1.2,-.5,.5);
+ const bounce=sin(beat*.46)*.23+(response[0].bounce+response[1].bounce)*.9*weight+phraseLift*.28;
+ return {gesture,style:shape.style,weight,progress,torso,head,waist,chest,lean,shoulders,hands,palms:response,
   bounce,flinch:hit,anticipation,spotlight:raidAttack?.blocked===true,normalizedTime:scaleTime};
 }
