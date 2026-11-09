@@ -6,7 +6,7 @@ const tick=(g,t)=>{for(let s=0;s<t;s+=1/240)stepClown(g,1/240);};
 test('all performances finish with at least a visible punish interval',()=>{
  for(const[k,d]of Object.entries(PATTERNS)){
   const g=createClownGame();
-  g.boss.phase=d.phases.includes(1)?1:d.phases.includes(2)?2:3;
+  g.boss.phase=d.phases.includes(1)?1:2;
   g.player.x=g.player.z=18;g.player.invuln=100;
   startClownPattern(g,k);
   let punishFrames=0;
