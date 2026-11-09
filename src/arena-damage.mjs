@@ -1,16 +1,12 @@
 import {KWON_THREE} from './kwon-third-phase.mjs';
-import {CLOWN_BALLET_THRESHOLDS} from './clown-ballet-score.mjs';
-import {clearCircusTroupe} from './clown-troupe.mjs';
 const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
  if(g?.status!=='playing'||!Number.isFinite(amount)||amount<=0||!Number.isFinite(poise)||poise<0||!Number.isFinite(b?.hp)||b.hp<=0||['transition','moonCinematic','moonStorm'].includes(b.state))return 0;
- // Clown's two cinematic curtains must never be skipped by a huge
- // weapon hit, poison tick or developer hit. Consume only HP up to the
- // next act's threshold; the remaining overkill is intentionally discarded.
- // Phase three has no gate and can be defeated normally.
- const nextCurtain=g.clown&&b.phase===1?b.maxHp*CLOWN_BALLET_THRESHOLDS.second:
-  g.clown&&b.phase===2?b.maxHp*CLOWN_BALLET_THRESHOLDS.third:null;
+ // The clown has only two acts. Clamp oversized hits to the one real
+ // 50% phase-two threshold so the unskippable transformation still plays.
+ // Once in phase two, HP can reach zero normally without another curtain.
+ const nextCurtain=g.clown&&b.phase===1?b.maxHp*.5:null;
  const available=nextCurtain===null?b.hp:Math.max(0,b.hp-nextCurtain);
  const damage=Math.min(b.hp,available,amount*(!developer&&b.state==='stagger'?1.25:1)),
   big=developer||damage>=150;
@@ -28,14 +24,12 @@ export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot
   if(g.clown)Object.assign(g.clown,{zones:[],bombs:[],waves:[],state:'defeated'});
   emit(g,'victory');return damage;
  }
- // Clown: circus 100-70%, ringmaster 70-33.3%, final wooden ballet 33.3%-0.
- // Kwon's independent three-phase contract is unchanged.
- const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.second:KWON_THREE.first)?2:
-  b.phase===2&&b.hp<=b.maxHp*(g.clown?CLOWN_BALLET_THRESHOLDS.third:KWON_THREE.second)?3:null;
+ // Clown: phase one 100-50%, phase two 50-0%; no third act.
+ // Kwon's independent three-phase contract must remain unchanged.
+ const nextPhase=b.phase===1&&b.hp<=b.maxHp*(g.clown?.5:KWON_THREE.first)?2:
+  !g.clown&&b.phase===2&&b.hp<=b.maxHp*KWON_THREE.second?3:null;
  if(nextPhase!==null){
-  // Perform the curtain call at the authoritative damage threshold, not in
-  // a later event observer: scripted hits and projectiles must agree.
-  if(g.clown&&nextPhase===3){clearCircusTroupe(g);g.clown.duetOrbitYaw=g.clown.yaw;}
+  // Perform the remaining second-act curtain on authoritative damage.
   Object.assign(b,{phase:nextPhase,state:'transition',t:0,queue:[],poise:0,
    stun:0,punishable:false,from:null,motionFrom:null,riftFired:false,
    pendingOpening:null,closeCooldown:0,hug:0});
