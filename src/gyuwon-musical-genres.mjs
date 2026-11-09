@@ -327,7 +327,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  if(!m||g.status!=='playing')return;
  const realDt=clamp(dt,0,1/30),song=GYUWON_SONGS[gyuwonSongKey(m)];
  // Finite audio position is authoritative. Buffering freezes gameplay too.
- dt=m.clock?.source==='media'?Math.max(0,Math.min(.05,m.clock.time-m.time)):realDt;
+ dt=m.clock&&['media','fallback'].includes(m.clock.source)?Math.max(0,Math.min(.05,m.clock.time-m.time)):realDt;
  if(m.clock?.ended)m.time=m.clock.duration;else m.time+=dt;
  const duration=m.clock?.duration||song.duration;
  const ended=m.clock?m.clock.ended:m.time>=duration;
@@ -346,7 +346,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  }
  if(m.songEnded){
   tickStrike(g,m,realDt,emit);
-  m.settle+=realDt;const q=clamp(m.settle/1.1,0,1),ease=q*q*(3-2*q);
+  m.settle=Number.isFinite(m.clock?.afterEnd)?m.clock.afterEnd:m.settle+realDt;const q=clamp(m.settle/1.1,0,1),ease=q*q*(3-2*q);
   g.boss.hp=m.settleFrom+(song.target-m.settleFrom)*ease;
   if(q===1){g.boss.hp=song.target;clearAct(g,m);
    if(e.year===11)beginCurtain(g,m,emit);else advance();}

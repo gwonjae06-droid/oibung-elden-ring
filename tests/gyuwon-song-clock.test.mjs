@@ -30,7 +30,7 @@ test('missing, rejected and permanently stalled audio fall back without trapping
   if(failure==='error')a.onerror();
   else if(failure==='stalled'){setTime(7);score.update(g);}
   else{await Promise.resolve();await Promise.resolve();a.paused=true;a.play=()=>Promise.reject(Error('decode'));score.update(g);await new Promise(r=>setImmediate(r));}
-  assert.equal(m.clock.source,'fallback',failure);m.time=48;score.update(g);assert.equal(m.clock.ended,true);score.dispose();
+  assert.equal(m.clock.source,'fallback',failure);setTime(100);score.update(g);assert.equal(m.clock.ended,true);score.dispose();
  }
 });
 test('edited masters exist and subtitles have finite, ordered bilingual intervals with silent gaps',()=>{
@@ -42,4 +42,12 @@ test('edited masters exist and subtitles have finite, ordered bilingual interval
   }
   assert.equal(gyuwonSubtitleAt(id,song.duration-.1),null);
  }
+});
+
+test('post-song HP bridge uses active real time even with sparse frames',()=>{
+ const {score,g,sounds,setTime}=rig(),m=g.gyuwon.years.musical;g.boss.hp=6000;
+ sounds[0].onended();score.update(g);stepGyuwon(g,.05);assert.equal(m.settle,0);
+ setTime(.8);score.update(g);stepGyuwon(g,.05);assert.ok(m.settle>.79);
+ score.stop();setTime(10);score.update(g,{enabled:false});assert.ok(m.settle<1);
+ score.update(g);setTime(10.4);score.update(g);stepGyuwon(g,.05);assert.equal(g.gyuwon.years.year,6);assert.equal(g.boss.hp,5300);score.dispose();
 });
