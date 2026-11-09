@@ -13,7 +13,9 @@ try{
  await page.evaluate(async()=>{document.getElementById('journey').close();window.__read=(await import('./src/battle-session.mjs')).readBattleSession;window.__battle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.gyuwon.years.year=5;g.boss.hp=6000;g.player.invuln=1e6;g.startGrace=0;}});window.__session=()=>window.__read(document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot);});
  await page.waitForFunction(()=>window.__session()?.active,null,{timeout:90000});
  // Wait for the non-skippable stage reveal; inputs stay disabled while curtains open.
- await page.waitForFunction(()=>{const m=window.__session()?.game?.gyuwon?.years?.musical;return m?.year===5&&m?.transition===0&&m?.turn==='player'&&!m?.actorMotion;},null,{timeout:40000});
+ await page.waitForTimeout(9000);
+ console.log('Act 5 music/stage probe:',JSON.stringify(await page.evaluate(()=>{const s=window.__session(),m=s?.game?.gyuwon?.years?.musical;return {active:s?.active,year:m?.year,turn:m?.turn,transition:m?.transition,time:m?.time,clock:m?.clock,media:window.__media.map(a=>({src:a.src.split('/').at(-1),time:a.currentTime,duration:a.duration,paused:a.paused,readyState:a.readyState,error:a.error?.message}))};})));
+ await page.waitForFunction(()=>{const m=window.__session()?.game?.gyuwon?.years?.musical;return m?.year===5&&m?.transition<=.01&&m?.turn==='player'&&!m?.actorMotion;},null,{timeout:20000});
  // Test the genuine in-game UI pointer action rather than relying on focused canvas keys.
  await page.locator('#gyuwon-battle').locator('[data-musical-action="light"]').click({force:true});
  await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.score>0,null,{timeout:15000});
