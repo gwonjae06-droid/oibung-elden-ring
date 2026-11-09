@@ -48,7 +48,11 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
  function dancer(isLead){
   const group=new THREE.Group();group.name=isLead?'o-seulwoo-male-ballet-dancer':'his-faceless-wood-carved-ballerina-spouse';
   root.add(group);
-  const body=new THREE.Group();group.add(body);
+  // Sculptures articulate around the pelvis instead of tipping rigidly about
+  // the stage floor; the reference's deep back arcs remain credible.
+  const pelvisPivot=new THREE.Group();pelvisPivot.name='articulated-pelvis-pivot';
+  pelvisPivot.position.y=1.55;group.add(pelvisPivot);
+  const body=new THREE.Group();body.position.y=-1.55;pelvisPivot.add(body);
   const skin=isLead?ivory:birch,costume=isLead?ebony:satin;
   // Photo-inspired morphology: continuous muscle and ribcage in the
   // airborne male, narrow waist with an uninterrupted white leotard in the
@@ -159,10 +163,10 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
     lead,pattern,reduced,showcase:phase?0:intro});
    smoothedPose=blendBalletPose(smoothedPose,target,dt,isLead?9.6:8.4);
    const p=smoothedPose;
-   body.position.y=p.bodyLift;
-   body.rotation.set(p.chestPitch,p.chestYaw,p.chestRoll+position.bow);
+   pelvisPivot.position.y=1.55+p.bodyLift;
+   pelvisPivot.rotation.set(p.chestPitch,p.chestYaw,p.chestRoll+position.bow);
    hip.rotation.y=p.pelvisYaw;
-   head.rotation.set(p.headPitch,p.headYaw-p.chestYaw*.4,p.headRoll-body.rotation.z*.52);
+   head.rotation.set(p.headPitch,p.headYaw-p.chestYaw*.4,p.headRoll-pelvisPivot.rotation.z*.52);
    if(group.userData.portrait){
     const m=group.userData.portrait;
     m.visible=Boolean(originalPortrait?.visible);
