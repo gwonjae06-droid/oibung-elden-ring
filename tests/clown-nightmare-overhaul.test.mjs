@@ -27,17 +27,17 @@ test('fifty-five horror and ensemble routines keep actual windups, recoveries an
  assert.equal(horrorMinStage('stageRupture'),3);
 });
 
-test('the third horror act starts at 25% HP without disrupting phase-two monster movement',()=>{
+test('the former 25% horror stage is replaced with a dedicated wooden ballet phase',()=>{
  const g=createClownGame('sword',{register:false,seed:91});
  g.boss.phase=2;g.clown.state='idle';g.clown.wait=900;
  g.boss.hp=g.boss.maxHp*.26;stepClown(g,1/120);
- assert.equal(g.clown.horrorStage,2);
- g.boss.hp=g.boss.maxHp*.24;stepClown(g,1/120);
- assert.equal(g.clown.horrorStage,3);
- assert.equal(g.boss.phase,2,'monster simulation remains in its second phase');
- assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1);
+ assert.equal(g.clown.horrorStage,2,'phase two never silently becomes the finale');
+ g.boss.phase=3;g.boss.state='clown';g.clown.state='idle';
  stepClown(g,1/120);
- assert.equal(g.events.filter(e=>e.type==='clown-phase3').length,1,'no repeated transformation event');
+ assert.equal(g.clown.horrorStage,3);
+ assert.equal(g.events.filter(e=>e.type==='clown-ballet-start').length,1);
+ stepClown(g,1/120);
+ assert.equal(g.events.filter(e=>e.type==='clown-ballet-start').length,1,'no repeated third-act cue');
 });
 
 for(const name of HORROR_PATTERNS){

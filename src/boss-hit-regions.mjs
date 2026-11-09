@@ -2,6 +2,7 @@
 // dimensions and the same phase/pose data used by its visual rig. No Three.js
 // dependency: combat and browser draw the same simulation-time silhouette.
 import {clownBeastPose,clownBeastPaw} from './clown-beast-pose.mjs';
+import {balletPartnerFrame} from './clown-ballet-score.mjs';
 import {clownContactFrame} from './clown-grounded-physics.mjs';
 import {ringmasterPerformance} from './clown-ringmaster-pose.mjs';
 import {bloodTransformation} from './blood-transformation.mjs';
@@ -19,6 +20,21 @@ const ellipsoid=(b,id,p,rx,ry,rz)=>{
 };
 export function clownHurtShapes(g){
  if(!g?.clown||!g?.boss)return [];
+ if(g.boss.phase===3){
+  // Both dancers are physical hurt targets tied to the one boss HP pool.
+  const f=balletPartnerFrame(g),out=[];
+  for(const [who,model] of [['lead',f.lead],['spouse',f.partner]]){
+   const actor={x:model.x,z:model.z,yaw:model.yaw};
+   const at=(part,x,y,z,rx,ry,rz)=>out.push(ellipsoid(actor,
+    who==='lead'?part:who+'-'+part,
+    {x:x*CLOWN_SCALE,y:y*CLOWN_SCALE,z:z*CLOWN_SCALE},
+    rx*CLOWN_SCALE,ry*CLOWN_SCALE,rz*CLOWN_SCALE));
+   at('torso',0,2.78,0,.75,1.2,.56);
+   at('head',0,4.56,.07,.64,.86,.58);
+   for(const s of[-1,1])at(s<0?'left-leg':'right-leg',s*.32,.91,.10,.29,.83,.32);
+  }
+  return out;
+ }
  const b=g.boss,v=g.clown.vis||{},Q=clownBeastPose(g),A=ringmasterPerformance(g),
   frame=clownContactFrame(g,A,Q),sy=Math.cos(frame.pitch),sz=Math.sin(frame.pitch),
   vertical=A.bodyY||1,lift=frame.height+Math.max(0,v.jump||0)*1.1,
