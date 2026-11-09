@@ -678,8 +678,28 @@ export const GYUWON_SUBTITLES={
   }
  ]
 };
-export const GYUWON_ORIGINAL_SUBTITLES=Object.freeze(Object.fromEntries(
- Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>[key,cues.flatMap(c=>{
-  const mapped=originalTimingForEditedCue(key,c);return mapped?[{...c,...mapped}]:[];
- }).sort((a,b)=>a.start-b.start)])));
-export function gyuwonSubtitleAt(key,time){return GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end)||null;}
+// The short-master text covers only fragments of each original song.
+ // Until the full recordings are transcribed, keep the reliably localized cues
+ // and use the existing bilingual *authored libretto* as provisional captions
+ // through other passages. These are not verified vocal timestamps.
+ import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
+ export const GYUWON_ORIGINAL_SUBTITLES=Object.freeze(Object.fromEntries(
+  Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>[key,cues.flatMap(c=>{
+   const mapped=originalTimingForEditedCue(key,c);return mapped?[{...c,...mapped,verified:true}]:[];
+  }).sort((a,b)=>a.start-b.start)])));
+ export const GYUWON_PROVISIONAL_SUBTITLES=Object.freeze(Object.fromEntries(
+  Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>{
+   const duration=GYUWON_SONGS[key]?.duration||180;
+   const repeat=key==='ending'?3:4,offset=key==='ending'?8:4.5;
+   const slots=[],total=duration-offset-4,slotLength=total/(cues.length*repeat);
+   for(let cycle=0;cycle<repeat;cycle++)for(let i=0;i<cues.length;i++){
+    const at=offset+(cycle*cues.length+i)*slotLength;
+    slots.push({...cues[i],start:+at.toFixed(3),end:+Math.min(duration-1,at+Math.min(slotLength*.81,4.4)).toFixed(3),verified:false});
+   }
+   return [key,slots];
+  })));
+ export function gyuwonSubtitleAt(key,time){
+  const verified=GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
+  if(verified)return verified;
+  return GYUWON_PROVISIONAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end)||null;
+ }
