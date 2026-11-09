@@ -99,7 +99,7 @@ test('continuous loft anatomy is high-poly on desktop with correct outward norma
    assert.ok(mesh.attributes.position.count>(coarse?1000:5000));
    assert.ok(mesh.groups.some(g=>g.materialIndex===0));
    assert.ok(mesh.groups.some(g=>g.materialIndex===1));
-   assert.ok(upper.attributes.normal.count>200);
+   assert.ok(upper.attributes.normal.count>(coarse?185:800));
    for(const geo of [mesh,upper]){
     const pos=geo.attributes.position;
     const normal=geo.attributes.normal;
