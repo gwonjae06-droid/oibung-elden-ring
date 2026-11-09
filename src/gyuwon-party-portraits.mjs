@@ -35,13 +35,14 @@ export function createGyuwonBossParty({coarse=false}={}){
   for(let i=0;i<roles.length;i++){
    const p=m.party[i],role=roles[i],motion=m.actorMotion?.actorId===p.id?m.actorMotion:null;
    role.visible=true;const to=m.enemies?.find(e=>e.id===motion?.targetId)||m.enemies?.[m.targetIndex];
-   const swing=motion?Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI):0;
+   const swing=motion?Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI):0,performance=m.songPerformance,w=performance?.weight||0;
    const entrance=THREE.MathUtils.smoothstep(m.time,.6+i*.55,3.2+i*.55);
    const ensemble=(m.ensembleJump||0)*(1+i*.035);
    role.position.set(p.x+(1-entrance)*(i%2?23:-23),.16+(p.y||0)+ensemble,p.z);
    role.rotation.y=Math.atan2((to?.x||0)-p.x,(to?.z||-10)-p.z);role.rotation.x=p.hp<=0?-.8:0;
    role.rotation.z=i===2?swing*.23:0;
-   if(i===0){kwon.swordGroup.rotation.x=-.22-1.9*swing;kwon.model.rotation.x=-.18*swing;}
+   if(!motion&&performance?.gesture==='dance')role.rotation.z+=Math.sin(m.time*4+i)*.025*w;
+   if(i===0){kwon.swordGroup.rotation.x=-.22-1.9*swing-((performance?.gesture==='knight'&&!motion)? .7*w : 0);kwon.model.rotation.x=-.18*swing;}
    if(i===1){
     clownGame.time=m.time;clownGame.clown.time=m.time;clown.update(clownGame,dt);
     const body=clown.root.getObjectByName('seulwoo-grounded-physical-rig');if(body)body.rotation.x-=swing*.24;
@@ -52,7 +53,7 @@ export function createGyuwonBossParty({coarse=false}={}){
     bloodGame.time=m.time;bloodGame.boss.hp=p.hp;bloodGame.blood.veins=swing*.2;
     const pose={anticipation:motion&&motion.age<.5?swing:0,release:motion&&motion.age>.6?swing:0,body:{lean:swing*.4},arms:[{raise:swing*.9,open:swing},{raise:swing,open:swing}]};
     bloodRegalia.update(bloodGame,bloodGame.blood,dt,swing,pose);bloodHead.update(bloodGame,bloodGame.blood,dt,{cast:swing,pose});
-    wingRoots.forEach((w,k)=>{w.visible=motion?.type==='ultimate'||m.finishProgress>0;w.rotation.y=(k?1:-1)*(.15+swing*.55);});
+    wingRoots.forEach((wing,k)=>{wing.visible=motion?.type==='ultimate'||m.finishProgress>0||performance?.gesture==='flight'&&w>.1;wing.rotation.y=(k?1:-1)*(.15+swing*.55+Math.sin(m.time*2)*w*.12);});
    }
   }
  }

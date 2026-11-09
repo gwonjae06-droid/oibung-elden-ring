@@ -119,7 +119,9 @@ test('5수 턴제 보스에게 반복해서 맞아도 피격 연출은 유지되
  for(let attack=0;attack<2;attack++){
   m.turn='boss';m.turnActor='enemy1';m.enemyVictim='ally0';
   m.turnElapsed=0;m.raidAttack=null;m.enemyHit=false;g.player.invuln=0;
-  advance(g,2.15);
+  advance(g,.02);
+  const impact=m.raidAttack.impactAt;
+  advance(g,impact+.03);
   assert.equal(g.player.hp,1);
   assert.equal(g.status,'playing');
  }

@@ -1,6 +1,8 @@
 import * as T from 'three';
 import {createGyuwonBossParty} from './gyuwon-party-portraits.mjs';
 import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
+import {createActFiveStagecraft} from './gyuwon-act-five-stagecraft.mjs';
+import {ACT_FIVE_SCORE,scoreEase} from './gyuwon-act-five-score.mjs';
 export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const root=new T.Group();root.name='gyuwon-three-dimensional-giant-raid';root.visible=false;scene.add(root);
  const mats=new Set(),geos=new Set(),mat=o=>{const m=new T.MeshStandardMaterial(o);mats.add(m);return m;},geo=g=>(geos.add(g),g);
@@ -17,8 +19,12 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const curtains=[-1,1].map(side=>{const o=mesh(root,curtainGeo,red,'giant-opening-curtain');o.position.set(side*16.5,20,-30);return o;});
  const canopy=mesh(root,box,red);canopy.position.set(0,40,-28);canopy.scale.set(67,3,5);
  const guestParty=createGyuwonBossParty({coarse}),allies=guestParty.roles;for(const a of allies)root.add(a);
- const fill=new T.HemisphereLight(0xffdec2,0x27172c,.75);root.add(fill);
+ const fill=new T.HemisphereLight(0xffdec2,0x27172c,1.15);root.add(fill);
+ const key=new T.DirectionalLight(0xffe5c5,2.3);key.position.set(-18,34,25);root.add(key);
+ const rim=new T.DirectionalLight(0x8bbddb,1.5);rim.position.set(25,30,-30);root.add(rim);
+ const footlight=new T.DirectionalLight(0xf0e6d6,1.6);footlight.position.set(0,9,23);footlight.target.position.set(0,2,8);root.add(footlight,footlight.target);
  const giant=createGiantGyuwon(root,boss,{coarse});
+ const stagecraft=createActFiveStagecraft(root,giant.head,{coarse});
  const backStage=mesh(root,box,iron,'giant-waist-stage-front');backStage.position.set(0,3.4,-26);backStage.scale.set(20,6.8,6);
  const lighting=new T.Group();lighting.name='raid-lighting-core';root.add(lighting);
  const crystal=mesh(lighting,geo(new T.OctahedronGeometry(2.2,1)),glow);crystal.position.y=0;
@@ -36,7 +42,8 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   const circusWave=mesh(group,ring,glow);circusWave.scale.setScalar(1.1);
   return {group,items:[blade,puppet,die,bloodBall],circusWave,pips};
  });
- const enemyShot=mesh(root,sphere,glow,'raid-host-projectile');enemyShot.scale.set(.7,.7,.7);
+ const enemyShots=Array.from({length:3},()=>{const group=new T.Group();group.name='raid-sung-pattern-projectile';root.add(group);group.visible=false;
+  const orb=mesh(group,sphere,glow),wave=mesh(group,ring,glow),star=mesh(group,stagecraft.starGeometry,glow);orb.scale.setScalar(.7);wave.scale.set(1.7,1.4,1.7);star.scale.setScalar(1.25);return {group,items:[orb,wave,star]};});
  const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
  const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
  const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
@@ -44,12 +51,13 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const fragments=Array.from({length:40},(_,i)=>{const p=mesh(root,i%3===0?box:geo(new T.TetrahedronGeometry(.4,0)),i%2?gold:cream,'raid-pooled-fragment');p.visible=false;return {mesh:p,at:-99,from:new T.Vector3(),index:i};});
  const seen=new Set(),project=new T.Vector3();let disposed=false,last=0,owner=null;
  function update(g){
-  const m=g.gyuwon?.years?.musical;root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible)return;
+  const m=g.gyuwon?.years?.musical;root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible){for(const a of allies)if(a.parent===root)a.scale.setScalar(1);return;}
   const dt=owner===g?Math.max(0,Math.min(.05,m.time-last)):.016;if(owner!==g){seen.clear();owner=g;}last=m.time;
-  scene.background.setHex(0x171321);scene.fog.color.setHex(0x171321);scene.fog.density=.0025;
-  for(const a of allies)if(a.parent!==root)root.add(a);
-  guestParty.update(m);giant.update(m,dt);
+  scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
+  for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
+  guestParty.update(m);giant.update(m,dt);stagecraft.update(m);
   for(let i=0;i<2;i++){const side=i?-1:1;curtains[i].position.x=-side*(16.5+T.MathUtils.smoothstep(m.time,.2,7)*22);curtains[i].rotation.y=side*.035*Math.sin(m.time*.7);}
+  const curtainLift=T.MathUtils.smoothstep(m.time,ACT_FIVE_SCORE[11].start,ACT_FIVE_SCORE[11].end);canopy.position.y=40+curtainLift*7;curtains.forEach(o=>o.position.y=20+curtainLift*5);
   const a=m.raidAttack,compression=a&&a.part<2&&a.age>a.impactAt&&a.age<a.impactAt+.6?Math.sin((a.age-a.impactAt)/.6*Math.PI):0;
   for(let i=0;i<96;i++){const x=(i%16-7.5)*4,z=(Math.floor(i/16)-2.5)*10;const bend=compression*Math.max(0,1-Math.hypot(x-(a?.to.x||0),z-(a?.to.z||0))/8)*.38;v.set(x,-bend,z);s.set(3.96,.3,9.96);matrix.compose(v,q,s);floor.setMatrixAt(i,matrix);}floor.instanceMatrix.needsUpdate=true;
   const light=m.enemies[2];lighting.visible=!light.destroyed;lighting.position.set(light.x,light.y,light.z);crystal.rotation.y=m.time*.4;
@@ -57,7 +65,10 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   petals.forEach((p,i)=>{p.rotation.z=(i%2?1:-1)*(core.active?Math.min(1,(m.time-core.unlock)/3):0)*.85;p.position.y=-Math.min(2,Math.max(0,m.time-core.unlock)*.6);});
   projectiles.forEach(p=>p.group.visible=false);const motion=m.actorMotion,role=motion?m.party.find(p=>p.id===motion.actorId):null;
   motion?.projectiles?.forEach((shot,i)=>{const fx=projectiles[i];if(!fx)return;fx.group.visible=shot.visible&&role.index!==0;fx.group.position.set(shot.x,shot.y,shot.z);fx.group.rotation.set(m.time*3,m.time*4,m.time*2);const shock=role.index===1&&motion.type==='light';fx.items.forEach((o,k)=>o.visible=k===role.index&&!shock);fx.circusWave.visible=shock;fx.group.scale.setScalar(motion.type==='ultimate'?2.3:1);const layout=[[],[4],[0,8],[0,4,8],[0,2,6,8],[0,2,4,6,8],[0,2,3,5,6,8]][motion.diceValue||1];fx.pips.forEach((o,k)=>o.visible=layout.includes(k));});
-  enemyShot.visible=!!a&&a.part>=2&&a.age>=a.wind&&a.age<a.impactAt+.1;if(a)enemyShot.position.set(a.x,a.y,a.z);
+  enemyShots.forEach((fx,i)=>{const shot=a?.shots?.[i];fx.group.visible=!!shot&&a.part>=2&&a.age<a.impactAt+.1;if(!fx.group.visible)return;
+   fx.group.position.set(shot.x,shot.y,shot.z);fx.group.scale.setScalar(a.age<a.wind?.18+.82*scoreEase(a.age/a.wind):1);fx.group.rotation.set(0,m.time*.6,m.time*.9+i);
+   const shape=a.kind==='stars'?2:['wave','crown'].includes(a.kind)?1:0;fx.items.forEach((o,k)=>o.visible=k===shape);
+  });
   for(let i=0;i<notes.length;i++){const n=notes[i];n.visible=!!a&&(a.part===1||a.part===3)&&a.age<a.impactAt;if(n.visible){const u=i/8;n.position.set(a.from.x+Math.sin(m.time*2+i)*3,a.from.y+Math.cos(m.time*2+i)*2,a.from.z+u*5);n.rotation.set(.4,m.time+i,.3);}}
   waves.forEach((w,i)=>{const contact=motion&&motion.age>=motion.hitAt&&motion.age<motion.hitAt+.4;w.visible=contact&&i===role.index||m.finishProgress>0&&m.finishProgress<.92;if(w.visible){const target=m.enemies[m.targetIndex];w.position.set(m.finishProgress>0?0:target.x,m.finishProgress>0?5:target.y,m.finishProgress>0?-9:target.z);w.scale.setScalar(m.finishProgress>0?2+m.finishProgress*(10+m.finishStrength*.4):1+(motion.age-motion.hitAt)*13);}});
   shields.forEach((o,i)=>{o.visible=m.shield>0;const p=m.party[i];o.position.set(p.x,2.5+(p.y||0),p.z-.6);o.rotation.y=Math.sin(m.time*1.5)*.15;});
@@ -65,8 +76,8 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   for(const h of m.raidHistory){if(h.event!=='destroy'||seen.has(h.part))continue;seen.add(h.part);const e=m.enemies[h.part];for(let i=0;i<8;i++){const f=fragments[h.part*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
   fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=age>=0&&age<3;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
  }
- function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{project.set(e.x,e.y+3,e.z).project(camera);return {left:Math.min(r.width-65,Math.max(65,r.left-s.left+(project.x*.5+.5)*r.width+(e.index===3?95:0))),top:Math.max(r.height>500?185:115,r.top-s.top+(-project.y*.5+.5)*r.height),visible:project.z<1&&e.active&&!e.destroyed};});}
- function cameraFrame(m,aspect=1.6){const portrait=aspect<1,position={x:0,y:22,z:portrait?85:57},target={x:0,y:9,z:-9};const motion=m.actorMotion;if(motion?.type==='ultimate'){const e=m.enemies[m.targetIndex],p=m.party.find(p=>p.id===motion.actorId),k=Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI);position.x=p.homeX*.3*k;position.z-=9*k;position.y+=k*2;target.x=e.x*.3*k;target.y+=k*((e.y+4)*.45-9)*.4;}return {position,target};}
+ function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{project.set(e.x,e.y+3,e.z).project(camera);return {left:Math.min(r.width-65,Math.max(65,r.left-s.left+(project.x*.5+.5)*r.width+(e.index===3?95:0))),top:Math.max(r.height>500?185:115,r.top-s.top+(-project.y*.5+.5)*r.height-(e.index<2?10:0)),visible:project.z<1&&e.active&&!e.destroyed};});}
+ function cameraFrame(m,aspect=1.6){const portrait=aspect<1,position={x:0,y:21.5,z:portrait?85:53},target={x:0,y:10.8,z:-9};const motion=m.actorMotion;if(motion?.type==='ultimate'){const e=m.enemies[m.targetIndex],p=m.party.find(p=>p.id===motion.actorId),k=Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI);position.x=p.homeX*.3*k;position.z-=9*k;position.y+=k*2;target.x=e.x*.3*k;target.y+=k*((e.y+4)*.45-10.8)*.4;}return {position,target};}
  async function prewarm(renderer,camera){await guestParty.ready;const visible=root.visible,previous=renderer.getRenderTarget(),target=new T.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
- return {root,update,projectTargets,cameraFrame,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
+ return {root,update,projectTargets,cameraFrame,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }

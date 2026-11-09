@@ -62,15 +62,16 @@ void main(){
  vec3 inkColor=vec3(.065,.061,.073);
  vec3 warmPaper=vec3(.963,.930,.864);
  // Reduce physically based gradients to a painted, partly colored storyboard.
- vec3 wash=floor(clamp(original,0.0,1.0)*5.0+.5)/5.0;
+ vec3 wash=mix(original,floor(clamp(original,0.0,1.0)*8.0+.5)/8.0,.25);
  float gray=brightness(wash);
- vec3 handPaint=mix(vec3(gray),wash,.70);
- vec3 painted=mix(warmPaper,handPaint,.68);
- painted=mix(painted,warmPaper,.13*uStrength);
+ vec3 handPaint=mix(vec3(gray),wash,1.12);
+ // Keep dark coats dark and preserve each model's pigment. Paper belongs
+ // to a faint surface grain, not an opaque white layer over the entire world.
+ vec3 painted=clamp(handPaint*1.05+warmPaper*.008,0.0,1.0);
  // Static paper fiber and diagonal pencil shading in dark areas: neither
  // changes with time, so the screen does not shimmer like TV grain.
  float fiber=sketchHash(floor(gl_FragCoord.xy/3.5));
- painted+=vec3((fiber-.5)*.020);
+ painted+=vec3((fiber-.5)*.006);
  float hatch=(1.0-smoothstep(.10,.57,centerLight))
       *smoothstep(.82,1.0,sin((gl_FragCoord.x+gl_FragCoord.y)*.36));
  painted=mix(painted,inkColor,.060*hatch*uStrength);
@@ -97,7 +98,7 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
  const outputScene=new THREE.Scene();outputScene.add(quad);
  const outputCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
  const dims=new THREE.Vector2();
- let width=0,height=0,disposed=false,broken=false,lastApplied=false;
+ let width=0,height=0,disposed=false,broken=false,lastApplied=false,worldCalls=0,worldTriangles=0;
  function render(scene,camera,{active=false,time=0}={}){
   if(disposed)return false;
   lastApplied=false;
@@ -113,6 +114,7 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
    uniforms.uDrawing.value=gyuwonDoodleDrawingAt(time,reducedMotion);
    renderer.setRenderTarget(target);
    renderer.render(scene,camera);
+   worldCalls=renderer.info?.render?.calls||0;worldTriangles=renderer.info?.render?.triangles||0;
    renderer.setRenderTarget(originalTarget);
    renderer.render(outputScene,outputCamera);
    lastApplied=true;
@@ -138,5 +140,5 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
   geometry.dispose();material.dispose();target.dispose();
  }
  return {render,suspend,prewarm,dispose,
-  stats:()=>({active:!broken&&!disposed,applied:lastApplied,width,height,frame:uniforms.uDrawing.value,kind:'act5-world-ink-ab'})};
+  stats:()=>({active:!broken&&!disposed,applied:lastApplied,width,height,frame:uniforms.uDrawing.value,kind:'act5-world-ink-ab',worldCalls,worldTriangles})};
 }

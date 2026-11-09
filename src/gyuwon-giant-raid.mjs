@@ -1,5 +1,6 @@
 // Simulation owns both visible limb positions and their contact volumes.
 // The giant's part HP is local performance state; only the song ends an act.
+import {ACT_FIVE_SCORE,actFivePerformanceAt,actFiveAttackProfile,actFiveAttackPoint,poseActFiveHands} from './gyuwon-act-five-score.mjs';
 export const GIANT_RAID_SCENES=Object.freeze([[0,'invitation'],[20,'hands'],[40,'lighting'],[90,'mask'],[109,'ensemble'],[140,'grand-stage'],[165,'finish']]);
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -9,7 +10,7 @@ const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 export function setupGiantRaid(g,m,party){
  m.giantRaid=true;m.skillPoints=3;m.maxSkillPoints=5;m.targetIndex=0;m.wave=1;m.turnCount=0;m.supportClock=0;m.partBreaks=0;m.shield=0;m.partyAmp=0;m.usedAbilities=[[],[],[],[]];m.raidHistory=[];
  m.party=party.map((p,i)=>({...p,id:'ally'+i,team:1,index:i,x:-10+i*6.5,y:0,z:9+(i%2)*2,homeX:-10+i*6.5,homeZ:9+(i%2)*2,hp:i===1?175:125,maxHp:i===1?175:125,energy:75+i*7,av:10000/p.speed}));
- const defs=[['왼손',-13,2.7,-3,780,0,0],['오른손',13,2.7,-3,780,1,0],['무대 조명핵',-21,23,-18,1000,2,40],['얼굴의 가면',0,28,-25,900,0,90],['무대 중심핵',0,3,-9,1500,3,109]];
+ const defs=[['왼손',-13,2.7,-3,780,0,0],['오른손',13,2.7,-3,780,1,0],['무대 조명핵',-21,23,-18,1000,2,ACT_FIVE_SCORE[11].start],['얼굴의 가면',0,28,-25,900,0,ACT_FIVE_SCORE[22].start],['무대 중심핵',0,3,-9,1500,3,ACT_FIVE_SCORE[26].start]];
  m.enemies=defs.map(([name,x,y,z,hp,weakness,unlock],i)=>({name,x,y,z,homeX:x,homeY:y,homeZ:z,id:'enemy'+i,index:i,team:-1,hp,maxHp:hp,toughness:100,maxToughness:100,weakness,unlock,active:unlock===0,destroyed:false,broken:0,bleed:0,bleedClock:0,bind:0,speed:75+i*3,av:10000/(75+i*3)}));
  m.raidScene='invitation';m.raidSceneIndex=0;m.raidAttack=null;m.finishProgress=0;nextRaidTurn(m);
 }
@@ -80,6 +81,7 @@ function attackContact(g,m,a,p,c){
  if(p.index===3&&(skill||ulti)){for(const ally of m.party)ally.hp=Math.min(ally.maxHp,ally.hp+(ulti?45:14));m.shield=ulti?7:2;}
 }
 export function tickGiantRaid(g,m,dt,c){
+ if(m.songPerformance?.time!==m.time)m.songPerformance=actFivePerformanceAt(m.time);
  m.shield=Math.max(0,m.shield-dt);m.partyAmp=Math.max(0,m.partyAmp-dt);
  let scene=0;for(let i=1;i<GIANT_RAID_SCENES.length&&m.time>=GIANT_RAID_SCENES[i][0];i++)scene=i;
  m.raidSceneIndex=scene;m.raidScene=GIANT_RAID_SCENES[scene][1];
@@ -99,6 +101,7 @@ export function tickGiantRaid(g,m,dt,c){
   for(const p of m.party)if(p.hp<=0)p.hp=35;
   return;
  }
+ poseActFiveHands(m,dt);
  const a=m.actorMotion;
  if(a){
   const p=m.party.find(p=>p.id===a.actorId),e=m.enemies.find(e=>e.id===a.targetId);a.age+=dt;
@@ -108,14 +111,19 @@ export function tickGiantRaid(g,m,dt,c){
   if(a.age>=a.hitAt)attackContact(g,m,a,p,c);
   if(a.age>=a.duration){p.x=p.homeX;p.z=p.homeZ;p.y=0;m.actorMotion=null;if(a.type==='ultimate')m.turn=m.returnTurn;else nextRaidTurn(m);}
  }else if(m.turn==='boss'){
+  if(m.songPerformance.pattern==='breather'&&!m.raidAttack){nextRaidTurn(m);return;}
   const e=m.enemies.find(e=>e.id===m.turnActor);if(!e||e.destroyed||!e.active||e.broken>0||e.bind>0){m.raidAttack=null;nextRaidTurn(m);return;}
   const victim=m.party.find(p=>p.id===m.enemyVictim&&p.hp>0)||m.party.find(p=>p.hp>0);
   if(!victim){m.turn='support';m.raidAttack=null;return;}
-  if(!m.raidAttack)m.raidAttack={part:e.index,victim:victim.id,age:0,wind:1.4,impactAt:2.1,duration:3.15,from:point(e),to:{x:victim.x,y:1.8,z:victim.z},x:e.x,y:e.y,z:e.z,hit:false};
+  if(!m.raidAttack){const profile=actFiveAttackProfile(m.time,e.index),victims=profile.multi?[victim,...m.party.filter(p=>p.hp>0&&p.id!==victim.id)].slice(0,3):[victim];
+   m.raidAttack={...profile,part:e.index,victim:victim.id,age:0,from:point(e),to:{x:victim.x,y:1.8,z:victim.z},x:e.x,y:e.y,z:e.z,hit:false,
+    shots:victims.map(p=>({victim:p.id,from:point(e),to:{x:p.x,y:p.y+1.8,z:p.z},x:e.x,y:e.y,z:e.z,hit:false}))};
+   m.raidHistory.push({at:m.time,event:'song-pattern',kind:profile.kind,cue:m.songPerformance.index});
+  }
   const b=m.raidAttack;b.age+=dt;m.turnElapsed=b.age;m.turnWind=Math.max(0,b.wind-b.age);
-  const q=ease((b.age-b.wind)/(b.impactAt-b.wind)),recover=ease((b.age-b.impactAt-.2)/.85);
-  b.x=lerp(b.from.x,b.to.x,q);b.z=lerp(b.from.z,b.to.z,q);b.y=lerp(b.from.y+Math.sin(clamp(b.age/b.wind,0,1)*Math.PI)*5,b.to.y,q);
-  if(b.age>=b.impactAt&&!b.hit){b.hit=true;if(distance(b,{x:victim.x,y:victim.y+1.8,z:victim.z})<4.5){const amount=m.shield>0?7:18;victim.hp=Math.max(0,victim.hp-amount);victim.energy=Math.min(100,victim.energy+18);c.take(g,amount,c.emit);}}
+  const pos=actFiveAttackPoint(b,b.from,b.to,b.age,e.index%2?1:-1),recover=pos.back;Object.assign(b,{x:pos.x,y:pos.y,z:pos.z});
+  for(const shot of b.shots){const pos=actFiveAttackPoint(b,shot.from,shot.to,b.age,e.index%2?1:-1);Object.assign(shot,{x:pos.x,y:pos.y,z:pos.z});}
+  if(b.age>=b.impactAt&&!b.hit){b.hit=true;for(const shot of b.shots){const p=m.party.find(p=>p.id===shot.victim);shot.hit=true;if(p&&p.hp>0&&distance(shot,{x:p.x,y:p.y+1.8,z:p.z})<4.5){const amount=m.shield>0?7:b.multi?12:18;p.hp=Math.max(0,p.hp-amount);p.energy=Math.min(100,p.energy+18);c.take(g,amount,c.emit);}}}
   if(e.index<2){e.x=lerp(b.x,e.homeX,recover);e.y=lerp(b.y,e.homeY,recover);e.z=lerp(b.z,e.homeZ,recover);}
   if(b.age>=b.duration){e.x=e.homeX;e.y=e.homeY;e.z=e.homeZ;m.raidAttack=null;nextRaidTurn(m);}
  }

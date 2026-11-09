@@ -1,4 +1,5 @@
 import {usesReference2d} from './gyuwon-reference-rules.mjs';
+import {ACT_FIVE_INK_UI} from './gyuwon-act-five-ink-ui.mjs';
 
 
 
@@ -24,13 +25,14 @@ export function createGyuwonUi({coarse=false,doc=globalThis.document}={}){
  // No low-HP red heartbeat during the noncombat curtain call or dedication.
  musicStyle.textContent+='[data-curtain-call="on"] #vignette{--lowhp:0!important;--beat:0!important}[data-curtain-call="on"] #vignette[data-fx]::after{background:none!important}[data-curtain-call="on"] #hit-flash,[data-curtain-call="on"] .oden-hit-overlay,[data-curtain-call="on"] .oden-impact-light{display:none!important}';
  shell.appendChild(musicStyle);
+ musicStyle.textContent+=ACT_FIVE_INK_UI;
  let disposed=false;const styles=loadBattleStyles(root,doc,['../style.css?v=ui-safe-layout-v2-20261107','../skills.css?v=ui-refine-20261107'].map(path=>new URL(path,import.meta.url))),ready=styles.ready.then(ok=>{if(!disposed)shell.style.visibility='';return ok;});doc.body.appendChild(d);
  function mode(value){$('menu').hidden=true;$('pause-screen').hidden=value!=='paused';$('result').hidden=value!=='result';for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;$('touch').hidden=!coarse||value!=='playing';$('pause').disabled=!['playing','paused'].includes(value);}
  function render(g,sv,weaponName,lock){const b=g.boss,s=g.gyuwon;renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});if(s.years){$('boss-hud').querySelector('h2').textContent=R.name;$('phase-label').textContent=gyuwonYearTitle(s.years.year)+(s.years.musical?' · '+s.years.musical.title:'');$('boss-action').textContent='';$('boss-action').removeAttribute('data-critical');$('notice').textContent='';$('notice').classList.remove('visible');yearsHud.update(g);musicalHud.update(g);
    const fill=$('boss-fill');
    fill.style.background=s.years.musical?s.years.musical.color:'';
    const musical=!!s.years.musical;
-   shell.dataset.reverie=s.years.mode==='reverie'?'on':'off';shell.dataset.musical=musical?'on':'off';shell.dataset.curtainCall=musical&&s.years.year>=11?'on':'off';shell.dataset.reference2d=usesReference2d(s.years.musical)?'on':'off';shell.dataset.referenceTurn=s.years.musical?.reference&&s.years.year===5?'on':'off';shell.dataset.referenceYear=String(s.years.year);shell.dataset.musicalEnding=musical&&g.status==='won'?'on':'off';shell.style.background=musical&&g.status==='won'?'#000':'';
+   shell.dataset.inkUi=s.years.musical?.giantRaid&&!s.years.musical?.finishing?'on':'off';shell.dataset.reverie=s.years.mode==='reverie'?'on':'off';shell.dataset.musical=musical?'on':'off';shell.dataset.curtainCall=musical&&s.years.year>=11?'on':'off';shell.dataset.reference2d=usesReference2d(s.years.musical)?'on':'off';shell.dataset.referenceTurn=s.years.musical?.reference&&s.years.year===5?'on':'off';shell.dataset.referenceYear=String(s.years.year);shell.dataset.musicalEnding=musical&&g.status==='won'?'on':'off';shell.style.background=musical&&g.status==='won'?'#000':'';
    $('controls').hidden=musical;
    const closing=s.years.musical?.finishing,fade=closing?Math.max(0,1-(s.years.musical.curtain-27)/9):1;
    $('boss-hud').style.opacity=$('player-hud').style.opacity=String(fade);

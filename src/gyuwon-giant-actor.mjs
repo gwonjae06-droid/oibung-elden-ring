@@ -5,7 +5,7 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const root=new T.Group();root.name='gyuwon-giant-musical-host';parent.add(root);
  const ownM=new Set(),ownG=new Set(),mat=(...args)=>{const m=new T.MeshStandardMaterial(...args);ownM.add(m);return m;},geo=g=>(ownG.add(g),g);
  const skin=source.getObjectByName('gyuwon-palm')?.material||mat({color:0xd3ae96,roughness:.75});
- const velvet=mat({color:0x191b2b,roughness:.88,metalness:.08}),silk=mat({color:0xf4ead7,roughness:.53}),gold=mat({color:0xc8a26a,metalness:.76,roughness:.3}),dark=mat({color:0x241118,roughness:.92});
+ const velvet=mat({color:0x30445d,roughness:.88,metalness:.08}),silk=mat({color:0xf4ead7,roughness:.53}),gold=mat({color:0xc8a26a,metalness:.76,roughness:.3}),dark=mat({color:0x241118,roughness:.92});
  const torso=source.getObjectByName('gyuwon-tailored-torso').clone(true);root.add(torso);torso.scale.setScalar(10.5);torso.position.set(0,15.5,-25);torso.rotation.y=0;
  torso.traverse(o=>{
   if(/^gyuwon-year-\d+-rig-gear$/.test(o.name)||/accumulated-nightmare|shoulder-rig/.test(o.name))o.visible=false;
@@ -39,14 +39,21 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const shell=add(mask,shellGeo,maskMat,'giant-gold-half-mask');shell.scale.set(.77,.82,.31);shell.position.z=.7;
  for(const side of [-1,1]){const socket=add(mask,sphere,dark,'theater-mask-eye');socket.position.set(side*1.8,.4,2.35);socket.scale.set(.95,.5,.12);}
  const cracks=[];for(let i=0;i<6;i++){const curve=new T.CatmullRomCurve3([new T.Vector3(-2+i*.8,2,2.15),new T.Vector3(-2.2+i*.8,.2,2.6),new T.Vector3(-1.6+i*.8,-2.3,2.3)]);const c=add(mask,geo(new T.TubeGeometry(curve,8,.035,5,false)),dark,'mask-physical-crack');cracks.push(c);}
- const direction=new T.Vector3(),mid=new T.Vector3(),up=new T.Vector3(0,1,0);let disposed=false;
+ const direction=new T.Vector3(),mid=new T.Vector3(),up=new T.Vector3(0,1,0),costumeColor=new T.Color(0x725080);let disposed=false;
  function link(mesh,a,b,r1,r2){direction.subVectors(b,a);mesh.position.copy(mid.copy(a).add(b).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(up,direction.clone().normalize());mesh.scale.set(r1,direction.length(),r2);}
  function update(m,dt){
   const beat=m.time*2*Math.PI*(m.bpm||136)/60,breath=Math.sin(m.time*1.45)*.15,bow=m.finishProgress||0;
+  const blend=1-Math.exp(-dt*10),p=m.songPerformance||{gesture:'idle',weight:0,progress:0},w=p.weight,dance=p.gesture==='dance'?w:0,laugh=p.gesture==='laugh'?w*Math.sin(p.progress*Math.PI):0;
   const focus=m.party.find(p=>p.id===(m.raidAttack?.victim||m.turnActor));
-  torso.position.y=15.5+breath-Math.sin(bow*Math.PI)*1.4;torso.rotation.x=Math.sin(m.time*.8)*.012+bow*.07;head.rotation.y=Math.atan2(focus?.x||0,40)*.3+Math.sin(m.time*.35)*.015;head.rotation.z=Math.sin(beat*.5)*.015;
+  torso.position.y=T.MathUtils.lerp(torso.position.y,15.5+breath-Math.sin(bow*Math.PI)*1.4-laugh*2+Math.abs(Math.sin(beat*.5))*dance*.25,blend);
+  torso.rotation.x=T.MathUtils.lerp(torso.rotation.x,Math.sin(m.time*.8)*.012+bow*.07+laugh*.18+(p.gesture==='greet'?Math.sin(p.progress*Math.PI)*w*.1:p.gesture==='run'?.07*w:0),blend);torso.rotation.z=T.MathUtils.lerp(torso.rotation.z,Math.sin(beat*.5)*dance*.055+laugh*.18+(p.gesture==='run'?Math.sin(beat)*.025*w:0),blend);
+  head.rotation.x=T.MathUtils.lerp(head.rotation.x,(p.gesture==='self'||p.gesture==='heart'?.16:p.gesture==='sky'||p.gesture==='flight'?-.13:0)*w,blend);
+  head.rotation.y=T.MathUtils.lerp(head.rotation.y,Math.atan2(focus?.x||0,40)*.3+Math.sin(m.time*.35)*.015+(p.gesture==='choose'?Math.sin(m.time*1.7)*.16*w:0),blend);head.rotation.z=T.MathUtils.lerp(head.rotation.z,Math.sin(beat*.5)*.015-laugh*.12,blend);
+  velvet.color.setHex(0x30445d).lerp(costumeColor,p.gesture==='costume'?w:0);
+  torso.updateWorldMatrix(true,false);
   tails.forEach((o,i)=>{o.rotation.x=Math.sin(m.time*1.35+i)*.045+bow*.12;o.rotation.z=Math.sin(m.time*.8+i)*.025;});
   for(const arm of arms){
+   arm.shoulder.set(arm.side*.64,.63,0).applyMatrix4(torso.matrixWorld);
    const e=m.enemies[arm.index];const withdrawn=e.destroyed?1:0;
    arm.target.set(e.x+arm.side*withdrawn*7,e.y+withdrawn*2,e.z-withdrawn*12);
    arm.hand.position.lerp(arm.target,1-Math.exp(-Math.max(.001,dt)*25));

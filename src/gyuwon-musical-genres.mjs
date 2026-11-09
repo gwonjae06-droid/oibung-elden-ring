@@ -1,4 +1,5 @@
 import {setupReferenceMinigame,actReferenceMinigame,tickReferenceMinigame} from './gyuwon-reference-rules.mjs';
+import {actFivePerformanceAt,poseActFiveHands} from './gyuwon-act-five-score.mjs';
 // One unbroken, playable eleven-act fight. Acts 1-4 keep the authored
 // annual system. Acts 5-11 replace it with six distinct controls/genres and
 // a final musical. No exam/result roll or fake remote damage is used here.
@@ -375,6 +376,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  if(m.clock?.ended)m.time=m.clock.duration;
  else if(m.clock?.source==='media')m.time=Math.max(m.time,m.clock.time);
  else m.time+=dt;
+ if(m.giantRaid)m.songPerformance=actFivePerformanceAt(m.time);
  const duration=m.clock?.duration||song.duration;
  m.actProgress=clamp(m.time/duration,0,1);
  m.masterScene=gyuwonMasterScene(gyuwonSongKey(m),m.time);
@@ -409,6 +411,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  g.player.invuln=Math.max(0,g.player.invuln-dt);
  if(m.dash){const d=m.dash,step=Math.min(dt,d.left);g.player.x=clamp(g.player.x+d.vx*step,-19,19);d.left-=step;if(d.left<=0)m.dash=null;}
  if(m.transition>0){
+  if(m.giantRaid)poseActFiveHands(m,dt);
   const q=1-m.transition/m.entryDuration,k=q*q*(3-2*q),a=m.entry;
   if(a&&!(m.reference&&m.year>=6)){g.player.x=a.px+(a.tx-a.px)*k;g.player.z=a.pz+(a.tz-a.pz)*k;g.boss.x=a.bx+(a.btx-a.bx)*k;g.boss.z=a.bz+(a.btz-a.bz)*k;}
   return;
