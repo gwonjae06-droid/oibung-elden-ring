@@ -8,7 +8,8 @@ test('act eight lyric direction changes scene from army to dance to dawn to next
  assert.equal(gyuwonDanceScene(12).key,'invitation');
  assert.equal(gyuwonDanceScene(42).key,'stars');
  assert.equal(gyuwonDanceScene(98).key,'silence');
- assert.equal(gyuwonDanceScene(119).key,'rain');
+ assert.equal(gyuwonDanceScene(119).key,'encore');
+ assert.equal(gyuwonDanceScene(121).key,'rain');
  assert.equal(gyuwonDanceScene(160).key,'sunrise');
  assert.equal(gyuwonDanceScene(176).key,'bow');
  assert.equal(gyuwonDanceScene(180).ring,1);
