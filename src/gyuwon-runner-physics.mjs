@@ -77,7 +77,7 @@ export function runnerObstacleContact(m,playerX,o){
  const bottom=m.jumpY;
  const top=bottom+runnerBodyHeight(m);
  const low=o.kind==='low';
- const lo=low?1.50:0,hi=low?3.58:1.30;
+ const lo=low?1.50:0,hi=low?3.58:(o.height||1.30);
  return top>lo+.055&&bottom<hi-.055;
 }
 export function runnerGuideReset(m,scene){
@@ -104,8 +104,8 @@ export function runnerGuideCatch(m,player,time){
 }
 export function runnerGuideWarning(m,playerX,time){
  if(m.guideActionUntil>time&&['bridge','catch'].includes(m.guideAction))return;
- const nearest=m.obstacles.filter(o=>!o.hit&&o.x>playerX&&o.x-playerX<20)
-  .sort((a,b)=>a.x-b.x)[0];
+ let nearest=null;
+ for(const o of m.obstacles){if(o.hit||o.x<=playerX||o.x-playerX>=20)continue;if(!nearest||o.x<nearest.x)nearest=o;}
  if(nearest){m.guideAction='warn';m.guideActionUntil=time+.45;
   m.guideWarnId=nearest.id;m.guideWarnKind=nearest.kind;}
  else if(m.guideActionUntil<=time){m.guideAction='';m.guideWarnId=null;}
