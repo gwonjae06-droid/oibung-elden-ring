@@ -126,7 +126,7 @@ function rhythmPress(g,m,type,emit){
 }
 export function actGyuwonMusical(g,type,emit=()=>{}){
  const m=g?.gyuwon?.years?.musical;
- if(!m||g.status!=='playing'||m.finishing||m.songEnded||m.transition>0)return false;
+ if(!m||g.status!=='playing'||m.finishing||m.songEnded||m.transition>0||m.clock?.source==='error')return false;
  if(m.reference)return actReferenceMinigame(g,m,type,{deal,take,heal,emit});
  if(m.kind==='turn')return turnChoice(g,m,type,emit);
  if(m.kind==='rhythm'||m.kind==='finale')return rhythmPress(g,m,type,emit);
@@ -329,8 +329,11 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  if(!m||g.status!=='playing')return;
  const realDt=clamp(dt,0,1/30),song=GYUWON_SONGS[gyuwonSongKey(m)];
  // Finite audio position is authoritative. Buffering freezes gameplay too.
- dt=m.clock&&['media','fallback'].includes(m.clock.source)?Math.max(0,Math.min(.05,m.clock.time-m.time)):realDt;
- if(m.clock?.ended)m.time=m.clock.duration;else m.time+=dt;
+ // Media time is authoritative even when visual frames lag; audio errors freeze the act.
+ dt=m.clock?(m.clock.source==='media'?Math.max(0,Math.min(.05,m.clock.time-m.time)):0):realDt;
+ if(m.clock?.ended)m.time=m.clock.duration;
+ else if(m.clock?.source==='media')m.time=Math.max(m.time,m.clock.time);
+ else m.time+=dt;
  const duration=m.clock?.duration||song.duration;
  const ended=m.clock?m.clock.ended:m.time>=duration;
  if(m.finishing){

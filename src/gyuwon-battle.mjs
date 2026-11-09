@@ -83,6 +83,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   function setMode(value){if(value!=='playing')freeLook.release();mode=value;hud.mode(value);clearInput();}
   function request(type){
    if(!ready||introGate.blocked||mode!=='playing')return;
+   if(type==='retry-audio'){musicalScore.retry();return;}
    sound();
    if(type==='lock'){lock=!lock;if(lock)freeLook.release();else freeLook.capture();return;}
    const v=g.gyuwon.years?.musical?musicalInput():input(),accepted=actGyuwon(g,type,{...v,lock,cameraYaw:yaw});

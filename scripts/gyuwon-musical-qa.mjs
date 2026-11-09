@@ -22,21 +22,21 @@ try{
  assert.equal(await page.evaluate(()=>window.__session().game.gyuwon.years.musical.time),paused);
  await page.evaluate(()=>document.getElementById('gyuwon-battle').firstElementChild.shadowRoot.getElementById('resume').click());
  await page.evaluate(()=>localStorage.setItem('oibung-muted','1'));await page.waitForTimeout(200);
- assert.equal(await page.evaluate(()=>window.__media.find(a=>a.src.endsWith('/gyuwon5.mp3')&&!a.paused)?.muted),true);
+ assert.equal(await page.evaluate(()=>window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop)?.muted),true);
  await page.evaluate(()=>localStorage.setItem('oibung-muted','0'));
  const results=[];
  for(let y=5;y<=11;y++){
   await page.waitForFunction(y=>window.__session().game.gyuwon.years.year===y&&window.__session().game.gyuwon.years.musical.time>3,y,{timeout:15000});
   await page.screenshot({path:`qa-output/musical/act-${y}.png`,timeout:30000});console.log('Verified act',y);
   results.push(await page.evaluate(()=>{const s=window.__session();return {year:s.game.gyuwon.years.year,hp:s.game.boss.hp,clock:s.game.gyuwon.years.musical.clock,graphics:s.diagnostics()};}));
-  await page.evaluate(y=>{const a=window.__media.find(a=>a.src.endsWith(`/gyuwon${y}.mp3`)&&!a.paused);if(!a)throw Error('missing playing master '+y);a.currentTime=a.duration-.12;},y);
+  await page.evaluate(y=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);if(!a)throw Error('missing playing master '+y);a.currentTime=a.duration-.12;},y);
   await page.waitForFunction(y=>y===11?window.__session().game.gyuwon.years.mode==='curtain':window.__session().game.gyuwon.years.year===y+1,y,{timeout:15000});
   assert.equal(await page.evaluate(()=>window.__session().game.boss.hp),[5300,4600,3900,3200,2500,1800,800][y-5]);
  }
- await page.waitForFunction(()=>window.__media.some(a=>a.src.endsWith('/gyuwonending.mp3')&&!a.paused),{timeout:10000});
- await page.evaluate(()=>{const a=window.__media.find(a=>a.src.endsWith('/gyuwonending.mp3')&&!a.paused);a.currentTime=25;window.__session().game.gyuwon.years.musical.time=25;});
+ await page.waitForFunction(()=>window.__media.some(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop),{timeout:10000});
+ await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=25;window.__session().game.gyuwon.years.musical.time=25;});
  await page.waitForTimeout(500);await page.screenshot({path:'qa-output/musical/ending-question.png'});
- await page.evaluate(()=>{const a=window.__media.find(a=>a.src.endsWith('/gyuwonending.mp3')&&!a.paused);a.currentTime=a.duration-.12;});
+ await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-.12;});
  await page.waitForFunction(()=>window.__session().game.status==='won',{timeout:10000});
  assert.equal(await page.evaluate(()=>window.__session().game.stats.damage),0);
  await page.evaluate(async()=>{window.__battle.close();window.__finale=(await import('./src/journey-finale.mjs')).playJourneyFinale(document,window);});

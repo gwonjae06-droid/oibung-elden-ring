@@ -1,4 +1,5 @@
-// Phrase timings measured on the shortened masters; English reviewed against the supplied libretto.
+import {originalTimingForEditedCue} from './gyuwon-original-timeline.mjs';
+// Historical short-master cues; incomplete portions of original masters intentionally remain silent.
 export const GYUWON_SUBTITLES={
  "5": [
   {
@@ -677,4 +678,8 @@ export const GYUWON_SUBTITLES={
   }
  ]
 };
-export function gyuwonSubtitleAt(key,time){return GYUWON_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end)||null;}
+export const GYUWON_ORIGINAL_SUBTITLES=Object.freeze(Object.fromEntries(
+ Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>[key,cues.flatMap(c=>{
+  const mapped=originalTimingForEditedCue(key,c);return mapped?[{...c,...mapped}]:[];
+ }).sort((a,b)=>a.start-b.start)])));
+export function gyuwonSubtitleAt(key,time){return GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end)||null;}
