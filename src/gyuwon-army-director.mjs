@@ -13,7 +13,7 @@ export const GYUWON_ARMY_STAGES=Object.freeze([
  Object.freeze({at:175,key:'exit',sky:['#9e83c1','#e0bbca'],hill:'#8a83ab',soil:'#897c8f'})
 ]);
 export function gyuwonArmyScene(time=0,duration=180){
- const t=clamp((time/(duration||180))*180,0,180);
+ const t=clamp(time*(180/(duration||180))+1e-8,0,180);
  let stage=GYUWON_ARMY_STAGES[0];
  for(const cue of GYUWON_ARMY_STAGES)if(t>=cue.at)stage=cue;
  return {...stage,time:t,progress:t/180,
