@@ -3,6 +3,7 @@ import {setupReferenceMinigame,actReferenceMinigame,tickReferenceMinigame} from 
 // annual system. Acts 5-11 replace it with six distinct controls/genres and
 // a final musical. No exam/result roll or fake remote damage is used here.
 import {playerIncomingDamage} from './weapon-stats.mjs';
+import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 
@@ -61,6 +62,7 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  m.bpm=GYUWON_BEATS[e.year]?.bpm||GYUWON_SONGS[e.year].bpm;m.chartIndex=0;
  const from={px:g.player.x,pz:g.player.z,bx:g.boss.x,bz:g.boss.z};
  e.musical=m;e.mode='musical';e.cast=null;e.castT=0;
+ g.player.hp=Math.max(gyuwonPlayerHpFloor(g),g.player.hp);
  e.grade=null;e.gradeT=0;e.subjectLabel=null;e.wards=[];e.signatureUsed=true;
  e.mapPending=false;e.mapClock=0;e.recover=0;e.day=365;
  g.gyuwon.space='white';g.gyuwon.stageMemory=null;g.gyuwon.pattern=null;
@@ -84,13 +86,11 @@ function deal(g,amount,emit){
 function take(g,amount,emit){
  const m=g.gyuwon.years?.musical,p=g.player;
  if(!m||m.finishing||p.invuln>0||m.guard>0||m.transition>0)return false;
- const value=Math.min(p.hp,playerIncomingDamage(g,amount*.4));
- p.hp=Math.max(0,p.hp-value);p.invuln=.67;m.hitFlash=.26;
+ // A hit still lands, staggers, and produces feedback. It never kills the
+ // player nor triggers the old surprise full heal in the narrative finale.
+ const value=applyGyuwonPlayerDamage(g,playerIncomingDamage(g,amount*.4));
+ p.invuln=.67;m.hitFlash=.26;
  emit('hurt',{amount:value});
- if(!p.hp){
-  if(!m.recovered){m.recovered=true;p.hp=p.maxHp*.4;p.invuln=2;m.combo=0;emit('healed');}
-  else{g.status='lost';emit('death');}
- }
  return true;
 }
 const heal=(g,emit)=>{
