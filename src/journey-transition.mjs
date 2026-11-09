@@ -1,8 +1,10 @@
 import {renderJourneyArt} from './journey-art.mjs?art=home-mural-fit-v1-20261108';
 import {playDiceCrushEntrance} from './dice-entrance-view.mjs';
+import {playJourneyFinale} from './journey-finale.mjs';
 
 import {playBossCue,stopBossCue} from './boss-cues.mjs';
 export function playJourneyTransition(doc,win,boss,shell){
+ if(boss==='complete')return playJourneyFinale(doc,win);
  if(boss==='dice')return playDiceCrushEntrance(doc,shell,{win});
  const d=doc.createElement('dialog');d.className='journey-transition';d.setAttribute('aria-label',boss==='kwon'?'검기로 열리는 첫 번째 시련':boss==='clown'?'광대 오슬우 전환 연출':boss==='blood'?'성혈 대성당으로':boss==='gyuwon'?'심야 자습실로':'다섯 시련의 종결');
  d.innerHTML=boss==='kwon'?`<div class="jt-half jt-left">${renderJourneyArt("transition-left")}</div><div class="jt-half jt-right">${renderJourneyArt("transition-right")}</div><div class="jt-slash"></div>`:boss==='clown'?'<canvas aria-label="공 위에서 등장해 인사하는 광대 오슬우"></canvas>':boss==='blood'?'<div class="jt-ending" style="color:#dd5478">♜　♥　♜</div>':boss==='gyuwon'?'<div class="jt-ending">마지막 문제</div>':'<div class="jt-ending">◇　◇　◇　◇　◇</div>';

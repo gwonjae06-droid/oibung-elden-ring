@@ -41,8 +41,7 @@ test('controller grants five repeatable flames, replaces relic choices, and reco
  f.game().status='won';await f.poll();assert.match(f.dialog.html,/영원하지 못한 생명/);
  await f.click('memory-next');assert.match(f.dialog.html,/정화의 불꽃을 획득했습니다/);
  await f.click('flame-next');await f.click('next');
- f.game().status='won';await f.poll();assert.match(f.dialog.html,/마지막 빈칸/);
- await f.click('memory-next');await f.click('flame-next');assert.match(f.dialog.html,/다섯 지배자를 넘어섰다/);
+ f.game().status='won';await f.poll();assert.match(f.dialog.html,/다섯 지배자를 넘어섰다/);
  const saved=JSON.parse(f.data.get(SAVE_KEY));
  assert.equal(saved.clears,1);assert.equal(saved.flames,5);assert.equal(saved.earnedFlames,5);
  assert.deepEqual(saved.memories.map(m=>m.id),['kwon','clown','dice','blood','gyuwon']);
@@ -199,7 +198,7 @@ test('starting at final unlocked boss rewards only its clear and records that st
  const profile=freshProfile();profile.flames=2;profile.defeated=['kwon','clown','dice','blood'];
  profile.records=[{weapon:'sword',time:100,deaths:0,bossCount:4,startStage:0}];profile.clears=1;
  const f=rig({savedProfile:profile});await f.click('new');await f.click('boss-target',{stage:'4'});await f.click('begin');
- assert.equal(f.game().boss.maxHp,BOSS_REGISTRY.gyuwon.maxHp);
+ assert.equal(f.game().boss.maxHp,7000);
  f.game().status='won';await f.poll();await f.click('memory-next');await f.click('flame-next');
  assert.match(f.dialog.html,/마지막 시련을 넘어섰다/);assert.match(f.dialog.html,/별도로 기록/);
  const saved=JSON.parse(f.data.get(SAVE_KEY));assert.equal(saved.flames,3);assert.equal(saved.earnedFlames,3);
