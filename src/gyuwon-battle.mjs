@@ -2,6 +2,7 @@ import {createDanceCueAudio} from './gyuwon-dance-cues.mjs';
 import {referenceKeyAction,usesReference2d} from './gyuwon-reference-rules.mjs';
 import {createGyuwon2dView} from './gyuwon-2d-view.mjs';
 import {createGyuwonTurnStage} from './gyuwon-turn-stage.mjs';
+import {createGyuwonLivingDoodle,isGyuwonLivingDoodleAct} from './gyuwon-living-doodle.mjs';
 import {createPlayerProjectileView} from './player-projectile-view.mjs';
 import {gyuwonMemoryFraming} from './gyuwon-horizon-camera.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
@@ -46,6 +47,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   if(document.getElementById('gyuwon-battle'))return null;
   const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion(),hud=createGyuwonUi({coarse}),{d,root,shell,$,canvas}=hud;startup.own('Gyuwon HUD',()=>hud.dispose());
   const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});const quality=createEncounterQuality({coarse}),audit=createFramePerformanceAudit({renderer,boss:'gyuwon'});startup.own('Gyuwon renderer',()=>renderer.dispose());renderer.setPixelRatio(1);renderer.shadowMap.enabled=!coarse;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.13;renderer.outputColorSpace=THREE.SRGBColorSpace;d.showModal();
+   const doodle=createGyuwonLivingDoodle(renderer,{coarse,reducedMotion:reduced});startup.own('Act V living doodle',()=>doodle.dispose());
   const scope=createEventScope(window);startup.own('Gyuwon callbacks',()=>scope.dispose());const scene=new THREE.Scene();startup.own('Gyuwon scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x111b28);scene.fog=new THREE.FogExp2(0x111b28,.009);
   scene.add(new THREE.HemisphereLight(0xcbe1ff,0x263446,1.9));const sun=new THREE.DirectionalLight(0xd5eaff,2);sun.position.set(19,38,16);sun.castShadow=!coarse;
    if(!coarse){sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,near:1,far:110});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.028;}
@@ -117,7 +119,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
     // First-use GPU shader compilation belongs behind the initial loading
     // gate, never in the middle of a phase-three memory map transition.
-    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);doodle.prewarm();}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
     if(closed)return;hud.loading(false);ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
@@ -137,7 +139,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
    const referenceMini=g.gyuwon.years?.musical;
-   if(usesReference2d(referenceMini)){flatView.render(g);turnStage.root.visible=false;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);return;}
+   if(usesReference2d(referenceMini)){doodle.suspend();flatView.render(g);turnStage.root.visible=false;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);return;}
    flatView.canvas.hidden=true;
    study.update(g,impact.frozen?0:visualDt);musicalStage.update(g);musicalStage.root.visible=musicalStage.root.visible&&!referenceMini?.reference;turnStage.update(g);player.rig.visible=!(referenceMini?.reference&&referenceMini.year===5);study.root.visible=!(referenceMini?.giantRaid);impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:g.gyuwon.years?.musical?.slide>0?.48:1;const walk=posePlayer(player,(g.gyuwon.years?.musical?.time??g.time)*7,a?0:g.gyuwon.years?.musical?.kind==='runner'?7:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=g.gyuwon.years?.musical?.playerStrike?-1.2+Math.sin(Math.min(1,g.gyuwon.years.musical.playerStrike.age/.6)*Math.PI)*2.5:a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
    // Real positions are shared with collision for arrows, cards, sword
@@ -196,10 +198,10 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
  }
  camera.position.lerp(desired,1-Math.exp(-4.6*dt));
    }
- study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
+ study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);doodle.render(scene,camera,{active:isGyuwonLivingDoodleAct(referenceMini),time:referenceMini?.time??0});audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.calls,triangles:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.triangles,
  camera:{x:camera.position.x,y:camera.position.y,z:camera.position.z,fov:camera.fov},
- view:study.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
+ view:study.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),livingDoodle:doodle.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
  });
 }

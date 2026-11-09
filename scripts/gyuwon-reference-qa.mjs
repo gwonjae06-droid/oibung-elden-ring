@@ -66,7 +66,7 @@ try{
   }
   await page.screenshot({path:`qa-output/reference/act-${y}.png`});
   const result=await value(()=>{const s=window.__session(),m=s.game.gyuwon.years.musical,r=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;return {year:m.year,score:m.score,hp:s.game.boss.hp,graphics:s.diagnostics(),brand:getComputedStyle(r.querySelector('.brand')).display,controls:[...r.querySelectorAll('.gy-musical-actions button')].map(b=>{const r=b.getBoundingClientRect();return {action:b.dataset.musicalAction,x:r.x,y:r.y,w:r.width,h:r.height};})};});
-  assert.equal(result.graphics.renderMode,y===5?'webgl':'canvas2d');assert.equal(result.brand,'none');
+  assert.equal(result.graphics.renderMode,y===5?'webgl':'canvas2d');assert.equal(result.graphics.livingDoodle.applied,y===5,'only 5수 should render through ink A/B shader');assert.equal(result.brand,'none');
   if(y>5){assert.equal(result.graphics.calls,0);assert.equal(result.graphics.triangles,0);}
   for(const b of result.controls)assert.ok(b.x>=0&&b.x+b.w<=1281&&b.y>=0&&b.y+b.h<=801,JSON.stringify(b));
   results.push(result);console.log('Verified reference controls',y);
