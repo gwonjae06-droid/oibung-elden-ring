@@ -12,11 +12,31 @@ export function setupGiantRaid(g,m,party){
  m.party=party.map((p,i)=>({...p,id:'ally'+i,team:1,index:i,x:-10+i*6.5,y:0,z:9+(i%2)*2,homeX:-10+i*6.5,homeZ:9+(i%2)*2,hp:i===1?175:125,maxHp:i===1?175:125,energy:75+i*7,av:10000/p.speed}));
  const defs=[['왼손',-13,2.7,-3,780,0,0],['오른손',13,2.7,-3,780,1,0],['무대 조명핵',-21,23,-18,1000,2,ACT_FIVE_SCORE[11].start],['얼굴의 가면',0,28,-25,900,0,ACT_FIVE_SCORE[22].start],['무대 중심핵',0,3,-9,1500,3,ACT_FIVE_SCORE[26].start]];
  m.enemies=defs.map(([name,x,y,z,hp,weakness,unlock],i)=>({name,x,y,z,homeX:x,homeY:y,homeZ:z,id:'enemy'+i,index:i,team:-1,hp,maxHp:hp,toughness:100,maxToughness:100,weakness,unlock,active:unlock===0,destroyed:false,broken:0,bleed:0,bleedClock:0,bind:0,speed:75+i*3,av:10000/(75+i*3)}));
+ m.encoreCount=0;m.encoreDelay=0;
  m.raidScene='invitation';m.raidSceneIndex=0;m.raidAttack=null;m.spotlightCounter=null;m.finishProgress=0;nextRaidTurn(m);
 }
 const live=m=>m.enemies.filter(e=>e.active&&!e.destroyed&&e.hp>0);
+// The five original parts remain permanently broken. A separately targetable
+// dream prop is rebuilt when no active target survives.
+export function summonActFiveEncore(m){
+ if(live(m).length||m.time>=165)return false;
+ const old=m.enemies[5],cycle=(m.encoreCount||0)+1;
+ const labels=['꿈의 별','다시 열리는 문','황금 왕관','노래의 심장','새로운 무대'];
+ const x=[0,-16,15,0,0][(cycle-1)%5],y=[11,9,10,12,7][(cycle-1)%5],z=-12;
+ const hp=340+Math.min(4,cycle-1)*110;
+ const e=old||{id:'enemy5',index:5,team:-1,speed:85,av:0,bleed:0,bleedClock:0,bind:0,broken:0,maxToughness:100};
+ Object.assign(e,{name:'앙코르 · '+labels[(cycle-1)%5],x,y,z,homeX:x,homeY:y,homeZ:z,
+  hp,maxHp:hp,toughness:100,maxToughness:100,weakness:(cycle-1)%4,
+  unlock:0,active:true,destroyed:false,encore:true,bleed:0,bind:0,broken:0,av:0});
+ if(!old)m.enemies.push(e);
+ m.encoreCount=cycle;m.targetIndex=5;m.raidHistory.push({at:m.time,event:'encore-spawn',part:5,cycle});
+ nextRaidTurn(m);
+ return true;
+}
 export function nextRaidTurn(m){
- const actors=[...m.party.filter(p=>p.hp>0),...live(m)];
+ const remaining=live(m);
+ if(!remaining.length){m.turn='support';m.turnActor=null;m.queue=[];return;}
+ const actors=[...m.party.filter(p=>p.hp>0),...remaining];
  if(!actors.length){m.turn='support';m.turnActor=null;return;}
  actors.sort((a,b)=>a.av-b.av||a.id.localeCompare(b.id));const actor=actors[0],min=actor.av;
  for(const a of actors)a.av=Math.max(0,a.av-min);actor.av+=10000/actor.speed;
@@ -32,7 +52,7 @@ function hitPart(g,m,e,damage,p,c,type){
  if(e.toughness===0&&e.broken<=0){e.broken=4;e.av+=50;m.raidHistory.push({at:m.time,event:'break',part:e.index});c.deal(g,180,c.emit);}
  p.energy=Math.min(100,p.energy+(type==='ultimate'?0:19));
  c.deal(g,Math.round(damage),c.emit);m.hitTarget=e.id;m.hitTargetUntil=m.time+.35;
- if(e.hp===0){e.destroyed=true;m.partBreaks++;m.raidHistory.push({at:m.time,event:'destroy',part:e.index});c.deal(g,300,c.emit);for(const ally of m.party){ally.energy=Math.min(100,ally.energy+12);ally.av=Math.max(0,ally.av-14);}}
+ if(e.hp===0){e.destroyed=true;if(!e.encore)m.partBreaks++;m.raidHistory.push({at:m.time,event:'destroy',part:e.index,cycle:e.encore?m.encoreCount:0});c.deal(g,300,c.emit);for(const ally of m.party){ally.energy=Math.min(100,ally.energy+12);ally.av=Math.max(0,ally.av-14);}}
 }
 function beginAttack(m,type,p){
  const selected=m.enemies[m.targetIndex];const e=selected?.active&&!selected.destroyed&&selected.hp>0?selected:live(m)[0];if(!e)return false;
@@ -47,9 +67,9 @@ function beginAttack(m,type,p){
 export function actGiantRaid(g,m,type,c){
  if(m.turn==='finish')return false;
  if(type==='target-next'||type==='target-prev'){
-  const step=type==='target-next'?1:-1;for(let i=0;i<5;i++){m.targetIndex=(m.targetIndex+step+5)%5;const e=m.enemies[m.targetIndex];if(e.active&&!e.destroyed)return true;}return false;
+  const step=type==='target-next'?1:-1;for(let i=0;i<m.enemies.length;i++){m.targetIndex=(m.targetIndex+step+m.enemies.length)%m.enemies.length;const e=m.enemies[m.targetIndex];if(e.active&&!e.destroyed)return true;}return false;
  }
- if(/^target[0-4]$/.test(type)){const e=m.enemies[+type.slice(6)];if(!e.active||e.destroyed)return false;m.targetIndex=e.index;return true;}
+ if(/^target[0-9]+$/.test(type)){const e=m.enemies[+type.slice(6)];if(!e)return false;if(!e.active||e.destroyed)return false;m.targetIndex=e.index;return true;}
  if(type.startsWith('ultimate')){const p=m.party[+type.slice(8)];if(!p||p.hp<=0||p.energy<100||m.actorMotion)return false;if(!beginAttack(m,'ultimate',p))return false;p.energy=0;return true;}
  // Reading the boss's physical windup allows a single call-and-response
  // guard without stealing the acting character's next turn. The strike still
@@ -107,6 +127,11 @@ export function tickGiantRaid(g,m,dt,c){
   if(!e.destroyed&&e.bleed>0){e.bleed-=dt;e.bleedClock-=dt;if(e.bleedClock<=0){e.bleedClock=1;hitPart(g,m,e,8,m.party[3],c,'bleed');}}
   if(!e.destroyed&&e.broken===0&&e.toughness===0)e.toughness=e.maxToughness;
  }
+ if(!live(m).length&&m.time<165&&!m.actorMotion){
+  m.encoreDelay=(m.encoreDelay||0)+dt;
+  if(m.encoreDelay>=1.25){m.encoreDelay=0;summonActFiveEncore(m);}
+  else if(m.turn!=='support'){m.turn='support';m.turnActor=null;m.raidAttack=null;}
+ }else m.encoreDelay=0;
  if(!m.enemies[m.targetIndex]?.active||m.enemies[m.targetIndex]?.destroyed){const e=live(m)[0];if(e)m.targetIndex=e.index;}
  // A KO is recoverable support state, never a deadlock or a song skip.
  m.supportClock+=dt;if(m.supportClock>=6){m.supportClock=0;const fallen=m.party.find(p=>p.hp<=0);if(fallen){fallen.hp=35;fallen.av=0;m.raidHistory.push({at:m.time,event:'support',ally:fallen.index});if(m.turn==='support')nextRaidTurn(m);}}
