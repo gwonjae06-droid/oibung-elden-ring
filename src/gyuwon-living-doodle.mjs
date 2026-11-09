@@ -96,9 +96,10 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
  const outputScene=new THREE.Scene();outputScene.add(quad);
  const outputCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
  const dims=new THREE.Vector2();
- let width=0,height=0,disposed=false,broken=false;
+ let width=0,height=0,disposed=false,broken=false,lastApplied=false;
  function render(scene,camera,{active=false,time=0}={}){
   if(disposed)return false;
+  lastApplied=false;
   if(!active||broken){renderer.render(scene,camera);return false;}
   const originalTarget=renderer.getRenderTarget();
   try{
@@ -113,6 +114,7 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
    renderer.render(scene,camera);
    renderer.setRenderTarget(originalTarget);
    renderer.render(outputScene,outputCamera);
+   lastApplied=true;
    return true;
   }catch(error){
    // A shader/platform failure must never prevent completing a 3-minute song.
@@ -123,6 +125,7 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
    return false;
   }
  }
+ function suspend(){lastApplied=false;}
  function prewarm(){
   if(disposed)return;
   // Compilation here prevents a first-use shader hitch during the opening.
@@ -133,6 +136,6 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
   outputScene.remove(quad);
   geometry.dispose();material.dispose();target.dispose();
  }
- return {render,prewarm,dispose,
-  stats:()=>({active:!broken&&!disposed,width,height,frame:uniforms.uDrawing.value,kind:'act5-world-ink-ab'})};
+ return {render,suspend,prewarm,dispose,
+  stats:()=>({active:!broken&&!disposed,applied:lastApplied,width,height,frame:uniforms.uDrawing.value,kind:'act5-world-ink-ab'})};
 }
