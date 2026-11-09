@@ -1,6 +1,6 @@
 import {beginGyuwonReverie,tickGyuwonReverie} from './gyuwon-reverie.mjs';
 import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,spawnArsenal,tickArsenal} from './gyuwon-arsenal.mjs';
-import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage} from './gyuwon-nightmare-mechanics.mjs';
+import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage,MARKSMAN_VOLLEYS} from './gyuwon-nightmare-mechanics.mjs';
 import {GYUWON_CALENDAR_SECONDS,syncAnnualHealth,annualFloor,annualFloorForYear,applyAnnualCarry,settleAnnualCarryBeforeGrade} from './gyuwon-annual-progress.mjs';
 import {makeRide,ridePose,updateRideAim,rifleRay,rifleAimYaw} from './gyuwon-year-choreography.mjs';
 import {drawPatternShuffle} from './pattern-shuffle.mjs';
@@ -47,7 +47,7 @@ export function createGyuwonYears(){
   recover:1.8,subject:0,subjectT:0,grade:null,gradeT:0,gradeAt:-100,
   bannerUntil:2.8,subjectLabel:null,scoreFlash:0,from:null,aim:0,
   mapClock:0,mapIndex:0,chat:[],gachaResult:0,lastCast:null,dodge:null,
-  signatureUsed:false,nightmareUsed:false,failures:0,worldBreak:0,wards:[],
+  signatureUsed:false,marksmanFinaleCompleted:false,nightmareUsed:false,failures:0,worldBreak:0,wards:[],
   resultScene:null,nightmareStartedAt:-1,examCount:0,
   attackBuff:0,speedBuff:0,inquiry:null,rideTrack:[],rideKind:null,calendarDamage:0,damageBank:0,yearDamage:0,endingUnlocked:false,mapPending:false};
 }
@@ -149,7 +149,7 @@ function startNextYear(g,emit){
  e.year=e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
  e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);e.yearStartHp=g.boss.hp;e.weaponPlan=null;
- e.signatureUsed=false;e.nightmareUsed=false;e.rideTrack=[];
+ e.signatureUsed=false;e.marksmanFinaleCompleted=false;e.nightmareUsed=false;e.rideTrack=[];
  e.worldBreak=gyuwonWorldBreak(e.examCount+1,e.failures);e.resultScene=null;
  g.gyuwon.hazards.length=0;
  g.boss.state='recovery';g.gyuwon.pattern=null;g.gyuwon.space='white';
@@ -337,6 +337,11 @@ export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
   b.yaw=rifleAimYaw(s.hazards)??b.yaw;
   const spec=GYUWON_YEAR_PATTERNS[e.cast];
   if(e.castT>=Math.max(spec[0],e.castDuration||0)){
+   // Year four may enter its unskippable reverie only after every one of
+   // the 30 gun-and-bow volleys in the full 210-round signature was fired
+   // and the authored cast timeline finished. Merely starting it is not enough.
+   if(e.year===4&&!e.legacyAnnual&&e.cast==='ultimateMarksman')
+    e.marksmanFinaleCompleted=(e.marksmanVolleys||0)>=MARKSMAN_VOLLEYS;
    if(e.cast==='nightmare365')e.endingUnlocked=true;
    e.cast=null;s.pattern=null;s.hazards=s.hazards.filter(h=>h.persistent&&h.age<h.warn+h.life);b.state='recovery';
    e.wards=[];e.recover=spec[1];
@@ -363,7 +368,19 @@ export function tickGyuwonYears(g,dt,{hurt,emit,input={}}){
   b.x=d.fromX+(d.toX-d.fromX)*k;b.z=d.fromZ+(d.toZ-d.fromZ)*k;
   if(d.t>=.72)e.dodge=null;
  }
- if(e.day===0&&b.hp<=annualFloor(g)+1e-7){if(e.year===4&&!e.legacyAnnual)startNextYear(g,emit);else beginExam(g,emit);return;}
+ if(e.day===0&&b.hp<=annualFloor(g)+1e-7){
+  if(e.year===4&&!e.legacyAnnual){
+   // A rapid weapon burst can reach the 4th-year HP floor before the
+   // signature is selected. Play the entire 210-round ultimate FIRST,
+   // then enter the non-skippable reverie on a later simulation tick.
+   if(!e.marksmanFinaleCompleted){
+    beginCast(g,'ultimateMarksman',emit);
+    return;
+   }
+   startNextYear(g,emit);
+  }else beginExam(g,emit);
+  return;
+ }
  if(e.recover>0)return;
  if(!e.signatureUsed&&e.season>=GYUWON_YEAR_SECONDS*.55){
   beginCast(g,GYUWON_YEAR_SIGNATURES[Math.min(11,e.year)],emit);return;
