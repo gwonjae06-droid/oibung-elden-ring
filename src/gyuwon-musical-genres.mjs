@@ -348,6 +348,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  const realDt=clamp(dt,0,1/30),song=GYUWON_SONGS[gyuwonSongKey(m)];
  // Finite audio position is authoritative. Buffering freezes gameplay too.
  // Media time is authoritative even when visual frames lag; audio errors freeze the act.
+ const priorSongTime=m.time;
  dt=m.clock?(m.clock.source==='media'?Math.max(0,Math.min(.05,m.clock.time-m.time)):0):realDt;
  if(m.clock?.ended)m.time=m.clock.duration;
  else if(m.clock?.source==='media')m.time=Math.max(m.time,m.clock.time);
@@ -377,7 +378,8 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
   return;
  }
  if(dt<=0)return;
- m.transition=Math.max(0,m.transition-dt);
+ // The stage entrance advances by genuine audio time even when physics dt is capped.
+ m.transition=Math.max(0,m.transition-Math.max(0,m.time-priorSongTime));
  m.guard=Math.max(0,m.guard-dt);m.invulnerable=Math.max(0,m.invulnerable-dt);
  m.shotCooldown=Math.max(0,m.shotCooldown-dt);m.hitFlash=Math.max(0,m.hitFlash-dt);
  g.player.invuln=Math.max(0,g.player.invuln-dt);
