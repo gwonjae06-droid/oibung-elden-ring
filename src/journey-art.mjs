@@ -1,6 +1,6 @@
 const asset=name=>new URL('../assets/art/'+name,import.meta.url).href;
 export const MURAL_SEALS=[
- {id:'spider',boss:'kwon',x:800,y:125},
+ {id:'spider',boss:'kwon',x:800,y:120},
  {id:'clown',boss:'clown',x:1265,y:435},
  {id:'dice',boss:'dice',x:1125,y:785},
  {id:'blood',boss:'blood',x:480,y:785},
