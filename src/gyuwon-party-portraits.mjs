@@ -63,7 +63,7 @@ export function createGyuwonBossParty({coarse=false}={}){
     kwon.model.rotation.x=-.18*swing;
    }else if(i===1){
     clown.body.rotation.x=.04*Math.sin(m.time*1.7)-.25*swing;
-    clown.head.rotation.z=.04*Math.sin(m.time*1.8)+.17*swing;
+    clown.head.group.rotation.z=.04*Math.sin(m.time*1.8)+.17*swing;
    }else if(i===2){
     dice.root.rotation.set(m.time*.25+swing*5,m.time*.35+swing*2,swing*3);
     dice.root.position.y=2.15+.19*Math.sin(m.time*1.6);
