@@ -7,7 +7,7 @@ import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 
 export const GYUWON_MASTER_SCENES=Object.freeze({
  5:[[0,'overture'],[7,'entrance'],[26,'verse'],[40,'ensemble'],[64,'change'],[127.6,'reprise'],[176.8,'exit']],
- 6:[[0,'overture'],[11.5,'meadow'],[34,'bridge'],[54.3,'rain'],[91,'quiet'],[102,'sunrise'],[176,'exit']],
+ 6:[[0,'overture'],[11.5,'meadow'],[34,'bridge'],[54.3,'rain'],[91,'quiet'],[102,'sunrise'],[132,'skyroad'],[158,'final-sprint'],[176,'exit']],
  7:[[0,'overture'],[17,'march'],[32,'ensemble'],[56.5,'countermarch'],[115.9,'lonely'],[126,'reunion'],[175,'exit']],
  8:[[0,'overture'],[10,'pose'],[33,'turns'],[47.6,'ensemble'],[94,'bridge'],[112,'encore'],[174.5,'bow']],
  9:[[0,'entrance'],[9,'round1'],[41,'round2'],[56.6,'duel'],[93,'breather'],[108,'round3'],[144,'climax'],[176,'bow']],
