@@ -66,6 +66,8 @@ jobs:
           node --check src/clown-ballet-score.mjs
           node --check src/clown-ballet-duet-view.mjs
           node --test tests/clown-ballet-duet.test.mjs tests/clown-ballet-duet-view.test.mjs tests/clown-engine.test.mjs tests/clown-nightmare-overhaul.test.mjs tests/clown-act-two-revival.test.mjs
+      - name: Verify arena damage phase gates and full clown pattern repertoire
+        run: node --test tests/arena-damage.test.mjs tests/clown-patterns.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs
 
