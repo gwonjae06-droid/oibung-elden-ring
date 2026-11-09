@@ -51,6 +51,18 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const encoreBall=mesh(encore,geo(new T.IcosahedronGeometry(1,2)),glow);
  const encoreRings=[0,1,2].map((_,i)=>{const o=mesh(encore,ring,i===1?blood:gold);o.scale.setScalar(2.4+i*.85);return o;});
  const encoreRays=Array.from({length:8},(_,i)=>{const o=mesh(encore,box,i%2?gold:cream);const a=i*Math.PI/4;o.position.set(Math.cos(a)*3.8,Math.sin(a)*3.8,0);o.scale.set(.16,1.5,.16);o.rotation.z=-a;return o;});
+ const encoreForms=Array.from({length:5},()=>{const o=new T.Group();encore.add(o);return o;});
+ mesh(encoreForms[0],stagecraft.starGeometry,glow, 'encore-dream-star').scale.set(3.1,3.1,3.1);
+ for(const side of [-1,1])mesh(encoreForms[1],box,cream,'encore-door-pillar').position.set(side*2.15,0,0);
+ for(const side of [-1,1]){const pillar=encoreForms[1].children[side===-1?0:1];pillar.scale.set(.43,5.6,.55);}
+ const lintel=mesh(encoreForms[1],box,gold,'encore-open-door');lintel.position.y=2.9;lintel.scale.set(5.1,.5,.75);
+ const crownRing=mesh(encoreForms[2],ring,gold,'encore-royal-crown');crownRing.rotation.x=Math.PI/2;crownRing.scale.setScalar(2.4);
+ for(let i=0;i<7;i++){const a=i*Math.PI*2/7;mesh(encoreForms[2],geo(new T.ConeGeometry(.35,1.2,7)),glow,'encore-crown-spire').position.set(Math.sin(a)*2.3,1.05,Math.cos(a)*2.3);}
+ for(const side of [-1,1]){const lobe=mesh(encoreForms[3],sphere,blood,'encore-heart-lobe');lobe.position.set(side*1.04,.65,0);lobe.scale.set(1.5,1.5,.85);}
+ const heartTip=mesh(encoreForms[3],geo(new T.ConeGeometry(2.5,3.4,4)),blood,'encore-heart-tip');heartTip.position.y=-1.25;heartTip.rotation.z=Math.PI;
+ const platform=mesh(encoreForms[4],box,gold,'encore-performance-stage');platform.position.y=-1.3;platform.scale.set(6.5,1.15,4.4);
+ const banner=mesh(encoreForms[4],box,cream,'encore-show-banner');banner.position.y=1.5;banner.scale.set(4.8,3.2,.24);
+ 
   const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
  const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
  const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
@@ -75,6 +87,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
    encoreBall.rotation.set(m.time*.45,m.time*.8,0);
    encoreRings.forEach((o,i)=>{o.rotation.set(m.time*(i%2?-.32:.46),m.time*.3+i,.25);o.scale.setScalar((2.4+i*.8)*pulse);});
    encoreRays.forEach((o,i)=>o.rotation.z=m.time*.25-i*Math.PI/4);
+   encoreForms.forEach((form,i)=>{form.visible=i===(m.encoreCount-1)%5;form.rotation.y=Math.sin(m.time*.7)*.15;});
   }
   // The previous four bosses remain behind as the armored protagonist takes
   // the newly revealed road. This is a presentation-only farewell, not AI.
