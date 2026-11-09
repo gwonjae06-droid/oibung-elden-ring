@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {gyuwonArmyScene,gyuwonArmyLaneY} from '../src/gyuwon-army-director.mjs';
 import {createGyuwonGame,stepGyuwon,actGyuwon} from '../src/gyuwon-combat.mjs';
+import {referenceKeyAction} from '../src/gyuwon-reference-rules.mjs';
 
 function stage(){
  const g=createGyuwonGame('sword',{yearMode:true,seed:77});
@@ -17,6 +18,7 @@ function at(g,m,t){
 test('Act VII changes actual world scenes at all authored story chapters',()=>{
  assert.deepEqual([0,18,35,57,90,115,130,160,177].map(t=>gyuwonArmyScene(t).key),
   ['arrival','recruits','village','march','siege','lonely','reunion','victory','exit']);
+ assert.equal(gyuwonArmyScene(126).key,'reunion');
  assert.equal(gyuwonArmyScene(115).quiet,true);
  assert.equal(gyuwonArmyScene(130).quiet,false);
  assert.equal(gyuwonArmyLaneY(0)<gyuwonArmyLaneY(1),true);
@@ -59,8 +61,10 @@ test('the lonely bridge is interactive and rally recruits return on the reprise'
  assert.equal(m.armyReunionDone,true);
  assert.ok(m.units.filter(u=>u.returning&&u.team>0).length>=2);
 });
-test('new keyboard mapping preserves six existing soldier cards',()=>{
+test('new lane hotkey preserves six original cards',()=>{
  const {m}=stage();
  assert.equal(m.deployLane,0);
- assert.equal(actGyuwon(stage().g,'lane'),true);
+ assert.equal(referenceKeyAction(m,'KeyT'),'lane');
+ assert.equal(referenceKeyAction(m,'Digit1'),'summon0');
+ assert.equal(referenceKeyAction(m,'Digit6'),'summon5');
 });
