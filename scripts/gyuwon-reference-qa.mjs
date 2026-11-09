@@ -17,7 +17,7 @@ try{
  for(let y=5;y<=10;y++){
   await page.waitForFunction(y=>window.__session()?.active&&window.__session().game.gyuwon.years.year===y&&window.__session().game.gyuwon.years.musical?.time>3,y,{timeout:90000});
   if(y===5){
-   await control('target3').click();await control('skill').click();
+   await control('target0').click();await control('skill').click();
    await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.score>0);
    assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.skillPoints),2);
    await page.waitForTimeout(700);

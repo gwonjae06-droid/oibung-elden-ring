@@ -72,6 +72,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     role.position.set(from+(x-from)*entrance,
       .18+Math.sin(t*1.7+i)*.12*(alive?1:0),-9+Math.sin(i*2.4)*2);
     role.rotation.y=Math.sin(t*.31+i)*.36;
+    role.rotation.x=0;
     role.rotation.z=Math.sin(t*1.35+i*.9)*.06;
     if(t>=124)role.rotation.z+=Math.sin(t*3+i)*.075;
    });

@@ -1,3 +1,4 @@
+import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
@@ -17,28 +18,12 @@ export const REFERENCE_PARTY=Object.freeze([
 ]);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:0));
 const dist=(a,b)=>Math.hypot(a.x-b.x,(a.z||0)-(b.z||0));
-const smooth=q=>{q=clamp(q,0,1);return q*q*(3-2*q);};
 export const usesReference2d=m=>!!m?.reference&&m.year>=6&&m.year<=10&&!m.finishing;
-const aliveTargets=m=>m.enemies.filter(e=>e.hp>0);
-function activeParty(m){return m.party.find(p=>p.id===m.turnActor)||m.party[0];}
-function nextTurn(m){
- const actors=[...m.party.filter(a=>a.hp>0),...m.enemies.filter(a=>a.hp>0)];
- if(!actors.length)return;
- actors.sort((a,b)=>a.av-b.av||a.id.localeCompare(b.id));const a=actors[0],min=a.av;
- for(const p of actors)p.av=Math.max(0,p.av-min);
- a.av+=10000/a.speed;m.turnActor=a.id;m.turn=a.team===1?'player':'boss';m.turnWind=a.team<0?1.25:0;
- m.turnElapsed=0;m.turnCount++;m.actorMotion=null;m.enemyHit=false;
- m.queue=actors.map(p=>({id:p.id,name:p.name,team:p.team,av:p.av,weapon:p.weapon})).sort((a,b)=>a.av-b.av);
- if(a.team<0){m.enemyVictim=m.party.filter(p=>p.hp>0)[m.turnCount%m.party.filter(p=>p.hp>0).length]?.id;}
-}
 export function setupReferenceMinigame(g,m){
  if(m.year<5||m.year>10)return;
  m.reference=true;m.nextId=0;m.judgement='';m.judgementUntil=0;
  if(m.year===5){
-  m.skillPoints=3;m.maxSkillPoints=5;m.targetIndex=0;m.wave=1;
-  m.party=REFERENCE_PARTY.map((p,i)=>({...p,id:'ally'+i,team:1,index:i,x:-9+i*5,z:11+i*.9,homeX:-9+i*5,homeZ:11+i*.9,hp:i===1?175:125,maxHp:i===1?175:125,energy:75+i*7,av:10000/p.speed}));
-  m.enemies=Array.from({length:5},(_,i)=>({id:'enemy'+i,index:i,name:i===0?'최규원':i<3?'답안의 기사':'별빛 수호기',team:-1,x:[0,-9,8,-14,14][i],z:[-11,-7,-8,-12,-13][i],hp:i===0?320:150,maxHp:i===0?320:150,toughness:60,maxToughness:60,weakness:i%4,speed:84+i*5,av:10000/(84+i*5),broken:0,reform:0}));
-  nextTurn(m);
+  setupGiantRaid(g,m,REFERENCE_PARTY);
  }else if(m.year===6){
   g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;
  }else if(m.year===7){
@@ -66,20 +51,6 @@ export function setupReferenceMinigame(g,m){
   g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
 }
-function targetHit(g,m,target,damage,actor,c){
- if(!target||target.hp<=0)return;
- const weak=target.weakness===actor.index,breakAmount=(weak?35:18)*(damage>50?1.5:1);
- target.hp=Math.max(0,target.hp-damage*(weak?1.35:1));
- target.toughness=Math.max(0,target.toughness-breakAmount);actor.energy=Math.min(100,actor.energy+(m.actorMotion?.type==='ultimate'?0:22));
- if(target.toughness===0&&target.broken<=0){target.broken=3;target.av+=40;c.deal(g,180,c.emit);}
- c.deal(g,Math.round(damage*(weak?1.4:1)),c.emit);m.hitTarget=target.id;m.hitTargetUntil=m.time+.35;
- if(!target.hp){target.reform=3;c.deal(g,250,c.emit);}
-}
-function beginTurnAttack(m,type,actor=activeParty(m)){
- const target=m.enemies[m.targetIndex]?.hp>0?m.enemies[m.targetIndex]:aliveTargets(m)[0];if(!target)return false;m.targetIndex=target.index;
- m.actorMotion={actorId:actor.id,targetId:target.id,type,age:0,hitAt:type==='ultimate'?1.15:.7,duration:type==='ultimate'?2.2:1.4,hit:false,fromX:actor.x,fromZ:actor.z};
- m.returnTurn=m.turn;m.turn='animation';return true;
-}
 const fighterSpecs={light:{wind:.2,live:.12,recovery:.25,range:3.1,damage:9,reachY:1.4},kick:{wind:.29,live:.15,recovery:.32,range:4.3,damage:14,reachY:.8},skill:{wind:.42,live:.19,recovery:.43,range:5.6,damage:22,reachY:1.5},super:{wind:.62,live:.27,recovery:.55,range:10,damage:35,reachY:2.5}};
 function fighterAttack(f,type){
  if(f.action||f.stun>0)return false;
@@ -89,19 +60,7 @@ function fighterAttack(f,type){
 }
 export function actReferenceMinigame(g,m,type,c){
  if(type==='heal')return c.heal(g,c.emit);
- if(m.year===5){
-  if(/^target[0-4]$/.test(type)){const n=Number(type.slice(6));if(m.enemies[n].hp<=0)return false;m.targetIndex=n;return true;}
-  if(type==='target-next'||type==='target-prev'){
-   const direction=type==='target-next'?1:-1;for(let i=0;i<5;i++){m.targetIndex=(m.targetIndex+direction+5)%5;if(m.enemies[m.targetIndex].hp>0)break;}return true;
-  }
-  if(type.startsWith('ultimate')){const i=Number(type.slice(8))||0,p=m.party[i];if(!p||p.hp<=0||p.energy<100||m.actorMotion)return false;if(!beginTurnAttack(m,'ultimate',p))return false;p.energy=0;return true;}
-  if(m.turn!=='player'||m.actorMotion)return false;
-  const actor=activeParty(m);
-  if(type==='light'){if(!beginTurnAttack(m,'light',actor))return false;m.skillPoints=Math.min(5,m.skillPoints+1);return true;}
-  if(type==='skill'&&m.skillPoints>0){if(!beginTurnAttack(m,'skill',actor))return false;m.skillPoints--;return true;}
-  if(type==='roll'){actor.hp=Math.min(actor.maxHp,actor.hp+20);actor.energy=Math.min(100,actor.energy+15);nextTurn(m);return true;}
-  return false;
- }
+ if(m.year===5)return actGiantRaid(g,m,type,c);
  if(m.year===6){
   if(['light','roll','jump'].includes(type)&&m.jumpCount<2){m.jumpV=m.jumpCount?8:9.2;m.jumpCount++;m.slide=0;m.slideHeld=false;return true;}
   if(type==='skill'||type==='slide'){m.slide=.95;m.slideHeld=true;return true;}
@@ -140,31 +99,6 @@ export function actReferenceMinigame(g,m,type,c){
   if(type==='light'){m.shotCooldown=0;return true;}
  }
  return false;
-}
-function tickReferenceTurn(g,m,dt,c){
- // Never resurrect a defeated enemy at the same location on a short timer.
- const p=m.actProgress||0;
- if(!m.actorMotion&&m.wave<3&&p>=(m.wave===1?.38:.76)){
-  m.wave++;m.targetIndex=0;m.skillPoints=Math.min(m.maxSkillPoints,m.skillPoints+1);
-  for(const e of m.enemies){e.maxHp=Math.round((e.index===0?330:135)*(m.wave===2?1.2:1.6));e.hp=e.maxHp;
-   e.x=[0,-10,9,-15,15][e.index]+(m.wave===2?-1.6:1.6);e.toughness=e.maxToughness=65+15*(m.wave-1);e.broken=0;e.reform=0;e.av+=30;}
-  nextTurn(m);
- }
- for(const e of m.enemies)e.broken=Math.max(0,e.broken-dt);
- if(m.actorMotion){
-  const a=m.actorMotion,p=m.party.find(p=>p.id===a.actorId),t=m.enemies.find(t=>t.id===a.targetId);a.age+=dt;
-  const advance=smooth(a.age/.55)*(1-smooth((a.age-.86)/.5));
-  if(a.type!=='ultimate'&&t){p.x=a.fromX+(t.x-a.fromX)*advance*.85;p.z=a.fromZ+(t.z-a.fromZ)*advance*.85;}
-  if(!a.hit&&a.age>=a.hitAt){a.hit=true;if(a.type==='ultimate'){for(const e of aliveTargets(m))targetHit(g,m,e,95,p,c);}else if(t&&dist(p,t)<6){targetHit(g,m,t,a.type==='skill'?58:32,p,c);if(a.type==='skill')for(const e of aliveTargets(m))if(e!==t&&Math.abs(e.index-t.index)===1)targetHit(g,m,e,22,p,c);}}
-  if(a.age>=a.duration){p.x=p.homeX;p.z=p.homeZ;m.actorMotion=null;if(a.type==='ultimate'){m.turn=m.returnTurn;}else nextTurn(m);}
- }else if(m.turn==='boss'){
-  const enemy=m.enemies.find(e=>e.id===m.turnActor),victim=m.party.find(p=>p.id===m.enemyVictim);
-  if(!enemy||enemy.hp<=0||enemy.broken>0){nextTurn(m);return;}
-  m.turnElapsed+=dt;m.turnWind=Math.max(0,1.25-m.turnElapsed);
-  if(m.turnElapsed>=1.25&&!m.enemyHit){m.enemyHit=true;if(victim){victim.hp=Math.max(0,victim.hp-18);victim.energy=Math.min(100,victim.energy+16);c.take(g,18,c.emit);}}
-  if(m.turnElapsed>=1.8){m.enemyHit=false;nextTurn(m);}
- }
- g.boss.x=m.enemies[0].x;g.boss.z=m.enemies[0].z;
 }
 function tickReferenceRunner(g,m,dt,c){
  const p=g.player,progress=m.actProgress||0,scene=gyuwonMasterScene(6,m.time).kind,relief=scene==='quiet';
@@ -276,7 +210,7 @@ function tickReferenceShooter(g,m,dt,input,c){
  m.powerItems=m.powerItems.filter(a=>!a.done&&a.z<21);g.boss.x=0;g.boss.z=-12;
 }
 export function tickReferenceMinigame(g,m,dt,input,c){
- if(m.year===5)tickReferenceTurn(g,m,dt,c);
+ if(m.year===5)tickGiantRaid(g,m,dt,c);
  else if(m.year===6)tickReferenceRunner(g,m,dt,c);
  else if(m.year===7)tickReferenceArmy(g,m,dt,c);
  else if(m.year===8)tickReferenceDance(g,m,dt,c);
@@ -285,7 +219,7 @@ export function tickReferenceMinigame(g,m,dt,input,c){
 }
 export function referenceKeyAction(m,code){
  if(!m?.reference)return null;
- if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'light',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
+ if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'support',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
  if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide'}[code]||null;
  if(m.year===7)return {Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
  if(m.year===9)return {KeyK:'kick',KeyI:'guard',KeyO:'super',Space:'jump',KeyW:'jump',ArrowUp:'jump'}[code]||null;

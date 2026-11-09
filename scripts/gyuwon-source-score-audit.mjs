@@ -1,3 +1,5 @@
+import {pathToFileURL} from 'node:url';
+import {GYUWON_ALIGNED_CAPTIONS} from '../src/gyuwon-aligned-captions.mjs';
 // Report traceable original-track timing coverage and remaining hand-timed
 // vocal sections. Never infer a completed transcript from the archived edit.
 import {GYUWON_SONGS} from '../src/gyuwon-song-data.mjs';
@@ -20,21 +22,21 @@ export function scoreAudit(){
   const duration=song.duration,source=GYUWON_ORIGINAL_SUBTITLES[key]||[];
   const windows=merge(source.map(x=>({...x})),duration);
   const mappedSeconds=windows.reduce((sum,[start,end])=>sum+end-start,0);
-  const unverified=(GYUWON_PROVISIONAL_SUBTITLES[key]||[]).length;
+  const aligned=GYUWON_ALIGNED_CAPTIONS[key]||[];const unverified=0;
   const scenes=GYUWON_MASTER_SCENES[key]||[];
   const accentCount=gyuwonVerifiedMasterAccents(key).length;
   return {key,track:song.source,duration,sceneAnchors:scenes.length,
    excerptMappedCues:source.length,excerptMappedSeconds:round(mappedSeconds),
    mappedPct:round(mappedSeconds/duration*100),
-   excerptDerivedAccents:accentCount,provisionalDisplayCues:unverified,
+   excerptDerivedAccents:accentCount,provisionalDisplayCues:unverified,wordAlignedCues:aligned.length,wordAlignedSeconds:round(aligned.reduce((s,c)=>s+c.end-c.start,0)),
    manualTranscriptionRequired:mappedSeconds<duration*.94};
  });
 }
-if(import.meta.url===new URL(process.argv[1],import.meta.url).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  console.log('Traceable original-master excerpt alignment. This is NOT a full lyric transcription.');
  for(const item of scoreAudit())console.log(
   [item.key.padEnd(6),item.track.padEnd(36),
    ('sourced '+item.excerptMappedSeconds+'s ('+item.mappedPct+'%)').padEnd(27),
-   'accents '+item.excerptDerivedAccents,'provisional lines '+item.provisionalDisplayCues].join(' | '));
- console.log('All uncovered spans require a human source-audio transcription and manual sync before final approval.');
+   'word-aligned '+item.wordAlignedCues,'provisional lines '+item.provisionalDisplayCues].join(' | '));
+ console.log('Display uses original-recording word alignment, never the provisional repeated libretto. ASR boundaries still benefit from human listening verification.');
 }

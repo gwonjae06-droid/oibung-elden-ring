@@ -1,3 +1,4 @@
+import {GYUWON_ALIGNED_CAPTIONS} from '../src/gyuwon-aligned-captions.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ test('original masters and source-located bilingual subtitles',()=>{
   assert.ok(fs.statSync(new URL('../assets/music/'+song.file,import.meta.url)).size>100000);
   let end=0;for(const cue of GYUWON_ORIGINAL_SUBTITLES[id]){
    assert.ok(cue.start>=end&&cue.end>cue.start&&cue.end<=song.duration,id);end=cue.end;
-   assert.ok(cue.en&&cue.ko);const shown=gyuwonSubtitleAt(id,cue.start);assert.equal(shown.en,cue.en);assert.equal(shown.ko,cue.ko);assert.equal(shown.source,'archived-source-excerpt');
+   assert.ok(cue.en&&cue.ko); // Historical edit mappings remain archived, not display priority.
   }
   assert.ok(GYUWON_ORIGINAL_SUBTITLES[id].length>0);
   assert.ok(GYUWON_SUBTITLES[id].length>=GYUWON_ORIGINAL_SUBTITLES[id].length);
@@ -57,11 +58,12 @@ test('post-song HP bridge uses active real time even with sparse frames',()=>{
  score.update(g);setTime(10.4);score.update(g);stepGyuwon(g,.05);assert.equal(g.gyuwon.years.year,6);assert.equal(g.boss.hp,5300);score.dispose();
 });
 
-test('full-song captions remain visible beyond the historic 45s edit',()=>{
+test('full-song vocal captions extend beyond the historic edit while instrumentals stay blank',()=>{
  for(const [key,song] of Object.entries(GYUWON_SONGS)){
   let count=0;
   for(let second=5;second<song.duration-4;second+=1)if(gyuwonSubtitleAt(key,second)?.ko)count++;
-  assert.ok(count>song.duration*.55,key+' bilingual caption coverage '+count);
+  assert.ok(count>45,key+' actual vocal caption coverage '+count);
+  assert.ok(GYUWON_ALIGNED_CAPTIONS[key].some(c=>c.start>90));
   assert.equal(gyuwonSubtitleAt(key,song.duration-.05),null);
  }
 });
@@ -98,7 +100,7 @@ test('manual master-caption corrections can replace temporary lyric slots withou
  }
  // A cached excerpt is explicitly not certified against the full vocal.
  for(const key of Object.keys(GYUWON_SONGS)){
-  const excerpt=GYUWON_ORIGINAL_SUBTITLES[key][0];
+  const excerpt=GYUWON_ALIGNED_CAPTIONS[key][0];
   const shown=gyuwonSubtitleAt(key,excerpt.start);
   assert.equal(shown.verified,false);
  }
@@ -112,7 +114,8 @@ test('score audit separates original-excerpt cues from every track\'s unfinished
   assert.ok(r.excerptMappedCues>0,r.track);
   assert.ok(r.excerptDerivedAccents>0,r.track);
   assert.ok(r.excerptMappedSeconds>0&&r.excerptMappedSeconds<r.duration,r.track);
-  assert.ok(r.provisionalDisplayCues>0,r.track);
+  assert.equal(r.provisionalDisplayCues,0,r.track);
+  assert.ok(r.wordAlignedCues>=20,r.track);
   assert.equal(r.manualTranscriptionRequired,true,r.track);
  }
 });

@@ -9,6 +9,9 @@ on:
       - 'tests/journey-controller.test.mjs'
       - 'scripts/gyuwon-musical-qa.mjs'
       - 'scripts/gyuwon-reference-qa.mjs'
+      - 'scripts/gyuwon-giant-raid-qa.mjs'
+      - 'tests/gyuwon-giant-raid.test.mjs'
+      - 'tests/gyuwon-caption-sync.test.mjs'
       - '.github/workflows/gyuwon-musical.yml'
   workflow_dispatch:
 permissions:
@@ -16,17 +19,19 @@ permissions:
 jobs:
   musical:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
-      - run: node --test tests/gyuwon-reference-games.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/journey-controller.test.mjs
+      - run: node --test tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/journey-controller.test.mjs
       - run: npx playwright-core install --with-deps chromium
       - run: node scripts/gyuwon-musical-qa.mjs
       - run: node scripts/gyuwon-reference-qa.mjs
+      - name: Full original 5su raid with native UI combat
+        run: node scripts/gyuwon-giant-raid-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -34,4 +39,5 @@ jobs:
           path: |
             qa-output/musical/
             qa-output/reference/
+            qa-output/giant-raid/
           if-no-files-found: warn

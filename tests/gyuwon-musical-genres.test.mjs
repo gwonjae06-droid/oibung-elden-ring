@@ -93,8 +93,8 @@ test('5수 턴제 보스에게 반복해서 맞아도 피격 연출은 유지되
  g.player.hp=2;g.player.invuln=0;
  for(let attack=0;attack<2;attack++){
   m.turn='boss';m.turnActor='enemy1';m.enemyVictim='ally0';
-  m.turnElapsed=1.2;m.enemyHit=false;g.player.invuln=0;
-  advance(g,.15);
+  m.turnElapsed=0;m.raidAttack=null;m.enemyHit=false;g.player.invuln=0;
+  advance(g,2.15);
   assert.equal(g.player.hp,1);
   assert.equal(g.status,'playing');
  }

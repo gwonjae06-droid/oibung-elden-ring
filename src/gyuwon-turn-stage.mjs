@@ -1,75 +1,72 @@
-import * as THREE from 'three';
-import {REFERENCE_PARTY} from './gyuwon-reference-rules.mjs';
+import * as T from 'three';
 import {createGyuwonBossParty} from './gyuwon-party-portraits.mjs';
-export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
- const root=new THREE.Group();root.name='gyuwon-three-dimensional-turn-arena';root.visible=false;scene.add(root);
- const mats=new Set(),geos=new Set(),ownMat=m=>(mats.add(m),m),ownGeo=g=>(geos.add(g),g);
- const steel=ownMat(new THREE.MeshStandardMaterial({color:0x243444,roughness:.48,metalness:.72})),edge=ownMat(new THREE.MeshStandardMaterial({color:0x6b869b,roughness:.38,metalness:.8})),brass=ownMat(new THREE.MeshStandardMaterial({color:0x9d8967,roughness:.45,metalness:.67})),blue=ownMat(new THREE.MeshStandardMaterial({color:0x83b7c5,emissive:0x27667b,emissiveIntensity:.55,metalness:.45,roughness:.35}));
- const box=ownGeo(new THREE.BoxGeometry(1,1,1)),circle=ownGeo(new THREE.CylinderGeometry(29,29,.18,coarse?64:112));
- const floor=new THREE.Mesh(circle,steel);floor.position.y=.05;floor.receiveShadow=true;root.add(floor);
- const panel=new THREE.InstancedMesh(box,edge,60),mat4=new THREE.Matrix4(),v=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();let n=0;
- for(let i=0;i<15;i++)for(let side of [-1,1]){
-  v.set(side*28,3,i*4-26);s.set(.6,6,3.8);mat4.compose(v,q,s);panel.setMatrixAt(n++,mat4);
-  v.set(i*4-28,.19,side*24);s.set(3.8,.08,.18);mat4.compose(v,q,s);panel.setMatrixAt(n++,mat4);
- }panel.instanceMatrix.needsUpdate=true;panel.receiveShadow=true;root.add(panel);
- const hoopGeo=ownGeo(new THREE.TorusGeometry(26,.13,8,coarse?64:128));
- for(const r of [1,.78,.52]){const m=new THREE.Mesh(hoopGeo,r===1?brass:edge);m.scale.setScalar(r);m.rotation.x=-Math.PI/2;m.position.y=.17;root.add(m);}
- for(let i=0;i<6;i++){
-  const arch=new THREE.Group();arch.position.z=-28+i*6;root.add(arch);
-  for(const side of [-1,1]){const leg=new THREE.Mesh(box,steel);leg.position.set(side*24,8,0);leg.scale.set(1.4,16,1.8);arch.add(leg);const rail=new THREE.Mesh(box,brass);rail.position.set(side*22.8,7,0);rail.scale.set(.18,14,.8);arch.add(rail);}
-  const top=new THREE.Mesh(box,edge);top.position.y=15.6;top.scale.set(48,1,1.4);arch.add(top);
- }
- const back=new THREE.Mesh(box,steel);back.position.set(0,7,-29);back.scale.set(56,14,1);root.add(back);
- const gateGeo=ownGeo(new THREE.TorusGeometry(7,.45,coarse?10:18,coarse?48:96)),gate=new THREE.Mesh(gateGeo,edge);gate.position.set(0,6,-28);root.add(gate);
- const inset=new THREE.Mesh(ownGeo(new THREE.CircleGeometry(6.3,64)),ownMat(new THREE.MeshStandardMaterial({color:0x112231,roughness:.6,metalness:.5})));inset.position.set(0,6,-28.2);root.add(inset);
- for(let i=-2;i<=2;i++){const stripe=new THREE.Mesh(box,blue);stripe.position.set(i*2.6,3,-27.4);stripe.scale.set(.1,5,.08);root.add(stripe);}
- const cloneTint=(source,color)=>{const rig=source.clone(true),cache=new Map();rig.traverse(o=>{if(o.material){const values=[].concat(o.material).map(m=>{if(!cache.has(m)){const a=m.clone();if(a.color)a.color.lerp(new THREE.Color(color),.2);cache.set(m,ownMat(a));}return cache.get(m);});o.material=Array.isArray(o.material)?values:values[0];}if(/rifle|cigarette|scooter|bike|bow-rig|hammer-rig|gacha|octopus|arsenal/i.test(o.name))o.visible=false;});return rig;};
- // A full quartet of real prior-boss meshes, not four tinted player clones.
- const guestParty=createGyuwonBossParty({coarse});
- const allies=guestParty.roles;
- for(const a of allies)root.add(a);
- const enemies=[null,cloneTint(boss,0x7999b5),cloneTint(boss,0xa395b9)];
- for(const r of enemies)if(r)root.add(r);
- const droneGeo=ownGeo(new THREE.IcosahedronGeometry(1.3,coarse?1:2)),trimGeo=ownGeo(new THREE.TorusGeometry(1.5,.12,8,40));
- for(let i=3;i<5;i++){
-  const drone=new THREE.Group();drone.name='musical-armoured-drone-'+i;
-  const body=new THREE.Mesh(droneGeo,steel);body.scale.set(1,.82,.8);drone.add(body);
-  for(let j=0;j<6;j++){const a=j*Math.PI/3,panel=new THREE.Mesh(box,edge);panel.position.set(Math.sin(a)*1.25,Math.cos(a)*1.25,0);panel.rotation.z=-a;panel.scale.set(.75,.8,.45);drone.add(panel);}
-  const ring=new THREE.Mesh(trimGeo,brass);ring.position.z=.7;drone.add(ring);const core=new THREE.Mesh(ownGeo(new THREE.SphereGeometry(.48,24,16)),blue);core.position.z=.85;drone.add(core);enemies.push(drone);root.add(drone);
- }
- const target=new THREE.Mesh(ownGeo(new THREE.TorusGeometry(1.5,.055,8,64)),ownMat(new THREE.MeshBasicMaterial({color:0xf3d29c,transparent:true,opacity:.9})));target.name='turn-selected-enemy';root.add(target);
- const ribbons=Array.from({length:5},()=>{const a=new THREE.Mesh(ownGeo(new THREE.CylinderGeometry(.13,.2,1,12)),blue);a.visible=false;root.add(a);return a;});
- const direction=new THREE.Vector3(),axis=new THREE.Vector3(0,1,0),project=new THREE.Vector3();let disposed=false;
+import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
+export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
+ const root=new T.Group();root.name='gyuwon-three-dimensional-giant-raid';root.visible=false;scene.add(root);
+ const mats=new Set(),geos=new Set(),mat=o=>{const m=new T.MeshStandardMaterial(o);mats.add(m);return m;},geo=g=>(geos.add(g),g);
+ const wood=mat({color:0x6b422d,roughness:.74}),gold=mat({color:0xb89b63,roughness:.35,metalness:.72}),iron=mat({color:0x2a2634,roughness:.5,metalness:.65}),red=mat({color:0x5b1728,roughness:.95,side:T.DoubleSide}),cream=mat({color:0xd5d0b8,roughness:.73}),black=mat({color:0x191420,roughness:.75});
+ const glow=mat({color:0xffdf8d,emissive:0xe5a739,emissiveIntensity:.9,roughness:.3,metalness:.45}),blood=mat({color:0x8e173c,emissive:0x470c24,emissiveIntensity:.6,roughness:.35});
+ const box=geo(new T.BoxGeometry(1,1,1)),sphere=geo(new T.SphereGeometry(1,coarse?14:24,coarse?10:16)),ring=geo(new T.TorusGeometry(1,.06,8,coarse?40:72)),cyl=geo(new T.CylinderGeometry(1,1,1,16)),pageGeo=geo(new T.PlaneGeometry(1,1.4,3,4));
+ const mesh=(p,g,m,name='')=>{const o=new T.Mesh(g,m);o.name=name;o.castShadow=!coarse;o.receiveShadow=true;p.add(o);return o;};
+ const floor=new T.InstancedMesh(box,wood,96);floor.name='raid-deformable-stage-planks';floor.receiveShadow=true;root.add(floor);
+ const matrix=new T.Matrix4(),q=new T.Quaternion(),v=new T.Vector3(),s=new T.Vector3();
+ const footing=mesh(root,box,iron);footing.position.set(0,-1.2,-1);footing.scale.set(65,1.8,61);
+ for(const side of [-1,1]){const frame=mesh(root,box,gold);frame.position.set(side*32,20,-30);frame.scale.set(1.3,40,2);}
+ const upper=mesh(root,box,gold);upper.position.set(0,40,-30);upper.scale.set(65,1.2,2);
+ const curtainGeo=geo(new T.PlaneGeometry(33,42,coarse?24:64,16));const pos=curtainGeo.attributes.position;for(let i=0;i<pos.count;i++)pos.setZ(i,Math.cos(pos.getX(i)*1.45)*.55);curtainGeo.computeVertexNormals();
+ const curtains=[-1,1].map(side=>{const o=mesh(root,curtainGeo,red,'giant-opening-curtain');o.position.set(side*16.5,20,-30);return o;});
+ const canopy=mesh(root,box,red);canopy.position.set(0,40,-28);canopy.scale.set(67,3,5);
+ const guestParty=createGyuwonBossParty({coarse}),allies=guestParty.roles;for(const a of allies)root.add(a);
+ const fill=new T.HemisphereLight(0xffdec2,0x27172c,.75);root.add(fill);
+ const giant=createGiantGyuwon(root,boss,{coarse});
+ const backStage=mesh(root,box,iron,'giant-waist-stage-front');backStage.position.set(0,3.4,-26);backStage.scale.set(20,6.8,6);
+ const lighting=new T.Group();lighting.name='raid-lighting-core';root.add(lighting);
+ const crystal=mesh(lighting,geo(new T.OctahedronGeometry(2.2,1)),glow);crystal.position.y=0;
+ for(let i=0;i<8;i++){const a=i*Math.PI/4,lamp=mesh(lighting,cyl,iron);lamp.position.set(Math.cos(a)*4,0,Math.sin(a)*2);lamp.scale.set(.8,1.8,.8);lamp.rotation.x=Math.PI/3;const bulb=mesh(lamp,sphere,glow);bulb.position.y=-.6;bulb.scale.set(.6,.25,.6);}
+ const wire=mesh(root,cyl,iron);wire.position.set(-21,31.5,-18);wire.scale.set(.09,17,.09);
+ const center=new T.Group();center.name='raid-stage-center-core';root.add(center);const heart=mesh(center,geo(new T.IcosahedronGeometry(2,2)),glow),petals=[];
+ for(let i=0;i<12;i++){const a=i*Math.PI/6,p=mesh(center,box,i%2?gold:iron);p.position.set(Math.sin(a)*2.4,0,Math.cos(a)*2.4);p.rotation.y=a;p.scale.set(.7,3.2,1);petals.push(p);}
+ const projectiles=Array.from({length:8},()=>{
+  const group=new T.Group();root.add(group);group.visible=false;
+  const blade=mesh(group,box,cream);blade.scale.set(.18,3.4,.4);
+  const die=mesh(group,box,gold);die.scale.setScalar(1.6);for(let i=0;i<3;i++)for(const side of [-1,1]){const pip=mesh(die,sphere,black);pip.position.set((i-1)*.19,side*.51,0);pip.scale.setScalar(.055);}
+  const pips=Array.from({length:9},(_,i)=>{const p=mesh(die,sphere,black);p.position.set((i%3-1)*.27,(Math.floor(i/3)-1)*.27,.51);p.scale.setScalar(.065);return p;});
+  const puppet=new T.Group();group.add(puppet);const coat=mesh(puppet,geo(new T.LatheGeometry([[0,0],[.3,0],[.5,.5],[.35,1.4],[0,1.5]].map(x=>new T.Vector2(...x)),16)),red);const face=mesh(puppet,sphere,cream);face.position.y=1.7;face.scale.set(.38,.46,.33);const hat=mesh(puppet,cyl,black);hat.position.y=2.18;hat.scale.set(.38,.5,.38);for(const side of [-1,1]){const arm=mesh(puppet,cyl,cream);arm.position.set(side*.65,.85,0);arm.rotation.z=side*1.0;arm.scale.set(.09,1,.09);}
+  const bloodBall=mesh(group,sphere,blood);bloodBall.scale.set(.6,.85,.6);const bloodRing=mesh(bloodBall,ring,blood);bloodRing.scale.setScalar(1.5);
+  const circusWave=mesh(group,ring,glow);circusWave.scale.setScalar(1.1);
+  return {group,items:[blade,puppet,die,bloodBall],circusWave,pips};
+ });
+ const enemyShot=mesh(root,sphere,glow,'raid-host-projectile');enemyShot.scale.set(.7,.7,.7);
+ const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
+ const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
+ const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
+ const bindings=Array.from({length:5},()=>{const m=mesh(root,ring,gold,'raid-circus-binding');m.scale.setScalar(2.7);m.visible=false;return m;});
+ const fragments=Array.from({length:40},(_,i)=>{const p=mesh(root,i%3===0?box:geo(new T.TetrahedronGeometry(.4,0)),i%2?gold:cream,'raid-pooled-fragment');p.visible=false;return {mesh:p,at:-99,from:new T.Vector3(),index:i};});
+ const seen=new Set(),project=new T.Vector3();let disposed=false,last=0,owner=null;
  function update(g){
-  const m=g.gyuwon?.years?.musical;root.visible=!!m?.reference&&m.year===5&&!m.finishing&&g.status==='playing';if(!root.visible)return;
-  scene.background.setHex(0x111d2b);scene.fog.color.setHex(0x111d2b);scene.fog.density=.009;
-  guestParty.update(m);
-  // Every attack's physical target and the staged cast positions use m.party.
-  for(let i=0;i<enemies.length;i++){
-   const e=m.enemies[i],a=i===0?boss:enemies[i];a.visible=e.hp>0;a.position.set(e.x,i<3?.2:3.6+Math.sin(m.time*2+i)*.28,e.z);a.scale.setScalar(i<3?1.35:1);
-   if(i===0){
-    // The first musical act: Gyuwon enters from the wing, crosses to the
-    // orchestra-lit center and makes a nervous bow. This is a visual entrance
-    // only, not a combat teleport or a dangerous hitbox while input is locked.
-    const overture=m.overture&&m.time<5.8?m.time:null;
-    if(overture!==null){
-     const walk=THREE.MathUtils.smoothstep(overture,1.6,4.1);
-     a.position.x=-10+(e.x+10)*walk;
-     a.position.y=.2+Math.sin(Math.min(1,walk)*Math.PI*7)*.13*(1-walk);
-     a.rotation.x=-.16*THREE.MathUtils.smoothstep(overture,3.75,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.8,5.65));
-     const arm=a.getObjectByName('gyuwon-right-arm');
-     if(arm)arm.rotation.z=-.55*THREE.MathUtils.smoothstep(overture,3.1,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.9,5.7));
-    }else{a.rotation.x=0;const arm=a.getObjectByName('gyuwon-right-arm');if(arm)arm.rotation.z=0;}
-   }
-   a.rotation.y=Math.atan2(m.party[0].x-e.x,m.party[0].z-e.z);
-   if(i>0&&i<3){const torso=a.getObjectByName('gyuwon-tailored-torso'),arm=a.getObjectByName('gyuwon-right-arm');const power=m.turnActor===e.id&&m.turn==='boss'?Math.min(1,m.turnElapsed/1.2):0;if(torso)torso.rotation.x=-.18+power*.24;if(arm)arm.rotation.x=-.4-power;}
-  }
-  const selected=m.enemies[m.targetIndex];target.visible=selected?.hp>0;if(selected){target.position.set(selected.x,selected.index<3?2.5:3.8,selected.z+1.1);target.rotation.y=Math.atan2(-12-selected.x,23-selected.z);target.rotation.z=m.time*.3;}
-  ribbons.forEach(a=>a.visible=false);
-  const motion=m.actorMotion;
-  if(motion?.type==='ultimate'&&motion.age>.55&&motion.age<1.65){const actor=m.party.find(p=>p.id===motion.actorId);for(let i=0;i<m.enemies.length;i++){const e=m.enemies[i],r=ribbons[i];r.visible=e.hp>0;const from=new THREE.Vector3(actor.x,3,actor.z),to=new THREE.Vector3(e.x,2.3,e.z);direction.subVectors(to,from);r.position.copy(from).addScaledVector(direction,.5);r.quaternion.setFromUnitVectors(axis,direction.clone().normalize());r.scale.set(1,direction.length(),1);}}
+  const m=g.gyuwon?.years?.musical;root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible)return;
+  const dt=owner===g?Math.max(0,Math.min(.05,m.time-last)):.016;if(owner!==g){seen.clear();owner=g;}last=m.time;
+  scene.background.setHex(0x171321);scene.fog.color.setHex(0x171321);scene.fog.density=.0025;
+  for(const a of allies)if(a.parent!==root)root.add(a);
+  guestParty.update(m);giant.update(m,dt);
+  for(let i=0;i<2;i++){const side=i?-1:1;curtains[i].position.x=-side*(16.5+T.MathUtils.smoothstep(m.time,.2,7)*22);curtains[i].rotation.y=side*.035*Math.sin(m.time*.7);}
+  const a=m.raidAttack,compression=a&&a.part<2&&a.age>a.impactAt&&a.age<a.impactAt+.6?Math.sin((a.age-a.impactAt)/.6*Math.PI):0;
+  for(let i=0;i<96;i++){const x=(i%16-7.5)*4,z=(Math.floor(i/16)-2.5)*10;const bend=compression*Math.max(0,1-Math.hypot(x-(a?.to.x||0),z-(a?.to.z||0))/8)*.38;v.set(x,-bend,z);s.set(3.96,.3,9.96);matrix.compose(v,q,s);floor.setMatrixAt(i,matrix);}floor.instanceMatrix.needsUpdate=true;
+  const light=m.enemies[2];lighting.visible=!light.destroyed;lighting.position.set(light.x,light.y,light.z);crystal.rotation.y=m.time*.4;
+  const core=m.enemies[4];center.visible=core.active;center.position.set(core.x,core.y,core.z);heart.rotation.y=m.time*.5;heart.visible=!core.destroyed;
+  petals.forEach((p,i)=>{p.rotation.z=(i%2?1:-1)*(core.active?Math.min(1,(m.time-core.unlock)/3):0)*.85;p.position.y=-Math.min(2,Math.max(0,m.time-core.unlock)*.6);});
+  projectiles.forEach(p=>p.group.visible=false);const motion=m.actorMotion,role=motion?m.party.find(p=>p.id===motion.actorId):null;
+  motion?.projectiles?.forEach((shot,i)=>{const fx=projectiles[i];if(!fx)return;fx.group.visible=shot.visible&&role.index!==0;fx.group.position.set(shot.x,shot.y,shot.z);fx.group.rotation.set(m.time*3,m.time*4,m.time*2);const shock=role.index===1&&motion.type==='light';fx.items.forEach((o,k)=>o.visible=k===role.index&&!shock);fx.circusWave.visible=shock;fx.group.scale.setScalar(motion.type==='ultimate'?2.3:1);const layout=[[],[4],[0,8],[0,4,8],[0,2,6,8],[0,2,4,6,8],[0,2,3,5,6,8]][motion.diceValue||1];fx.pips.forEach((o,k)=>o.visible=layout.includes(k));});
+  enemyShot.visible=!!a&&a.part>=2&&a.age>=a.wind&&a.age<a.impactAt+.1;if(a)enemyShot.position.set(a.x,a.y,a.z);
+  for(let i=0;i<notes.length;i++){const n=notes[i];n.visible=!!a&&(a.part===1||a.part===3)&&a.age<a.impactAt;if(n.visible){const u=i/8;n.position.set(a.from.x+Math.sin(m.time*2+i)*3,a.from.y+Math.cos(m.time*2+i)*2,a.from.z+u*5);n.rotation.set(.4,m.time+i,.3);}}
+  waves.forEach((w,i)=>{const contact=motion&&motion.age>=motion.hitAt&&motion.age<motion.hitAt+.4;w.visible=contact&&i===role.index||m.finishProgress>0&&m.finishProgress<.92;if(w.visible){const target=m.enemies[m.targetIndex];w.position.set(m.finishProgress>0?0:target.x,m.finishProgress>0?5:target.y,m.finishProgress>0?-9:target.z);w.scale.setScalar(m.finishProgress>0?2+m.finishProgress*(10+m.finishStrength*.4):1+(motion.age-motion.hitAt)*13);}});
+  shields.forEach((o,i)=>{o.visible=m.shield>0;const p=m.party[i];o.position.set(p.x,2.5+(p.y||0),p.z-.6);o.rotation.y=Math.sin(m.time*1.5)*.15;});
+  bindings.forEach((o,i)=>{const e=m.enemies[i];o.visible=e.bind>0&&!e.destroyed;o.position.set(e.x,e.y,e.z);o.rotation.set(m.time*.7,m.time*.3,0);});
+  for(const h of m.raidHistory){if(h.event!=='destroy'||seen.has(h.part))continue;seen.add(h.part);const e=m.enemies[h.part];for(let i=0;i<8;i++){const f=fragments[h.part*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
+  fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=age>=0&&age<3;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
  }
- function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{project.set(e.x,e.index<3?5.3:5.7,e.z).project(camera);return {left:r.left-s.left+(project.x*.5+.5)*r.width,top:r.top-s.top+(-project.y*.5+.5)*r.height,visible:project.z<1&&e.hp>0};});}
- async function prewarm(renderer,camera){const visible=root.visible,previous=renderer.getRenderTarget(),target=new THREE.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
- return {root,update,projectTargets,prewarm,ensembleRoles:allies,stats:()=>({allies:allies.length,enemies:5,dimension:3}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
+ function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{project.set(e.x,e.y+3,e.z).project(camera);return {left:Math.min(r.width-65,Math.max(65,r.left-s.left+(project.x*.5+.5)*r.width+(e.index===3?95:0))),top:Math.max(r.height>500?185:115,r.top-s.top+(-project.y*.5+.5)*r.height),visible:project.z<1&&e.active&&!e.destroyed};});}
+ function cameraFrame(m,aspect=1.6){const portrait=aspect<1,position={x:0,y:22,z:portrait?85:57},target={x:0,y:9,z:-9};const motion=m.actorMotion;if(motion?.type==='ultimate'){const e=m.enemies[m.targetIndex],p=m.party.find(p=>p.id===motion.actorId),k=Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI);position.x=p.homeX*.3*k;position.z-=9*k;position.y+=k*2;target.x=e.x*.3*k;target.y+=k*((e.y+4)*.45-9)*.4;}return {position,target};}
+ async function prewarm(renderer,camera){await guestParty.ready;const visible=root.visible,previous=renderer.getRenderTarget(),target=new T.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
+ return {root,update,projectTargets,cameraFrame,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }

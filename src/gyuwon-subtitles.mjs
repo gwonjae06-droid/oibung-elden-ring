@@ -1,3 +1,4 @@
+import {GYUWON_ALIGNED_CAPTIONS} from './gyuwon-aligned-captions.mjs';
 import {originalTimingForEditedCue} from './gyuwon-original-timeline.mjs';
 // Historical short-master cues; incomplete portions of original masters intentionally remain silent.
 export const GYUWON_SUBTITLES={
@@ -678,32 +679,19 @@ export const GYUWON_SUBTITLES={
   }
  ]
 };
-// The short-master text covers only fragments of each original song.
- // Until the full recordings are transcribed, keep the reliably localized cues
- // and use the existing bilingual *authored libretto* as provisional captions
- // through other passages. These are not verified vocal timestamps.
+// Historical edit cues are retained only for source-provenance audits.
+// Runtime captions use the original-recording alignment below.
  import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
  import {gyuwonMasterCaptionOverride} from './gyuwon-caption-overrides.mjs';
  export const GYUWON_ORIGINAL_SUBTITLES=Object.freeze(Object.fromEntries(
   Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>[key,cues.flatMap(c=>{
    const mapped=originalTimingForEditedCue(key,c);return mapped?[{...c,...mapped,verified:true}]:[];
   }).sort((a,b)=>a.start-b.start)])));
- export const GYUWON_PROVISIONAL_SUBTITLES=Object.freeze(Object.fromEntries(
-  Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>{
-   const duration=GYUWON_SONGS[key]?.duration||180;
-   const repeat=key==='ending'?3:4,offset=key==='ending'?8:4.5;
-   const slots=[],total=duration-offset-4,slotLength=total/(cues.length*repeat);
-   for(let cycle=0;cycle<repeat;cycle++)for(let i=0;i<cues.length;i++){
-    const at=offset+(cycle*cues.length+i)*slotLength;
-    slots.push({...cues[i],start:+at.toFixed(3),end:+Math.min(duration-1,at+Math.min(slotLength*.81,4.4)).toFixed(3),verified:false});
-   }
-   return [key,slots];
-  })));
+ // Compatibility export: provisional repeated libretto is never generated or displayed.
+ export const GYUWON_PROVISIONAL_SUBTITLES=Object.freeze(Object.fromEntries(Object.keys(GYUWON_SONGS).map(key=>[key,Object.freeze([])])));
  export function gyuwonSubtitleAt(key,time){
   const corrected=gyuwonMasterCaptionOverride(key,time);
   if(corrected)return {...corrected,verified:true,source:'original-master-manual'};
-  const mapped=GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
-  if(mapped)return {...mapped,source:'archived-source-excerpt',verified:false};
-  const guide=GYUWON_PROVISIONAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
-  return guide?{...guide,source:'unverified-libretto-guide',verified:false}:null;
+  const aligned=GYUWON_ALIGNED_CAPTIONS[key]?.find(c=>time>=c.start&&time<c.end);
+  return aligned?{...aligned,source:aligned.timing==='source-excerpt'?'archived-source-excerpt':'original-word-alignment',verified:false}:null;
  }
