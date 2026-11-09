@@ -42,7 +42,7 @@ test('orchestral microacting stays bounded, finite, and rigid-body collision ind
     {raidAttack:{part:0,age:1.1,wind:1.5},hitUntil:73.3,bpm:142});
    assert.ok(pose.torso.every(v=>Number.isFinite(v)&&Math.abs(v)<.6),name);
    assert.ok(pose.head.every(v=>Number.isFinite(v)&&Math.abs(v)<.6),name);
-   assert.ok(pose.hands.flat().every(v=>Number.isFinite(v)&&Math.abs(v)<18),name);
+   assert.ok(pose.hands.flat().every(v=>Number.isFinite(v)&&Math.abs(v)<45),name);
    assert.ok(pose.palms.every(p=>p.curl>=0&&p.curl<=1));
   }
  }
@@ -53,8 +53,10 @@ test('orchestral microacting stays bounded, finite, and rigid-body collision ind
  poseActFiveHands(m,0);assert.deepEqual(m.enemies.slice(0,2).map(e=>[e.x,e.y,e.z]),after);
  m.raidAttack={part:0,age:.4,wind:1.5};
  poseActFiveHands(m,.1);
- assert.deepEqual(m.enemies.slice(0,2).map(e=>[e.x,e.y,e.z]),after,
-  'the active attack has priority over decorative gesture');
+ assert.deepEqual([m.enemies[0].x,m.enemies[0].y,m.enemies[0].z],after[0],
+  'the attacking hand keeps its authoritative contact path');
+ assert.notDeepEqual([m.enemies[1].x,m.enemies[1].y,m.enemies[1].z],after[1],
+  'the other hand keeps performing');
 });
 
 test('full giant rig smoothly animates the actual actor model, all limbs and face together',()=>{

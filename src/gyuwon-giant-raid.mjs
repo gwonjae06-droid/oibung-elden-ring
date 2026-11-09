@@ -1,6 +1,6 @@
 // Simulation owns both visible limb positions and their contact volumes.
 // The giant's part HP is local performance state; only the song ends an act.
-import {ACT_FIVE_SCORE,actFivePerformanceAt,actFiveAttackProfile,actFiveAttackPoint,poseActFiveHands} from './gyuwon-act-five-score.mjs';
+import {ACT_FIVE_SCORE,actFivePerformanceAt,actFiveAttackProfile,actFiveAttackPoint,poseActFiveHands,actFiveLiteralFocusAt} from './gyuwon-act-five-score.mjs';
 export const GIANT_RAID_SCENES=Object.freeze([[0,'invitation'],[20,'hands'],[40,'lighting'],[90,'mask'],[109,'ensemble'],[140,'grand-stage'],[165,'finish']]);
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const ease=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -138,6 +138,7 @@ export function tickGiantRaid(g,m,dt,c){
  if(m.time>=165){
   if(m.actorMotion){const p=m.party.find(p=>p.id===m.actorMotion.actorId);p.x=lerp(p.x,p.homeX,1-Math.exp(-dt*5));p.z=lerp(p.z,p.homeZ,1-Math.exp(-dt*5));p.y*=Math.exp(-dt*5);m.actorMotion=null;}
   m.raidAttack=null;m.turn='finish';m.ensembleJump=Math.sin(m.finishProgress*Math.PI)*7;
+  poseActFiveHands(m,dt);
   for(const p of m.party)if(p.hp<=0)p.hp=35;
   return;
  }
@@ -147,11 +148,11 @@ export function tickGiantRaid(g,m,dt,c){
   const p=m.party.find(p=>p.id===a.actorId),e=m.enemies.find(e=>e.id===a.targetId);a.age+=dt;
   const out=ease(a.age/a.hitAt),back=ease((a.age-a.hitAt-.12)/(a.duration-a.hitAt-.12));
   if(p.index===0){p.x=lerp(a.fromX,e.x,out)*(1-back)+p.homeX*back;p.z=lerp(a.fromZ,e.z+1.5,out)*(1-back)+p.homeZ*back;p.y=Math.max(0,(e.y-1.6)*out*(1-back)+Math.sin(out*Math.PI)*(a.type==='ultimate'?14:3)*(1-back));}
-  for(const shot of a.projectiles){const q=ease((a.age-.42)/Math.max(.1,a.hitAt-.42));shot.visible=a.age>=.42&&a.age<=a.hitAt+.1;shot.x=lerp(shot.from.x,shot.to.x,q);shot.z=lerp(shot.from.z,shot.to.z,q);shot.y=lerp(shot.from.y,shot.to.y,q)+Math.sin(q*Math.PI)*(p.index===2?7:2);}
+  for(const shot of a.projectiles){const target=m.enemies[shot.part];if(target&&!shot.hit)shot.to=point(target);const q=ease((a.age-.42)/Math.max(.1,a.hitAt-.42));shot.visible=a.age>=.42&&a.age<=a.hitAt+.1;shot.x=lerp(shot.from.x,shot.to.x,q);shot.z=lerp(shot.from.z,shot.to.z,q);shot.y=lerp(shot.from.y,shot.to.y,q)+Math.sin(q*Math.PI)*(p.index===2?7:2);}
   if(a.age>=a.hitAt)attackContact(g,m,a,p,c);
   if(a.age>=a.duration){p.x=p.homeX;p.z=p.homeZ;p.y=0;m.actorMotion=null;if(a.type==='ultimate')m.turn=m.returnTurn;else nextRaidTurn(m);}
  }else if(m.turn==='boss'){
-  if(m.songPerformance.pattern==='breather'&&!m.raidAttack){nextRaidTurn(m);return;}
+  if((m.songPerformance.pattern==='breather'||actFiveLiteralFocusAt(m.time,3.8))&&!m.raidAttack){nextRaidTurn(m);return;}
   const e=m.enemies.find(e=>e.id===m.turnActor);if(!e||e.destroyed||!e.active||e.broken>0||e.bind>0){m.raidAttack=null;nextRaidTurn(m);return;}
   const victim=m.party.find(p=>p.id===m.enemyVictim&&p.hp>0)||m.party.find(p=>p.hp>0);
   if(!victim){m.turn='support';m.raidAttack=null;return;}
@@ -164,8 +165,9 @@ export function tickGiantRaid(g,m,dt,c){
   const pos=actFiveAttackPoint(b,b.from,b.to,b.age,e.index%2?1:-1),recover=pos.back;Object.assign(b,{x:pos.x,y:pos.y,z:pos.z});
   for(const shot of b.shots){const pos=actFiveAttackPoint(b,shot.from,shot.to,b.age,e.index%2?1:-1);Object.assign(shot,{x:pos.x,y:pos.y,z:pos.z});}
   if(b.age>=b.impactAt&&!b.hit){b.hit=true;for(const shot of b.shots){const p=m.party.find(p=>p.id===shot.victim);shot.hit=true;if(p&&p.hp>0&&distance(shot,{x:p.x,y:p.y+1.8,z:p.z})<4.5){const amount=m.shield>0?7:b.multi?12:18;p.hp=Math.max(0,p.hp-amount);p.energy=Math.min(100,p.energy+18);c.take(g,amount,c.emit);}}}
-  if(e.index<2){e.x=lerp(b.x,e.homeX,recover);e.y=lerp(b.y,e.homeY,recover);e.z=lerp(b.z,e.homeZ,recover);}
-  if(b.age>=b.duration){e.x=e.homeX;e.y=e.homeY;e.z=e.homeZ;m.raidAttack=null;nextRaidTurn(m);}
+  const home=e.index<2?m.handPose.handTargets[e.index]:[e.homeX,e.homeY,e.homeZ];
+  if(e.index<2){e.x=lerp(b.x,home[0],recover);e.y=lerp(b.y,home[1],recover);e.z=lerp(b.z,home[2],recover);}
+  if(b.age>=b.duration){[e.x,e.y,e.z]=home;m.raidAttack=null;nextRaidTurn(m);}
  }
  g.boss.x=0;g.boss.z=-25;
 }

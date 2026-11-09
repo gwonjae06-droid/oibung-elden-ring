@@ -8,7 +8,7 @@ import {actFivePerformanceAt} from '../src/gyuwon-act-five-score.mjs';
 import {actFiveMouthAt,actFiveInstrumentalAt} from '../src/gyuwon-act-five-vocal-acting.mjs';
 import {createGyuwonActor} from '../src/gyuwon-actor.mjs';
 import {createGiantGyuwon} from '../src/gyuwon-giant-actor.mjs';
-import {createActFiveSpectacle} from '../src/gyuwon-act-five-spectacle.mjs';
+import {createActFiveWings} from '../src/gyuwon-act-five-wings.mjs';
 import {createGyuwonFiveSixBridge} from '../src/gyuwon-five-six-bridge.mjs';
 import {gyuwonFiveToSixExit,gyuwonRunnerBridgeAt} from '../src/gyuwon-runner-director.mjs';
 
@@ -60,15 +60,14 @@ test('the giant face deformation never writes into the shared original portrait 
  assert.equal(giant.photoMouth.interior.visible,false);
  giant.dispose();source.dispose();
 });
-test('giant lyric-scale sets use pooled stage objects without creating physical damage zones',()=>{
- const parent=new T.Group(),fx=createActFiveSpectacle(parent,{coarse:true});
- const samples={threshold:13,ocean:20.5,sky:68,royal:28,hero:31,heart:35,ballroom:54,fanfare:43,fireworks:104};
- for(const [name,t]of Object.entries(samples)){
-  const p=actFivePerformanceAt(t);fx.update({time:t,songPerformance:p,bpm:136});
-  assert.equal(fx.groups[name].visible,true, name);
- }
- fx.dispose();assert.equal(parent.children.length,0);
+test('the flight word unfolds one physical pair from the back, without ambient swarms',()=>{
+ const parent=new T.Group(),wings=createActFiveWings(parent,{coarse:true});
+ for(let i=0;i<30;i++)wings.update({time:68.5,songPerformance:actFivePerformanceAt(68.5)},1/60);
+ assert.equal(wings.root.parent,parent);assert.equal(wings.stats().pairs,1);assert.equal(wings.root.visible,true);
+ for(let i=0;i<60;i++)wings.update({time:72,songPerformance:actFivePerformanceAt(72)},1/60);
+ assert.equal(wings.root.visible,false);wings.dispose();assert.equal(parent.children.length,0);
 });
+
 test('five-to-six preserves the actual 3D performance and stage transition instead of a black-only handoff',()=>{
  const g=createGyuwonGame('sword',{yearMode:true});jumpGyuwonToFifthYear(g);
  const before=g.gyuwon.years.musical;

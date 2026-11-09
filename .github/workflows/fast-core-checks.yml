@@ -66,6 +66,7 @@ jobs:
           tests/gyuwon-musical-route.test.mjs
           tests/gyuwon-curtain-call.test.mjs
           tests/gyuwon-living-doodle.test.mjs
+          tests/gyuwon-act-five-literal.test.mjs
       - name: Verify two-phase clown encounter, original horror and ensemble
         run: |
           node --check src/clown-combat.mjs

@@ -14,8 +14,10 @@ on:
       - 'scripts/gyuwon-giant-raid-qa.mjs'
       - 'scripts/gyuwon-reverie-qa.mjs'
       - 'scripts/gyuwon-act-five-ink-qa.mjs'
+      - 'scripts/gyuwon-act-five-literal-qa.mjs'
       - 'tests/gyuwon-act-five-score.test.mjs'
       - 'tests/gyuwon-act-five-acting.test.mjs'
+      - 'tests/gyuwon-act-five-literal.test.mjs'
       - 'tests/gyuwon-reverie.test.mjs'
       - 'tests/gyuwon-giant-raid.test.mjs'
       - 'tests/gyuwon-caption-sync.test.mjs'
@@ -50,6 +52,8 @@ jobs:
           node scripts/gyuwon-musical-browser-smoke.mjs
       - name: Colored ink UI and synchronized original lyric scenes
         run: node scripts/gyuwon-act-five-ink-qa.mjs
+      - name: Literal lyric arms, back wings and clean stage
+        run: node scripts/gyuwon-act-five-literal-qa.mjs
       - name: Fourth-year reflection and uninterrupted imagination entry
         run: node scripts/gyuwon-reverie-qa.mjs
       - name: Full original 5su raid with native UI combat
@@ -67,5 +71,6 @@ jobs:
             qa-output/giant-raid/
             qa-output/reverie/
             qa-output/act-five-ink/
+            qa-output/literal/
           if-no-files-found: warn
           retention-days: 7

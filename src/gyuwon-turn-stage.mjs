@@ -4,7 +4,6 @@ import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
 import {createActFiveStagecraft} from './gyuwon-act-five-stagecraft.mjs';
 import {ACT_FIVE_SCORE,scoreEase,actFivePerformanceAt} from './gyuwon-act-five-score.mjs';
 import {createGyuwonFiveSixBridge} from './gyuwon-five-six-bridge.mjs';
-import {createActFiveSpectacle} from './gyuwon-act-five-spectacle.mjs';
 import {gyuwonRunnerBridgeAt,GYUWON_RUNNER_ENTER_SECONDS} from './gyuwon-runner-director.mjs';
 import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
 import {actFiveCameraDirection} from './gyuwon-act-five-camera.mjs';
@@ -29,8 +28,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const rim=new T.DirectionalLight(0x8bbddb,1.5);rim.position.set(25,30,-30);root.add(rim);
  const footlight=new T.DirectionalLight(0xf0e6d6,1.6);footlight.position.set(0,9,23);footlight.target.position.set(0,2,8);root.add(footlight,footlight.target);
  const giant=createGiantGyuwon(root,boss,{coarse});
- const stagecraft=createActFiveStagecraft(root,giant.head,{coarse});
- const spectacle=createActFiveSpectacle(root,{coarse});
+ const stagecraft=createActFiveStagecraft(root,giant.head,{coarse,hands:giant.arms.map(a=>a.hand)});
  const runnerBridge=createGyuwonFiveSixBridge(root,{coarse});
  const backStage=mesh(root,box,iron,'giant-waist-stage-front');backStage.position.set(0,3.4,-26);backStage.scale.set(20,6.8,6);
  const lighting=new T.Group();lighting.name='raid-lighting-core';root.add(lighting);
@@ -53,9 +51,6 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   const orb=mesh(group,sphere,glow),wave=mesh(group,ring,glow),star=mesh(group,stagecraft.starGeometry,glow);orb.scale.setScalar(.7);wave.scale.set(1.7,1.4,1.7);star.scale.setScalar(1.25);return {group,items:[orb,wave,star]};});
  // Encore's physical stage object is attached to enemy5's real collider.
  const encore=new T.Group();encore.name='raid-encore-physical-beacon';root.add(encore);encore.visible=false;
- const encoreBall=mesh(encore,geo(new T.IcosahedronGeometry(1,2)),glow);
- const encoreRings=[0,1,2].map((_,i)=>{const o=mesh(encore,ring,i===1?blood:gold);o.scale.setScalar(2.4+i*.85);return o;});
- const encoreRays=Array.from({length:8},(_,i)=>{const o=mesh(encore,box,i%2?gold:cream);const a=i*Math.PI/4;o.position.set(Math.cos(a)*3.8,Math.sin(a)*3.8,0);o.scale.set(.16,1.5,.16);o.rotation.z=-a;return o;});
  const encoreForms=Array.from({length:5},()=>{const o=new T.Group();encore.add(o);return o;});
  mesh(encoreForms[0],stagecraft.starGeometry,glow, 'encore-dream-star').scale.set(3.1,3.1,3.1);
  for(const side of [-1,1])mesh(encoreForms[1],box,cream,'encore-door-pillar').position.set(side*2.15,0,0);
@@ -68,7 +63,6 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const platform=mesh(encoreForms[4],box,gold,'encore-performance-stage');platform.position.y=-1.3;platform.scale.set(6.5,1.15,4.4);
  const banner=mesh(encoreForms[4],box,cream,'encore-show-banner');banner.position.y=1.5;banner.scale.set(4.8,3.2,.24);
  
-  const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
  const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
  const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
  // A real spotlight cues the incoming collision for the targeted ally.
@@ -91,15 +85,11 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   const dt=owner===g?Math.max(0,Math.min(.05,m.time-last)):.016;if(owner!==g){seen.clear();owner=g;}last=m.time;
   scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
   for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
-  guestParty.update(m);giant.update(m,dt);stagecraft.update(m);spectacle.update(m);
+  guestParty.update(m);giant.update(m,dt);stagecraft.update(m);
   runnerBridge.update({exit:bridging?1:Math.max(0,(gyuwonFiveToSixExit(m.time,m.clock?.duration||180)-.24)/.76),entryTime:bridging?current.time:null});
   const encorePart=m.enemies[5],echo=encorePart&&!encorePart.destroyed&&encorePart.active;
   encore.visible=!!echo;
   if(echo){encore.position.set(encorePart.x,encorePart.y,encorePart.z);
-   const pulse=1+.12*Math.sin(m.time*4.8);encoreBall.scale.setScalar(1.7*pulse);
-   encoreBall.rotation.set(m.time*.45,m.time*.8,0);
-   encoreRings.forEach((o,i)=>{o.rotation.set(m.time*(i%2?-.32:.46),m.time*.3+i,.25);o.scale.setScalar((2.4+i*.8)*pulse);});
-   encoreRays.forEach((o,i)=>o.rotation.z=m.time*.25-i*Math.PI/4);
    encoreForms.forEach((form,i)=>{form.visible=i===(m.encoreCount-1)%5;form.rotation.y=Math.sin(m.time*.7)*.15;});
   }
   // The previous four bosses remain behind as the armored protagonist takes
@@ -125,8 +115,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
    fx.group.position.set(shot.x,shot.y,shot.z);fx.group.scale.setScalar(a.age<a.wind?.18+.82*scoreEase(a.age/a.wind):1);fx.group.rotation.set(0,m.time*.6,m.time*.9+i);
    const shape=a.kind==='stars'?2:['wave','crown'].includes(a.kind)?1:0;fx.items.forEach((o,k)=>o.visible=k===shape);
   });
-  for(let i=0;i<notes.length;i++){const n=notes[i];n.visible=!!a&&(a.part===1||a.part===3)&&a.age<a.impactAt;if(n.visible){const u=i/8;n.position.set(a.from.x+Math.sin(m.time*2+i)*3,a.from.y+Math.cos(m.time*2+i)*2,a.from.z+u*5);n.rotation.set(.4,m.time+i,.3);}}
-  waves.forEach((w,i)=>{const contact=motion&&motion.age>=motion.hitAt&&motion.age<motion.hitAt+.4;w.visible=contact&&i===role.index||m.finishProgress>0&&m.finishProgress<.92;if(w.visible){const target=m.enemies[m.targetIndex];w.position.set(m.finishProgress>0?0:target.x,m.finishProgress>0?5:target.y,m.finishProgress>0?-9:target.z);w.scale.setScalar(m.finishProgress>0?2+m.finishProgress*(10+m.finishStrength*.4):1+(motion.age-motion.hitAt)*13);}});
+  waves.forEach((w,i)=>{const contact=motion&&motion.age>=motion.hitAt&&motion.age<motion.hitAt+.4;w.visible=contact&&i===role.index;if(w.visible){const target=m.enemies[m.targetIndex];w.position.set(m.finishProgress>0?0:target.x,m.finishProgress>0?5:target.y,m.finishProgress>0?-9:target.z);w.scale.setScalar(1.1+Math.min(.3,motion.age-motion.hitAt)*2.5);}});
   shields.forEach((o,i)=>{o.visible=m.shield>0;const p=m.party[i];o.position.set(p.x,2.5+(p.y||0),p.z-.6);o.rotation.y=Math.sin(m.time*1.5)*.15;});
   const attack=m.raidAttack,ready=!!attack&&!attack.blocked
    &&attack.age>=attack.wind*.28&&attack.age<=attack.wind+.12;
@@ -141,7 +130,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   }
   bindings.forEach((o,i)=>{const e=m.enemies[i];o.visible=e.bind>0&&!e.destroyed;o.position.set(e.x,e.y,e.z);o.rotation.set(m.time*.7,m.time*.3,0);});
   for(const h of m.raidHistory){if(h.event!=='destroy')continue;const id=h.part+':'+(h.cycle||0);if(seen.has(id))continue;seen.add(id);const e=m.enemies[h.part];if(!e)continue;for(let i=0;i<8;i++){const f=fragments[(h.part%5)*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
-  fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=age>=0&&age<3;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
+  fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=f.index%8<3&&age>=0&&age<1.1;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
  }
  function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{// Selection buttons reference fixed stage anchors, while the real
  // articulated hands and collision volumes continue following e.x/y/z.
@@ -152,5 +141,5 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   return {position:{x:0,y:9.8-b.camera*3.6,z:37-b.camera*(portrait?9:18)},
    target:{x:0,y:5.5-b.camera*3.4,z:-10+b.camera*4},fov:51+b.camera*4};}
  async function prewarm(renderer,camera){await guestParty.ready;const visible=root.visible,previous=renderer.getRenderTarget(),target=new T.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
- return {root,update,projectTargets,cameraFrame,runnerBridgeCamera,prewarm,ensembleRoles:allies,ensembleParty:guestParty,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();spectacle.dispose();runnerBridge.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
+ return {root,update,projectTargets,cameraFrame,runnerBridgeCamera,prewarm,ensembleRoles:allies,ensembleParty:guestParty,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,acting:giant.stats(),props:stagecraft.stats(),phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();runnerBridge.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }

@@ -5,7 +5,7 @@ const cues=GYUWON_ALIGNED_CAPTIONS[5];
 const score=[
  ['greet','invitation'],['welcome','invitation'],['choose','doors'],
  ['doors','doors'],['roads','doors'],['sea','wave'],['dream','stars'],
- ['king','crown'],['knight','strike'],['heart','invitation'],['adventure','chase'],
+ ['king','crown'],['knight','strike'],['wipe','invitation'],['adventure','chase'],
  ['curtain','strike'],['brass','fan'],['costume','crown'],
  ['stage','strike'],['dance','waltz'],['run','chase'],['self','invitation'],
  ['sky','stars'],['flight','stars'],['hand','invitation'],['together','fan'],
@@ -29,6 +29,9 @@ export function actFiveAttackProfile(time,part){
  const wind=kind==='strike'?1.65:kind==='chase'?1.35:kind==='reach'?1.65:1.5;
  return {kind,wind,impactAt:wind+.8,duration:wind+1.9,multi:part>=2&&['fan','stars'].includes(kind)};
 }
+// Preserve a clear silhouette for the three connected, literal sung actions.
+// An already launched strike completes; its next windup cannot overlap them.
+export const actFiveLiteralFocusAt=(time,lookAhead=0)=>time<82.89&&time+lookAhead>=67.34;
 export function actFiveAttackPoint(attack,from,to,age,side=1){
  const q=scoreEase((age-attack.wind)/(attack.impactAt-attack.wind)),back=scoreEase((age-attack.impactAt-.2)/.85),pre=scoreEase(age/attack.wind),arc=Math.sin(q*Math.PI);
  const lift=attack.kind==='strike'?8:attack.kind==='reach'?2:5;
@@ -39,12 +42,15 @@ export function actFiveAttackPoint(attack,from,to,age,side=1){
 // renderer moves a single pixel; a hand never acts in one place and hits
 // elsewhere. Collision-owned attacks override idle sung choreography.
 export function poseActFiveHands(m,dt){
- if(m.raidAttack||m.actorMotion)return;
  const pose=actFiveChoreographyAt(m.time,m.songPerformance,{hitUntil:m.hitTargetUntil||0,bpm:m.bpm||136});
+ m.handPose=pose;
  const k=1-Math.exp(-Math.max(0,dt)*7.5);
  for(let index=0;index<2;index++){
-  const e=m.enemies[index];if(e.destroyed)continue;
-  const [dx,dy,dz]=pose.hands[index];
-  e.x+=(e.homeX+dx-e.x)*k;e.y+=(e.homeY+dy-e.y)*k;e.z+=(e.homeZ+dz-e.z)*k;
+  // Only a hand actually making physical contact owns its wrist. The other
+  // hand, both hands during ally/projectile actions, and harmless broken parts
+  // continue the song. Target HP and attackability do not control anatomy.
+  if(m.raidAttack?.part===index)continue;
+  const e=m.enemies[index],[x,y,z]=pose.handTargets[index];
+  e.x+=(x-e.x)*k;e.y+=(y-e.y)*k;e.z+=(z-e.z)*k;
  }
 }

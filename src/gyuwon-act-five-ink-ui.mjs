@@ -55,4 +55,6 @@ export const ACT_FIVE_INK_UI=`
  [data-ink-ui="on"] .gy-turn-target{width:82px;font-size:9px;padding:3px 5px;min-height:44px}
  [data-ink-ui="on"] #pause{top:5px;right:6px;font-size:10px;padding:5px 8px}
 }
+[data-reference-turn="on"] .gy-musical-dialogue{top:14%;bottom:auto;max-width:min(62vw,760px);padding:3px 10px}
+@media(max-height:500px){[data-reference-turn="on"] .gy-musical-dialogue{top:16%;bottom:auto;max-width:58vw;padding:2px 7px}}
 `;

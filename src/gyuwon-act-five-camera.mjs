@@ -18,11 +18,11 @@ const SHOTS=Object.freeze({
  stage:[[0,22,63],[0,12,-14],54],
  dance:[[7,20,62],[0,10,-16],53],
  run:[[-8,18,64],[0,8,-13],54],
- self:[[0,24,55],[0,18,-23],47],
+ self:[[0,24,55],[0,20,-24],49],
  sky:[[0,27,60],[0,26,-27],51],
- flight:[[8,26,59],[0,23,-25],52],
- hand:[[-7,20,56],[0,11,-14],48],
- together:[[0,23,63],[0,13,-17],54],
+ flight:[[0,26,64],[0,22,-25],52],
+ hand:[[-5,24,52],[1,21,-23],49],
+ together:[[0,24,55],[0,21,-24],49],
  roles:[[9,24,57],[0,20,-24],50],
  crowns:[[5,28,58],[0,23,-25],48],
  laugh:[[-6,17,61],[0,6,-22],52],
@@ -35,7 +35,7 @@ export function actFiveCameraDirection(m,aspect=1.6){
  const cue=m?.songPerformance||{gesture:'greet',progress:0,weight:0};
  const spec=SHOTS[cue.gesture]||SHOTS.conduct,portrait=aspect<1;
  const t=Number.isFinite(m?.time)?m.time:0;
- const drift=Math.sin(t*.21)*1.65;
+ const drift=Math.sin(t*.12)*.45;
  const [x,y,z]=spec[0], [fx,fy,fz]=spec[1];
  const position={x:x+drift,y:y,z:portrait?z+28:z};
  const target={x:fx+drift*.24,y:fy,z:fz};

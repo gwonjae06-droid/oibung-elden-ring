@@ -71,16 +71,14 @@ test('the sung shot plan changes composition and retains telegraphed combat read
   raidAttack:{age:1,wind:1.4,victim:'ally0'},party:[{id:'ally0',x:6,y:0}]});
  assert.ok(warning.fov>=52);
 });
-test('the scenic stage changes real 3D object visibility on the aligned original audio clock',()=>{
+test('the stage uses a single concrete prop, leaving personal words to the actor',()=>{
  const parent=new THREE.Group(),head=new THREE.Group();parent.add(head);
  const scene=createActFiveStagecraft(parent,head,{coarse:true});
- const check=(time,name)=>{scene.update({time,songPerformance:actFivePerformanceAt(time)});const obj=parent.getObjectByName(name);assert.ok(obj,name);assert.equal(obj.visible,true,name);};
- check(20.5,'act-five-lyric-ocean');
- check(31,'act-five-knight-sword-and-shield');
- check(35,'act-five-shared-heart');
- check(54.8,'act-five-dancing-roles');
- check(68.5,'act-five-physical-dream-wings');
- check(97,'act-five-many-stories');
- check(130,'act-five-many-stories');
+ for(const [time,name]of [[13,'act-five-single-opening-door'],[20.5,'act-five-quiet-sea'],[28,'act-five-sung-crown'],[31,'act-five-held-knight-sword'],[43,'act-five-held-trumpet']]){
+  scene.update({time,songPerformance:actFivePerformanceAt(time)});assert.deepEqual(scene.stats().visibleProps,[name]);
+ }
+ for(const time of [35,54.8,68.5,72,75,97,130]){scene.update({time,songPerformance:actFivePerformanceAt(time)});assert.deepEqual(scene.stats().visibleProps,[]);}
+ assert.equal(parent.getObjectByName('act-five-shared-heart'),undefined);
+ assert.equal(parent.getObjectByName('act-five-dancing-roles'),undefined);
  scene.dispose();
 });

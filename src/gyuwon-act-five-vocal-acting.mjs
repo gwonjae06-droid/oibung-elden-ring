@@ -29,13 +29,11 @@ export function actFiveMouthAt(time){
 export function actFiveInstrumentalAt(time){
  const t=Math.max(0,Number.isFinite(time)?time:0),intro=t<1.44,bridge=t>=82.34&&t<89.86,
   finale=t>=135;
- const sequence=finale?['conduct','dance','flight','friends','beginning','conduct','welcome','dance']:
-  bridge?['dream','hand','together','roles']:
-  ['welcome','choose','roads','dream','stage','self','conduct','friends'];
- const duration=finale?5.2:bridge?2.1:2.8;
- const offset=finale?t-135:bridge?t-82.34:t;
- const slot=Math.floor(offset/duration)%sequence.length,phase=(offset/duration)%1;
- return {time:t,index:-1,gesture:intro?'greet':sequence[slot],
-  pattern:finale?'fan':'invitation',weight:intro?.72:.60+.18*Math.sin(Math.PI*phase),
+ // Instrumentals keep a quiet conducting beat. Literal flying/reaching/hugging
+ // belongs to the actual words, not a random prop/motion carousel.
+ const duration=finale?8:bridge?6:8,offset=finale?t-135:bridge?t-82.34:t;
+ const phase=(offset/duration)%1;
+ return {time:t,index:-1,gesture:intro?'greet':'conduct',
+  pattern:finale?'fan':'invitation',weight:intro?.72:.36+.15*Math.sin(Math.PI*phase),
   progress:phase,instrumental:true,vocal:false};
 }
