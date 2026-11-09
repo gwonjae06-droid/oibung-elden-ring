@@ -148,7 +148,7 @@ test('years one through four have no music player, including exams, restarts and
  await Promise.resolve();await Promise.resolve();
  assert.equal(score.mode,5);
  assert.ok(sounds.length>=1);
- assert.match(sounds[0].src,/assets\\/music\\/.+\.mp3$/);
+ assert.ok(sounds[0].src.endsWith('.mp3'));
  assert.ok(sounds[0].src.includes('assets/music/'));
  assert.equal(sounds[0].paused,false);
  // Re-entering an early year stops and releases all old song objects.
