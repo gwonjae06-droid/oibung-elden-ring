@@ -1,4 +1,5 @@
 import {GYUWON_ALIGNED_CAPTIONS} from './gyuwon-aligned-captions.mjs';
+import {actFiveChoreographyAt} from './gyuwon-act-five-choreography.mjs';
 const cues=GYUWON_ALIGNED_CAPTIONS[5];
 const score=[
  ['greet','invitation'],['welcome','invitation'],['choose','doors'],
@@ -33,11 +34,16 @@ export function actFiveAttackPoint(attack,from,to,age,side=1){
  const sweep=['sweep','waltz','chase'].includes(attack.kind)?side*arc*(attack.kind==='chase'?3:6):0;
  return {x:from.x+(to.x-from.x)*q+sweep,y:(from.y+Math.sin(pre*Math.PI)*lift)*(1-q)+to.y*q+(attack.kind==='stars'?arc*7:0),z:from.z+(to.z-from.z)*q,back};
 }
+// The actual five boss part colliders take the blocking positions before the
+// renderer moves a single pixel; a hand never acts in one place and hits
+// elsewhere. Collision-owned attacks override idle sung choreography.
 export function poseActFiveHands(m,dt){
  if(m.raidAttack||m.actorMotion)return;
- const p=m.songPerformance,w=p.weight,k=1-Math.exp(-dt*6);
- for(const e of m.enemies.slice(0,2)){if(e.destroyed)continue;const side=e.index?1:-1;
-  const spread=['welcome','together','beginning','friends','flight'].includes(p.gesture)?3:0,offer=p.gesture==='hand'?3:0,dance=['dance','run'].includes(p.gesture)?Math.sin(m.time*(p.gesture==='run'?7:4)+e.index*Math.PI)*2:0,self=['self','heart'].includes(p.gesture)?1:0;
-  e.x+=(e.homeX+(side*spread-side*self*6)*w-e.x)*k;e.y+=(e.homeY+(spread+offer+dance+self*11)*w-e.y)*k;e.z+=(e.homeZ+(offer-self*13)*w-e.z)*k;
+ const pose=actFiveChoreographyAt(m.time,m.songPerformance,{hitUntil:m.hitTargetUntil||0,bpm:m.bpm||136});
+ const k=1-Math.exp(-Math.max(0,dt)*7.5);
+ for(let index=0;index<2;index++){
+  const e=m.enemies[index];if(e.destroyed)continue;
+  const [dx,dy,dz]=pose.hands[index];
+  e.x+=(e.homeX+dx-e.x)*k;e.y+=(e.homeY+dy-e.y)*k;e.z+=(e.homeZ+dz-e.z)*k;
  }
 }
