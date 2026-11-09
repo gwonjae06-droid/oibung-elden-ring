@@ -2,6 +2,7 @@ import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
+import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
 import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady} from './gyuwon-runner-director.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
  {name:'턱검 기사',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
@@ -28,7 +29,7 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===6){
   g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;
  }else if(m.year===7){
-  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;
+  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
   m.dancePeriod=period;m.dancePatterns=[];let start=3.2,index=0;
@@ -70,11 +71,21 @@ export function actReferenceMinigame(g,m,type,c){
   return false;
  }
  if(m.year===7){
+  if(type==='lane'){m.deployLane=1-(m.deployLane||0);return true;}
   if(type==='upgrade'){const cost=m.workerLevel*95;if(m.money<cost||m.workerLevel>=6)return false;m.money-=cost;m.workerLevel++;m.moneyCap=400+m.workerLevel*150;return true;}
-  if(type==='cannon'){if(m.cannon<100||m.cannonShot)return false;m.cannon=0;m.cannonShot={age:0,hit:false,x:-18,hitIds:[]};return true;}
+  if(type==='cannon'){
+   if(m.armyTruce){if(m.cannon<40||m.armyRallied)return false;
+    m.cannon-=40;m.armyRallied=true;m.rallyPulse=2.4;
+    m.money=Math.min(m.moneyCap,m.money+75);
+    for(const u of m.units)if(u.team>0)u.hp=Math.min(u.maxHp,u.hp+u.maxHp*.5);
+    return true;
+   }
+   if(m.cannon<100||m.cannonShot)return false;
+   m.cannon=0;m.cannonShot={age:0,hit:false,x:-18,hitIds:[]};return true;
+  }
   const n=type.startsWith('summon')?Number(type.slice(6)):{light:0,skill:2,roll:1}[type],spec=REFERENCE_UNIT_TYPES[n];
   if(!spec||m.money<spec.cost||m.unitCooldowns[n]>0||m.units.length>=48)return false;
-  m.money-=spec.cost;m.unitCooldowns[n]=spec.cool;m.units.push({id:g.nextId++,team:1,type:n,x:-17,z:0,hp:spec.hp,maxHp:spec.hp,attack:spec.attack,range:spec.range,speed:spec.speed,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:n===2||n===4?'ranged':'melee'});return true;
+  m.money-=spec.cost;m.unitCooldowns[n]=spec.cool;m.units.push({id:g.nextId++,team:1,type:n,x:-17,z:0,hp:spec.hp,maxHp:spec.hp,attack:spec.attack,range:spec.range,speed:spec.speed,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:n===2||n===4?'ranged':'melee',lane:m.deployLane||0});return true;
  }
  if(m.year===8){
   const wanted={light:'pose',skill:'turn',roll:'quick'}[type];if(!wanted)return false;
@@ -184,25 +195,114 @@ function tickReferenceRunner(g,m,dt,c){
  if(m.energy===0){c.take(g,8,c.emit);m.energy=20;}
 }
 function tickReferenceArmy(g,m,dt,c){
- m.money=Math.min(m.moneyCap,m.money+dt*(22+m.workerLevel*7));m.cannon=Math.min(100,m.cannon+dt*4.8);m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
- const p=m.actProgress||0;
- m.armyTruce=m.time>=108&&gyuwonMasterScene(7,m.time).kind!=='reunion'&&gyuwonMasterScene(7,m.time).kind!=='exit';
- if(m.armyTruce){m.enemySpawn=Math.max(m.enemySpawn,.8);return;}
- if((m.enemyFort<2&&m.time>=56.5)||(m.enemyFort<3&&m.time>=126)){m.enemyFort++;m.enemyBaseHp=m.enemyBaseMaxHp=Math.round(3000*(1+.35*(m.enemyFort-1)));m.enemySpawn=.6;}
- m.enemySpawn-=dt;if(m.enemySpawn<=0&&m.units.length<48&&m.enemyBaseHp>0){const type=(m.armyWave++%6),s=REFERENCE_UNIT_TYPES[type];m.enemySpawn=1.9+(type%3)*.28;m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*.72,maxHp:s.hp*.72,attack:s.attack*.65,range:s.range,speed:s.speed*.85,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:type===2||type===4?'ranged':'melee'});}
- for(const u of m.units){if(u.hp<=0)continue;u.cool=Math.max(0,u.cool-dt);u.x+=u.knock*dt;u.knock*=Math.exp(-dt*8);
-  let target=null,best=Infinity;for(const v of m.units){const d=Math.abs(u.x-v.x);if(v.hp>0&&v.team!==u.team&&d<best){target=v;best=d;}}
-  const baseX=u.team>0?18:-18,baseRange=Math.abs(baseX-u.x)<=u.range&&(u.team>0?m.enemyBaseHp>0:m.baseHp>0);
-  if(u.wind>0){u.attackAge+=dt;u.wind=Math.max(0,u.wind-dt);
-   if(u.wind<=0&&!u.hit){u.hit=true;if(target&&best<u.range+.4){target.hp-=u.attack;target.knock=u.team*2.6;if(u.team>0)c.deal(g,u.attack*.4,c.emit);}else if(baseRange){if(u.team>0){m.enemyBaseHp=Math.max(0,m.enemyBaseHp-u.attack);c.deal(g,u.attack,c.emit);}else{m.baseHp=Math.max(0,m.baseHp-u.attack);c.take(g,12,c.emit);}}u.cool=u.role==='ranged'?1.3:.9;}
-  }else if((target&&best<u.range)||baseRange){if(u.cool===0){u.wind=.55;u.attackAge=0;u.hit=false;}}
-  else u.x+=u.team*u.speed*dt;
+ const scene=gyuwonArmyScene(m.time,m.clock?.duration||GYUWON_SONGS[7].duration);
+ m.armyTruce=m.time>=108&&m.time<126;
+ m.money=Math.min(m.moneyCap,m.money+dt*(22+m.workerLevel*7));
+ m.cannon=Math.min(100,m.cannon+dt*4.8);
+ m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
+ m.rallyPulse=Math.max(0,(m.rallyPulse||0)-dt);
+ m.armySiegeFlash=Math.max(0,(m.armySiegeFlash||0)-dt);
+ // Three different castles are fixed score events, not infinite respawns.
+ if(m.enemyFort<2&&m.time>=56.5){
+  m.enemyFort=2;m.enemyBaseHp=m.enemyBaseMaxHp=4050;m.enemySpawn=.7;m.armyConvoys=0;m.armyConvoyClock=4;
+ }
+ if(m.enemyFort<3&&m.time>=126){
+  m.enemyFort=3;m.enemyBaseHp=m.enemyBaseMaxHp=5100;m.enemySpawn=.7;m.armyConvoys=0;
+ }
+ if(m.time>=126&&!m.armyReunionDone){
+  m.armyReunionDone=true;
+  const count=m.armyRallied?3:1;
+  for(let i=0;i<count&&m.units.length<46;i++){
+   const type=i%2?3:0,s=REFERENCE_UNIT_TYPES[type];
+   m.units.push({id:g.nextId++,team:1,type,x:-17,z:0,hp:s.hp,maxHp:s.hp,
+    attack:s.attack,range:s.range,speed:s.speed,cool:.4,wind:0,hit:false,
+    attackAge:0,knock:0,role:'melee',lane:i%2,returning:true});
+  }
+  m.rallyPulse=2.4;
+ }
+ if(m.armyTruce){
+  // The quiet bridge is still playable: troops lower weapons, retreat and
+  // visibly recover instead of freezing the entire simulation.
+  m.enemySpawn=Math.max(m.enemySpawn,.8);
+  for(const u of m.units){
+   if(u.hp<=0)continue;
+   u.wind=0;u.hit=false;u.cool=Math.max(0,u.cool-dt);
+   const home=u.team>0?-13:13;
+   u.x+=Math.sign(home-u.x)*Math.min(Math.abs(home-u.x),dt*(u.speed||1)*1.6);
+   if(u.team>0)u.hp=Math.min(u.maxHp,u.hp+dt*(m.armyRallied?9:3));
+  }
+  m.units=m.units.filter(u=>u.hp>0);
+  return;
+ }
+ // A small *finite* supply convoy fills early victories without rebuilding
+ // destroyed enemy castles or endlessly duplicating the main objective.
+ if(m.enemyBaseHp<=0&&m.enemyFort<3&&scene.key!=='lonely'){
+  m.armyConvoyClock-=dt;
+  if(m.armyConvoyClock<=0&&m.armyConvoys<3&&m.units.length<46){
+   const type=m.armyConvoys%2?5:1,s=REFERENCE_UNIT_TYPES[type];
+   m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*1.1,
+    maxHp:s.hp*1.1,attack:s.attack*.4,range:s.range,speed:s.speed*.65,
+    cool:0,wind:0,hit:false,attackAge:0,knock:0,role:'melee',
+    lane:m.armyConvoys%2,kind:'supply'});
+   m.armyConvoys++;m.armyConvoyClock=6;
+  }
+ }
+ m.enemySpawn-=dt;
+ if(m.enemySpawn<=0&&m.units.length<46&&m.enemyBaseHp>0&&m.time<173){
+  const type=(m.armyWave++%6),s=REFERENCE_UNIT_TYPES[type];
+  const lane=m.armyWave%2;
+  m.enemySpawn=scene.key==='siege'?1.55:scene.key==='reunion'?1.7:2+(type%3)*.22;
+  m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*.72,
+   maxHp:s.hp*.72,attack:s.attack*.65,range:s.range,speed:s.speed*.85,
+   cool:0,wind:0,hit:false,attackAge:0,knock:0,
+   role:type===2||type===4?'ranged':'melee',lane});
+ }
+ for(const u of m.units){
+  if(u.hp<=0)continue;
+  const lane=u.lane??0;
+  u.cool=Math.max(0,u.cool-dt);
+  u.x+=u.knock*dt;u.knock*=Math.exp(-dt*8);
+  let target=null,best=Infinity;
+  for(const v of m.units){
+   if(v.hp<=0||v.team===u.team||(v.lane??0)!==lane)continue;
+   const d=Math.abs(u.x-v.x);
+   if(d<best){target=v;best=d;}
+  }
+  const baseX=u.team>0?18:-18;
+  const baseAlive=u.team>0?m.enemyBaseHp>0:m.baseHp>0;
+  const baseRange=baseAlive&&Math.abs(baseX-u.x)<=u.range;
+  if(u.wind>0){
+   u.attackAge+=dt;u.wind=Math.max(0,u.wind-dt);
+   if(u.wind<=0&&!u.hit){
+    u.hit=true;
+    // Resolve at physical contact following the visible 0.55s windup.
+    if(target&&target.hp>0&&Math.abs(u.x-target.x)<u.range+.4){
+     target.hp-=u.attack;target.knock=u.team*2.6;
+     if(u.team>0){c.deal(g,u.attack*.4,c.emit);
+      if(u.type===3){for(const a of m.units)if(a.team>0&&(a.lane??0)===lane&&Math.abs(a.x-u.x)<5)a.hp=Math.min(a.maxHp,a.hp+5);}}
+    }else if(baseRange){
+     if(u.team>0){
+      const siege=u.type===5?1.6:1;
+      m.enemyBaseHp=Math.max(0,m.enemyBaseHp-u.attack*siege);
+      m.armySiegeFlash=.36;c.deal(g,u.attack*siege,c.emit);
+     }else{m.baseHp=Math.max(0,m.baseHp-u.attack);c.take(g,12,c.emit);}
+    }
+    u.cool=u.role==='ranged'?1.3:.9;
+   }
+  }else if((target&&best<u.range)||baseRange){
+   if(u.cool===0){u.wind=.55;u.attackAge=0;u.hit=false;}
+  }else u.x+=u.team*u.speed*dt;
  }
  m.units=m.units.filter(u=>u.hp>0&&Math.abs(u.x)<22);
- if(m.cannonShot){const a=m.cannonShot;a.age+=dt;a.x=-18+Math.max(0,a.age-.65)*55;
-  if(a.age>=.65)for(const u of m.units)if(u.team<0&&u.x<=a.x&&!a.hitIds.includes(u.id)){a.hitIds.push(u.id);u.hp-=130;u.knock=7;c.deal(g,80,c.emit);}if(a.age>1.7)m.cannonShot=null;
+ if(m.cannonShot){
+  const a=m.cannonShot;a.age+=dt;
+  a.x=-18+Math.max(0,a.age-.65)*55;
+  if(a.age>=.65)for(const u of m.units)if(u.team<0&&u.x<=a.x&&!a.hitIds.includes(u.id)){
+   a.hitIds.push(u.id);u.hp-=130;u.knock=7;c.deal(g,80,c.emit);
+  }
+  if(a.age>1.7)m.cannonShot=null;
  }
- if(m.enemyBaseHp<=0){m.enemyBaseHp=0;m.baseReform+=dt;}else m.baseReform=0;
+ if(m.enemyBaseHp<=0)m.baseReform+=dt;else m.baseReform=0;
  if(m.baseHp<=0){m.baseHp=350;c.take(g,70,c.emit);}
 }
 function tickReferenceDance(g,m,dt,c){
@@ -280,7 +380,7 @@ export function referenceKeyAction(m,code){
  if(!m?.reference)return null;
  if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'support',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
  if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide',KeyK:'dash',ShiftLeft:'dash',ShiftRight:'dash'}[code]||null;
- if(m.year===7)return {Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
+ if(m.year===7)return {KeyT:'lane',Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
  if(m.year===9)return {KeyK:'kick',KeyI:'guard',KeyO:'super',Space:'jump',KeyW:'jump',ArrowUp:'jump'}[code]||null;
  if(m.year===10)return {Space:'bomb',KeyB:'bomb'}[code]||null;
  return null;
