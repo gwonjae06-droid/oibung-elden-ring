@@ -2,6 +2,7 @@ import {createDanceCueAudio} from './gyuwon-dance-cues.mjs';
 import {referenceKeyAction,usesReference2d} from './gyuwon-reference-rules.mjs';
 import {createGyuwon2dView} from './gyuwon-2d-view.mjs';
 import {createGyuwonTurnStage} from './gyuwon-turn-stage.mjs';
+import {createGyuwonLivingDoodle,isGyuwonLivingDoodleAct} from './gyuwon-living-doodle.mjs';
 import {createPlayerProjectileView} from './player-projectile-view.mjs';
 import {gyuwonMemoryFraming} from './gyuwon-horizon-camera.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
@@ -46,6 +47,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
   if(document.getElementById('gyuwon-battle'))return null;
   const coarse=matchMedia('(pointer:coarse)').matches,reduced=reducedMotion(),hud=createGyuwonUi({coarse}),{d,root,shell,$,canvas}=hud;startup.own('Gyuwon HUD',()=>hud.dispose());
   const renderer=new THREE.WebGLRenderer({canvas,antialias:!coarse});const quality=createEncounterQuality({coarse}),audit=createFramePerformanceAudit({renderer,boss:'gyuwon'});startup.own('Gyuwon renderer',()=>renderer.dispose());renderer.setPixelRatio(1);renderer.shadowMap.enabled=!coarse;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.13;renderer.outputColorSpace=THREE.SRGBColorSpace;d.showModal();
+   const doodle=createGyuwonLivingDoodle(renderer,{coarse,reducedMotion:reduced});startup.own('Act V living doodle',()=>doodle.dispose());
   const scope=createEventScope(window);startup.own('Gyuwon callbacks',()=>scope.dispose());const scene=new THREE.Scene();startup.own('Gyuwon scene',()=>disposeScene(scene));scene.background=new THREE.Color(0x111b28);scene.fog=new THREE.FogExp2(0x111b28,.009);
   scene.add(new THREE.HemisphereLight(0xcbe1ff,0x263446,1.9));const sun=new THREE.DirectionalLight(0xd5eaff,2);sun.position.set(19,38,16);sun.castShadow=!coarse;
    if(!coarse){sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,near:1,far:110});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.028;}
@@ -117,7 +119,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   hud.ready.then(async ok=>{if(closed)return;if(!ok)$('load-status').textContent='스타일을 불러오지 못했습니다. 새로고침해 주세요.';
     // First-use GPU shader compilation belongs behind the initial loading
     // gate, never in the middle of a phase-three memory map transition.
-    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
+    try{study.update(g,0);await study.prewarmProgressive(renderer,camera,{companions:[player.rig],openingOnly:!g.gyuwon.years?.legacyAnnual});if(!g.gyuwon.years?.legacyAnnual)await turnStage.prewarm(renderer,camera);doodle.prewarm();}catch(error){console.warn('Gyuwon memory prewarm unavailable',error);}
     if(closed)return;hud.loading(false);ready=true;introGate.whenReady(!g.introControlled);sound();}).catch(error=>{console.error('Gyuwon UI startup failed',error);close();});
   const samples=[];let frameAt=0;
   function frame(now,dt,realDt=dt){if(diagnostics){if(frameAt&&mode==='playing'){samples.push(now-frameAt);if(samples.length>240)samples.shift();}frameAt=now;}
@@ -196,10 +198,10 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
  }
  camera.position.lerp(desired,1-Math.exp(-4.6*dt));
    }
- study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);renderer.render(scene,camera);audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
+ study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);doodle.render(scene,camera,{active:isGyuwonLivingDoodleAct(referenceMini),time:referenceMini?.time??0});audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
   const loop=createBattleLoop({request:fn=>requestAnimationFrame(fn),cancel:id=>cancelAnimationFrame(id),update:frame,onError:error=>{console.error('Gyuwon frame failed',error);close();}});startup.own('Gyuwon loop',()=>loop.dispose());const unbind=bindBattleSession(root,()=>({game:g,active:ready&&!introGate.blocked&&mode==='playing',intro:introGate.begin,pause:()=>pause.pause(),resume:()=>pause.resume(),close,...(diagnostics?{diagnostics:()=>({graphics:{...renderer.info.memory},calls:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.calls,triangles:usesReference2d(g.gyuwon.years?.musical)?0:renderer.info.render.triangles,
  camera:{x:camera.position.x,y:camera.position.y,z:camera.position.z,fov:camera.fov},
- view:study.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
+ view:study.stats(),reference2d:flatView.stats(),reference3d:turnStage.stats(),livingDoodle:doodle.stats(),renderMode:usesReference2d(g.gyuwon.years?.musical)?'canvas2d':'webgl',projectiles:playerProjectiles.stats(),quality:study.quality,frameMs:[...samples]})}:{})}));startup.own('Gyuwon session',unbind);hud.mode(mode);loop.start();return {close,dispose:close,get closed(){return closed;}};
  });
 }
