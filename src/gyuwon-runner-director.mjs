@@ -23,6 +23,19 @@ export function gyuwonFiveToSixExit(time,duration=GYUWON_SONGS[5].duration){
  const d=Number.isFinite(duration)&&duration>0?duration:180;
  return smooth((time-(d-GYUWON_RUNNER_EXIT_SECONDS))/GYUWON_RUNNER_EXIT_SECONDS);
 }
+// One continuous visual handoff: the three-dimensional stage grows into the
+// paper runner road while the *actual* Act VI soundtrack starts independently.
+export function gyuwonRunnerBridgeAt(time){
+ const t=Math.max(0,Number.isFinite(time)?time:0);
+ return {time:t,progress:smooth(t/GYUWON_RUNNER_ENTER_SECONDS),
+  gate:smooth(t/3.8),
+  stage:1-smooth((t-2)/5.5),
+  runner:smooth((t-.65)/5.6),
+  companions:smooth((t-.5)/4.7),
+  camera:smooth((t-.3)/5.8),
+  paint:smooth((t-1.15)/5.6),
+  finished:t>=GYUWON_RUNNER_ENTER_SECONDS};
+}
 export function gyuwonRunnerScene(time,duration=GYUWON_SONGS[6].duration){
  const d=Number.isFinite(duration)&&duration>0?duration:180;
  // A slightly different encoded file length must not destroy the ending cue.
