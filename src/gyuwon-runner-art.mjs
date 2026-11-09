@@ -86,10 +86,14 @@ function drawKnight(c,x,y,{t,scale,pose,weapon,ink,energy,slideAmount=0,landTime
    ink?'#a39b93':energy>0?'#fff2b0':'#a7dcf0',4-i*.5);}
  c.restore();
 }
-export function drawGyuwonRunnerGuide(c,x,y,{scale=1,t=0,opacity=1,gesture='open',portrait=null}={}){
+export function drawGyuwonRunnerGuide(c,x,y,{scale=1,t=0,opacity=1,gesture='open',portrait=null,lyric=null}={}){
  c.save();c.globalAlpha*=clamp(opacity);c.translate(x,y);c.scale(scale,scale);
  const ink='#222c3b',coat='#3f3047',gold='#f1cf8e',shine='#e9d4a8';
- const running=gesture==='run',step=running?Math.sin(t*11)*12:Math.sin(t*2)*1.4;
+ const lg=lyric?.gesture||'',q=Math.sin(Math.PI*Math.min(1,Math.max(0,lyric?.phase||0)));
+ const running=gesture==='run'||['run','walk'].includes(lg),step=running?Math.sin(t*11)*12:Math.sin(t*2)*1.4;
+ const jumping=lg==='jump'||lg==='fly',bowing=lg==='bow'||lg==='ponder';
+ if(jumping)c.translate(0,-35*q);
+ if(bowing)c.rotate(.13*q);
  c.fillStyle='#20222c50';c.beginPath();c.ellipse(0,1,29,5,0,0,TAU);c.fill();
  // Both legs animate under the same theatrical costume.
  segment(c,[[-10,-54],[-12+step,-30],[-20+step*1.4,-5]],ink,11);
@@ -100,9 +104,13 @@ export function drawGyuwonRunnerGuide(c,x,y,{scale=1,t=0,opacity=1,gesture='open
  polygon(c,[[-10,-100],[8,-99],[4,-64],[-4,-64]],'#eee3d3',ink,1.4);
  polygon(c,[[-3,-98],[2,-88],[-4,-68],[-8,-88]],gold,null);
  segment(c,[[-20,-93],[-31-running*step*.25,-65],[-24-running*step*.6,-25]],ink,10);
- const reach=gesture==='open'?45:gesture==='gate'?65:
+ const reach=['reach','point','offer','raise','ask'].includes(lg)?65+10*q:
+  ['clap','whisper','listen','ponder','shrug'].includes(lg)?10:
+  gesture==='open'?45:gesture==='gate'?65:
   gesture==='catch'?75:gesture==='bridge'?60:gesture==='warn'?60:running?32:20;
- const handY=gesture==='catch'?-125:gesture==='warn'?-108:gesture==='bridge'?-66:
+ const handY=['jump','fly','raise','cast'].includes(lg)?-160-15*q:
+  ['clap','listen','whisper','ponder'].includes(lg)?-126:
+  gesture==='catch'?-125:gesture==='warn'?-108:gesture==='bridge'?-66:
   -94+Math.sin(t*1.4)*4;
  segment(c,[[17,-94],[26+Math.sin(t*2)*2,-76],[reach,handY]],ink,11);
  // The magic cue originates exactly at the actor's moving palm.
