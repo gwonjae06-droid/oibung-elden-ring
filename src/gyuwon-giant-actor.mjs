@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {actFiveChoreographyAt} from './gyuwon-act-five-choreography.mjs';
+import {gyuwonCinematicMotionAt} from './gyuwon-cinematic-motion-score.mjs';
 import {createActFivePhotoMouth} from './gyuwon-act-five-photo-mouth.mjs';
 import {createActFiveWings} from './gyuwon-act-five-wings.mjs';
 import {solveFixedLimb} from './clown-performance-rig.mjs';
@@ -53,6 +54,36 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const shell=add(mask,shellGeo,maskMat,'giant-gold-half-mask');shell.scale.set(.77,.82,.31);shell.position.z=.7;
  for(const side of [-1,1]){const socket=add(mask,sphere,dark,'theater-mask-eye');socket.position.set(side*1.8,.4,2.35);socket.scale.set(.95,.5,.12);}
  const cracks=[];for(let i=0;i<6;i++){const curve=new T.CatmullRomCurve3([new T.Vector3(-2+i*.8,2,2.15),new T.Vector3(-2.2+i*.8,.2,2.6),new T.Vector3(-1.6+i*.8,-2.3,2.3)]);const c=add(mask,geo(new T.TubeGeometry(curve,8,.035,5,false)),dark,'mask-physical-crack');cracks.push(c);}
+ // Dedicated handheld and worn props are physically parented to the bone
+ // hierarchy, not stuck at a fixed spot in world space.
+ const royalCrown=new T.Group();royalCrown.name='gyuwon-giant-worn-royal-crown';head.add(royalCrown);
+ royalCrown.position.set(0,.66,0);
+ const band=add(royalCrown,geo(new T.TorusGeometry(.58,.08,10,32)),gold,'giant-royal-crown-band');
+ band.rotation.x=Math.PI/2;band.position.y=.08;
+ for(let i=0;i<9;i++){const a=i*Math.PI*2/9;
+  const spike=add(royalCrown,geo(new T.ConeGeometry(.12,.35,8)),gold,'giant-royal-crown-point');
+  spike.position.set(Math.cos(a)*.57,.28,Math.sin(a)*.57);
+  const jewel=add(royalCrown,sphere,maskMat,'giant-royal-crown-gem');
+  jewel.position.set(Math.cos(a)*.59,.02,Math.sin(a)*.59);jewel.scale.set(.068,.075,.062);
+ }
+ const cinemaSword=new T.Group();cinemaSword.name='giant-handheld-knight-sword';arms[1].hand.add(cinemaSword);
+ cinemaSword.position.set(1,.4,3.9);cinemaSword.rotation.x=Math.PI/2;
+ const swordSteel=add(cinemaSword,geo(new T.ConeGeometry(.42,5.5,4)),silk,'giant-knight-forged-blade');
+ swordSteel.position.y=3.5;swordSteel.rotation.y=Math.PI/4;
+ const hilt=add(cinemaSword,cylinder,dark,'giant-knight-sword-hilt');hilt.scale.set(.18,1.75,.18);
+ hilt.position.y=.45;
+ const crossbar=add(cinemaSword,cylinder,gold,'giant-knight-crossguard');
+ crossbar.scale.set(.17,2.25,.2);crossbar.rotation.z=Math.PI/2;crossbar.position.y=1.25;
+ const horn=new T.Group();horn.name='giant-handheld-fanfare-horn';arms[0].hand.add(horn);
+ horn.position.set(-1.1,0,4.1);horn.rotation.x=Math.PI/2;
+ const hornTube=add(horn,cylinder,gold,'giant-fanfare-horn-tube');hornTube.scale.set(.21,3.8,.21);
+ hornTube.position.y=1.8;
+ const hornBell=add(horn,geo(new T.ConeGeometry(.9,1.5,18)),gold,'giant-fanfare-flared-bell');
+ hornBell.position.y=4.25;
+ const hornRim=add(horn,geo(new T.TorusGeometry(.78,.08,8,24)),silk,'giant-fanfare-bell-rim');
+ hornRim.position.y=5;hornRim.rotation.x=Math.PI/2;
+ const magicCard=add(arms[0].hand,geo(new T.BoxGeometry(2.7,3.3,.11)),silk,'giant-lyric-story-card');
+ magicCard.position.set(-1.0,1.4,4.4);magicCard.rotation.x=.42;
  const direction=new T.Vector3(),mid=new T.Vector3(),up=new T.Vector3(0,1,0),costumeColor=new T.Color(0x725080);let disposed=false;
  function link(mesh,a,b,r1,r2){direction.subVectors(b,a);mesh.position.copy(mid.copy(a).add(b).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(up,direction.clone().normalize());mesh.scale.set(r1,direction.length(),r2);}
  function update(m,dt){
@@ -65,6 +96,8 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
    hitUntil:m.hitTargetUntil||0,raidAttack:m.raidAttack,bpm:m.bpm||136
   });
   const gesture=pose.gesture,weight=pose.weight;
+  const cinema=gyuwonCinematicMotionAt(5,m.time)?.pose;
+  const lyric=m.lyricAction,cinemaInfluence=m.raidAttack?.age<2?.18:.62;
   const bodyEase=1-Math.exp(-step*6.2),faceEase=1-Math.exp(-step*9.5),waistEase=1-Math.exp(-step*4.7);
   const aim=m.party?.find(a=>a.id===(m.raidAttack?.victim||m.turnActor));
   const focusX=aim?.x||0;
@@ -84,13 +117,13 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
   torso.position.x=T.MathUtils.lerp(torso.position.x,pose.lean.x*.45,bodyEase);
   torso.position.z=T.MathUtils.lerp(torso.position.z,pose.lean.z*.55,bodyEase);
   torso.rotation.x=T.MathUtils.lerp(torso.rotation.x,
-   body[0]+bow*.12,bodyEase);
+   body[0]+bow*.12+(cinema?.chest||0)*cinemaInfluence*.28,bodyEase);
   torso.rotation.y=T.MathUtils.lerp(torso.rotation.y,
-   body[1]+Math.atan2(focusX,50)*.11,bodyEase);
-  torso.rotation.z=T.MathUtils.lerp(torso.rotation.z,body[2],bodyEase);
-  head.rotation.x=T.MathUtils.lerp(head.rotation.x,face[0],faceEase);
+   body[1]+Math.atan2(focusX,50)*.11+(cinema?.turn||0)*cinemaInfluence*.19,bodyEase);
+  torso.rotation.z=T.MathUtils.lerp(torso.rotation.z,body[2]+(cinema?.bank||0)*cinemaInfluence*.30,bodyEase);
+  head.rotation.x=T.MathUtils.lerp(head.rotation.x,face[0]+(cinema?.headPitch||0)*cinemaInfluence*.34,faceEase);
   head.rotation.y=T.MathUtils.lerp(head.rotation.y,
-   face[1]+Math.atan2(focusX,40)*.22,faceEase);
+   face[1]+Math.atan2(focusX,40)*.22+(cinema?.headYaw||0)*cinemaInfluence*.46,faceEase);
   head.rotation.z=T.MathUtils.lerp(head.rotation.z,face[2],faceEase);
   velvet.color.setHex(0x30445d).lerp(costumeColor,
    gesture==='costume'?weight:gesture==='king'||gesture==='crowns'?.2*weight:0);
@@ -105,6 +138,13 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
     Math.sin(m.time*.8+i)*.032+sign*body[2]*.52,
     1-Math.exp(-step*4.3));
   });
+  royalCrown.visible=['kingTomorrow','everyCrown','becomeAnyone'].includes(lyric?.actionId)&&!m.raidAttack;
+  royalCrown.rotation.y=Math.sin(m.time*.55)*.07;
+  cinemaSword.visible=['savingKnight','heroDancerStar'].includes(lyric?.actionId)&&!m.raidAttack;
+  cinemaSword.rotation.y=Math.sin(m.time*1.2)*.09;
+  horn.visible=lyric?.actionId==='trumpetFanfare'&&!m.raidAttack;
+  magicCard.visible=['thousandDoors','whereBegin','dreamWorld','onlyBeginning'].includes(lyric?.actionId)&&!m.raidAttack;
+  magicCard.rotation.z=Math.sin(m.time*1.7)*.12;
   baton.visible=(pose.style==='conduct'||pose.style==='fanfare')&&weight>.2&&!m.finishing
     &&!m.enemies[1]?.destroyed;
   baton.rotation.z=Math.sin(m.time*5)*.14*weight;
