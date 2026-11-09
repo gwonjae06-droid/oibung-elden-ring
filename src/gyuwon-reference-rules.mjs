@@ -46,6 +46,7 @@ export function setupReferenceMinigame(g,m){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
   m.dancePeriod=period;m.dancePatterns=[];let start=3.2,index=0;
   while(start+period*8<GYUWON_SONGS[8].duration-4){
+   if(start>GYUWON_SONGS[8].duration*.57&&start<GYUWON_SONGS[8].duration*.68){start=GYUWON_SONGS[8].duration*.69;continue;}
    const kind=['pose','turn','pose','quick'][index%4],count=kind==='quick'?1:index%3===1?4:3;
    const cue=start+period*(kind==='turn'?3:3.5),first=start+period*(kind==='pose'?6:kind==='turn'?5:5.5);
    m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,done:[],misses:[],facing:index%2?-1:1});
@@ -57,9 +58,9 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
-  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;
+  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;
  }else if(m.year===10){
-  g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;
+  g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
 }
 function targetHit(g,m,target,damage,actor,c){
@@ -218,7 +219,14 @@ function tickReferenceDance(g,m,dt,c){
 }
 function tickReferenceFighter(g,m,dt,input,c){
  const [p,b]=m.fighters;
- if(m.fightReset>0){m.fightReset-=dt;if(m.fightReset<=0){for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;}return;}
+ const progress=m.actProgress||0,cut=m.fightRound===1?.35:m.fightRound===2?.72:1;
+ if(m.fightReset>0){
+  if(progress>=cut&&m.fightRound<3){for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.fightReset=0;m.enemyThink=1.35;}
+  else{m.fightReset=1;return;}
+ }
+ if((m.fightRound===1&&progress>=.35)||(m.fightRound===2&&progress>=.72)){
+  for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.enemyThink=1.1;
+ }
  p.crouch=(input.z||0)<-.35;p.guard=!!input.guard||!!m.guardHeld||((input.x||0)*p.facing<-.3);p.facing=p.x<b.x?1:-1;b.facing=-p.facing;
  if(!p.action&&p.stun===0)p.x=clamp(p.x+(input.x||0)*(p.crouch?2.1:7)*dt,-16,16);
  m.enemyThink-=dt;if(!b.action&&b.stun===0){const d=Math.abs(b.x-p.x);if(d>3.4)b.x+=Math.sign(p.x-b.x)*3.8*dt;else if(m.enemyThink<=0){fighterAttack(b,['light','kick','skill'][m.turnCount++%3]);m.enemyThink=1.4;}b.guard=!!p.action&&p.action.t<p.action.wind+p.action.live&&m.turnCount%3===0;}
@@ -231,13 +239,15 @@ function tickReferenceFighter(g,m,dt,input,c){
  }
  if(Math.abs(b.x-p.x)<1.9){const mid=(b.x+p.x)/2;p.x=mid-p.facing*.95;b.x=mid+p.facing*.95;}
  m.hitSparks=m.hitSparks.filter(s=>(s.age+=dt)<.35);
- if(p.hp<=0||b.hp<=0){m.roundWins[p.hp<=0?1:0]++;m.fightReset=2;}
+ if((p.hp<=0||b.hp<=0)&&!m.fightReset){m.roundWins[p.hp<=0?1:0]++;m.fightReset=1;}
  g.player.x=p.x;g.player.z=0;g.player.floorY=p.y;g.boss.x=b.x;g.boss.z=0;
 }
 function tickReferenceShooter(g,m,dt,input,c){
  const p=g.player;if(m.pointerTarget){const dx=m.pointerTarget.x-p.x,dz=m.pointerTarget.z-p.z,d=Math.hypot(dx,dz),q=Math.min(1,dt*26/Math.max(.001,d));p.x+=dx*q;p.z+=dz*q;}p.x=clamp(p.x+(input.x||0)*10*dt,-11,11);p.z=clamp(p.z-(input.z||0)*10*dt,-8,16);m.scroll+=dt*5;m.bombEffect=Math.max(0,m.bombEffect-dt);m.chainTime=Math.max(0,m.chainTime-dt);if(m.chainTime===0)m.chain=0;
  m.shotCooldown-=dt;if(m.shotCooldown<=0){m.shotCooldown=.115;for(let i=0;i<m.power;i++){const d=(i-(m.power-1)/2)*(m.weaponMode==='laser'?.18:.52);m.bullets.push({x:p.x+d,z:p.z-1,life:2.5,vx:d*1.2,vz:-30,damage:9,kind:m.weaponMode==='laser'?'laser':'shot'});}}
- m.shooterSpawn-=dt;if(m.shooterSpawn<=0&&m.shooterTargets.length<7){m.shooterSpawn=4;const side=m.turnCount++%2?-1:1;m.shooterTargets.push({id:g.nextId++,x:side*9,z:-19,hp:45,maxHp:45,phase:m.turnCount,wind:1.4,aim:0,kind:'fighter'});}
+ const progress=m.actProgress||0,quiet=progress>.57&&progress<.69;
+ if(progress>.76&&!m.finalCarrierSpawned){m.finalCarrierSpawned=true;m.shooterTargets.push({id:g.nextId++,x:0,z:-15,hp:1100,maxHp:1100,phase:7,wind:3.2,aim:0,kind:'carrier'});}
+ if(!quiet)m.shooterSpawn-=dt;if(m.shooterSpawn<=0&&!quiet&&m.shooterTargets.length<7&&progress<.87){m.shooterSpawn=4;const side=m.turnCount++%2?-1:1;m.shooterTargets.push({id:g.nextId++,x:side*9,z:-19,hp:45,maxHp:45,phase:m.turnCount,wind:1.4,aim:0,kind:'fighter'});}
  for(const e of m.shooterTargets){
   if(e.hp<=0)continue;e.z+=e.kind==='fighter'?dt*3:Math.sin(m.time*.7+e.phase)*dt*.45;e.x+=Math.sin(m.time*.8+e.phase)*dt*.6;e.wind-=dt;
   if(e.wind<=0){const angle=Math.atan2(p.x-e.x,p.z-e.z);for(let i=-2;i<=2;i++){const a=angle+i*(e.kind==='carrier'?.19:.12);m.enemyShots.push({x:e.x,z:e.z+1,vx:Math.sin(a)*6.5,vz:Math.cos(a)*6.5,life:7,age:0,kind:e.phase%2?'amber':'red'});}e.wind=e.kind==='carrier'?2.15:2.7;}
@@ -246,7 +256,8 @@ function tickReferenceShooter(g,m,dt,input,c){
  for(const a of m.enemyShots){a.x+=a.vx*dt;a.z+=a.vz*dt;a.life-=dt;a.age+=dt;if(dist(a,p)<.68){a.life=0;c.take(g,18,c.emit);m.chain=0;}}
  m.bullets=m.bullets.filter(a=>a.life>0&&a.z>-23);m.enemyShots=m.enemyShots.filter(a=>a.life>0&&Math.abs(a.x)<15&&a.z<23);
  m.shooterTargets=m.shooterTargets.filter(e=>e.hp>0&&e.z<21);
- if(!m.shooterTargets.some(e=>e.kind==='carrier'))m.shooterTargets.push({id:g.nextId++,x:0,z:-16,hp:300,maxHp:300,phase:2,wind:2,aim:0,kind:'carrier'});
+ m.victoryFlight=m.finalCarrierSpawned&&!m.shooterTargets.some(e=>e.kind==='carrier');
+ if(m.victoryFlight&&m.powerItems.length<12&&m.time%3<dt)m.powerItems.push({x:Math.sin(m.time)*8,z:-17,kind:'medal'});
  for(const item of m.powerItems){item.z+=dt*3;if(dist(item,p)<1.4){item.done=true;if(item.kind==='power')m.power=Math.min(3,m.power+1);c.deal(g,200,c.emit);}}
  m.powerItems=m.powerItems.filter(a=>!a.done&&a.z<21);g.boss.x=0;g.boss.z=-12;
 }
