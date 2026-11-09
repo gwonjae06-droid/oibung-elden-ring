@@ -68,7 +68,11 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  // Preserve a concrete cast from the last seconds of VII instead of replacing
  // them with anonymous dancers at the VIII opening. The original song clocks
  // remain independent; the image carryover is a normal, unskippable transition.
- if(e.year===8&&previous?.year===7){
+ // Preserve the final full 3D theater model for Act VI's real entrance.
+ // This is visual-only: no previous attack or combat clock is advanced.
+ if(e.year===6&&previous?.year===5&&previous.giantRaid)
+  m.handoffFromFive=previous;
+  if(e.year===8&&previous?.year===7){
   m.danceHandoff=previous.armyFinale||{
    count:Math.max(3,Math.min(6,previous.units?.filter(u=>u.team===1&&u.hp>0).length||4)),
    kinds:previous.units?.filter(u=>u.team===1&&u.hp>0).slice(0,6).map(u=>u.type)||[]};
