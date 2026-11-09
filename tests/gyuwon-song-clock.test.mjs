@@ -55,3 +55,19 @@ test('post-song HP bridge uses active real time even with sparse frames',()=>{
  score.stop();setTime(10);score.update(g,{enabled:false});assert.ok(m.settle<1);
  score.update(g);setTime(10.4);score.update(g);stepGyuwon(g,.05);assert.equal(g.gyuwon.years.year,6);assert.equal(g.boss.hp,5300);score.dispose();
 });
+
+test('full-song captions remain visible beyond the historic 45s edit',()=>{
+ for(const [key,song] of Object.entries(GYUWON_SONGS)){
+  let count=0;
+  for(let second=5;second<song.duration-4;second+=1)if(gyuwonSubtitleAt(key,second)?.ko)count++;
+  assert.ok(count>song.duration*.55,key+' bilingual caption coverage '+count);
+  assert.equal(gyuwonSubtitleAt(key,song.duration-.05),null);
+ }
+});
+test('seven-act progress HUD keeps a live song clock and text-only caption style',()=>{
+ const hud=fs.readFileSync(new URL('../src/gyuwon-musical-hud.mjs',import.meta.url),'utf8');
+ assert.match(hud,/gy-theater-progress/);
+ assert.match(hud,/theaterFill\.style\.width/);
+ assert.match(hud,/gyuwonSubtitleAt\(gyuwonSongKey\(m\),m\.time\)/);
+ assert.match(hud,/background:transparent;border:0/);
+});
