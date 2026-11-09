@@ -30,7 +30,7 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===6){
   g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;
  }else if(m.year===7){
-  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;
+  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;m.armyVerseRecruits=0;m.armyCaptainRecruits=0;
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
   m.dancePeriod=period;m.dancePatterns=[];let start=9.4,index=0;
@@ -216,6 +216,23 @@ function tickReferenceArmy(g,m,dt,c){
  m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
  m.rallyPulse=Math.max(0,(m.rallyPulse||0)-dt);
  m.armySiegeFlash=Math.max(0,(m.armySiegeFlash||0)-dt);
+ // One, two, three, four: these are playable allied recruits, not visual ghosts.
+ const verseTimes=[17.9,21.52,25.26,28.82];
+ while(m.armyVerseRecruits<verseTimes.length&&m.time>=verseTimes[m.armyVerseRecruits]){
+  const index=m.armyVerseRecruits++,type=index,s=REFERENCE_UNIT_TYPES[type];
+  if(m.units.length<46)m.units.push({id:g.nextId++,team:1,type,
+   x:-17,z:0,hp:s.hp,maxHp:s.hp,attack:s.attack,range:s.range,speed:s.speed,
+   cool:.45,wind:0,hit:false,attackAge:0,knock:0,
+   role:type===2?'ranged':'melee',lane:index%2,lyricRecruit:true});
+ }
+ const captainTimes=[40.44,43.94];
+ while(m.armyCaptainRecruits<captainTimes.length&&m.time>=captainTimes[m.armyCaptainRecruits]){
+  const index=m.armyCaptainRecruits++,type=index?4:0,s=REFERENCE_UNIT_TYPES[type];
+  if(m.units.length<46)m.units.push({id:g.nextId++,team:1,type,
+   x:-17,z:0,hp:s.hp,maxHp:s.hp,attack:s.attack,range:s.range,speed:s.speed,
+   cool:.45,wind:0,hit:false,attackAge:0,knock:0,
+   role:type===4?'ranged':'melee',lane:index,lyricRecruit:true});
+ }
  if(m.time>=174.5){
   // Close the battle with a parade; capture its survivors for the new dance.
   m.armyParade=true;m.enemySpawn=9999;
