@@ -32,7 +32,7 @@ test('a male lead and a faceless sculpted ballerina enter together and reset cle
  assert.ok(statue.getObjectByName('anatomical-dancer-waist-ribcage-and-shoulders').geometry.attributes.position.count>600);
  g.boss.state='clown';g.clown.state='idle';g.clown.pt=0;
  duet.update(g,1/60);
- const partner=duet.root.getObjectByName('his-wood-carved-ballerino-spouse');
+ const partner=duet.root.getObjectByName('his-faceless-wood-carved-ballerina-spouse');
  assert.ok(Number.isFinite(partner.position.x));
  assert.ok(Number.isFinite(partner.position.z));
  duet.reset();assert.equal(duet.root.visible,false);
