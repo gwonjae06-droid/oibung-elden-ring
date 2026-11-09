@@ -112,8 +112,12 @@ export function createBloodHead({coarse=false,reduced=false,seraph=false,portrai
     const angle=(x/(size-1)-.5)*P;
     // Face projected across the forward hemisphere and smoothly wrapped onto
     // sculpted temples; crown and hair stay separately modelled in real 3D.
-    const sy=Math.min(source.height-1,Math.round(y/(size-1)*(source.height-12)));
-    const sx=clamp(Math.round((.5+Math.sin(angle)*.485)*(source.width-1)),0,source.width-1);
+    // The phase-three 3bae portrait is framed too loosely in its source image.
+    // Zoom its PHOTO sampling only; keep the sculpted skull, halo, and
+    // first/second-phase portrait at their authored sizes.
+    const photoZoom=portraitAsset==='3bae.png'?1.42:1;
+    const sy=clamp(Math.round((.5+(y/(size-1)-.5)/photoZoom)*(source.height-12)),0,source.height-1);
+    const sx=clamp(Math.round((.5+Math.sin(angle)*.485/photoZoom)*(source.width-1)),0,source.width-1);
     const q=(sy*source.width+sx)*4,k=(y*size+x)*4;
     let blend=clamp((Math.cos(angle)-.06)/.29,0,1)*photo.data[q+3]/255;
     // A photograph may include a collar; keep it off the lower jaw and neck.
