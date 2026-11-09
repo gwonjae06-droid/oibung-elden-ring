@@ -4,6 +4,7 @@ import {referenceKeyAction,usesReference2d} from './gyuwon-reference-rules.mjs';
 import {createGyuwon2dView} from './gyuwon-2d-view.mjs';
 import {createGyuwonTurnStage} from './gyuwon-turn-stage.mjs';
 import {createGyuwonLivingDoodle,isGyuwonLivingDoodleAct} from './gyuwon-living-doodle.mjs';
+import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
 import {createPlayerProjectileView} from './player-projectile-view.mjs';
 import {gyuwonMemoryFraming} from './gyuwon-horizon-camera.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
@@ -184,6 +185,13 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
      target.set(g.boss.x,1.15,g.boss.z);
     }else if(musical.reference&&musical.year===5){
      const frame=turnStage.cameraFrame(musical,camera.aspect);desired.set(frame.position.x,frame.position.y,frame.position.z);target.set(frame.target.x,frame.target.y,frame.target.z);
+     // The giant actor and four guests remain in the actual 3D shot as
+     // its camera smoothly gives the illuminated path to the next act.
+     const farewell=gyuwonFiveToSixExit(musical.time,musical.clock?.duration||180);
+     if(farewell>.001){
+      const endCamera=new THREE.Vector3(0,9.8,37),endFocus=new THREE.Vector3(0,5.5,-10);
+      desired.lerp(endCamera,farewell*.62);target.lerp(endFocus,farewell*.62);
+     }
     }else if(genre==='shooter'){
      desired.set(0,34,5);
      target.set(0,0,0);
