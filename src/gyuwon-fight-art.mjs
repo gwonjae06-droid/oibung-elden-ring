@@ -140,10 +140,15 @@ export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
   c.restore();
   // Echoes actually stand and strike where their locked contact circle is.
   // No detached ghost attack or invisible damage at the player's location.
-  if(h.kind==='mirror-echo'||h.kind==='chorus-finale'){
+  if(h.kind.startsWith('echo-')||h.kind==='chorus-finale'||h.kind==='grand-ring'){
    c.save();c.globalAlpha=active ? .68 : (.2+.5*pre);
    const fy=gyuwonFightGroundScreen(t,h.x,580,45);
-   stagePerson(c,x,fy,{scale:1.52,t,pose:active?'strike':'wind',face:-1,color:'#b5a9da',gyuwon:false});
+   const echoPose=h.kind==='echo-kick-prepare'?'jump':
+    h.kind==='echo-gather'?'guard':h.kind==='echo-blade'?'wind':
+    active?'strike':'wind';
+   stagePerson(c,x,fy,{scale:h.kind==='echo-slam'?1.8:1.52,t,
+    pose:echoPose,face:-1,color:h.kind==='echo-blade'?'#bddcef':h.kind==='echo-slam'?'#d7a9b5':'#b5a9da',
+    gyuwon:false,lyric:m.lyricAction});
    if(h.kind==='chorus-finale')for(const side of [-1,1]){
     c.globalAlpha=.18+.25*pre;
     stagePerson(c,x+side*(90-35*pre),fy,{scale:1.13,t,pose:active?'strike':'wind',face:-side,color:'#d7b1a3',gyuwon:false});
