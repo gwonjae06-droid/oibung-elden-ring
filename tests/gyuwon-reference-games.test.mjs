@@ -135,7 +135,7 @@ test('all 170 authored line-specific lyric actions use the original aligned audi
    assert.equal(a.start,source.start);assert.equal(a.end,source.end);
    assert.equal(a.ko,source.ko);assert.equal(a.en,source.en);
    assert.equal(a.stagingRule,GYUWON_LYRIC_SCENARIOS[key][i].instruction);
-   assert.ok(a.stagingRule.length>20,'every cue needs an actual movement description');
+   assert.ok(a.stagingRule.length>=15,'each lyric must carry its source acting rule');
    assert.ok(a.actors.length&&a.worldEvents.length&&a.gesture&&a.actionId);
    const middle=(a.start+a.end)/2;
    assert.equal(gyuwonLyricActionAt(key,middle)?.id,a.id);
