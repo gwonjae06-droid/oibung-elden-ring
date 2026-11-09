@@ -2,7 +2,7 @@ import {GYUWON_FACE_URL} from './gyuwon-photo-face.mjs';
 import {usesReference2d} from './gyuwon-reference-rules.mjs';
 import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './gyuwon-2d-art.mjs';
 import {drawArmoredRunner,drawGyuwonRunnerGuide} from './gyuwon-runner-art.mjs';
-import {gyuwonRunnerScene,gyuwonRunnerGuideAt,gyuwonRunnerAccent,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
+import {gyuwonRunnerScene,gyuwonRunnerBridgeAt,gyuwonRunnerGuideAt,gyuwonRunnerAccent,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
 import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
 import {drawGyuwonDanceWorld} from './gyuwon-dance-director.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -446,7 +446,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const m=g?.gyuwon?.years?.musical,active=usesReference2d(m)&&g.status!=='won';canvas.hidden=!active;state.g=g;state.active=active;
   // Hold the composited final 3D theater shot underneath the 2D canvas. Its
   // last visible frame dissolves into the painted road without a black cut.
-  canvas.style.opacity=active&&m.year===6?String(clamp((m.time-.15)/5.8,0,1)):'1';
+  canvas.style.opacity=active&&m.year===6&&m.handoffFromFive?String(gyuwonRunnerBridgeAt(m.time).paint):'1';
   if(!active)return false;
   const started=performance.now(),rect=shell.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height)),ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
   if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)){canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);}
