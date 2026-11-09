@@ -105,25 +105,25 @@ test('5수 턴제 보스에게 반복해서 맞아도 피격 연출은 유지되
  assert.equal(g.events.some(e=>e.type==='death'),false);
  assert.equal(g.events.some(e=>e.type==='healed'),false);
 });
-test('6수 낙하 공격과 11수 피날레 공격도 1 HP에서 정상 진행된다',()=>{
+test('6수 낙하는 피해를 주지만 11수 커튼콜은 피격 패턴이 없다',()=>{
  const runner=at(6),r=runner.gyuwon.years.musical;
  runner.player.hp=2;runner.player.invuln=0;r.platforms=[];r.jumpY=-5.4;r.jumpV=-2;
  advance(runner,.05);
  assert.equal(runner.player.hp,1);
  assert.equal(runner.status,'playing');
  const finale=at(11),m=finale.gyuwon.years.musical;
- finale.player.hp=1;finale.player.invuln=0;m.finaleNext=999;
- m.finaleHazards=[{id:1,kind:'star',x:finale.player.x,z:finale.player.z,wind:1.5,age:1.49,hit:false,radius:2.3}];
+ finale.player.hp=1;finale.player.invuln=0;
+ m.finaleHazards=[{id:1,kind:'star',x:0,z:5,wind:1.5,age:1.49,hit:false,radius:2.3}];
  advance(finale,.05);
  assert.equal(finale.player.hp,1);
  assert.equal(finale.status,'playing');
- assert.ok(finale.events.some(e=>e.type==='hurt'));
+ assert.deepEqual(m.finaleHazards,[]);
+ assert.equal(finale.events.some(e=>e.type==='hurt'),false);
  m.finishing=true;finale.gyuwon.years.mode='curtain';m.clock=null;
  advance(finale,.2);
  assert.equal(finale.player.hp,1);
  assert.equal(finale.status,'playing');
 });
-
 test('original masters drive authored sections and traceable excerpt-derived rhythm cues',()=>{
  assert.equal(gyuwonMasterScene(6,96).kind,'quiet');
  assert.equal(gyuwonMasterScene(6,115).kind,'sunrise');
@@ -139,17 +139,24 @@ test('original masters drive authored sections and traceable excerpt-derived rhy
  assert.ok(notes.every(n=>n.at>0&&n.at<180));
  assert.ok(notes.every((n,i)=>i===0||n.at>notes[i-1].at));
 });
-test('11수 swordlike finale notes have a real physical counterattack with range',()=>{
- const g=at(11),m=g.gyuwon.years.musical;m.finaleNext=999;
- const before=m.score;
- assert.equal(actGyuwon(g,'light'),true);
- advance(g,.6);
- assert.equal(m.score,before,'theater swing cannot score across the stage');
- advance(g,.6);
- g.player.x=0;g.player.z=-6;g.boss.x=0;g.boss.z=-6;
- m.shotCooldown=0;m.playerStrike=null;
- assert.equal(actGyuwon(g,'skill'),true);
- advance(g,.52);
- assert.ok(m.score>before,'melee should score only after visible windup and actual proximity');
- assert.equal(g.boss.hp,1800,'the 3-minute master, not local score, owns Gyuwon HP');
+test('11수 is a noncombat curtain call that becomes credits halfway through the music',()=>{
+ const g=at(11),m=g.gyuwon.years.musical;
+ const hp=g.player.hp,bossHp=g.boss.hp;
+ assert.equal(actGyuwon(g,'light'),false);
+ assert.equal(actGyuwon(g,'roll'),false);
+ assert.equal(actGyuwon(g,'skill'),false);
+ m.clock={source:'media',duration:180,time:26,ended:false};
+ advance(g,.05);
+ assert.equal(m.curtainCall.actor,'oslu');
+ assert.equal(m.curtainCall.mode,'recollection');
+ assert.equal(g.player.x,0);
+ assert.equal(g.player.z,5);
+ m.clock.time=98;
+ advance(g,.05);
+ assert.equal(m.curtainCall.mode,'credits');
+ assert.equal(m.curtainCall.actorIndex,-1);
+ assert.equal(g.boss.hp,bossHp);
+ assert.equal(g.player.hp,hp);
+ assert.deepEqual(m.finaleHazards,[]);
+ assert.equal(g.events.some(e=>e.type==='hurt'),false);
 });
