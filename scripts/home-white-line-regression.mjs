@@ -37,13 +37,13 @@ try{
    });
    assert.ok(layout.wall,'mural wall image not painted');
    assert.equal(layout.wallpaper,'none','CSS wallpaper must not double the SVG image');
-   assert.equal(layout.wallMode,'xMidYMid slice','photo must cover, not letterbox');
+   assert.equal(layout.wallMode,'xMidYMid meet','mural must be fully visible without cropping the cast');
    assert.equal(layout.ghosts,0,'white sweeping rectangular glow must be absent');
    assert.equal(new Set(layout.ids).size,layout.ids.length,'clipping references must be unique');
-   assert.ok(layout.wall.left<=1&&layout.wall.right>=width-1,
-    name+' horizontal seam: SVG does not cover full viewport '+JSON.stringify(layout));
-   assert.ok(layout.wall.top<=1&&layout.wall.bottom>=height-1,
-    name+' vertical seam: SVG does not cover full viewport '+JSON.stringify(layout));
+   assert.ok(layout.wall.left>=-1&&layout.wall.right<=width+1,
+    name+' mural cropped horizontally: '+JSON.stringify(layout));
+   assert.ok(layout.wall.top>=-1&&layout.wall.bottom<=height+1,
+    name+' mural cropped vertically: '+JSON.stringify(layout));
    await page.screenshot({path:'artifacts/home-mural/'+name+'.png'});
    console.log('HOME MURAL SEAM-FREE',name,JSON.stringify(layout));
   }finally{await ctx.close();}
