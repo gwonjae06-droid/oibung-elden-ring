@@ -24,16 +24,42 @@ onceUpon:spotlight:narrate|dreamingBoy:child:reach|thousandWorlds:doors:walk|tho
 `
 };
 const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(n)?n:a));
+// Contact is defined on the SAME lyric entry as its animation and world FX.
+ // The visual hitbox consumers never invent a second arbitrary time mapping.
+ const contact9=Object.freeze({
+  upsideWorld:['royal-sweep',2.8,.82,9],
+  leftSwingRight:['right-swing',2.1,.80,10],
+  oneRound:['round-bell',2.5,.82,8],
+  turnWorldAgain:['inverse-pulse',3.2,1.05,13],
+  chanceAndDance:['dance-kicks',2.4,.9,10],
+  smileAndFly:['skyfall',2.6,1.12,11],
+  roundEcho1:['echo-jab',2.3,.80,8],
+  roundEcho2:['echo-kick-prepare',2.6,.85,0],
+  roundEcho3:['echo-blade',3.2,.94,10],
+  roundEcho4:['echo-slam',2.6,.85,12],
+  roundEcho5:['echo-gather',2.6,.85,0],
+  grandRound:['grand-ring',3.1,1.0,13],
+  fallRise:['chorus-finale',3.3,1.42,17]
+ });
+ const contact6=Object.freeze({
+  mountainLeap:['mountain','high'],repeatLeap:['mountain','high'],
+  curtainDrops:['curtain','low']
+ });
 const segment=(key,rows)=>{
  const tokens=specs[key].replace(/\s/g,'').split('|').filter(Boolean);
  if(tokens.length!==rows.length)throw Error('Lyric action count mismatch for '+key+': '+tokens.length+' of '+rows.length);
  return Object.freeze(rows.map((caption,index)=>{
   const [verb,visual,gesture]=tokens[index].split(':');
   if(!verb||!visual||!gesture)throw Error('Incomplete authored cue '+key+':'+index);
+  const strike=key==='9'?contact9[verb]:null,obstacle=key==='6'?contact6[verb]:null;
+  const attackEvents=strike?[Object.freeze({type:'fighter-strike',at:caption.start,
+    kind:strike[0],radius:strike[1],wind:strike[2],damage:strike[3]})]:
+   obstacle?[Object.freeze({type:'runner-obstacle',at:caption.start,variant:obstacle[0],
+     kind:obstacle[1],wind:1.2,damage:20})]:[];
   return Object.freeze({id:key+'-'+String(index+1).padStart(2,'0')+'-'+verb,
    year:key,index,start:caption.start,end:caption.end,en:caption.en,ko:caption.ko,
    actionId:verb,actors:Object.freeze(key==='8'?['gyuwon','dancers']:key==='6'?['gyuwon','knight']:key==='9'?['gyuwon','player']:['gyuwon']),
-   visual,gesture,worldEvents:Object.freeze([visual]),attackEvents:Object.freeze([])});
+   visual,gesture,worldEvents:Object.freeze([visual]),attackEvents:Object.freeze(attackEvents)});
  }));
 };
 export const GYUWON_LYRIC_ACTION_YEARS=Object.freeze(['5','6','8','9','11','ending']);
