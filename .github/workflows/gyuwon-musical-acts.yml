@@ -12,6 +12,7 @@ on:
       - 'scripts/gyuwon-reverie-qa.mjs'
       - 'scripts/gyuwon-act-five-ink-qa.mjs'
       - 'tests/gyuwon-act-five-score.test.mjs'
+      - 'tests/gyuwon-act-five-acting.test.mjs'
       - 'tests/gyuwon-reverie.test.mjs'
       - 'tests/gyuwon-giant-raid.test.mjs'
       - 'tests/gyuwon-caption-sync.test.mjs'
@@ -39,7 +40,7 @@ jobs:
             node --check "$f"
           done
       - name: Simulate all seven actual playable genres and final 800 HP
-        run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/journey-controller.test.mjs
+        run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-act-five-acting.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/journey-controller.test.mjs
       - run: npx playwright-core install --with-deps chromium
       - name: Native musical clocks, 3D party and five actual 2D genres
         run: |
