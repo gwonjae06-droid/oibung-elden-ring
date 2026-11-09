@@ -70,16 +70,17 @@ export function createActFiveStagecraft(parent,head,{coarse=false}={}){
   const royal=['king','crowns','roles'].includes(g);crown.visible=royal&&w>.01;crown.scale.setScalar(w);crown.rotation.y=Math.sin(m.time*.9)*.06;
   doors.visible=['doors','roads','dream','beginning','choose'].includes(g)&&w>.01;doors.scale.y=w;leaves.forEach((o,i)=>o.rotation.y=-(.15+1.9*p.progress)*w*(i%2?1:-1));
   roads.visible=['roads','adventure','run','beginning'].includes(g)&&w>.01;
+  if(roads.visible){roads.scale.z=.35+.65*w;roads.position.z=(1-p.progress)*5;}
   sea.visible=g==='sea'&&w>.01;sea.position.y=Math.sin(m.time*1.4)*.3;
   horns.visible=g==='brass'&&w>.01;horns.scale.setScalar(.1+.9*w);horns.rotation.y=Math.sin(m.time*4)*.015;
   stars.visible=['dream','sky','flight','roles','conduct','laugh','beginning'].includes(g)&&w>.01;
-  if(stars.visible){for(let i=0;i<stars.count;i++){pos.set(Math.sin(i*7.13)*34,14+(i*17%29)+Math.sin(m.time*.65+i)*.5,-33-(i%3)*2);const s=(.25+(i%5)*.12)*w;scale.setScalar(s);rotation.setFromAxisAngle(T.Object3D.DEFAULT_UP,m.time*.3+i);matrix.compose(pos,rotation,scale);stars.setMatrixAt(i,matrix);}stars.instanceMatrix.needsUpdate=true;}
+  if(stars.visible){for(let i=0;i<stars.count;i++){pos.set(Math.sin(i*7.13)*34,g==='laugh'?29-((m.time-p.start)*3.6+i*3)%22:14+(i*17%29)+Math.sin(m.time*.65+i)*.5,-33-(i%3)*2);const s=(.25+(i%5)*.12)*w;scale.setScalar(s);rotation.setFromAxisAngle(T.Object3D.DEFAULT_UP,m.time*.3+i);matrix.compose(pos,rotation,scale);stars.setMatrixAt(i,matrix);}stars.instanceMatrix.needsUpdate=true;}
   water.visible=g==='sea'&&w>.01;
   if(water.visible){water.scale.y=.5+.5*w;waterSheet.position.y=1+Math.sin(m.time*1.3)*.38;
    ship.position.set(Math.sin(m.time*.44)*7,2.1+Math.sin(m.time*1.7)*.65,-22);
    ship.rotation.z=Math.sin(m.time*1.05)*.085;banner.rotation.y=Math.sin(m.time*2)*.08;}
   knight.visible=g==='knight'&&w>.01;
-  if(knight.visible){knight.rotation.z=-.25+Math.sin(p.progress*Math.PI)*.52;shield.rotation.y=Math.sin(m.time*.75)*.18;}
+  if(knight.visible){const hand=m.enemies?.[0];if(hand)knight.position.set(hand.x,hand.y+5.8,hand.z-2);knight.rotation.z=-.25+Math.sin(p.progress*Math.PI)*.52;shield.rotation.y=Math.sin(m.time*.75)*.18;}
   heart.visible=['heart','self','hand','together'].includes(g)&&w>.01;
   if(heart.visible){const pulse=1+.12*Math.sin(m.time*6.5);heart.scale.setScalar(w*pulse);heart.rotation.y=Math.sin(m.time*.7)*.15;heartRing.rotation.z=m.time*.22;}
   compass.visible=['roads','adventure','run','choose'].includes(g)&&w>.01;
