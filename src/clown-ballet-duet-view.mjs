@@ -3,6 +3,7 @@ import {balletPartnerFrame} from './clown-ballet-score.mjs';
 import {solveFixedLimb} from './clown-performance-rig.mjs';
 import {balletSculptPose,blendBalletPose} from './clown-ballet-choreography.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
+import {createBalletTorsoGeometry,createBalletMuscleLimbGeometry} from './clown-ballet-anatomy.mjs';
 
 // One continuous, two-character ballet rig. Both statues are authored from
 // sculpted silhouettes and articulated arms/legs; the real O Seulwoo portrait
@@ -20,15 +21,16 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
   ring.rotation.x=Math.PI/2;ring.position.y=.035;stage.add(ring);
  }
  const light=new THREE.PointLight(0xffd5bc,1.12,27,2);light.position.set(0,13,0);stage.add(light);
- const ivory=new THREE.MeshPhysicalMaterial({color:0xd5b9a0,roughness:.65,clearcoat:.18,clearcoatRoughness:.78});
+ const ivory=new THREE.MeshPhysicalMaterial({color:0xcfa78c,roughness:.66,clearcoat:.18,clearcoatRoughness:.78});
  const wood=new THREE.MeshPhysicalMaterial({color:0x80543a,roughness:.72,clearcoat:.23,clearcoatRoughness:.65});
- const birch=new THREE.MeshPhysicalMaterial({color:0xd1b08d,roughness:.57,clearcoat:.22,clearcoatRoughness:.57});
- const hairWood=new THREE.MeshPhysicalMaterial({color:0x9e7957,roughness:.66,clearcoat:.15});
- const ebony=new THREE.MeshPhysicalMaterial({color:0x211a20,roughness:.67,clearcoat:.17});
- const satin=new THREE.MeshPhysicalMaterial({color:0xe1c8bd,roughness:.63,sheen:.6,sheenColor:0xf4e2cd,side:THREE.DoubleSide});
- const wine=new THREE.MeshPhysicalMaterial({color:0x602838,roughness:.71,sheen:.55,sheenColor:0xad727a,side:THREE.DoubleSide});
+ const birch=new THREE.MeshPhysicalMaterial({color:0xe1bfa8,roughness:.53,clearcoat:.24,clearcoatRoughness:.59});
+ const hairWood=new THREE.MeshPhysicalMaterial({color:0x4b322c,roughness:.59,clearcoat:.17});
+ const ebony=new THREE.MeshPhysicalMaterial({color:0x17171b,roughness:.88,clearcoat:.035});
+ const satin=new THREE.MeshPhysicalMaterial({color:0xf2eee9,roughness:.50,sheen:.36,sheenColor:0xf9f6f1,side:THREE.DoubleSide});
+ const wine=new THREE.MeshPhysicalMaterial({color:0x321f29,roughness:.74,sheen:.26,side:THREE.DoubleSide});
  const gold=new THREE.MeshStandardMaterial({color:0xad8757,metalness:.54,roughness:.48});
- const tubeGeo=new THREE.CylinderGeometry(.80,1,1,coarse?12:24);
+ const limbGeos=Object.fromEntries(['upperArm','forearm','thigh','calf'].map(kind=>
+  [kind,createBalletMuscleLimbGeometry(THREE,{kind,coarse})]));
  const sphere=new THREE.SphereGeometry(1,coarse?14:30,coarse?10:20);
  const up=new THREE.Vector3(0,1,0),A=new THREE.Vector3(),B=new THREE.Vector3(),V=new THREE.Vector3();
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -42,29 +44,44 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
   mesh.quaternion.setFromUnitVectors(up,V.clone().normalize());
   mesh.scale.set(r,Math.max(.01,V.length()),r);
  }
- const rod=(parent,mat,name)=>{const m=new THREE.Mesh(tubeGeo,mat);m.name=name;m.castShadow=!coarse;parent.add(m);return m};
+ const rod=(parent,mat,name,kind)=>{const m=new THREE.Mesh(limbGeos[kind],mat);m.name=name;m.castShadow=!coarse;parent.add(m);return m};
  function dancer(isLead){
   const group=new THREE.Group();group.name=isLead?'o-seulwoo-male-ballet-dancer':'his-faceless-wood-carved-ballerina-spouse';
   root.add(group);
   const body=new THREE.Group();group.add(body);
-  const skin=isLead?ivory:birch,costume=isLead?wine:satin;
-  // An individually carved ballerina profile: long neck, sloping shoulders,
-  // softly defined chest, narrow waist and fuller rounded pelvis. A spline
-  // rather than stacked primitives keeps the silhouette uninterrupted.
-  const contour=isLead?[
-   [0,1.48],[.34,1.51],[.43,1.69],[.34,1.93],[.43,2.24],
-   [.55,2.66],[.61,3.07],[.74,3.41],[.66,3.61],[.26,3.84],[0,3.88]
-  ]:[
-   [0,1.43],[.34,1.46],[.52,1.59],[.54,1.77],[.42,1.97],
-   [.31,2.22],[.35,2.50],[.46,2.76],[.53,3.10],[.58,3.35],
-   [.48,3.55],[.19,3.80],[0,3.85]
-  ];
-  const curve=new THREE.SplineCurve(contour.map(([r,y])=>new THREE.Vector2(r,y)));
-  const points=curve.getPoints(coarse?32:78).map(p=>new THREE.Vector2(Math.max(0,p.x),p.y));
-  const shape=new THREE.LatheGeometry(points,coarse?24:60);
-  const trunk=new THREE.Mesh(shape,costume);trunk.name='anatomical-dancer-waist-ribcage-and-shoulders';
-  trunk.scale.z=isLead?.77:.70;trunk.castShadow=!coarse;body.add(trunk);
-  const hip=blob(body,costume,'carved-pelvis',0,1.61,0,isLead?.46:.55,.28,isLead?.36:.40);
+  const skin=isLead?ivory:birch,costume=isLead?ebony:satin;
+  // Photo-inspired morphology: continuous muscle and ribcage in the
+  // airborne male, narrow waist with an uninterrupted white leotard in the
+  // wooden ballerina. Skin/garment are distinct surface groups in one loft.
+  const shape=createBalletTorsoGeometry(THREE,{lead:isLead,coarse});
+  const trunk=new THREE.Mesh(shape,[skin,costume]);
+  trunk.name='anatomical-dancer-waist-ribcage-and-shoulders';
+  trunk.castShadow=!coarse;body.add(trunk);
+  trunk.userData.reference=isLead?'bare-male-sculpted-thorax-and-black-tights':'white-sleeveless-ballet-leotard-and-carved-wood';
+  const hip=blob(body,costume,'carved-pelvis',0,1.59,0,isLead?.47:.48,.25,isLead?.33:.35);
+  if(isLead){
+   // Relieved pectoral, sternum and abdominal planes. These are shallow
+   // pieces of sculpture, not floating armour or a flat body texture.
+   for(const side of[-1,1]){
+    const chest=blob(body,skin,'sculpted-male-pectoral',side*.32,3.17,.355,.33,.21,.105);
+    chest.rotation.z=-side*.12;
+    blob(body,skin,'relief-serratus-muscle',side*.52,2.74,.29,.115,.27,.095);
+    for(let i=0;i<3;i++){
+     const abdominal=blob(body,skin,'sculpted-abdominal-muscle',side*.16,2.38+i*.21,.30,.15,.105,.055);
+     abdominal.rotation.z=side*.085;
+    }
+    blob(body,skin,'sculpted-collarbone',side*.38,3.52,.24,.36,.06,.075).rotation.z=-side*.13;
+   }
+   blob(body,skin,'soft-relief-sternum',0,3.10,.41,.07,.32,.075);
+  }else{
+   // No tutu: the reference is a short, clean sleeveless leotard, open
+   // through the hips with leg lines fully visible.
+   const trim=blob(body,satin,'reference-white-ballet-leotard',0,2.06,.01,.32,.18,.275);
+   trim.scale.set(.98,.45,.98);
+   const seam=new THREE.Mesh(new THREE.TorusGeometry(.33,.017,8,coarse?24:48),satin);
+   seam.name='minimal-leotard-hip-edge';seam.rotation.x=Math.PI/2;seam.scale.set(1.42,1.11,1);
+   seam.position.y=1.77;body.add(seam);
+  }
   blob(body,skin,'long-ballet-neck',0,4.04,0,isLead?.19:.155,.37,isLead?.19:.15);
   if(isLead){const collar=new THREE.Mesh(new THREE.TorusGeometry(.28,.038,8,24),gold);
    collar.rotation.x=Math.PI/2;collar.position.set(0,3.83,0);body.add(collar);}
@@ -91,26 +108,11 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
    }
   }
   if(isLead){
-   const forehead=new THREE.Mesh(new THREE.TorusGeometry(.53,.026,6,40,Math.PI),gold);
+   const forehead=new THREE.Mesh(new THREE.TorusGeometry(.53,.026,6,40,Math.PI),ivory);
    forehead.position.y=.49;forehead.rotation.z=Math.PI;head.add(forehead);
   }
-  if(!isLead){
-   // Sculpted satin petals follow the pelvis. The modest skirt is shaped in
-   // true volume, not a flat billboard masking the waist and legs.
-   const skirtProfile=[[.39,1.76],[.52,1.70],[.69,1.61],[.85,1.54],
-    [.91,1.47],[.77,1.43],[.53,1.45]].map(([r,y])=>new THREE.Vector2(r,y));
-   const skirt=new THREE.Mesh(new THREE.LatheGeometry(skirtProfile,coarse?28:56),satin);
-   skirt.name='layered-sculpted-ballerina-tutu';skirt.scale.z=.83;
-   skirt.castShadow=!coarse;body.add(skirt);
-   for(let i=0;i<(coarse?8:14);i++){
-    const angle=i*Math.PI*2/(coarse?8:14);
-    const fold=blob(body,i%3===0?birch:satin,'three-dimensional-tutu-petal',
-     Math.sin(angle)*.73,1.49,Math.cos(angle)*.59,.19,.065,.28);
-    fold.rotation.y=angle;fold.rotation.x=.12;
-   }
-  }
   for(const side of[-1,1]){
-   const shoulder=blob(body,skin,'deltoid-carving',side*(isLead?.7:.56),3.53,0,isLead?.22:.17,.23,.20);
+   const shoulder=blob(body,skin,isLead?'sculpted-shoulder-deltoid':'rounded-wood-shoulder',side*(isLead?.72:.55),3.53,0,isLead?.235:.16,.24,.205);
    shoulder.rotation.z=side*.17;
    for(let i=0;i<(coarse?5:9);i++){
     const y=1.84+i*.2;
@@ -123,26 +125,26 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
   }
   const arms=[],legs=[];
   for(const side of[-1,1]){
-   const upper=rod(body,skin,'rigged-upper-arm'),lower=rod(body,skin,'rigged-forearm');
+   const upper=rod(body,skin,'rigged-upper-arm','upperArm'),lower=rod(body,skin,'rigged-forearm','forearm');
    const elbow=blob(body,skin,'elbow-joint',side*.85,2.96,.06,isLead?.18:.145,.17,.16);
    const hand=blob(body,skin,isLead?'sculpted-male-ballet-hand':'sculpted-ballerina-palm',side*1.38,2.55,.3,isLead?.16:.13,.25,.115);
    const fingers=[];
    for(let j=0;j<4;j++)fingers.push(blob(hand,skin,'separated-ballet-finger',(j-1.5)*.30,-.87,.07,.085,.51,.23));
    const wrist=blob(body,skin,'articulated-ballet-wrist',side*1.33,2.6,.28,.105,.125,.115);
    arms.push({side,upper,lower,elbow,wrist,hand,fingers,previous:null});
-   const thigh=rod(body,isLead?ebony:skin,'articulated-ballet-thigh');
-   const shin=rod(body,isLead?ebony:skin,'articulated-ballet-calf');
+   const thigh=rod(body,isLead?ebony:skin,'articulated-ballet-thigh','thigh');
+   const shin=rod(body,isLead?ebony:skin,'articulated-ballet-calf','calf');
    const knee=blob(body,isLead?ebony:skin,'knee-patella',side*.3,.82,.05,isLead?.17:.14,.18,.16);
    const ankleJoint=blob(body,skin,'ballet-ankle-hinge',side*.32,.19,.13,.11,.14,.12);
-   const foot=blob(body,isLead?satin:skin,'pointed-ballet-slipper',side*.32,.14,.13,isLead?.18:.145,.13,isLead?.36:.40);
-   const toe=blob(foot,skin,'carved-extended-pointe-tip',0,-.23,.82,.72,.46,.36);
+   const foot=blob(body,isLead?ebony:satin,'pointed-ballet-slipper',side*.32,.14,.13,isLead?.18:.13,.12,isLead?.38:.35);
+   const toe=blob(foot,isLead?ebony:satin,'carved-extended-pointe-tip',0,-.21,.83,.74,.45,.30);
    legs.push({side,thigh,shin,knee,ankleJoint,foot,toe,previous:null});
   }
   // A pair of actual fabric coattails, not billboard wings.
   const veils=[];
   for(const side of[-1,1]){
-   const scarf=new THREE.Mesh(new THREE.PlaneGeometry(.43,1.66,1,9),isLead?wine:satin);
-   scarf.name='joint-carried-ritual-silk';scarf.position.set(side*.41,1.60,-.36);
+   const scarf=new THREE.Mesh(new THREE.PlaneGeometry(isLead?.23:.27,isLead?.86:1.05,1,9),isLead?ebony:satin);
+   scarf.name='joint-carried-ritual-silk';scarf.position.set(side*.41,1.60,-.36);scarf.visible=false;
    scarf.rotation.x=.19;body.add(scarf);veils.push({mesh:scarf,side});
   }
   let smoothedPose=null;
@@ -154,7 +156,7 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
    // Only local joint poses are damped, never the attack position itself.
    group.rotation.y=position.yaw;
    const target=balletSculptPose({time,beat,active:phase,pulse:position.pulse||0,
-    lead,pattern,reduced});
+    lead,pattern,reduced,showcase:phase?0:intro});
    smoothedPose=blendBalletPose(smoothedPose,target,dt,isLead?9.6:8.4);
    const p=smoothedPose;
    body.position.y=p.bodyLift;
@@ -170,7 +172,7 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
    }
    for(const x of arms){
     const side=x.side,left=side<0;
-    const shoulder=[side*(isLead?.70:.56),3.49,.02];
+    const shoulder=[side*(isLead?.72:.55),3.49,.02];
     const wrist=[side*(left?p.leftReach:p.rightReach),
      left?p.leftArmY:p.rightArmY,left?p.leftArmZ:p.rightArmZ];
     const ik=solveFixedLimb(shoulder,wrist,{
@@ -178,8 +180,8 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
      pole:[side*.8,.07,.35],previous:x.previous
     });
     x.previous=ik.joint;
-    segment(x.upper,ik.start,ik.joint,isLead?.17:.135);
-    segment(x.lower,ik.joint,ik.end,isLead?.13:.10);
+    segment(x.upper,ik.start,ik.joint,isLead?.195:.135);
+    segment(x.lower,ik.joint,ik.end,isLead?.147:.102);
     x.elbow.position.set(...ik.joint);x.hand.position.set(...ik.end);
     x.wrist.position.set(...ik.end);
     x.hand.rotation.z=left?p.leftWrist:p.rightWrist;
@@ -194,13 +196,15 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
     const rise=left?p.leftLegLift:p.rightLegLift;
     const trail=left?p.leftLegTrail:p.rightLegTrail;
     const pointe=left?p.leftPointe:p.rightPointe;
-    const ankle=[side*(.32+rise*.13),.15+rise,.11+trail];
+    const ankle=[side*(.32+rise*.13)+(left?p.leftAnkleX:p.rightAnkleX||0),
+     .15+rise,.11+trail];
     const ik=solveFixedLimb([side*.31,1.51,0],ankle,{
-     upper:.83,lower:.83,pole:[side*.44,.06,.36],previous:l.previous
+     upper:.83,lower:.83,pole:[side*(.44+(left?p.leftKneeOut:p.rightKneeOut||0)),
+      (left?p.leftKneeUp:p.rightKneeUp||0),.36],previous:l.previous
     });
     l.previous=ik.joint;
-    segment(l.thigh,ik.start,ik.joint,isLead?.23:.18);
-    segment(l.shin,ik.joint,ik.end,isLead?.14:.115);
+    segment(l.thigh,ik.start,ik.joint,isLead?.25:.185);
+    segment(l.shin,ik.joint,ik.end,isLead?.164:.122);
     l.knee.position.set(...ik.joint);
     l.ankleJoint.position.set(...ik.end);
     l.foot.position.set(...ik.end);
@@ -209,6 +213,7 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
     l.foot.rotation.z=side*rise*.15;
    }
    for(const tail of veils){
+    tail.mesh.visible=phase&&p.silkFloat>.06;
     tail.mesh.rotation.x=.15+p.silkFloat*Math.sin(time*1.5+tail.side);
     tail.mesh.rotation.z=tail.side*(.15+p.silkFloat);
    }
