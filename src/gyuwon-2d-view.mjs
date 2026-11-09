@@ -2,7 +2,7 @@ import {GYUWON_FACE_URL} from './gyuwon-photo-face.mjs';
 import {usesReference2d} from './gyuwon-reference-rules.mjs';
 import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './gyuwon-2d-art.mjs';
 import {drawArmoredRunner,drawGyuwonRunnerGuide} from './gyuwon-runner-art.mjs';
-import {gyuwonRunnerScene,gyuwonRunnerGuideAt,gyuwonRunnerAccent} from './gyuwon-runner-director.mjs';
+import {gyuwonRunnerScene,gyuwonRunnerGuideAt,gyuwonRunnerAccent,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
 import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
 import {drawGyuwonDanceWorld} from './gyuwon-dance-director.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -30,7 +30,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
  }
  function runner(g,m){
   const scene=m.runnerScene||gyuwonRunnerScene(m.time,m.clock?.duration||180),biome=scene.biome,
-    accent=gyuwonRunnerAccent(scene.time),d=m.runnerDistance||0,t=m.time,
+    accent=gyuwonRunnerAccent(scene.time),lyric=m.runnerLyric||gyuwonRunnerLyricStage(scene.time),d=m.runnerDistance||0,t=m.time,
     rain=biome==='rain'||accent.shower,quiet=biome==='quiet',dawn=['sunrise','finale','exit'].includes(biome),
     bridge=biome==='bridge',sky=biome==='skyroad',theater=biome==='theater';
   const palettes={
@@ -94,23 +94,88 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    else if(quiet){c.fillStyle='#fff4d9cb';c.beginPath();c.arc(x,y,1.3+i%3,0,TAU);c.fill();}
    else if(!bridge&&!sky)flower(c,x,y,.44+(i%3)*.3,dawn?'#ffecd7':i%4?'#fffce1':'#f5c0a6');
   }
-  // The director is a *distant* stage presence, never a hitbox or a fake
-  // replacement for the playable armored character.
-  const guide=gyuwonRunnerGuideAt(t,m.clock?.duration||180);
-  if(guide){
-   const x=guide.kind==='curtain'?1040:guide.kind==='moon'?1055:1110;
-   const y=guide.kind==='moon'?455:guide.kind==='gate'?527:550;
-   if(guide.kind==='moon'){c.fillStyle='#fff4db77';c.beginPath();c.arc(1055,260,85,0,TAU);c.fill();}
-   drawGyuwonRunnerGuide(c,x,y,{scale:guide.kind==='moon'?.56:.73,t,opacity:guide.opacity,gesture:guide.kind==='gate'?'gate':'open'});
+  // These are literal staged reactions to the time-aligned original lyrics:
+  // not just background palette swaps. Leave safety-critical hitboxes crisp.
+  if(lyric?.weight>.01){
+   const w=lyric.weight;
+   c.save();c.globalAlpha=w;
+   if(lyric.kind==='sunlight'||lyric.kind==='tomorrow'){
+    c.fillStyle='#fff5b743';
+    for(let i=0;i<8;i++){const x=720+i*90;
+     c.beginPath();c.moveTo(1060,110);c.lineTo(x-32,470);c.lineTo(x+23,470);c.fill();}
+   }
+   if(lyric.kind==='mountains'){
+    c.fillStyle='#c8d7bd9c';
+    c.beginPath();c.moveTo(300,475);
+    for(let i=0;i<7;i++){const x=400+i*130;
+     c.lineTo(x,420);c.lineTo(x+70,250+(i%3)*38);c.lineTo(x+140,430);}
+    c.lineTo(1280,490);c.closePath();c.fill();
+   }
+   if(lyric.kind==='sea'){
+    c.fillStyle='#77b5d6a9';c.beginPath();c.moveTo(0,490);
+    for(let x=0;x<=1300;x+=16)c.lineTo(x,435+Math.sin(x*.017+t*2.2)*17);
+    c.lineTo(1280,565);c.lineTo(0,565);c.closePath();c.fill();
+    for(let i=0;i<5;i++){const x=90+i*275;
+     c.strokeStyle='#fff5e8a9';c.lineWidth=3;c.beginPath();
+     c.arc(x,469+Math.sin(i+t)*9,28,0,Math.PI);c.stroke();}
+   }
+   if(lyric.kind==='curtains'){
+    c.fillStyle='#8b4568a4';
+    for(let i=0;i<2;i++){const side=i===0?0:1,x=side?1180:0;
+     c.beginPath();c.moveTo(x,0);c.lineTo(x+(side?-90:90),0);
+     c.quadraticCurveTo(x+(side?-60:60),170,x+(side?-100:100),360);
+     c.lineTo(x,380);c.closePath();c.fill();}
+   }
+   if(lyric.kind==='questions'||lyric.kind==='dream'||lyric.kind==='world'){
+    for(let i=0;i<9;i++){const x=((i*181-t*11)%1420+1420)%1420-50;
+     const y=135+(i*47)%260;
+     c.save();c.translate(x,y);c.rotate(Math.sin(t+i)*.15);
+     round(c,-15,-20,30,40,2,'#fff2d3bb','#ab8972ba',1.3);
+     c.restore();}
+   }
+   if(lyric.kind==='star'){
+    const gx=990,gy=185,r=30+8*Math.sin(t*5);
+    c.strokeStyle='#fff5b9';c.lineWidth=4;
+    for(let i=0;i<8;i++){const a=i*TAU/8;
+     c.beginPath();c.moveTo(gx+Math.cos(a)*r,gy+Math.sin(a)*r);
+     c.lineTo(gx+Math.cos(a)*(r+30),gy+Math.sin(a)*(r+30));c.stroke();}
+    c.fillStyle='#fff4c5';c.beginPath();c.arc(gx,gy,17,0,TAU);c.fill();
+   }
+   c.restore();
   }
   const sx=x=>640+x*(1280/44),ground=555,sy=y=>ground-y*52;
+  // The director is a *distant* stage presence, never a hitbox or a fake
+  // replacement for the playable armored character.
+  const guide=gyuwonRunnerGuideAt(t,m.clock?.duration||180,m);
+  if(guide){
+   const risk=m.obstacles.find(o=>o.id===guide.targetId);
+   const x=guide.kind==='curtain'?1040:guide.kind==='moon'?1055:
+    guide.kind==='catch'?sx(g.player.x)+105:
+    guide.kind==='warn'&&risk?clamp(sx(risk.x)+130,780,1170):
+    guide.kind==='run'?sx(g.player.x)+155:1110;
+   const y=guide.kind==='moon'?455:guide.kind==='gate'?527:550;
+   if(guide.kind==='moon'){c.fillStyle='#fff4db77';c.beginPath();c.arc(1055,260,85,0,TAU);c.fill();}
+   if(guide.kind==='warn'&&risk){
+    const toX=sx(risk.x),toY=sy(risk.kind==='low'?2.9:.95);
+    c.save();c.strokeStyle='#ffe5a3b9';c.lineWidth=3;c.setLineDash([7,9]);
+    c.beginPath();c.moveTo(x+35,y-95);c.quadraticCurveTo(x+26,toY-60,toX,toY);c.stroke();
+    c.setLineDash([]);c.restore();
+   }
+   drawGyuwonRunnerGuide(c,x,y,{scale:guide.kind==='moon'?.56:.73,t,
+    opacity:guide.opacity,gesture:guide.gesture||guide.kind});
+  }
   for(const a of m.platforms){
    const x=sx(a.x),w=(a.end-a.x)*1280/44;
    if(w<=0)continue;
-   const side=sky?'#dae0ee':rain?'#576979':quiet?'#5b5876':bridge?'#5c4f46':dawn?'#a98065':'#936a45';
-   const top=sky?'#fff8eb':rain?'#809eaf':quiet?'#9095b4':bridge?'#b99875':dawn?'#f1cb8d':'#8cc960';
+   const side=a.guide?'#98806e':sky?'#dae0ee':rain?'#576979':quiet?'#5b5876':bridge?'#5c4f46':dawn?'#a98065':'#936a45';
+   const top=a.guide?'#fff1b6':sky?'#fff8eb':rain?'#809eaf':quiet?'#9095b4':bridge?'#b99875':dawn?'#f1cb8d':'#8cc960';
    round(c,x,ground,w,190,5,side,'#334458',3);
    round(c,x,ground,w,23,5,top,sky?'#aebfd3':'#4b594b',3);
+   if(a.guide){
+    c.strokeStyle='#fff5c8';c.lineWidth=3;
+    c.beginPath();c.moveTo(x+5,ground-9);c.lineTo(x+w-5,ground-9);c.stroke();
+    for(let k=0;k<Math.ceil(w/32);k++)flower(c,x+12+k*32,ground-9+Math.sin(t*8+k)*6,.19,'#fff3bd');
+   }
    if(bridge||rain){c.strokeStyle='#d3c1a68b';c.lineWidth=3;
     for(let xx=x+12;xx<x+w;xx+=48){c.beginPath();c.moveTo(xx,ground+2);c.lineTo(xx+12,ground+24);c.stroke();}}
    else if(sky){c.fillStyle='#ffffff60';for(let i=0;i<w/57;i++){c.beginPath();c.arc(x+i*57+23,ground+14,17,0,TAU);c.fill();}}
@@ -141,10 +206,23 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     }
    }
   }
+  // A glowing *object* attached to the actual dangerous collider, never a
+  // false rectangular safe-zone overlay. Plenty of notice before contact.
+  for(const o of m.obstacles){
+   if(o.hit||o.x<=g.player.x||o.x-g.player.x>21)continue;
+   const near=1-(o.x-g.player.x)/21,
+    x=sx(o.x),y=sy(o.kind==='low'?2.55:.77);
+   c.save();c.globalAlpha=.20+near*.65;c.strokeStyle='#ffe2a0';
+   c.lineWidth=2+near*2;c.beginPath();c.arc(x,y,21+6*Math.sin(t*7),0,TAU);c.stroke();
+   for(let i=0;i<4;i++){const a=i*TAU/4+t*.3;
+    c.beginPath();c.arc(x+Math.cos(a)*33,y+Math.sin(a)*33,3,0,TAU);c.stroke();}
+   c.restore();
+  }
   for(const j of m.jellies)jelly(c,sx(j.x),sy(j.y),j.kind,m.time);
   drawArmoredRunner(c,sx(g.player.x),sy(m.jumpY),{
-   scale:1.03,t,pose:m.dashTime>0?'dash':m.slide>0?'slide':m.jumpY>.1?'jump':t<4?'walk':'run',
-   weapon:g.weapon||'sword',inkAmount:scene.opening,energy:m.starCharge||0});
+   scale:.68,t,pose:m.dashTime>0?'dash':m.runnerPose==='run'&&t<4?'walk':m.runnerPose||'run',
+   weapon:g.weapon||'sword',inkAmount:scene.opening,energy:m.starCharge||0,
+   slideAmount:m.slideVisual||0,landTime:m.landTime||0,jumpVelocity:m.jumpV||0});
   if(m.dashTime>0){for(let i=0;i<10;i++)flower(c,sx(g.player.x)-20-i*25,sy(m.jumpY+1)+Math.sin(i*1.6+t*14)*17,.14,'#ffefa7');}
   else if(m.bonus>0){for(let i=0;i<7;i++)flower(c,sx(g.player.x)-35-i*18,sy(m.jumpY+1)+Math.sin(i+t*12)*20,.15,'#fff6b8');}
   // Act 5's real velvet proscenium visually folds into the first 2D road.

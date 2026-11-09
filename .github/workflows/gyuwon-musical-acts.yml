@@ -8,6 +8,7 @@ on:
       - 'tests/gyuwon-reference-games.test.mjs'
       - 'tests/gyuwon-dance-director.test.mjs'
       - 'tests/gyuwon-runner-handoff.test.mjs'
+      - 'tests/gyuwon-runner-helper-physics.test.mjs'
       - 'scripts/gyuwon-reference-qa.mjs'
       - 'scripts/gyuwon-giant-raid-qa.mjs'
       - 'scripts/gyuwon-reverie-qa.mjs'
