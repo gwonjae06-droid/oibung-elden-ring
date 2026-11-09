@@ -170,7 +170,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  drawArmoredRunner(c,670,554,{scale:1.10,t,pose:m.dancePose>0?'run':'walk',weapon:m.playerWeapon||'sword',energy:m.danceEnergy||0});
  if(m.dancePose>0){c.save();c.strokeStyle=s.light;c.lineWidth=5;c.globalAlpha=.7;
   c.beginPath();c.arc(670,431,62,0,Math.PI*1.6);c.stroke();c.restore();}
- if(true)stagePerson(c,1050,530,{scale:1.50,t:t+.28,
+ stagePerson(c,1050,530,{scale:1.50,t:t+.28,
   pose:tele?.active?nowAction:'dance',face:-1,color:rivalColors[s.key]||'#60446d',theater:true});
  // The army's four familiar silhouettes return in each large chorus,
  // transformed into distinct moving partners instead of anonymous minions.
