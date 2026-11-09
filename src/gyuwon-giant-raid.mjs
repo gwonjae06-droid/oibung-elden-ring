@@ -12,7 +12,7 @@ export function setupGiantRaid(g,m,party){
  m.party=party.map((p,i)=>({...p,id:'ally'+i,team:1,index:i,x:-10+i*6.5,y:0,z:9+(i%2)*2,homeX:-10+i*6.5,homeZ:9+(i%2)*2,hp:i===1?175:125,maxHp:i===1?175:125,energy:75+i*7,av:10000/p.speed}));
  const defs=[['왼손',-13,2.7,-3,780,0,0],['오른손',13,2.7,-3,780,1,0],['무대 조명핵',-21,23,-18,1000,2,ACT_FIVE_SCORE[11].start],['얼굴의 가면',0,28,-25,900,0,ACT_FIVE_SCORE[22].start],['무대 중심핵',0,3,-9,1500,3,ACT_FIVE_SCORE[26].start]];
  m.enemies=defs.map(([name,x,y,z,hp,weakness,unlock],i)=>({name,x,y,z,homeX:x,homeY:y,homeZ:z,id:'enemy'+i,index:i,team:-1,hp,maxHp:hp,toughness:100,maxToughness:100,weakness,unlock,active:unlock===0,destroyed:false,broken:0,bleed:0,bleedClock:0,bind:0,speed:75+i*3,av:10000/(75+i*3)}));
- m.raidScene='invitation';m.raidSceneIndex=0;m.raidAttack=null;m.finishProgress=0;nextRaidTurn(m);
+ m.raidScene='invitation';m.raidSceneIndex=0;m.raidAttack=null;m.spotlightCounter=null;m.finishProgress=0;nextRaidTurn(m);
 }
 const live=m=>m.enemies.filter(e=>e.active&&!e.destroyed&&e.hp>0);
 export function nextRaidTurn(m){
@@ -51,6 +51,20 @@ export function actGiantRaid(g,m,type,c){
  }
  if(/^target[0-4]$/.test(type)){const e=m.enemies[+type.slice(6)];if(!e.active||e.destroyed)return false;m.targetIndex=e.index;return true;}
  if(type.startsWith('ultimate')){const p=m.party[+type.slice(8)];if(!p||p.hp<=0||p.energy<100||m.actorMotion)return false;if(!beginAttack(m,'ultimate',p))return false;p.energy=0;return true;}
+ // Reading the boss's physical windup allows a single call-and-response
+ // guard without stealing the acting character's next turn. The strike still
+ // lands at its authored collider; its damage is softened by the real shield.
+ if(m.turn==='boss'&&(type==='support'||type==='roll')){
+  const a=m.raidAttack;
+  if(!a||a.blocked||a.age<a.wind*.28||a.age>a.wind+.12)return false;
+  a.blocked=true;
+  m.shield=Math.max(m.shield,a.impactAt-a.age+.7);
+  m.spotlightCounter={at:m.time,until:m.time+1.0,part:a.part,victim:a.victim};
+  for(const ally of m.party)if(ally.hp>0)ally.energy=Math.min(100,ally.energy+9);
+  m.success++;m.raidHistory.push({at:m.time,event:'spotlight-counter',part:a.part});
+  c.emit('gyuwon-musical-parry',{year:5,part:a.part});
+  return true;
+ }
  if(m.turn!=='player'||m.actorMotion)return false;
  const p=m.party.find(p=>p.id===m.turnActor);if(!p)return false;
  if(type==='light'){if(!beginAttack(m,type,p))return false;m.skillPoints=Math.min(5,m.skillPoints+1);return true;}
@@ -83,6 +97,7 @@ function attackContact(g,m,a,p,c){
 export function tickGiantRaid(g,m,dt,c){
  if(m.songPerformance?.time!==m.time)m.songPerformance=actFivePerformanceAt(m.time);
  m.shield=Math.max(0,m.shield-dt);m.partyAmp=Math.max(0,m.partyAmp-dt);
+ if(m.spotlightCounter&&m.spotlightCounter.until<m.time)m.spotlightCounter=null;
  let scene=0;for(let i=1;i<GIANT_RAID_SCENES.length&&m.time>=GIANT_RAID_SCENES[i][0];i++)scene=i;
  m.raidSceneIndex=scene;m.raidScene=GIANT_RAID_SCENES[scene][1];
  m.finishProgress=ease((m.time-165)/13);m.finishStrength=m.partBreaks+m.usedAbilities.reduce((s,a)=>s+a.length,0);
