@@ -252,8 +252,19 @@ function tickReferenceShooter(g,m,dt,input,c){
  if(m.time>=132&&!m.finalCarrierSpawned){m.finalCarrierSpawned=true;m.shooterTargets.push({id:g.nextId++,x:0,z:-15,hp:1100,maxHp:1100,phase:7,wind:3.2,aim:0,kind:'carrier'});}
  if(!quiet)m.shooterSpawn-=dt;if(m.shooterSpawn<=0&&!quiet&&m.shooterTargets.length<7&&m.time<147){m.shooterSpawn=4;const side=m.turnCount++%2?-1:1;m.shooterTargets.push({id:g.nextId++,x:side*9,z:-19,hp:45,maxHp:45,phase:m.turnCount,wind:1.4,aim:0,kind:'fighter'});}
  for(const e of m.shooterTargets){
-  if(e.hp<=0)continue;e.z+=e.kind==='fighter'?dt*3:Math.sin(m.time*.7+e.phase)*dt*.45;e.x+=Math.sin(m.time*.8+e.phase)*dt*.6;e.wind-=dt;
-  if(e.wind<=0){const angle=Math.atan2(p.x-e.x,p.z-e.z);for(let i=-2;i<=2;i++){const a=angle+i*(e.kind==='carrier'?.19:.12);m.enemyShots.push({x:e.x,z:e.z+1,vx:Math.sin(a)*6.5,vz:Math.cos(a)*6.5,life:7,age:0,kind:e.phase%2?'amber':'red'});}e.wind=e.kind==='carrier'?2.15:2.7;}
+  if(e.hp<=0)continue;e.z+=e.kind==='fighter'?dt*3:Math.sin(m.time*.7+e.phase)*dt*.45;e.x+=Math.sin(m.time*.8+e.phase)*dt*.6;
+  // Lock direction during a visible aiming pose, instead of retargeting
+  // instantly on the firing frame. VFX and bullets use e.lockedAim together.
+  if(e.wind>1.13&&e.wind-dt<=1.13)e.lockedAim=Math.atan2(p.x-e.x,p.z-e.z);
+  e.wind-=dt;
+  if(e.wind<=0){
+   const angle=e.lockedAim??Math.atan2(p.x-e.x,p.z-e.z);
+   for(let i=-2;i<=2&&m.enemyShots.length<100;i++){
+    const a=angle+i*(e.kind==='carrier'?.19:.12);
+    m.enemyShots.push({x:e.x,z:e.z+1,vx:Math.sin(a)*6.5,vz:Math.cos(a)*6.5,life:7,age:0,kind:e.phase%2?'amber':'red'});
+   }
+   e.lockedAim=null;e.wind=e.kind==='carrier'?2.15:2.7;
+  }
  }
  for(const a of m.bullets){a.x+=a.vx*dt;a.z+=a.vz*dt;a.life-=dt;for(const e of m.shooterTargets)if(e.hp>0&&dist(a,e)<(e.kind==='carrier'?1.45:.85)){e.hp-=a.damage;a.life=0;c.deal(g,a.damage,c.emit);if(e.hp<=0){m.chain++;m.chainTime=2.5;c.deal(g,500+m.chain*50,c.emit);m.powerItems.push({x:e.x,z:e.z,kind:m.chain%3===0?'power':'medal'});}break;}}
  for(const a of m.enemyShots){a.x+=a.vx*dt;a.z+=a.vz*dt;a.life-=dt;a.age+=dt;if(dist(a,p)<.68){a.life=0;c.take(g,18,c.emit);m.chain=0;}}
