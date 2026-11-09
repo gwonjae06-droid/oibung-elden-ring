@@ -196,8 +196,9 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
     const rise=left?p.leftLegLift:p.rightLegLift;
     const trail=left?p.leftLegTrail:p.rightLegTrail;
     const pointe=left?p.leftPointe:p.rightPointe;
+    const groundPointe=.24*Math.sin(Math.max(0,pointe))*Math.max(0,1-rise*1.2);
     const ankle=[side*(.32+rise*.13)+(left?p.leftAnkleX:p.rightAnkleX||0),
-     .15+rise,.11+trail];
+     .15+rise+groundPointe,.11+trail];
     const ik=solveFixedLimb([side*.31,1.51,0],ankle,{
      upper:.83,lower:.83,pole:[side*(.44+(left?p.leftKneeOut:p.rightKneeOut||0)),
       (left?p.leftKneeUp:p.rightKneeUp||0),.36],previous:l.previous
@@ -208,7 +209,8 @@ export function createClownBalletDuet(scene,{coarse=false,reduced=false,original
     l.knee.position.set(...ik.joint);
     l.ankleJoint.position.set(...ik.end);
     l.foot.position.set(...ik.end);
-    l.foot.rotation.x=-pointe;
+    // Positive X bends the forward-oriented slipper down onto the toe box.
+    l.foot.rotation.x=pointe;
     l.foot.rotation.y=side*(.23+rise*.23);
     l.foot.rotation.z=side*rise*.15;
    }
