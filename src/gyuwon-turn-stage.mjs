@@ -92,7 +92,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
   for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
   guestParty.update(m);giant.update(m,dt);stagecraft.update(m);spectacle.update(m);
-  runnerBridge.update({exit:gyuwonFiveToSixExit(m.time,m.clock?.duration||180),entryTime:bridging?current.time:null});
+  runnerBridge.update({exit:bridging?1:Math.max(0,(gyuwonFiveToSixExit(m.time,m.clock?.duration||180)-.24)/.76),entryTime:bridging?current.time:null});
   const encorePart=m.enemies[5],echo=encorePart&&!encorePart.destroyed&&encorePart.active;
   encore.visible=!!echo;
   if(echo){encore.position.set(encorePart.x,encorePart.y,encorePart.z);
