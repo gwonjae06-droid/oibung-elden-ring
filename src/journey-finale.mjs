@@ -3,7 +3,8 @@ import {renderJourneyArt} from './journey-art.mjs';
 import {disposeScene} from './runtime/scene-resources.mjs';
 import {audioChannelGain} from './audio-preferences.mjs';
 
-// One continuous, unskippable return to the five red seals, then morning.
+// One continuous, unskippable, deliberately slow return to five red seals and morning.
+export const JOURNEY_FINALE_SECONDS=34;
 export function playJourneyFinale(doc,win){
  const d=doc.createElement('dialog');d.className='journey-transition od-final';
  d.setAttribute('aria-label','다섯 문양과 아침으로 이어지는 복도');
@@ -52,14 +53,14 @@ export function playJourneyFinale(doc,win){
  function end(ok){if(done)return;done=true;doc.removeEventListener('visibilitychange',visibility);win.cancelAnimationFrame(raf);music.pause();music.removeAttribute('src');music.load();renderer.dispose();disposeScene(scene);d.close();d.remove();resolve(ok);}
  function frame(now){if(done)return;try{const dt=last===null?0:Math.max(0,(now-last)/1000);last=now;
   if(!doc.hidden)t+=dt;
-  if(doc.hidden)music.pause();else if(t>3&&music.paused&&!music.ended&&t<19){try{music.muted=win.localStorage?.getItem('oibung-muted')==='1';}catch{music.muted=true;}music.volume=.18*audioChannelGain('music');try{music.play()?.catch(()=>{});}catch{}}
-  d.style.setProperty('--last-seal',ease((t-.8)/1.2));
-  const open=ease((t-2.4)/3.4);left.style.transform=`translateX(${-open*90}%)`;right.style.transform=`translateX(${open*90}%)`;
-  left.style.opacity=right.style.opacity=String(1-ease((t-5)/1.5));
-  camera.position.set(0,2.3,9-ease((t-5)/8)*40);camera.lookAt(0,2.2,-35);
+  if(doc.hidden)music.pause();else if(t>4.5&&music.paused&&!music.ended&&t<JOURNEY_FINALE_SECONDS){try{music.muted=win.localStorage?.getItem('oibung-muted')==='1';}catch{music.muted=true;}music.volume=.18*audioChannelGain('music');try{music.play()?.catch(()=>{});}catch{}}
+  d.style.setProperty('--last-seal',ease((t-1.2)/2.3));
+  const open=ease((t-3.8)/6.4);left.style.transform=`translateX(${-open*90}%)`;right.style.transform=`translateX(${open*90}%)`;
+  left.style.opacity=right.style.opacity=String(1-ease((t-9)/3.4));
+  camera.position.set(0,2.3,9-ease((t-9)/13.5)*40);camera.lookAt(0,2.2,-35);
   const w=win.innerWidth,h=win.innerHeight;if(viewWidth!==w||viewHeight!==h){viewWidth=w;viewHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-  flash.style.opacity=String(ease((t-12)/1.8));title.style.opacity=String(ease((t-13.5)/1));credits.style.opacity=String(ease((t-15.5)/1));
-  renderer.render(scene,camera);if(t>=19){end(true);return;}raf=win.requestAnimationFrame(frame);
+  flash.style.opacity=String(ease((t-22.5)/3.2));title.style.opacity=String(ease((t-25.6)/2.6));credits.style.opacity=String(ease((t-28.2)/2.5));
+  renderer.render(scene,camera);if(t>=JOURNEY_FINALE_SECONDS){end(true);return;}raf=win.requestAnimationFrame(frame);
  }catch(error){console.error('Journey finale failed',error);end(false);}}
  try{raf=win.requestAnimationFrame(frame);}catch{end(false);}
  return {finished,watchdogMilliseconds:120000,dispose:()=>end(false)};
