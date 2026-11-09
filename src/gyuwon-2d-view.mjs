@@ -8,6 +8,7 @@ import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
 import {createGyuwonArmyDoodle} from './gyuwon-army-doodle.mjs';
 import {drawGyuwonDanceWorld} from './gyuwon-dance-director.mjs';
 import {drawGyuwonFightWorld} from './gyuwon-fight-art.mjs';
+import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const TAU=Math.PI*2;
 export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={}){
@@ -148,10 +149,12 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    }
    c.restore();
   }
+  drawGyuwonLyricBackdrop(c,m);
   const sx=x=>640+x*(1280/44),ground=555,sy=y=>ground-y*52;
   // The director is a *distant* stage presence, never a hitbox or a fake
   // replacement for the playable armored character.
-  const guide=gyuwonRunnerGuideAt(t,m.clock?.duration||180,m);
+  const guide=gyuwonRunnerGuideAt(t,m.clock?.duration||180,m)||
+   (m.lyricAction?{kind:'run',gesture:m.lyricAction.gesture,opacity:.78,targetId:null}:null);
   if(guide){
    const risk=m.obstacles.find(o=>o.id===guide.targetId);
    const x=guide.kind==='curtain'?1040:guide.kind==='moon'?1055:
@@ -167,7 +170,8 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     c.setLineDash([]);c.restore();
    }
    drawGyuwonRunnerGuide(c,x,y,{scale:guide.kind==='moon'?.56:.73,t,
-    opacity:guide.opacity,gesture:guide.gesture||guide.kind,portrait});
+    opacity:guide.opacity,gesture:guide.gesture||guide.kind,portrait,lyric:m.lyricAction});
+   drawGyuwonLyricGesture(c,m,{x,y:y-95,scale:.85});
   }
   for(const a of m.platforms){
    const x=sx(a.x),w=(a.end-a.x)*1280/44;
