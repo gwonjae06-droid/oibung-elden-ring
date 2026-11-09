@@ -10,6 +10,7 @@ const css=`
 .gy-musical-layer[data-reference='true']:not(.turn) .gy-musical-dialogue{top:27%;bottom:auto}.gy-musical-layer[data-reference='true'].rhythm .gy-musical-dialogue{top:33%}.gy-musical-layer[data-reference='true'].shooter .gy-musical-dialogue{top:20%;bottom:auto}
 @media(max-height:500px){.gy-turn-queue{width:48px;top:20%;gap:3px}.gy-turn-queue div{height:26px;font-size:13px}.gy-party-card{height:64px;grid-template-columns:30px 1fr;font-size:9px;padding:4px}.gy-party-card .portrait{font-size:26px}.gy-party-card .energy{width:27px;height:27px;font-size:8px;top:-11px;right:3px}.gy-party-card small{font-size:8px}.gy-turn-party{gap:4px;left:10%;bottom:3%}.turn .gy-musical-actions button{min-width:45px;height:57px;font-size:10px}.gy-turn-target{width:75px;font-size:8px}.gy-turn-target .weak{font-size:11px}.gy-turn-points{font-size:15px;bottom:21%}.turn .gy-musical-top{top:3%}.gy-musical-actions button{min-height:40px;font-size:10px;min-width:47px;padding:5px}.rhythm .gy-musical-actions button{min-width:65px}.gy-musical-dialogue{padding:5px 9px;bottom:clamp(90px,21vh,110px)}.gy-lyric-en{font-size:10px}.gy-lyric-ko{font-size:12px}.army .gy-musical-dialogue{bottom:24%}.fighter .gy-musical-dialogue{bottom:21%}}
 
+.gy-theater-progress[hidden]{display:none!important}
 .gy-theater-progress{position:absolute;top:2%;left:50%;transform:translateX(-50%);width:min(520px,57vw);display:grid;gap:4px;text-align:center;z-index:2;filter:drop-shadow(0 2px 4px #0009)}
 .gy-theater-heading{color:#fff1c8;font:700 clamp(9px,1.1vw,13px)/1.3 system-ui;letter-spacing:.14em}
 .gy-theater-meter{height:8px;background:#181b2999;border:1px solid #f9d8a488;border-radius:99px;overflow:hidden}
@@ -19,6 +20,7 @@ const css=`
 .gy-musical-dialogue{max-width:min(86vw,960px);width:86vw;filter:drop-shadow(0 2px 6px #000) drop-shadow(0 -1px 3px #0009)}
 .gy-lyric-en{font-size:clamp(11px,1.35vw,17px)}
 .gy-lyric-ko{font-size:clamp(13px,1.7vw,21px)}
+ .gy-musical-layer.fighter .gy-theater-progress{top:21%}
 @media(max-height:500px){.gy-theater-progress{top:1%;width:min(410px,49vw);gap:2px}.gy-theater-meter{height:5px}.gy-musical-dialogue{max-width:80vw}}
 `;
 export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
