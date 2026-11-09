@@ -37,6 +37,12 @@ const css=`
 .gy-musical-layer.runner .gy-musical-actions button{min-width:clamp(76px,14vw,175px);height:clamp(52px,11vh,90px);font-size:clamp(15px,2.3vw,29px)}
 .gy-musical-layer.runner [data-musical-action="dash"]{border-color:#e6ca88;background:#425d76c9}
 .gy-musical-layer.runner [data-musical-action="dash"]:not(:disabled){box-shadow:0 0 18px #ffe6a488}
+/* A glowing action button is a tactile affordance, never a pattern explanation. */
+.turn .gy-musical-actions button.spotlight-ready{border-color:#ffe6a6;color:#fff4d4;
+background:#776143e8;box-shadow:0 0 20px #ffe1a68c,0 0 0 2px #f5d99680;
+animation:gy-sung-response .55s ease-in-out infinite alternate}
+@keyframes gy-sung-response{from{filter:brightness(.9)}to{filter:brightness(1.24)}}
+@media(prefers-reduced-motion:reduce){.turn .gy-musical-actions button.spotlight-ready{animation:none}}
 `;
 export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
  const style=doc.createElement('style');style.textContent=css;shell.appendChild(style);
@@ -83,7 +89,17 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
    partyButtons.forEach((b,i)=>{const p=m.party[i];b.classList.toggle('active',p.id===m.turnActor);b.classList.toggle('ready',p.energy>=100);b.disabled=m.turn==='finish'||p.energy<100||!!m.actorMotion||m.transition>0||m.songEnded||paused;b.querySelector('.energy').textContent=Math.round(p.energy)+'%';b.querySelector('.hp i').style.width=(p.hp/p.maxHp*100)+'%';});
   }else{title.textContent=m.year+'수 · '+GYUWON_MUSICAL_ACTS[m.year].name;info.textContent='COMBO '+m.combo+' · '+m.score;}
   buttons.forEach(({b,act})=>{let disabled=paused||m.transition>0||m.songEnded||m.finishing;
-   if(isTurn)disabled=disabled||m.turn!=='player'||!!m.actorMotion||act==='skill'&&m.skillPoints<=0;
+   if(isTurn){
+    const a=m.raidAttack,counterWindow=m.turn==='boss'&&a&&!a.blocked
+     &&a.age>=a.wind*.28&&a.age<=a.wind+.12;
+    const reactive=act==='support'&&counterWindow;
+    disabled=disabled||(!reactive&&(m.turn!=='player'||!!m.actorMotion))
+     ||act==='skill'&&m.skillPoints<=0;
+    if(act==='support'){
+     b.classList.toggle('spotlight-ready',!!reactive&&!paused);
+     b.querySelector('span').textContent=reactive?'빛의 응답':'지원';
+    }
+   }
    if(m.year===7){if(act.startsWith('summon')){const n=Number(act.slice(6)),s=REFERENCE_UNIT_TYPES[n];disabled=disabled||m.money<s.cost||m.unitCooldowns[n]>0;b.querySelector('.gy-card-meter').style.width=(1-m.unitCooldowns[n]/s.cool)*100+'%';}else if(act==='upgrade')disabled=disabled||m.money<m.workerLevel*95||m.workerLevel>=6;else if(act==='cannon')disabled=disabled||m.cannon<100;}
    if(m.year===6&&act==='dash'){disabled=disabled||(m.starCharge||0)<55||(m.dashCooldown||0)>0;b.title=disabled?'별빛을 모으면 질주할 수 있습니다':'별빛 질주';}
    if(m.year===10&&act==='bomb')disabled=disabled||m.bombs<=0;
