@@ -13,8 +13,10 @@ try{
  await page.evaluate(async()=>{document.getElementById('journey').close();window.__read=(await import('./src/battle-session.mjs')).readBattleSession;window.__battle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({diagnostics:true,configure(g){g.gyuwon.years.year=5;g.boss.hp=6000;g.player.invuln=1e6;g.startGrace=0;}});window.__session=()=>window.__read(document.getElementById('gyuwon-battle')?.firstElementChild?.shadowRoot);});
  await page.waitForFunction(()=>window.__session()?.active,null,{timeout:90000});
  await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical?.time>3.2,{timeout:30000});
- await page.locator('#gyuwon-battle').locator('#world').focus();await page.keyboard.press('j');
- await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.score>0,{timeout:10000});
+ // Act 5 is a turn-based encounter: wait for an allied turn and use its mapped normal attack (Q), not the obsolete J key.
+ await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical?.turn==='player',null,{timeout:30000});
+ await page.locator('#gyuwon-battle').locator('#world').focus();await page.keyboard.press('q');
+ await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.score>0,null,{timeout:12000});
  const hp=await page.evaluate(()=>window.__session().game.boss.hp);assert.equal(hp,6000);
  await page.keyboard.press('Space'); // previously dereferenced a null player action and crashed the fight
  await page.keyboard.press('Escape');await page.waitForTimeout(100);
