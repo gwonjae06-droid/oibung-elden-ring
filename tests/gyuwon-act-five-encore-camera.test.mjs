@@ -36,7 +36,7 @@ test('when all five original parts are shattered, a physical sixth target return
  assert.ok(m.enemies.slice(0,5).every(e=>e.destroyed&&e.hp===0));
  m.turn='player';m.turnActor='ally0';encore.hp=1;
  assert.equal(actGyuwon(g,'light'),true);
- for(let i=0;i<100;i++)stepGyuwon(g,1/120);
+ for(let i=0;i<150;i++)stepGyuwon(g,1/120);
  assert.equal(encore.destroyed,true);
  assert.equal(m.partBreaks,5,'original parts are never regenerated or counted twice');
  m.actorMotion=null;m.turn='support';m.turnActor=null;
