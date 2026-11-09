@@ -1,3 +1,4 @@
+import {renderJourneyArt} from './journey-art.mjs';
 // Post-800 HP playable-ending continuation. This cannot be skipped or triggered
 // from the main menu: the full original final song must finish first.
 export const GYUWON_LIFE_SECONDS=147;
@@ -60,9 +61,10 @@ const stageCss=`
 .gy-life-table{position:absolute;bottom:13%;left:42%;width:32%;height:8%;border-radius:12px;background:linear-gradient(#ae8659,#624331);box-shadow:0 3vmin #332b2b}
 .gy-life-film:not([data-shot="family"]):not([data-shot="child"]):not([data-shot="answer"]):not([data-shot="phone"]) .gy-life-table{display:none}
 .gy-life-phone{position:absolute;left:55%;bottom:22%;width:min(16vmin,120px);height:min(25vmin,188px);padding:1vmin;border:.8vmin solid #12171d;border-radius:1.8vmin;background:#050607;transform:perspective(55vmin) rotateX(25deg) rotateZ(-9deg) scale(var(--zoom,1));box-shadow:0 2vmin 3vmin #0008}
-.gy-life-screen{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(#0c1521aa,#15212c88),url("${new URL('../assets/art/temple-wall-v1.jpg',import.meta.url).href}") center / cover;color:#f9e4b6;text-shadow:0 2px 5px #000;gap:7px}
-.gy-life-screen strong{font:900 clamp(9px,1.8vmin,18px)/1.3 Georgia,serif;letter-spacing:.14em}
-.gy-life-screen small{font:600 clamp(5px,.9vmin,11px) system-ui}
+.gy-life-screen{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:linear-gradient(#0c1521aa,#15212c88),url("${new URL('../assets/art/temple-wall-v1.jpg',import.meta.url).href}") center / cover;color:#f9e4b6;text-shadow:0 2px 5px #000;gap:7px;overflow:hidden}
+.gy-life-phone-art{position:absolute;inset:0;z-index:0;overflow:hidden;opacity:.9}.gy-life-phone-art .j-scene{position:absolute;inset:0;overflow:hidden}.gy-life-phone-art svg{width:100%;height:100%;object-fit:cover}.gy-life-phone-art *{animation:none!important;transition:none!important}
+.gy-life-screen strong{position:relative;z-index:1;font:900 clamp(9px,1.8vmin,18px)/1.3 Georgia,serif;letter-spacing:.14em}
+.gy-life-screen small{position:relative;z-index:1;font:600 clamp(5px,.9vmin,11px) system-ui}
 .gy-life-film:not([data-shot="family"]):not([data-shot="child"]):not([data-shot="answer"]):not([data-shot="phone"]) .gy-life-phone{display:none}
 .gy-life-label{position:absolute;top:11%;width:100%;text-align:center;font:600 clamp(14px,2vw,25px) Georgia,serif;letter-spacing:.35em;color:#f5e0bd;text-shadow:0 2px 9px #000}
 .gy-life-caption{position:absolute;left:8%;right:8%;bottom:7%;text-align:center;font:600 clamp(18px,2.8vw,37px)/1.6 "Malgun Gothic",system-ui;color:#fff9ee;text-shadow:0 2px 12px #000,0 0 22px #000a}
@@ -77,7 +79,7 @@ const stageCss=`
 export function createGyuwonLifeEpilogue(doc,shell,{onComplete=()=>{}}={}){
  const style=doc.createElement('style');style.textContent=stageCss;shell.appendChild(style);
  const layer=doc.createElement('div');layer.className='gy-life-film';layer.hidden=true;layer.setAttribute('aria-live','off');
- layer.innerHTML='<div class="gy-life-vista"><div class="gy-life-sun"></div><div class="gy-life-buildings"></div><div class="gy-life-school"></div><div class="gy-life-floor"></div><div class="gy-life-person"></div><div class="gy-life-person partner"></div><div class="gy-life-person child"></div><div class="gy-life-table"></div><div class="gy-life-phone"><div class="gy-life-screen"><strong>ODEN RING</strong><small>오든링 · 메인화면</small></div></div></div><div class="gy-life-vignette"></div><div class="gy-life-label"></div><div class="gy-life-caption"></div>';
+ layer.innerHTML='<div class="gy-life-vista"><div class="gy-life-sun"></div><div class="gy-life-buildings"></div><div class="gy-life-school"></div><div class="gy-life-floor"></div><div class="gy-life-person"></div><div class="gy-life-person partner"></div><div class="gy-life-person child"></div><div class="gy-life-table"></div><div class="gy-life-phone"><div class="gy-life-screen"><div class="gy-life-phone-art>'+renderJourneyArt('gyuwon-phone')+'</div><strong>ODEN RING</strong><small>오든링 · 메인화면</small></div></div></div><div class="gy-life-vignette"></div><div class="gy-life-label"></div><div class="gy-life-caption"></div>';
  const label=layer.querySelector('.gy-life-label'),caption=layer.querySelector('.gy-life-caption'),phone=layer.querySelector('.gy-life-phone');
  shell.appendChild(layer);
  let time=0,active=false,ended=false,priorShot='';
