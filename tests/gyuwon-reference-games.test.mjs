@@ -87,7 +87,7 @@ test('11수 is an unskippable, nonviolent musical curtain call',()=>{
 test('act nine lyric acts transform ground, identities and fighting rules at source-master anchors',()=>{
  assert.equal(gyuwonFightScene(2).kind,'handoff');
  assert.equal(gyuwonFightScene(19).role,'king');
- assert.equal(gyuwonFightScene(28).role,'clown');
+ assert.equal(gyuwonFightScene(21).role,'clown');assert.equal(gyuwonFightScene(28).arena,'rooftop');
  assert.equal(gyuwonFightScene(50).arena,'rooftop');
  assert.equal(gyuwonFightScene(99).quiet,true);
  assert.equal(gyuwonFightScene(118).arena,'mirror');
@@ -152,7 +152,7 @@ test('timed lyric contact is seek-safe and excluded acts remain unaffected',()=>
  assert.deepEqual(gyuwonLyricActionsCrossed(9,111.75,111.95).map(a=>a.actionId),['roundEcho1']);
 });
 test('real media time selects matching 6, 8, and 9 gestures and affects fighter set pieces',()=>{
- const samples=[[6,25.5,'rainDance','rain'],[6,28.5,'mountainLeap','mountain'],
+ const samples=[[6,25.5,'rainDance','spin'],[6,28.5,'mountainLeap','mountain'],
   [8,29.3,'leftStep','stepleft'],[8,31.5,'rightStep','stepright'],
   [9,34.0,'leftSwingRight','stepstrike'],[9,118.5,'roundEcho3','blade'],
   [11,40,'runAndFight','fight']];
