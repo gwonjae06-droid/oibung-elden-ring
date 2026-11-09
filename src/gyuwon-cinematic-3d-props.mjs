@@ -103,6 +103,20 @@ export function createGyuwonCinematicProps(parent,{coarse=false}={}){
   ell(mirrors,ivory,x,5.38,z+.12,.49);
   mirrorPanels.push({panel,shadow});
  }
+ // A fully geometric animated sea: original vertex positions remain stable,
+ // low-cost waves update their height/normals without per-frame mesh creation.
+ const sea=group('sea',[0,0,-15]);
+ const seaGeom=g(new T.PlaneGeometry(29,13,coarse?14:26,coarse?8:14));
+ const seaBase=Float32Array.from(seaGeom.attributes.position.array);
+ const seaSurf=m(new T.MeshStandardMaterial({color:0x438fb5,metalness:.39,roughness:.32,
+  transparent:true,opacity:.78,side:T.DoubleSide,emissive:0x8e6847,emissiveIntensity:.18}));
+ const seaSheet=mesh(sea,seaGeom,seaSurf,{pos:[0,1,0],rot:[-Math.PI/2,0,0]});
+ const foam=[];
+ for(let i=0;i<18;i++){
+  const x=-12+(i%9)*3,y=i<9?-3:2.6;
+  const crest=mesh(sea,orb,ivory,{pos:[x,1.36,y],scale:[.31,.085,.21]});
+  foam.push({crest,x,y,i});
+ }
  // A miniature town and forest float over a sculpted terrain plinth.
  const world=group('world',[0,3,-13]),worldIslands=[];
  for(let i=0;i<4;i++){
@@ -226,10 +240,25 @@ export function createGyuwonCinematicProps(parent,{coarse=false}={}){
   const move=gyuwonCinematicMotionAt(key,t),sway=move?.pose?.bank||0;
   if(active==='doors'){
    for(let i=0;i<doorLeaves.length;i++){
-    const side=i%2?-1:1;doorLeaves[i].rotation.y=side*1.08*ease(phase);
+    const side=i%2?-1:1;
+    doorLeaves[i].rotation.y=side*1.08*ease((phase-i*.045)/.7);
+   }
+  }else if(active==='sea'){
+   const verts=seaGeom.attributes.position;
+   for(let i=0;i<verts.count;i++){
+    const j=i*3,x=seaBase[j],y=seaBase[j+1];
+    verts.array[j+2]=Math.sin(x*.61+t*2.1+y*.25)*.35+
+      Math.cos(y*.79+t*1.5-x*.13)*.22+
+      Math.sin(x*.25-y*.34+t*.9)*.16;
+   }
+   verts.needsUpdate=true;seaGeom.computeVertexNormals();
+   for(const {crest,x,y,i} of foam){
+    const height=Math.sin(x*.61+t*2.1+y*.25)*.35+
+     Math.cos(y*.79+t*1.5-x*.13)*.22+.95;
+    crest.position.y=height+.18;crest.scale.x=.25+(i%4)*.06;
    }
   }else if(active==='crown'){
-   o.position.y=key==='5'?26.5:4.2;o.position.z=key==='5'?-24:-11;
+   o.position.y=key==='5'?32.5:4.2;o.position.z=key==='5'?-27:-11;
    o.rotation.y=Math.sin(t*.62)*.18; // follows the sung royal reveal
   }else if(active==='sword'){
    o.position.y=key==='5'?10:4.5;
