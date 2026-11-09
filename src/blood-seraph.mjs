@@ -285,7 +285,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   const targetAngle=Math.atan2(p.x-b.x,p.z-b.z);
   const wanted=Math.atan2(Math.sin(targetAngle-(b.yaw||0)),
    Math.cos(targetAngle-(b.yaw||0)));
-  const gazeTarget=clamp(wanted,-1.18,1.18);
+  // A celestial face can turn through a full half-rotation while the main
+  // body stays still. Do not cap it at 68 degrees when the player goes behind.
+  const gazeTarget=wanted;
   headTurn+=Math.atan2(Math.sin(gazeTarget-headTurn),Math.cos(gazeTarget-headTurn))*
    (1-Math.exp(-d*.95));
   visage.group.rotation.y=headTurn;
