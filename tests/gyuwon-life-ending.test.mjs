@@ -26,7 +26,7 @@ test('the final two dialog lines precede an actual visual phone zoom',()=>{
  assert.equal(gyuwonLifeFrame(GYUWON_LIFE_SECONDS).zoom,1);
 });
 test('displayed 7 has two inputs, displayed 8 adds Space, runner cannot dash',()=>{
- const runner={year:6},dance={year:8},fighter={year:9};
+ const runner={year:6,reference:true},dance={year:8,reference:true},fighter={year:9,reference:true};
  assert.equal(referenceKeyAction(runner,'KeyK'),null);
  assert.equal(referenceKeyAction(runner,'Space'),'jump');
  assert.equal(referenceKeyAction(runner,'KeyL'),'slide');
