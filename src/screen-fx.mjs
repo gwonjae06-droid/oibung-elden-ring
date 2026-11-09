@@ -17,6 +17,13 @@ export function installScreenFx(doc=globalThis.document,win=globalThis.window,{r
    visited.add(vig);owned.add(vig);const session=readBattleSession(root),player=session?.game?.player,meter=hpEl.parentElement?.querySelector?.('.meter'),hp=player?player.hp:parseFloat(hpEl.textContent),max=player?player.maxHp:Number(meter?.getAttribute('aria-valuemax'))||120;
    const state=states.get(vig)||{prev:hp,heal:-1e9,active:false};
    if(!Number.isFinite(hp)||!(session?session.active:active(root))){state.prev=hp;state.heal=-1e9;state.active=false;states.set(vig,state);clear(vig);continue;}
+   // The last musical act and 800 HP dedication are a peaceful curtain
+   // call. Stop scheduling critical-HP heartbeats at their source instead
+   // of simply hiding the red texture after the frame has been painted.
+   if(session?.game?.gyuwon?.years?.year>=11&&session.game.gyuwon.years.musical){
+    state.prev=hp;state.heal=-1e9;state.active=false;
+    states.set(vig,state);clear(vig);continue;
+   }
    if(state.active&&healGain(state.prev,hp,max))state.heal=clock;
    state.prev=hp;state.active=true;states.set(vig,state);
    const level=lowHealthLevel(hpRatio(hp,max)),heal=healFade(state.heal,clock);
