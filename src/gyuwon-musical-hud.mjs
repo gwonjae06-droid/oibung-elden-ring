@@ -82,6 +82,12 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
   theaterFill.style.width=(overall*100)+'%';theaterMeter.setAttribute('aria-valuenow',String(Math.floor(overall*100)));
   const isTurn=m.year===5&&m.reference;queue.hidden=targets.hidden=party.hidden=points.hidden=!isTurn;
   if(isTurn){
+   // New encore props keep a clickable target linked to their collider.
+   while(targetButtons.length<m.enemies.length){
+    const i=targetButtons.length,b=doc.createElement('button');b.className='gy-turn-target';
+    bind(b,'target'+i);b.innerHTML='<div class="name"></div><div class="weak"></div><div class="hp"><i></i></div><div class="tough"><i></i></div>';
+    targets.appendChild(b);targetButtons.push(b);
+   }
    title.textContent='5수 · 거대 최규원';const actor=m.party.find(a=>a.id===m.turnActor);info.textContent=m.turn==='player'?(actor?.name||'')+'의 차례':m.turn==='boss'?'최규원의 차례':'공연 중';
    points.textContent='✦'.repeat(m.skillPoints)+'◇'.repeat(5-m.skillPoints);
    queue.innerHTML=[{id:m.turnActor,team:actor?1:-1,weapon:actor?.weapon,av:0},...m.queue.slice(0,7)].map((a,i)=>`<div class="${a.team<0?'enemy':''} ${i===0?'current':''}"><span>${a.team>0?glyphs[a.weapon]||'◇':'◆'}</span><small>${Math.round(a.av)}</small></div>`).join('');
