@@ -85,11 +85,12 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   for(const {rig,side}of ghosts){rig.visible=!won&&s.pattern==='contradiction'&&b.state==='pattern';rig.position.set(b.x+side*6,0,b.z+3);rig.rotation.y=root.rotation.y;rig.getObjectByName('gyuwon-head').visible=b.phase===1;}
   if(!s.years)hazardFx.update(g);else hazardFx.clear();if(s.years){yearsFx.update(g);arsenalFx.update(g);if(['musical','curtain'].includes(s.years.mode)){yearsFx.root.visible=false;arsenalFx.root.visible=false;}annualWorld.update(g,dt);}else{annualWorld.root.visible=false;shadowHand.update(g);absorbFx.update(g);}
  }
- async function prewarmProgressive(renderer,camera,{companions=[]}={}){
+ async function prewarmProgressive(renderer,camera,{companions=[],openingOnly=false}={}){
   await yearsFx.ready;if(disposed)return;
   const textures=new Set();yearsFx.root.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.map)textures.add(m.map);});
   for(const t of textures){if(disposed)return;renderer.initTexture?.(t);await new Promise(resolve=>setTimeout(resolve,0));}
   if(disposed)return;
+  if(openingOnly){await annualWorld.prewarmProgressive(renderer,camera,{maxYear:4});return;}
   const proxy=annualWorld.createWarmCompanion(),memory=annualWorld.prepare(9),visible=annualWorld.root.children.map(o=>[o,o.visible]),rootVisible=annualWorld.root.visible;
   scene.add(proxy);annualWorld.root.visible=true;for(const [o]of visible)o.visible=false;memory.group.visible=true;
   try{await recall.prewarmProgressive(renderer,camera,{companions:[proxy,stage,annualWorld.root,...companions],preparePrograms:()=>annualWorld.precompileVisibility(renderer,camera)});}

@@ -162,10 +162,10 @@ export function createGyuwonYearWorld(scene,{coarse=false,artMaterials=[],fragme
   playerTarget.set(g.player.x,1.4+(g.player.floorY||0),g.player.z);bossTarget.set(g.boss.x,2.1,g.boss.z);
   const sun=scene.children.find(o=>o.isDirectionalLight);if(sun){sun.color.setHex(a.sun).lerp(tint.setHex(b.sun),t);sun.intensity=a.light+(b.light-a.light)*t;}
  }
- async function warm(renderer,camera,{yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0))}={}){
+ async function warm(renderer,camera,{maxYear=11,yieldFrame=()=>new Promise(resolve=>setTimeout(resolve,0))}={}){
   if(warming)return warming;if(disposed||warmed)return;
   warming=(async()=>{const now=()=>globalThis.performance?.now?.()??Date.now(),start=now(),target=renderer.setRenderTarget?new THREE.WebGLRenderTarget(16,16):null;if(target)target.texture.colorSpace=renderer.outputColorSpace||THREE.SRGBColorSpace;
-   try{for(let year=1;year<=11;year++){
+   try{for(let year=1;year<=maxYear;year++){
     if(disposed)return;const before=now(),entry=prepare(year);audit.maxChunkMs=Math.max(audit.maxChunkMs,now()-before);await yieldFrame();
     const meshes=[];entry.group.traverse(o=>{if(o.geometry)meshes.push(o);});
     for(let i=0;i<meshes.length;i+=12){if(disposed)return;

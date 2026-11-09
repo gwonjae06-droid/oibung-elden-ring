@@ -34,61 +34,7 @@ test('first four exam years remain original, seven white stage acts have distinc
   assert.equal(one.gyuwon.years.mode,'musical');
  }
 });
-test('act 5 turn combat takes actual choices, damage, visible hostile windup and guard',()=>{
- const g=at(5),m=g.gyuwon.years.musical,old=g.boss.hp;
- assert.ok(actGyuwon(g,'light'));advance(g,.6);assert.equal(g.boss.hp,old);assert.ok(m.score>0);
- assert.equal(m.turn,'boss');assert.ok(m.turnWind>0);
- assert.ok(actGyuwon(g,'roll'),'defend during the enemy turn');
- const hp=g.player.hp;advance(g,2);
- assert.equal(hp,g.player.hp,'a correct timed guard prevents boss damage');
- assert.equal(m.turn,'player');
-});
-test('act 6 runner uses jumping and sliding against moving physical obstacles',()=>{
- const g=at(6),m=g.gyuwon.years.musical;
- assert.ok(actGyuwon(g,'roll'));advance(g,.25);
- assert.ok(g.player.floorY>0);
- assert.ok(actGyuwon(g,'skill'));assert.ok(m.slide>0);
- m.runnerSpawn=.01;advance(g,.05);
- assert.ok(m.obstacles.length>=1);
- const x=m.obstacles[0].x;advance(g,.1);assert.ok(m.obstacles[0].x<x);
-});
-test('act 7 army is resource-gated, units move and can fight each other',()=>{
- const g=at(7),m=g.gyuwon.years.musical;
- assert.ok(actGyuwon(g,'light'));assert.equal(m.units[0].team,1);
- const original=m.money;
- assert.ok(original<75);
- m.enemySpawn=0;advance(g,.06);
- assert.ok(m.units.some(u=>u.team<0));
- const x=m.units[0].x;advance(g,.08);
- assert.ok(m.units[0].x>x);
-});
-test('act 8 rhythm notes have strict beat input with performance scoring',()=>{
- const g=at(8),m=g.gyuwon.years.musical;
- advance(g,3.4);assert.ok(m.note);m.note.time=0;
- const key=m.note.key,old=g.boss.hp;
- assert.ok(actGyuwon(g,key));assert.equal(g.boss.hp,old);assert.ok(m.score>0);
- assert.ok(m.combo>0);
-});
-test('act 9 fighting gameplay hits only within real horizontal reach',()=>{
- const g=at(9),m=g.gyuwon.years.musical;
- g.player.x=g.boss.x-2.9;
- const hp=g.boss.hp;
- assert.ok(actGyuwon(g,'light'));advance(g,.5);assert.equal(g.boss.hp,hp);assert.ok(m.score>0);
- const hit=g.boss.hp;
- m.shotCooldown=0;g.player.x=-18;g.boss.x=17;
- assert.ok(actGyuwon(g,'light'));
- assert.equal(g.boss.hp,hit,'outside reach must be an honest miss');
-});
-test('act 10 twin-stick shooter fires projectiles and warns before enemy volleys',()=>{
- const g=at(10),m=g.gyuwon.years.musical;
- g.player.x=-1;g.player.z=0;g.boss.x=6;g.boss.z=0;
- const old=g.boss.hp;
- assert.ok(actGyuwon(g,'light'));assert.ok(m.bullets.length);
- advance(g,.4);assert.equal(g.boss.hp,old);assert.ok(m.score>0,'actual bullet must contact the boss to score');
- m.enemyWind=.01;advance(g,.05);assert.ok(m.enemyTarget?.wind>=1.05);
- advance(g,1.1);assert.ok(m.enemyShots.length>0);
-});
-
+// Genre contact and control regressions live in gyuwon-reference-games.test.mjs.
 test('songs own exact HP targets and cannot be skipped by direct damage or DoT',()=>{
  const g=at(5),e=g.gyuwon.years;g.player.invuln=1e6;g.stats.damage=77;
  const targets=[5300,4600,3900,3200,2500,1800,800];

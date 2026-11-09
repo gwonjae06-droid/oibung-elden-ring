@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/gyuwon-*.mjs'
       - 'tests/gyuwon-musical-genres.test.mjs'
+      - 'tests/gyuwon-reference-games.test.mjs'
+      - 'scripts/gyuwon-reference-qa.mjs'
+      - 'scripts/gyuwon-musical-qa.mjs'
       - 'tests/gyuwon-opening-pacing.test.mjs'
       - 'scripts/gyuwon-musical-browser-smoke.mjs'
       - '.github/workflows/gyuwon-musical-acts.yml'
@@ -28,16 +31,17 @@ jobs:
             node --check "$f"
           done
       - name: Simulate all seven actual playable genres and final 800 HP
-        run: node --test tests/gyuwon-musical-genres.test.mjs tests/gyuwon-opening-pacing.test.mjs
-      - name: Chromium WebGL - actual white stage, controls, camera and ending
+        run: node --test tests/gyuwon-reference-games.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/journey-controller.test.mjs
+      - run: npx playwright-core install --with-deps chromium
+      - name: Native musical clocks, 3D party and five actual 2D genres
         run: |
-          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/gyuwon-musical-http.log 2>&1 &
-          sleep 2
           node scripts/gyuwon-musical-browser-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gyuwon-musical-acts-screenshots
-          path: artifacts/gyuwon-musical/
+          path: |
+            qa-output/musical/
+            qa-output/reference/
           if-no-files-found: warn
           retention-days: 7

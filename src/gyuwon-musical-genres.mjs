@@ -1,3 +1,4 @@
+import {setupReferenceMinigame,actReferenceMinigame,tickReferenceMinigame} from './gyuwon-reference-rules.mjs';
 // One unbroken, playable eleven-act fight. Acts 1-4 keep the authored
 // annual system. Acts 5-11 replace it with six distinct controls/genres and
 // a final musical. No exam/result roll or fake remote damage is used here.
@@ -63,9 +64,9 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  g.gyuwon.space='white';g.gyuwon.stageMemory=null;g.gyuwon.pattern=null;
  g.gyuwon.hazards.length=0;g.projectiles.length=0;g.gyuwon.stun=0;
  g.boss.state='recovery';g.boss.phase=2;
- locate(g,m);
+ locate(g,m);setupReferenceMinigame(g,m);
  m.entry={...from,tx:g.player.x,tz:g.player.z,btx:g.boss.x,btz:g.boss.z};
- g.player.x=from.px;g.player.z=from.pz;g.boss.x=from.bx;g.boss.z=from.bz;
+ if(m.reference&&m.year>=6){g.player.x=m.entry.tx;g.player.z=m.entry.tz;}else{g.player.x=from.px;g.player.z=from.pz;}g.boss.x=from.bx;g.boss.z=from.bz;
  emit('gyuwon-musical-act',{year:e.year,genre:m.kind,title:m.title});
  emit('gyuwon-musical-dialogue',{line:m.dialogue,year:e.year});
  return true;
@@ -126,6 +127,7 @@ function rhythmPress(g,m,type,emit){
 export function actGyuwonMusical(g,type,emit=()=>{}){
  const m=g?.gyuwon?.years?.musical;
  if(!m||g.status!=='playing'||m.finishing||m.songEnded||m.transition>0)return false;
+ if(m.reference)return actReferenceMinigame(g,m,type,{deal,take,heal,emit});
  if(m.kind==='turn')return turnChoice(g,m,type,emit);
  if(m.kind==='rhythm'||m.kind==='finale')return rhythmPress(g,m,type,emit);
  if(type==='heal')return heal(g,emit);
@@ -360,9 +362,10 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  if(m.dash){const d=m.dash,step=Math.min(dt,d.left);g.player.x=clamp(g.player.x+d.vx*step,-19,19);d.left-=step;if(d.left<=0)m.dash=null;}
  if(m.transition>0){
   const q=1-m.transition/2.7,k=q*q*(3-2*q),a=m.entry;
-  if(a){g.player.x=a.px+(a.tx-a.px)*k;g.player.z=a.pz+(a.tz-a.pz)*k;g.boss.x=a.bx+(a.btx-a.bx)*k;g.boss.z=a.bz+(a.btz-a.bz)*k;}
+  if(a&&!(m.reference&&m.year>=6)){g.player.x=a.px+(a.tx-a.px)*k;g.player.z=a.pz+(a.tz-a.pz)*k;g.boss.x=a.bx+(a.btx-a.bx)*k;g.boss.z=a.bz+(a.btz-a.bz)*k;}
   return;
  }
+ if(m.reference){tickReferenceMinigame(g,m,dt,input||{},{deal,take,heal,emit});e.day=Math.max(0,Math.ceil(365*(1-m.time/duration)));return;}
  tickStrike(g,m,dt,emit);
  if(m.kind==='turn')tickTurn(g,m,dt,emit);
  else if(m.kind==='runner')tickRunner(g,m,dt,emit);

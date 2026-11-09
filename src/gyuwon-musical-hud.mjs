@@ -1,100 +1,52 @@
 import {GYUWON_MUSICAL_ACTS} from './gyuwon-musical-genres.mjs';
 import {gyuwonSubtitleAt} from './gyuwon-subtitles.mjs';
 import {gyuwonSongKey} from './gyuwon-song-data.mjs';
-
-// All seven genres share one compact, responsive controller. Only game state
-// changes the UI; the UI cannot invent collision, damage or a fake result.
-const BUTTONS=Object.freeze({
- turn:['공격','스킬','방어','회복'],
- runner:['투척','슬라이드','점프','회복'],
- army:['돌격단원','궁수단원','방패단원','회복'],
- rhythm:['박자','강박','회피박','회복'],
- fighter:['주먹','강타','회피','회복'],
- shooter:['발사','삼연발','대시','회복'],
- finale:['노래','고음','회피박','회복']
-});
-const TYPES=['light','skill','roll','heal'];
-const pad=String.raw`
-.gy-musical-layer{position:absolute;inset:0;pointer-events:none;z-index:27;color:#1d2433;font-family:system-ui,sans-serif}
-.gy-musical-top{position:absolute;top:12%;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;max-width:82vw;text-align:center}
-.gy-musical-title{background:#fffbf5e8;border:1px solid #8885;border-radius:30px;padding:7px 20px;box-shadow:0 7px 25px #2531451b;font-size:clamp(14px,2vw,22px);font-weight:900;letter-spacing:.06em}
-.gy-musical-info{background:#fffdf9dd;border-radius:18px;padding:5px 14px;color:#3c4261;font-size:clamp(11px,1.15vw,14px);font-weight:700}
-.gy-musical-dialogue{position:absolute;left:50%;bottom:21%;width:min(86vw,750px);transform:translateX(-50%);padding:16px 20px;background:linear-gradient(90deg,#1b253adf,#313444eb,#1b253adf);color:#fff7ec;text-align:center;border-radius:16px;border:1px solid #fff3;font:600 clamp(15px,2.2vw,25px)/1.5 'Georgia',serif;text-shadow:0 2px 10px #0f1225;box-shadow:0 8px 26px #1116}
-.gy-musical-actions{position:absolute;bottom:5%;right:4%;display:flex;gap:6px;pointer-events:auto}
-.gy-musical-actions button{border:1px solid #303a55a0;border-radius:12px;background:#f9f7f4ee;box-shadow:0 4px 11px #0002;color:#293044;padding:10px 11px;font:800 12px/1.2 system-ui,sans-serif;min-width:57px;touch-action:manipulation}
-.gy-musical-actions button:active{transform:translateY(2px);background:#f0dfca}
-.gy-musical-actions button:disabled{opacity:.33}
-.gy-musical-phases{position:absolute;left:50%;top:7%;transform:translateX(-50%);display:flex;width:min(80vw,620px);gap:3px}
-.gy-musical-phases span{flex:1;border:1px solid #2222;border-radius:6px;height:9px;opacity:.32;box-shadow:inset 0 0 5px #0002}
-.gy-musical-phases span.active{opacity:1;height:13px;transform:translateY(-2px);box-shadow:0 0 12px currentColor}
-.gy-musical-phases span.finished{opacity:.78}
-.gy-musical-beat{width:54px;height:54px;margin-top:16px;border:5px solid #bb87d9;border-radius:50%;background:#fcfcffe8;box-shadow:0 0 20px #9063e35c;display:grid;place-items:center;font-weight:950;font-size:24px;will-change:transform}
-.gy-musical-beat[data-note='roll']{border-color:#60acb1}
-.gy-musical-beat[data-note='skill']{border-color:#d9954d}
-.gy-musical-layer.curtain{background:linear-gradient(90deg,#0b122b55,#1d233744,#0b122b55);color:#fff}
-.gy-musical-layer.curtain .gy-musical-top{opacity:0}
-.gy-musical-layer.curtain .gy-musical-dialogue{bottom:28%;background:#101423ba}
-@media(max-width:720px){.gy-musical-actions{bottom:12%;right:2%;gap:3px}.gy-musical-actions button{padding:8px 5px;min-width:48px;font-size:10px}.gy-musical-dialogue{bottom:31%;padding:9px 10px}.gy-musical-top{top:14%}.gy-musical-title{font-size:14px;padding:5px 10px}.gy-musical-info{font-size:11px}.gy-musical-phases{top:9%}}
+import {REFERENCE_UNIT_TYPES,REFERENCE_PARTY} from './gyuwon-reference-rules.mjs';
+const names={turn:[['light','일반 공격','Q'],['skill','전투 스킬','E']],runner:[['jump','Jump','Space'],['slide','Slide','L']],army:[['upgrade','생산력','U'],...REFERENCE_UNIT_TYPES.map((u,i)=>['summon'+i,u.name,''+(i+1)]),['cannon','대포','K']],rhythm:[['light','포즈','J'],['skill','턴','L'],['roll','빠른 턴','Space']],fighter:[['light','주먹','J'],['kick','킥','K'],['skill','스킬','L'],['super','초필살','O'],['jump','점프','Space'],['guard','방어','I']],shooter:[['bomb','폭탄','Space'],['skill','무기','L']],finale:[['light','노래','J'],['skill','고음','L'],['roll','회피박','Space'],['heal','회복','E']]};
+const glyphs={sword:'╱',hammer:'♜',bow:'➶',cards:'◇'};
+const css=`
+.gy-musical-layer{position:absolute;inset:0;z-index:27;pointer-events:none;color:#e5e8eb;font-family:system-ui,sans-serif}.gy-musical-top{position:absolute;left:50%;top:12%;transform:translateX(-50%);text-align:center;display:grid;gap:5px;justify-items:center}.gy-musical-title,.gy-musical-info{background:#172536de;border:1px solid #9eafbf66;border-radius:22px;padding:7px 18px;font-weight:700;font-size:16px}.gy-musical-info{font-size:12px;padding:4px 13px}.gy-musical-phases{position:absolute;left:35%;top:4%;width:30%;display:flex;gap:4px}.gy-musical-phases span{height:5px;flex:1;opacity:.3;border-radius:5px}.gy-musical-phases .active{opacity:1;box-shadow:0 0 9px currentColor}.gy-musical-actions{position:absolute;bottom:4%;right:4%;display:flex;gap:8px;pointer-events:auto}.gy-musical-actions button{position:relative;display:grid;place-items:center;gap:4px;min-width:78px;min-height:62px;padding:8px 14px;background:#f7f6f0e8;border:2px solid #535b69;border-radius:12px;color:#27374a;font-weight:800;font-size:14px;touch-action:none}.gy-musical-actions button kbd{font:600 10px system-ui;color:#54616c}.gy-musical-actions button:disabled{filter:grayscale(.8);opacity:.45}.gy-musical-actions button:active{transform:translateY(2px)}.gy-musical-dialogue{position:absolute;left:50%;bottom:clamp(116px,22vh,180px);transform:translateX(-50%);padding:8px 15px;max-width:88vw;width:max-content;background:#172035d9;border:1px solid #ffffff44;border-radius:5px;text-align:center;text-shadow:0 2px 5px #000;pointer-events:none}.gy-lyric-en{font:500 clamp(10px,1.35vw,17px)/1.5 system-ui;white-space:nowrap;color:#fff}.gy-lyric-ko{font:650 clamp(12px,1.7vw,21px)/1.5 system-ui;white-space:nowrap;color:#fff0cc}.gy-musical-beat{width:54px;height:54px;border:4px solid #dbaeed;border-radius:50%;display:grid;place-items:center;font-size:25px;background:#ffffffef;color:#384358}.gy-musical-layer[data-reference='true']:not(.turn):not(.finale) .gy-musical-top,.gy-musical-layer[data-reference='true']:not(.turn):not(.finale) .gy-musical-phases{display:none}.gy-musical-layer.runner .gy-musical-actions{left:5%;right:5%;bottom:4%;justify-content:space-between}.runner .gy-musical-actions button{min-width:clamp(100px,16vw,220px);height:clamp(53px,11vh,95px);border-radius:50%;font-size:clamp(18px,3vw,39px);background:#fff8c999;border:4px solid #6e794b99;color:#fff;text-shadow:-2px -2px #263125,2px 2px #263125}.runner .gy-musical-actions kbd{display:none}.army .gy-musical-actions{left:3%;right:3%;bottom:2%;display:grid;grid-template-columns:.9fr repeat(6,1fr) .9fr;gap:5px}.army .gy-musical-actions button{padding:5px 3px;min-width:0;height:clamp(66px,13vh,115px);border:3px solid #292c33;border-radius:4px;background:#f2efe6;color:#1e272d;font-size:clamp(9px,1.1vw,16px);box-shadow:0 0 0 2px #b5a998}.army .gy-musical-actions kbd{display:none}.gy-unit-face{height:28px;font:800 30px/1 monospace;color:#222}.gy-unit-cost{font-size:12px}.gy-card-meter{position:absolute;bottom:0;left:0;height:6px;background:#5ccec7}.fighter .gy-musical-actions{right:3%;bottom:3%;gap:6px}.fighter .gy-musical-actions button{min-width:54px;width:clamp(52px,6.5vw,86px);height:clamp(50px,9vh,76px);padding:4px;background:#1c2935d9;color:#fff0d0;border:2px solid #c4ab76;border-radius:50%}.shooter .gy-musical-actions{right:3%;bottom:10%;display:grid}.shooter .gy-musical-actions button{background:#285c6a;color:#e2f6ff;border-color:#7cdeed}.rhythm .gy-musical-actions{bottom:3%;right:4%;gap:12px}.rhythm .gy-musical-actions button{background:#efe8e1;color:#574168;border-color:#8e709c;min-width:90px}.gy-turn-queue{position:absolute;left:1.5%;top:15%;width:70px;display:grid;gap:5px}.gy-turn-queue div{position:relative;height:44px;background:#172635d9;border:1px solid #7e9aad;color:#e7eef2;display:flex;align-items:center;justify-content:space-around;border-radius:3px;font-size:19px}.gy-turn-queue small{font:600 10px system-ui}.gy-turn-queue .enemy{border-color:#a77071;color:#e0a4a3}.gy-turn-queue .current{border:2px solid #f3d9a1;box-shadow:0 0 13px #eed09a77}.gy-turn-enemies{position:absolute;inset:0;pointer-events:none}.gy-turn-target{position:absolute;transform:translate(-50%,-100%);width:110px;pointer-events:auto;background:#0c192eaa;border:0;color:#f1eee1;padding:4px 6px;border-radius:4px;font:600 10px system-ui;text-align:left}.gy-turn-target.selected{outline:1px solid #f1d19a}.gy-turn-target .hp,.gy-turn-target .tough{height:4px;background:#342c2d;margin-top:3px}.gy-turn-target .hp i{display:block;height:4px;background:#d7987d}.gy-turn-target .tough{background:#4e5d6c}.gy-turn-target .tough i{display:block;height:3px;background:#dbe9ed}.gy-turn-target .weak{font-size:15px;color:#a8cae0;letter-spacing:.15em}.gy-turn-party{position:absolute;bottom:3.5%;left:13%;width:53%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;pointer-events:auto}.gy-party-card{height:101px;position:relative;display:grid;grid-template-columns:50px 1fr;align-items:center;gap:4px;border:1px solid #9eabbc66;border-radius:10px;background:#132130d9;color:#dfeaf1;padding:7px;font:700 12px system-ui;text-align:left}.gy-party-card.active{outline:2px solid #f4d397;box-shadow:0 0 20px #e7bf6844}.gy-party-card .portrait{font:800 42px Georgia;text-align:center;color:var(--party)}.gy-party-card .hp{height:5px;background:#384649;grid-column:1/-1}.gy-party-card .hp i{display:block;height:5px;background:#83cbd1}.gy-party-card .energy{position:absolute;right:8px;top:-16px;width:36px;height:36px;border-radius:50%;display:grid;place-content:center;border:3px solid var(--party);background:#142330;font-size:10px}.gy-party-card.ready .energy{box-shadow:0 0 14px #ffecc7;color:#ffedab}.gy-party-card small{font:500 10px system-ui;color:#b9c8d8}.gy-turn-points{position:absolute;bottom:18%;right:4%;padding:8px 16px;background:#101e31dd;font-size:22px;letter-spacing:.3em;color:#b5e4e8;border-radius:20px}.turn .gy-musical-top{top:4%;left:77%;max-width:30%;font-size:12px}.turn .gy-musical-title{font-size:13px}.turn .gy-musical-info{font-size:12px}.turn .gy-musical-actions{bottom:4%;right:3%;width:27%;justify-content:flex-end}.turn .gy-musical-actions button{min-width:70px;width:31%;height:88px;border-radius:50%;background:#172a3ddd;color:#f3e8ca;border:2px solid #aabec6;padding:4px;font-size:13px}.turn .gy-musical-dialogue{bottom:24%;max-width:68vw}.curtain .gy-musical-top,.curtain .gy-musical-actions,.curtain .gy-musical-phases,.curtain .gy-turn-queue,.curtain .gy-turn-party,.curtain .gy-turn-enemies,.curtain .gy-turn-points{display:none}.curtain .gy-musical-dialogue{bottom:24%}.gy-musical-layer[data-reference='true'].shooter .gy-musical-dialogue{bottom:13%;max-width:72vw;background:#142339e8}.shooter .gy-lyric-en{font-size:clamp(9px,1vw,13px)}.shooter .gy-lyric-ko{font-size:clamp(11px,1.2vw,16px)}
+.gy-musical-layer[data-reference='true']:not(.turn) .gy-musical-dialogue{top:27%;bottom:auto}.gy-musical-layer[data-reference='true'].rhythm .gy-musical-dialogue{top:33%}.gy-musical-layer[data-reference='true'].shooter .gy-musical-dialogue{top:20%;bottom:auto}
+@media(max-height:500px){.gy-turn-queue{width:48px;top:20%;gap:3px}.gy-turn-queue div{height:26px;font-size:13px}.gy-party-card{height:64px;grid-template-columns:30px 1fr;font-size:9px;padding:4px}.gy-party-card .portrait{font-size:26px}.gy-party-card .energy{width:27px;height:27px;font-size:8px;top:-11px;right:3px}.gy-party-card small{font-size:8px}.gy-turn-party{gap:4px;left:10%;bottom:3%}.turn .gy-musical-actions button{min-width:45px;height:57px;font-size:10px}.gy-turn-target{width:75px;font-size:8px}.gy-turn-target .weak{font-size:11px}.gy-turn-points{font-size:15px;bottom:21%}.turn .gy-musical-top{top:3%}.gy-musical-actions button{min-height:40px;font-size:10px;min-width:47px;padding:5px}.rhythm .gy-musical-actions button{min-width:65px}.gy-musical-dialogue{padding:5px 9px;bottom:clamp(90px,21vh,110px)}.gy-lyric-en{font-size:10px}.gy-lyric-ko{font-size:12px}.army .gy-musical-dialogue{bottom:24%}.fighter .gy-musical-dialogue{bottom:21%}}
 `;
 export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
- const style=doc.createElement('style');style.textContent=pad;shell.appendChild(style);
+ const style=doc.createElement('style');style.textContent=css;shell.appendChild(style);
  const wrap=doc.createElement('div');wrap.className='gy-musical-layer';wrap.hidden=true;
- const phases=doc.createElement('div');phases.className='gy-musical-phases';
- const spans=Object.entries(GYUWON_MUSICAL_ACTS).map(([year,data])=>{
-  const piece=doc.createElement('span');piece.style.background=data.color;
-  piece.title=year+'수 · '+data.name;phases.appendChild(piece);return piece;
- });
- const top=doc.createElement('div');top.className='gy-musical-top';
- const title=doc.createElement('div');title.className='gy-musical-title';
- const info=doc.createElement('div');info.className='gy-musical-info';
- const beat=doc.createElement('div');beat.className='gy-musical-beat';beat.hidden=true;
- top.append(title,info,beat);
- const dialogue=doc.createElement('div');dialogue.className='gy-musical-dialogue';dialogue.hidden=true;
- const english=doc.createElement('div'),korean=doc.createElement('div');english.className='gy-lyric-en';korean.className='gy-lyric-ko';dialogue.append(english,korean);
- style.textContent+='\n.gy-musical-dialogue{bottom:clamp(116px,22vh,180px);padding:8px 14px;border-radius:5px;width:max-content;max-width:88vw;box-sizing:border-box;pointer-events:none}.gy-lyric-en{font:500 clamp(10px,1.45vw,17px)/1.5 system-ui;color:#fff;white-space:nowrap}.gy-lyric-ko{font:600 clamp(12px,1.7vw,21px)/1.5 system-ui;color:#ffefce;white-space:nowrap}.gy-musical-layer.curtain .gy-musical-dialogue{bottom:24%}.gy-musical-layer.curtain .gy-musical-actions,.gy-musical-layer.curtain .gy-musical-phases{display:none}.gy-musical-title{font-weight:600;font-size:clamp(12px,1.5vw,18px)}';
- const actions=doc.createElement('div');actions.className='gy-musical-actions';
- const btns=TYPES.map((type,index)=>{
-  const btn=doc.createElement('button');btn.type='button';btn.dataset.musicalAction=type;
-  btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!btn.disabled)onAction(type);});
-  btn.addEventListener('click',e=>{if(e.detail===0&&!btn.disabled)onAction(type);});actions.appendChild(btn);return btn;
- });
- wrap.append(phases,top,dialogue,actions);shell.appendChild(wrap);
- let lastKind=null,lastTitle='',currentYear=0;
+ const phases=doc.createElement('div');phases.className='gy-musical-phases';const spans=Object.values(GYUWON_MUSICAL_ACTS).map(a=>{const x=doc.createElement('span');x.style.background=a.color;phases.appendChild(x);return x;});
+ const top=doc.createElement('div');top.className='gy-musical-top';const title=doc.createElement('div');title.className='gy-musical-title';const info=doc.createElement('div');info.className='gy-musical-info';const beat=doc.createElement('div');beat.className='gy-musical-beat';top.append(title,info,beat);
+ const dialogue=doc.createElement('div');dialogue.className='gy-musical-dialogue';const english=doc.createElement('div'),korean=doc.createElement('div');english.className='gy-lyric-en';korean.className='gy-lyric-ko';dialogue.append(english,korean);
+ const actions=doc.createElement('div');actions.className='gy-musical-actions';const queue=doc.createElement('div');queue.className='gy-turn-queue';const targets=doc.createElement('div');targets.className='gy-turn-enemies';const party=doc.createElement('div');party.className='gy-turn-party';const points=doc.createElement('div');points.className='gy-turn-points';wrap.append(phases,top,dialogue,actions,queue,targets,party,points);shell.appendChild(wrap);
+ const bind=(btn,act)=>{btn.type='button';btn.dataset.musicalAction=act;btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!btn.disabled)onAction(act);});btn.addEventListener('click',e=>{if(e.detail===0&&!btn.disabled)onAction(act);});for(const type of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(type,()=>{if(act==='slide'||act==='guard')onAction(act+'-end');});};
+ let lastKind='',buttons=[],targetButtons=[],partyButtons=[];
+ function rebuild(m){
+  actions.replaceChildren();buttons=[];for(const [act,name,key]of names[m.kind]||names.finale){const b=doc.createElement('button');bind(b,act);if(m.kind==='army'&&act.startsWith('summon')){const type=Number(act.slice(6));b.innerHTML=`<span class="gy-unit-face">${['♧','◈','➶','⚔','✦','♜'][type]}</span><span>${name}</span><span class="gy-unit-cost">${REFERENCE_UNIT_TYPES[type].cost}원</span><i class="gy-card-meter"></i>`;}else b.innerHTML=`<span>${name}</span><kbd>${key}</kbd>`;actions.appendChild(b);buttons.push({b,act});}
+  queue.replaceChildren();targets.replaceChildren();party.replaceChildren();targetButtons=[];partyButtons=[];
+  if(m.year===5&&m.reference){
+   for(let i=0;i<5;i++){const b=doc.createElement('button');b.className='gy-turn-target';bind(b,'target'+i);b.innerHTML='<div class="name"></div><div class="weak"></div><div class="hp"><i></i></div><div class="tough"><i></i></div>';targets.appendChild(b);targetButtons.push(b);}
+   for(let i=0;i<4;i++){const p=REFERENCE_PARTY[i],b=doc.createElement('button');b.className='gy-party-card';b.style.setProperty('--party',p.color);bind(b,'ultimate'+i);b.innerHTML=`<span class="portrait">${glyphs[p.weapon]}</span><span>${p.name}<br><small>${i+1} · 필살기</small></span><span class="energy"></span><span class="hp"><i></i></span>`;party.appendChild(b);partyButtons.push(b);}
+  }
+ }
  function update(g,paused=false){
-  const e=g?.gyuwon?.years,m=e?.musical;
-  const active=!!m&&g.status==='playing';
-  wrap.hidden=!active;
-  if(!active)return;
-  const isCurtain=m.finishing||e.mode==='curtain';
-  wrap.classList.toggle('curtain',isCurtain);
-  if(currentYear!==e.year){currentYear=e.year;
-   spans.forEach((s,i)=>s.className=i===e.year-5?'active':i<e.year-5?'finished':'');
-  }
-  if(lastKind!==m.kind){lastKind=m.kind;
-   btns.forEach((b,i)=>b.textContent=BUTTONS[m.kind]?.[i]||TYPES[i]);
-  }
-  btns.forEach(b=>b.disabled=paused||m.transition>0||m.songEnded||isCurtain);
-  const period=m.transition>0?m.title:e.year+'수 · '+GYUWON_MUSICAL_ACTS[e.year].name;
-  if(period!==lastTitle){title.textContent=period;lastTitle=period;}
-  const status=m.kind==='turn'?m.turn==='player'?'당신의 차례':m.turn==='boss'?'최규원의 차례':'다음 턴':
-   m.kind==='runner'?'거리 '+Math.floor(m.runnerDistance)+'m':
-   m.kind==='army'?'에너지 '+Math.floor(m.money)+' · 유닛 '+m.units.filter(u=>u.team===1).length:
-   m.kind==='fighter'?'연속 공격 '+m.combo:
-   m.kind==='shooter'?'발사체 '+m.bullets.length+' · 회피':
-   '콤보 '+m.combo;
-  info.textContent=status+' · '+m.score;
-  const hasNote=!!m.note&&!m.note.done&&['rhythm','finale'].includes(m.kind);
-  beat.hidden=!hasNote;
-  if(hasNote){
-   const p=Math.max(0,Math.min(1,m.note.time/1.05));
-   beat.style.transform='scale('+(0.9+p*1.4)+')';
-   beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';
-   beat.dataset.note=m.note.key;
-  }
-  const cue=gyuwonSubtitleAt(gyuwonSongKey(m),m.time);
-  dialogue.hidden=!cue;
-  english.textContent=cue?.en||'';korean.textContent=cue?.ko||'';
-  wrap.style.background=isCurtain?'rgba(0,0,0,'+Math.max(0,Math.min(1,(m.curtain-41)/4))+')':'';
+  const m=g?.gyuwon?.years?.musical;wrap.hidden=!m||g.status!=='playing';if(wrap.hidden)return;
+  wrap.dataset.reference=String(!!m.reference);wrap.className='gy-musical-layer '+m.kind+(m.finishing?' curtain':'');
+  if(lastKind!==m.kind){lastKind=m.kind;rebuild(m);}
+  for(let i=0;i<spans.length;i++)spans[i].className=i===m.year-5?'active':i<m.year-5?'finished':'';
+  const isTurn=m.year===5&&m.reference;queue.hidden=targets.hidden=party.hidden=points.hidden=!isTurn;
+  if(isTurn){
+   title.textContent='5수 · 기억 정거장';const actor=m.party.find(a=>a.id===m.turnActor);info.textContent=m.turn==='player'?(actor?.name||'')+'의 차례':m.turn==='boss'?'최규원의 차례':'공연 중';
+   points.textContent='✦'.repeat(m.skillPoints)+'◇'.repeat(5-m.skillPoints);
+   queue.innerHTML=[{id:m.turnActor,team:actor?1:-1,weapon:actor?.weapon,av:0},...m.queue.slice(0,7)].map((a,i)=>`<div class="${a.team<0?'enemy':''} ${i===0?'current':''}"><span>${a.team>0?glyphs[a.weapon]||'◇':'◆'}</span><small>${Math.round(a.av)}</small></div>`).join('');
+   targetButtons.forEach((b,i)=>{const e=m.enemies[i],p=m.targetScreens?.[i];b.hidden=e.hp<=0||!p?.visible;if(p){b.style.left=p.left+'px';b.style.top=p.top+'px';}b.classList.toggle('selected',i===m.targetIndex);b.querySelector('.name').textContent=e.name;b.querySelector('.weak').textContent=['╱','♜','➶','◇'][e.weakness]+(e.broken>0?' ✧':'');b.querySelector('.hp i').style.width=(e.hp/e.maxHp*100)+'%';b.querySelector('.tough i').style.width=(e.toughness/e.maxToughness*100)+'%';});
+   partyButtons.forEach((b,i)=>{const p=m.party[i];b.classList.toggle('active',p.id===m.turnActor);b.classList.toggle('ready',p.energy>=100);b.disabled=p.energy<100||!!m.actorMotion||m.transition>0||m.songEnded||paused;b.querySelector('.energy').textContent=Math.round(p.energy)+'%';b.querySelector('.hp i').style.width=(p.hp/p.maxHp*100)+'%';});
+  }else{title.textContent=m.year+'수 · '+GYUWON_MUSICAL_ACTS[m.year].name;info.textContent='COMBO '+m.combo+' · '+m.score;}
+  buttons.forEach(({b,act})=>{let disabled=paused||m.transition>0||m.songEnded||m.finishing;
+   if(isTurn)disabled=disabled||m.turn!=='player'||!!m.actorMotion||act==='skill'&&m.skillPoints<=0;
+   if(m.year===7){if(act.startsWith('summon')){const n=Number(act.slice(6)),s=REFERENCE_UNIT_TYPES[n];disabled=disabled||m.money<s.cost||m.unitCooldowns[n]>0;b.querySelector('.gy-card-meter').style.width=(1-m.unitCooldowns[n]/s.cool)*100+'%';}else if(act==='upgrade')disabled=disabled||m.money<m.workerLevel*95||m.workerLevel>=6;else if(act==='cannon')disabled=disabled||m.cannon<100;}
+   if(m.year===10&&act==='bomb')disabled=disabled||m.bombs<=0;
+   if(m.year===9&&act==='super')disabled=disabled||m.fighters[0].meter<100;b.disabled=disabled;
+  });
+  const hasNote=!m.reference&&!!m.note&&!m.note.done&&['rhythm','finale'].includes(m.kind);beat.hidden=!hasNote;if(hasNote){beat.style.transform='scale('+(1+Math.max(0,m.note.time/1.05))+')';beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';}
+  const cue=gyuwonSubtitleAt(gyuwonSongKey(m),m.time);dialogue.hidden=!cue;english.textContent=cue?.en||'';korean.textContent=cue?.ko||'';wrap.style.background=m.finishing?'rgba(0,0,0,'+Math.max(0,Math.min(1,(m.curtain-41)/4))+')':'';
  }
  return {update,onAction(fn){onAction=fn;},dispose(){wrap.remove();style.remove();}};
 }
