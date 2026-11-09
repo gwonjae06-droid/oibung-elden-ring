@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createGyuwonGame,stepGyuwon,actGyuwon,damageGyuwon} from '../src/gyuwon-combat.mjs';
 import {REFERENCE_UNIT_TYPES,usesReference2d,referenceKeyAction} from '../src/gyuwon-reference-rules.mjs';
 const advance=(g,s,input={})=>{for(let i=0;i<Math.ceil(s*120);i++)stepGyuwon(g,1/120,input);};
-function at(year){const g=createGyuwonGame('sword',{yearMode:true,seed:843}),e=g.gyuwon.years;e.year=year;stepGyuwon(g,.008);const m=e.musical;m.transition=0;g.player.invuln=0;g.player.x=m.entry.tx;g.player.z=m.entry.tz;g.boss.x=m.entry.btx;g.boss.z=m.entry.btz;g.boss.hp=({5:6000,6:5300,7:4600,8:3900,9:3200,10:2500})[year];return {g,m};}
+function at(year){const g=createGyuwonGame('sword',{yearMode:true,seed:843}),e=g.gyuwon.years;e.year=year;stepGyuwon(g,.008);const m=e.musical;m.transition=0;g.player.invuln=0;g.player.x=m.entry.tx;g.player.z=m.entry.tz;g.boss.x=m.entry.btx;g.boss.z=m.entry.btz;g.boss.hp=({5:6000,6:5300,7:4600,8:3900,9:3200,10:2500,11:1800})[year];return {g,m};}
 test('only the supplied 2D genres select Canvas2D, while act five and finale remain 3D',()=>{for(let y=5;y<=11;y++){const {g,m}=at(y);assert.equal(usesReference2d(m),y>=6&&y<=10);assert.equal(damageGyuwon(g,99999),0);}});
 test('giant turn combat owns four allies, five persistent parts, speed queue and shared skill points',()=>{const {g,m}=at(5);assert.equal(m.party.length,4);assert.equal(m.enemies.length,5);assert.equal(m.queue.length,6);assert.equal(m.turnActor,'ally2');assert.equal(actGyuwon(g,'target3'),false);assert.ok(actGyuwon(g,'target1'));assert.ok(actGyuwon(g,'light'));assert.equal(m.skillPoints,4);const hp=m.enemies[1].hp;advance(g,.9);assert.equal(m.enemies[1].hp,hp);advance(g,.2);assert.ok(m.enemies[1].hp<hp);assert.equal(g.boss.hp,6000);advance(g,.8);assert.equal(m.turn,'player');assert.ok(actGyuwon(g,'skill'));assert.equal(m.skillPoints,3);});
 test('turn skills cannot be free and out-of-turn ultimates cannot refund their own energy',()=>{const {g,m}=at(5);m.skillPoints=0;assert.equal(actGyuwon(g,'skill'),false);m.party[0].energy=100;assert.ok(actGyuwon(g,'ultimate0'));assert.equal(m.party[0].energy,0);advance(g,1.6);assert.equal(m.party[0].energy,0);assert.equal(actGyuwon(g,'ultimate0'),false);assert.ok(m.enemies.some(e=>e.hp<e.maxHp));});
@@ -40,15 +40,21 @@ test('long fighting song comprises three timed rounds, shooter owns a final carr
  reachSong(s.g,s.m,152);assert.equal(s.m.shooterTargets.filter(e=>e.phase===7).length,1);
 });
 
-test('11수 original-score finale has visible delayed memory strikes and independent dodge',()=>{
- const {g,m}=at(11);m.finaleNext=0;
- reachSong(g,m,82);assert.ok(m.finaleHazards.length>0);
- const h=m.finaleHazards[0];
- assert.ok(h.wind>=1.25&&h.wind<=1.9);
- assert.equal(h.hit,false);
- m.clock=null;g.player.x=h.x;g.player.z=h.z;g.player.invuln=0;
- const hp=g.player.hp;advance(g,2);
- assert.equal(h.hit,true);assert.ok(g.player.hp<hp);
- assert.ok(actGyuwon(g,'roll'),'stage dodge is always available');
- assert.ok(m.guard>0);
+test('11수 is an unskippable, nonviolent musical curtain call',()=>{
+ const {g,m}=at(11);g.player.hp=1;
+ assert.equal(actGyuwon(g,'roll'),false);
+ assert.equal(actGyuwon(g,'light'),false);
+ assert.equal(actGyuwon(g,'skill'),false);
+ reachSong(g,m,28);
+ assert.equal(m.curtainCall.actor,'oslu');
+ assert.equal(m.curtainCall.mode,'recollection');
+ assert.equal(g.player.x,0);
+ assert.equal(g.player.z,5);
+ assert.equal(g.player.hp,1);
+ assert.deepEqual(m.finaleHazards,[]);
+ reachSong(g,m,108);
+ assert.equal(m.curtainCall.mode,'credits');
+ assert.deepEqual(m.finaleHazards,[]);
+ assert.equal(g.status,'playing');
+ assert.equal(g.player.hp,1);
 });

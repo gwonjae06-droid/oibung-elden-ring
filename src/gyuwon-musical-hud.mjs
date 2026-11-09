@@ -2,6 +2,7 @@ import {GYUWON_MUSICAL_ACTS} from './gyuwon-musical-genres.mjs';
 import {gyuwonSubtitleAt} from './gyuwon-subtitles.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {REFERENCE_UNIT_TYPES,REFERENCE_PARTY} from './gyuwon-reference-rules.mjs';
+import {GYUWON_FINALE_CREDITS,gyuwonDedicationAt,gyuwonCurtainCallAt} from './gyuwon-curtain-call.mjs';
 const names={turn:[['light','일반 공격','Q'],['skill','전투 스킬','E'],['support','지원','Space']],runner:[['jump','Jump','Space'],['slide','Slide','L']],army:[['upgrade','생산력','U'],...REFERENCE_UNIT_TYPES.map((u,i)=>['summon'+i,u.name,''+(i+1)]),['cannon','대포','K']],rhythm:[['light','포즈','J'],['skill','턴','L'],['roll','빠른 턴','Space']],fighter:[['light','주먹','J'],['kick','킥','K'],['skill','스킬','L'],['super','초필살','O'],['jump','점프','Space'],['guard','방어','I']],shooter:[['bomb','폭탄','Space'],['skill','무기','L']],finale:[['light','노래','J'],['skill','고음','L'],['roll','회피박','Space'],['heal','회복','E']]};
 const glyphs={sword:'╱',hammer:'♜',bow:'➶',cards:'◇'};
 const css=`
@@ -22,6 +23,16 @@ const css=`
 .gy-lyric-ko{font-size:clamp(13px,1.7vw,21px)}
  .gy-musical-layer.fighter .gy-theater-progress{top:21%}
 @media(max-height:500px){.gy-theater-progress{top:1%;width:min(410px,49vw);gap:2px}.gy-theater-meter{height:5px}.gy-musical-dialogue{max-width:80vw}}
+.gy-curtain-cast{position:absolute;top:18%;left:50%;transform:translateX(-50%);white-space:nowrap;font:500 clamp(12px,1.5vw,20px)/1.7 Georgia,serif;letter-spacing:.24em;text-shadow:0 2px 7px #000;color:#f5e3bb;pointer-events:none}
+.gy-curtain-credits{position:absolute;inset:18% 12% 19%;overflow:hidden;text-align:center;pointer-events:none;mask-image:linear-gradient(transparent,#000 12%,#000 83%,transparent)}
+.gy-curtain-credits>div{position:absolute;left:0;right:0;top:100%;display:grid;justify-items:center;gap:clamp(16px,4vh,40px);will-change:transform;color:#fff6e0;text-shadow:0 2px 13px #000;letter-spacing:.11em}
+.gy-curtain-credits p{font:500 clamp(16px,2.3vw,28px)/1.7 Georgia,"Malgun Gothic",serif}
+.gy-curtain-credits p:first-child{font-size:clamp(26px,4vw,58px);letter-spacing:.22em}
+.gy-dedication{position:absolute;left:6%;right:6%;top:39%;text-align:center;font:500 clamp(20px,3.2vw,47px)/1.6 Georgia,"Malgun Gothic",serif;letter-spacing:.07em;color:#fff0d3;text-shadow:0 2px 13px #000,0 0 40px #f6c97a66;pointer-events:none}
+.gy-musical-layer.finale .gy-musical-actions,.gy-musical-layer.finale .gy-musical-top,.gy-musical-layer.finale .gy-turn-queue,.gy-musical-layer.finale .gy-turn-party,.gy-musical-layer.finale .gy-turn-enemies,.gy-musical-layer.finale .gy-turn-points{display:none!important}
+.gy-musical-layer.finale .gy-musical-dialogue{top:auto!important;bottom:4%!important;max-width:90vw}
+.gy-dedication[hidden],.gy-curtain-credits[hidden],.gy-curtain-cast[hidden]{display:none!important}
+@media(max-height:500px){.gy-curtain-credits{inset:16% 8% 24%}.gy-curtain-credits>div{gap:12px}.gy-curtain-credits p{font-size:14px}.gy-curtain-cast{top:19%;font-size:12px}.gy-dedication{top:37%;font-size:20px}}
 `;
 export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
  const style=doc.createElement('style');style.textContent=css;shell.appendChild(style);
@@ -34,7 +45,11 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
  const theaterSong=doc.createElement('div');theaterSong.className='gy-theater-song';theater.append(theaterHeading,theaterMeter,theaterSong);
  const top=doc.createElement('div');top.className='gy-musical-top';const title=doc.createElement('div');title.className='gy-musical-title';const info=doc.createElement('div');info.className='gy-musical-info';const beat=doc.createElement('div');beat.className='gy-musical-beat';top.append(title,info,beat);
  const dialogue=doc.createElement('div');dialogue.className='gy-musical-dialogue';const english=doc.createElement('div'),korean=doc.createElement('div');english.className='gy-lyric-en';korean.className='gy-lyric-ko';dialogue.append(english,korean);
- const actions=doc.createElement('div');actions.className='gy-musical-actions';const queue=doc.createElement('div');queue.className='gy-turn-queue';const targets=doc.createElement('div');targets.className='gy-turn-enemies';const party=doc.createElement('div');party.className='gy-turn-party';const points=doc.createElement('div');points.className='gy-turn-points';const audioRetry=doc.createElement('button');audioRetry.type='button';audioRetry.className='gy-musical-audio-retry';audioRetry.textContent='음원 오류 · 재시도';audioRetry.hidden=true;audioRetry.addEventListener('click',()=>onAction('retry-audio'));wrap.append(phases,theater,top,dialogue,actions,queue,targets,party,points,audioRetry);shell.appendChild(wrap);
+ const actions=doc.createElement('div');actions.className='gy-musical-actions';const queue=doc.createElement('div');queue.className='gy-turn-queue';const targets=doc.createElement('div');targets.className='gy-turn-enemies';const party=doc.createElement('div');party.className='gy-turn-party';const points=doc.createElement('div');points.className='gy-turn-points';const curtainCast=doc.createElement('div');curtainCast.className='gy-curtain-cast';curtainCast.hidden=true;
+ const credits=doc.createElement('div');credits.className='gy-curtain-credits';credits.hidden=true;
+ const creditRoll=doc.createElement('div');for(const line of GYUWON_FINALE_CREDITS){const text=doc.createElement('p');text.textContent=line;creditRoll.appendChild(text);}credits.appendChild(creditRoll);
+ const dedication=doc.createElement('div');dedication.className='gy-dedication';dedication.hidden=true;dedication.setAttribute('aria-live','off');
+ const audioRetry=doc.createElement('button');audioRetry.type='button';audioRetry.className='gy-musical-audio-retry';audioRetry.textContent='음원 오류 · 재시도';audioRetry.hidden=true;audioRetry.addEventListener('click',()=>onAction('retry-audio'));wrap.append(phases,theater,top,dialogue,actions,queue,targets,party,points,curtainCast,credits,dedication,audioRetry);shell.appendChild(wrap);
  const bind=(btn,act)=>{btn.type='button';btn.dataset.musicalAction=act;btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!btn.disabled)onAction(act);});btn.addEventListener('click',e=>{if(e.detail===0&&!btn.disabled)onAction(act);});for(const type of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(type,()=>{if(act==='slide'||act==='guard')onAction(act+'-end');});};
  let lastKind='',buttons=[],targetButtons=[],partyButtons=[];
  function rebuild(m){
@@ -69,7 +84,22 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
    if(m.year===10&&act==='bomb')disabled=disabled||m.bombs<=0;
    if(m.year===9&&act==='super')disabled=disabled||m.fighters[0].meter<100;b.disabled=disabled;
   });
-  const hasNote=!m.reference&&!!m.note&&!m.note.done&&['rhythm','finale'].includes(m.kind);beat.hidden=!hasNote;if(hasNote){beat.style.transform='scale('+(1+Math.max(0,m.note.time/1.05))+')';beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';}
+  // The finale is a song-clocked memorial, not another QTE battle.
+  const curtainCall=m.kind==='finale'&&!m.finishing;
+  const frame=curtainCall?(m.curtainCall||gyuwonCurtainCallAt(m.time,duration)):null;
+  curtainCast.hidden=!curtainCall||frame.mode!=='recollection';
+  curtainCast.textContent=curtainCast.hidden?'':frame.name+' · '+frame.phase+'막의 기억';
+  credits.hidden=!curtainCall||frame.mode!=='credits';
+  if(!credits.hidden){
+   const travel=credits.clientHeight+creditRoll.scrollHeight;
+   creditRoll.style.transform='translateY(-'+Math.round(travel*frame.creditsProgress)+'px)';
+  }
+  const line=m.finishing?gyuwonDedicationAt(m.time):null;
+  dedication.hidden=!line||line.opacity<=0;dedication.textContent=line?.line||'';
+  dedication.style.opacity=String(line?.opacity||0);
+  actions.hidden=curtainCall||m.finishing;
+  top.hidden=curtainCall||m.finishing;
+  const hasNote=!m.reference&&!!m.note&&!m.note.done&&m.kind==='rhythm';beat.hidden=!hasNote;if(hasNote){beat.style.transform='scale('+(1+Math.max(0,m.note.time/1.05))+')';beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';}
   audioRetry.hidden=m.clock?.source!=='error';
   const cue=gyuwonSubtitleAt(gyuwonSongKey(m),m.time);dialogue.hidden=!cue;english.textContent=cue?.en||'';korean.textContent=cue?.ko||'';wrap.style.background=m.finishing?'rgba(0,0,0,'+Math.max(0,Math.min(1,(m.curtain-GYUWON_SONGS.ending.duration*.9)/(GYUWON_SONGS.ending.duration*.1)))+')':'';
  }
