@@ -7,6 +7,7 @@ import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
+export const gyuwonStageProgress=m=>clamp((m?.time||0)/(m?.clock?.duration||GYUWON_SONGS[gyuwonSongKey(m)]?.duration||180),0,1);
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.z-b.z)<r;
 const angle=(a,b)=>Math.atan2(b.x-a.x,b.z-a.z);
 export const GYUWON_MUSICAL_ACTS=Object.freeze({
@@ -56,6 +57,7 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  const e=g?.gyuwon?.years;
  if(!e||!isGyuwonMusicalYear(e.year))return false;
  const m=newState(e.year);
+ if(e.year===5){m.transition=5.8;m.entryDuration=5.8;m.overture=true;}else m.entryDuration=2.7;
  m.bpm=GYUWON_BEATS[e.year]?.bpm||GYUWON_SONGS[e.year].bpm;m.chartIndex=0;
  const from={px:g.player.x,pz:g.player.z,bx:g.boss.x,bz:g.boss.z};
  e.musical=m;e.mode='musical';e.cast=null;e.castT=0;
@@ -252,7 +254,7 @@ function tickRhythm(g,m,dt,emit,finale=false){
   if(beat.at-m.time>1.05)break;
   m.chartIndex++;m.note={at:beat.at,time:beat.at-m.time,key:beat.key,index:beat.lane,done:false};
  }
- if(finale)m.finaleStep=Math.floor(m.time/5)%6;
+ if(finale)m.finaleStep=Math.min(5,Math.floor(gyuwonStageProgress(m)*6));
 }
 function tickFighter(g,m,dt,input,emit){
  const p=g.player,b=g.boss;
@@ -335,6 +337,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  else if(m.clock?.source==='media')m.time=Math.max(m.time,m.clock.time);
  else m.time+=dt;
  const duration=m.clock?.duration||song.duration;
+ m.actProgress=clamp(m.time/duration,0,1);
  const ended=m.clock?m.clock.ended:m.time>=duration;
  if(m.finishing){
   m.curtain=m.time;
@@ -364,7 +367,7 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  g.player.invuln=Math.max(0,g.player.invuln-dt);
  if(m.dash){const d=m.dash,step=Math.min(dt,d.left);g.player.x=clamp(g.player.x+d.vx*step,-19,19);d.left-=step;if(d.left<=0)m.dash=null;}
  if(m.transition>0){
-  const q=1-m.transition/2.7,k=q*q*(3-2*q),a=m.entry;
+  const q=1-m.transition/m.entryDuration,k=q*q*(3-2*q),a=m.entry;
   if(a&&!(m.reference&&m.year>=6)){g.player.x=a.px+(a.tx-a.px)*k;g.player.z=a.pz+(a.tz-a.pz)*k;g.boss.x=a.bx+(a.btx-a.bx)*k;g.boss.z=a.bz+(a.btz-a.bz)*k;}
   return;
  }
