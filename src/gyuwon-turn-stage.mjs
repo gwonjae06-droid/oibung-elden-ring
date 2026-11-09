@@ -48,6 +48,20 @@ export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
   }
   for(let i=0;i<enemies.length;i++){
    const e=m.enemies[i],a=i===0?boss:enemies[i];a.visible=e.hp>0;a.position.set(e.x,i<3?.2:3.6+Math.sin(m.time*2+i)*.28,e.z);a.scale.setScalar(i<3?1.35:1);
+   if(i===0){
+    // The first musical act: Gyuwon enters from the wing, crosses to the
+    // orchestra-lit center and makes a nervous bow. This is a visual entrance
+    // only, not a combat teleport or a dangerous hitbox while input is locked.
+    const overture=m.overture&&m.time<5.8?m.time:null;
+    if(overture!==null){
+     const walk=THREE.MathUtils.smoothstep(overture,1.6,4.1);
+     a.position.x=-10+(e.x+10)*walk;
+     a.position.y=.2+Math.sin(Math.min(1,walk)*Math.PI*7)*.13*(1-walk);
+     a.rotation.x=-.16*THREE.MathUtils.smoothstep(overture,3.75,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.8,5.65));
+     const arm=a.getObjectByName('gyuwon-right-arm');
+     if(arm)arm.rotation.z=-.55*THREE.MathUtils.smoothstep(overture,3.1,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.9,5.7));
+    }else{a.rotation.x=0;const arm=a.getObjectByName('gyuwon-right-arm');if(arm)arm.rotation.z=0;}
+   }
    a.rotation.y=Math.atan2(m.party[0].x-e.x,m.party[0].z-e.z);
    if(i>0&&i<3){const torso=a.getObjectByName('gyuwon-tailored-torso'),arm=a.getObjectByName('gyuwon-right-arm');const power=m.turnActor===e.id&&m.turn==='boss'?Math.min(1,m.turnElapsed/1.2):0;if(torso)torso.rotation.x=-.18+power*.24;if(arm)arm.rotation.x=-.4-power;}
   }

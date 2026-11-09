@@ -21,3 +21,39 @@ test('shooter drag position moves physically and weapon switching does not grant
 test('genre-specific keyboard commands match the visible native controls',()=>{assert.equal(referenceKeyAction(at(5).m,'KeyQ'),'light');assert.equal(referenceKeyAction(at(5).m,'Digit4'),'ultimate3');assert.equal(referenceKeyAction(at(6).m,'Space'),'jump');assert.equal(referenceKeyAction(at(7).m,'Digit6'),'summon5');assert.equal(referenceKeyAction(at(9).m,'KeyK'),'kick');assert.equal(referenceKeyAction(at(10).m,'Space'),'bomb');});
 test('runner slide remains held beyond one second and releases immediately',()=>{const {g,m}=at(6);g.player.invuln=999;actGyuwon(g,'slide');advance(g,1.4);assert.ok(m.slide>.9);actGyuwon(g,'slide-end');assert.equal(m.slide,0);assert.equal(m.slideHeld,false);});
 test('an empty target wave cannot consume or create turn-combat resources',()=>{const {g,m}=at(5);for(const e of m.enemies)e.hp=0;const sp=m.skillPoints;m.party[0].energy=100;assert.equal(actGyuwon(g,'light'),false);assert.equal(actGyuwon(g,'skill'),false);assert.equal(m.skillPoints,sp);assert.equal(actGyuwon(g,'ultimate0'),false);assert.equal(m.party[0].energy,100);});
+
+const reachSong=(g,m,time)=>{m.clock={source:'media',time,duration:180,ended:false};advance(g,.017);};
+test('turn stage opens as theater, defeated foes wait for real verse waves',()=>{
+ const {g,m}=at(5);assert.equal(m.entryDuration,5.8);
+ for(const e of m.enemies)e.hp=0;
+ advance(g,2);assert.ok(m.enemies.every(e=>e.hp===0),'no three-second automatic respawn');
+ reachSong(g,m,74);assert.equal(m.wave,2);assert.ok(m.enemies.every(e=>e.hp>0));
+ reachSong(g,m,143);assert.equal(m.wave,3);
+});
+test('long runner changes scenes and army has an interlude before final fort',()=>{
+ const r=at(6);reachSong(r.g,r.m,65);assert.equal(r.m.runnerBiome,'rain');
+ reachSong(r.g,r.m,112);assert.equal(r.m.runnerBiome,'quiet');
+ const a=at(7);reachSong(a.g,a.m,77);assert.equal(a.m.enemyFort,2);
+ reachSong(a.g,a.m,112);assert.equal(a.m.armyTruce,true);
+ reachSong(a.g,a.m,146);assert.equal(a.m.enemyFort,3);assert.equal(a.m.armyTruce,false);
+});
+test('long fighting song comprises three timed rounds, shooter owns a final carrier only once',()=>{
+ const f=at(9);reachSong(f.g,f.m,67);assert.equal(f.m.fightRound,2);
+ reachSong(f.g,f.m,137);assert.equal(f.m.fightRound,3);
+ const s=at(10);reachSong(s.g,s.m,145);assert.equal(s.m.finalCarrierSpawned,true);
+ const final=s.m.shooterTargets.filter(e=>e.phase===7);assert.equal(final.length,1);
+ reachSong(s.g,s.m,152);assert.equal(s.m.shooterTargets.filter(e=>e.phase===7).length,1);
+});
+
+test('11수 original-score finale has visible delayed memory strikes and independent dodge',()=>{
+ const {g,m}=at(11);m.finaleNext=0;
+ reachSong(g,m,82);assert.ok(m.finaleHazards.length>0);
+ const h=m.finaleHazards[0];
+ assert.ok(h.wind>=1.25&&h.wind<=1.9);
+ assert.equal(h.hit,false);
+ m.clock=null;g.player.x=h.x;g.player.z=h.z;g.player.invuln=0;
+ const hp=g.player.hp;advance(g,2);
+ assert.equal(h.hit,true);assert.ok(g.player.hp<hp);
+ assert.ok(actGyuwon(g,'roll'),'stage dodge is always available');
+ assert.ok(m.guard>0);
+});
