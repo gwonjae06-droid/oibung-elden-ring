@@ -45,7 +45,12 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  });
  const enemyShots=Array.from({length:3},()=>{const group=new T.Group();group.name='raid-sung-pattern-projectile';root.add(group);group.visible=false;
   const orb=mesh(group,sphere,glow),wave=mesh(group,ring,glow),star=mesh(group,stagecraft.starGeometry,glow);orb.scale.setScalar(.7);wave.scale.set(1.7,1.4,1.7);star.scale.setScalar(1.25);return {group,items:[orb,wave,star]};});
- const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
+ // Encore's physical stage object is attached to enemy5's real collider.
+ const encore=new T.Group();encore.name='raid-encore-physical-beacon';root.add(encore);encore.visible=false;
+ const encoreBall=mesh(encore,geo(new T.IcosahedronGeometry(1,2)),glow);
+ const encoreRings=[0,1,2].map((_,i)=>{const o=mesh(encore,ring,i===1?blood:gold);o.scale.setScalar(2.4+i*.85);return o;});
+ const encoreRays=Array.from({length:8},(_,i)=>{const o=mesh(encore,box,i%2?gold:cream);const a=i*Math.PI/4;o.position.set(Math.cos(a)*3.8,Math.sin(a)*3.8,0);o.scale.set(.16,1.5,.16);o.rotation.z=-a;return o;});
+  const notes=Array.from({length:9},()=>{const p=mesh(root,pageGeo,cream,'raid-floating-score');p.visible=false;return p;});
  const waves=Array.from({length:4},(_,i)=>{const m=mesh(root,ring,i===3?blood:glow,'raid-physical-wave');m.rotation.x=-Math.PI/2;m.visible=false;return m;});
  const shields=Array.from({length:4},()=>{const m=mesh(root,ring,blood,'raid-blood-protective-wing-ring');m.scale.set(2.3,3.1,1);m.visible=false;return m;});
  // A real spotlight cues the incoming collision for the targeted ally.
@@ -62,6 +67,14 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
   for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
   guestParty.update(m);giant.update(m,dt);stagecraft.update(m);
+  const encorePart=m.enemies[5],echo=encorePart&&!encorePart.destroyed&&encorePart.active;
+  encore.visible=!!echo;
+  if(echo){encore.position.set(encorePart.x,encorePart.y,encorePart.z);
+   const pulse=1+.12*Math.sin(m.time*4.8);encoreBall.scale.setScalar(1.7*pulse);
+   encoreBall.rotation.set(m.time*.45,m.time*.8,0);
+   encoreRings.forEach((o,i)=>{o.rotation.set(m.time*(i%2?-.32:.46),m.time*.3+i,.25);o.scale.setScalar((2.4+i*.8)*pulse);});
+   encoreRays.forEach((o,i)=>o.rotation.z=m.time*.25-i*Math.PI/4);
+  }
   // The previous four bosses remain behind as the armored protagonist takes
   // the newly revealed road. This is a presentation-only farewell, not AI.
   const goodbye=gyuwonFiveToSixExit(m.time,m.clock?.duration||180);
@@ -100,7 +113,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
    }else responseHalo.visible=false;
   }
   bindings.forEach((o,i)=>{const e=m.enemies[i];o.visible=e.bind>0&&!e.destroyed;o.position.set(e.x,e.y,e.z);o.rotation.set(m.time*.7,m.time*.3,0);});
-  for(const h of m.raidHistory){if(h.event!=='destroy'||seen.has(h.part))continue;seen.add(h.part);const e=m.enemies[h.part];for(let i=0;i<8;i++){const f=fragments[h.part*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
+  for(const h of m.raidHistory){if(h.event!=='destroy')continue;const id=h.part+':'+(h.cycle||0);if(seen.has(id))continue;seen.add(id);const e=m.enemies[h.part];if(!e)continue;for(let i=0;i<8;i++){const f=fragments[(h.part%5)*8+i];f.at=m.time;f.from.set(e.homeX,e.homeY,e.homeZ);}}
   fragments.forEach(f=>{const age=m.time-f.at;f.mesh.visible=age>=0&&age<3;if(f.mesh.visible){const a=f.index*2.4;f.mesh.position.copy(f.from);f.mesh.position.x+=Math.sin(a)*age*3;f.mesh.position.z+=Math.cos(a)*age*3;f.mesh.position.y+=age*4-age*age*4.9;f.mesh.rotation.set(age*3,age*4,a);}});
  }
  function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{// Selection buttons reference fixed stage anchors, while the real
