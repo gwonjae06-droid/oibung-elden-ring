@@ -338,7 +338,11 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
  }
  const ellipseNoStroke=(c,x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fill();};
  function render(g){
-  const m=g?.gyuwon?.years?.musical,active=usesReference2d(m)&&g.status!=='won';canvas.hidden=!active;state.g=g;state.active=active;if(!active)return false;
+  const m=g?.gyuwon?.years?.musical,active=usesReference2d(m)&&g.status!=='won';canvas.hidden=!active;state.g=g;state.active=active;
+  // Hold the composited final 3D theater shot underneath the 2D canvas. Its
+  // last visible frame dissolves into the painted road without a black cut.
+  canvas.style.opacity=active&&m.year===6?String(clamp((m.time-.15)/5.8,0,1)):'1';
+  if(!active)return false;
   const started=performance.now(),rect=shell.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height)),ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
   if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)){canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);}
   const vw=m.year===10?540:1280,vh=m.year===10?900:720,scale=Math.min(w/vw,h/vh),left=(w-vw*scale)/2,top=(h-vh*scale)/2;
