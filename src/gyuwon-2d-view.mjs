@@ -1,9 +1,11 @@
+import {GYUWON_FACE_URL} from './gyuwon-photo-face.mjs';
 import {usesReference2d} from './gyuwon-reference-rules.mjs';
 import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './gyuwon-2d-art.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const TAU=Math.PI*2;
 export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={}){
  const canvas=doc.createElement('canvas');canvas.className='gy-reference-canvas';canvas.setAttribute('aria-label','최규원 2D 미니게임');canvas.tabIndex=0;canvas.hidden=true;canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:12;touch-action:none;background:#080c12';shell.appendChild(canvas);
+ const portrait=doc.createElement('img');portrait.src=GYUWON_FACE_URL;portrait.decoding='async';
  const c=canvas.getContext('2d',{alpha:false}),state={g:null,width:1280,height:720,scale:1,left:0,top:0,active:false},report={mode:'canvas2d',drawMs:0,sprites:0,width:0,height:0};
  let pointer=null;
  const worldX=(x,w=1280)=>w/2+x*w/44;
@@ -65,7 +67,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    c.fillStyle='#bd5360';c.beginPath();c.moveTo(x-3,ground-19);c.lineTo(x+15,ground-57);c.lineTo(x+23,ground-45);c.lineTo(x+13,ground-18);c.fill();
   }}
   for(const j of m.jellies)jelly(c,sx(j.x),sy(j.y),j.kind,m.time);
-  stagePerson(c,sx(g.player.x),sy(m.jumpY),{scale:1.1,t:m.time,pose:m.slide>0?'slide':m.jumpY>.1?'jump':'run',gyuwon:true,color:m.bonus>0?'#e3b04f':'#ad78b7'});
+  stagePerson(c,sx(g.player.x),sy(m.jumpY),{scale:1.1,t:m.time,pose:m.slide>0?'slide':m.jumpY>.1?'jump':'run',gyuwon:true,portrait,color:m.bonus>0?'#e3b04f':'#ad78b7'});
   if(m.bonus>0){for(let i=0;i<7;i++)flower(c,sx(g.player.x)-35-i*18,sy(m.jumpY+1)+Math.sin(i+m.time*12)*20,.18,'#fff6b8');label(c,'BONUS!',640,132,43,'#fff3a3','center',5);}
   standardHeader(g,m,{dark:true,color:'#2b94ab'});
   round(c,25,89,327,42,17,'#fffbd6bb','#637c46');bar(c,83,101,250,17,m.energy,100,'#f18d66','#8d985b');label(c,'♥',49,111,28,'#db5d64','center');
@@ -90,7 +92,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   castle(sx(-18),false,m.baseHp,m.baseMaxHp);castle(sx(18),true,m.enemyBaseHp,m.enemyBaseMaxHp);
   if(m.armyTruce){c.fillStyle='#d8e4ff18';c.fillRect(0,0,1280,530);for(let i=0;i<7;i++)flower(c,210+i*145,480,1.1,'#f8f0c2');}
    const sorted=[...m.units].sort((a,b)=>a.team-b.team||a.x-b.x);
-  for(const u of sorted)paperUnit(c,sx(u.x),546,{type:u.type,team:u.team,t:m.time+u.id,wind:u.wind,hp:u.hp,maxHp:u.maxHp,scale:u.type===5?1.55:1.05});
+  for(const u of sorted)paperUnit(c,sx(u.x),546,{type:u.type,team:u.team,t:m.time+u.id,wind:u.wind,hp:u.hp,maxHp:u.maxHp,scale:u.type===5?1.55:1.05,portrait});
   if(m.cannonShot){const a=m.cannonShot;if(a.age<.65)burst(c,sx(-18),473,14+a.age*36,a.age,'#c6f9ff');else{c.strokeStyle='#bcfaff';c.lineWidth=9;c.beginPath();c.moveTo(sx(-18),470);c.lineTo(sx(Math.min(18,a.x)),470);c.stroke();burst(c,sx(Math.min(18,a.x)),470,38,a.age);}}
   standardHeader(g,m,{dark:true,color:'#126d83'});label(c,Math.floor(m.money)+' / '+m.moneyCap+' 원',1210,112,31,'#ffdc6c','right',5);
   bar(c,1008,151,200,13,m.cannon,100,'#c9eaff');label(c,'LEVEL '+m.workerLevel,36,599,21,'#fff8d8','left',4);
@@ -122,7 +124,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    stagePerson(c,x,535,{scale,t:m.time+offset,pose:player?(m.dancePose>0?pose:'idle'):pose,face:player?m.danceFacing:face,color:player?'#cad6eb':'#292739',gyuwon:false,miss:player&&m.danceError>0});
    if(player){label(c,'★',x,322,24,'#ffe890','center');if(m.danceError>0){burst(c,x+64,390,24,m.time,'#faaca0');}}
   }
-  stagePerson(c,638,633,{scale:1.65,t:m.time,pose:performance==='bridge'?'idle':'dance',color:'#9b70ac',gyuwon:true,miss:m.danceError>0&&performance==='bridge'});
+  stagePerson(c,638,633,{scale:1.65,t:m.time,pose:performance==='bridge'?'idle':'dance',color:'#9b70ac',gyuwon:true,portrait,miss:m.danceError>0&&performance==='bridge'});
   if(response)for(let i=0;i<12;i++){const a=i*TAU/12+m.time*.5,x=640+Math.cos(a)*175,y=460+Math.sin(a)*67;flower(c,x,y,.24+(m.combo%5)*.07,'#f8edb7');}
   c.strokeStyle='#dde2e2';c.lineWidth=8;c.beginPath();c.moveTo(681,495);c.lineTo(681,635);c.stroke();c.fillStyle='#b8c2d2';c.beginPath();c.ellipse(681,488,12,19,-.35,0,TAU);c.fill();
   if(pat&&m.danceCue&&m.time>=pat.cue&&m.time<pat.first){
@@ -147,7 +149,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const sx=x=>640+x*33;
   for(let i=0;i<2;i++){
    const f=m.fighters[i],a=f.action,pose=f.stun>0?'guard':a?(a.t<a.wind?'wind':a.t<a.wind+a.live?'strike':'idle'):f.guard?'guard':f.crouch?'crouch':f.y>0?'jump':Math.abs(f.x-(i?7:-7))>.01?'run':'idle';
-   stagePerson(c,sx(f.x),580-f.y*45,{scale:1.65,t:m.time,pose,face:f.facing,color:i?'#9d7f8f':'#638ba8',gyuwon:!!i,reach:a?Math.min(120,a.range*33/1.65):76});
+   stagePerson(c,sx(f.x),580-f.y*45,{scale:1.65,t:m.time,pose,face:f.facing,color:i?'#9d7f8f':'#638ba8',gyuwon:!!i,portrait,reach:a?Math.min(120,a.range*33/1.65):76});
    if(a&&a.t>=a.wind&&a.t<a.wind+a.live&&a.kind==='skill'){c.save();c.translate(sx(f.x)+f.facing*50,440-f.y*45);c.scale(f.facing,1);c.strokeStyle='#fff2c7';c.lineWidth=10;c.beginPath();c.ellipse(0,0,127,47,-.25,-1.3,1.3);c.stroke();c.restore();}
    if(f.combo>1)label(c,f.combo+' HIT',i?1090:165,225,33,'#fff0b8','center',4);
   }
@@ -244,5 +246,5 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   if(m.year===6)runner(g,m);else if(m.year===7)army(g,m);else if(m.year===8)dance(g,m);else if(m.year===9)fighter(g,m);else if(m.year===10)shooter(g,m);c.restore();
   report.drawMs=performance.now()-started;report.width=w;report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
  }
- return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();canvas.remove();}};
+ return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();portrait.removeAttribute('src');canvas.remove();}};
 }

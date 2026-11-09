@@ -1,5 +1,4 @@
 import * as T from 'three';
-import {gyuwonSubtitleAt} from './gyuwon-subtitles.mjs';
 // Shares Gyuwon's sculpted likeness and photo material with the existing boss.
 // The sleeves, elbows, palms and three-joint digits are connected 3D meshes.
 export function createGiantGyuwon(parent,source,{coarse=false}={}){
@@ -16,11 +15,9 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  // source model owns them; this host wears only his tuxedo, never all years.
  const retired=[];torso.traverse(o=>{if(/^gyuwon-year-\d+-rig-gear$/.test(o.name)||/accumulated-nightmare|shoulder-rig/.test(o.name))retired.push(o);});
  for(const o of retired)o.removeFromParent();
- const head=torso.getObjectByName('gyuwon-head'),jaw=head.getObjectByName('gyuwon-jaw'),brows=[],eyes=[],lids=[];head.traverse(o=>{if(o.name==='gyuwon-brow')brows.push(o);if(o.name==='gyuwon-eye-socket')eyes.push(o);if(o.name==='gyuwon-lid-bone')lids.push(o);});
+ const head=torso.getObjectByName('gyuwon-head');
  const sphere=geo(new T.SphereGeometry(1,coarse?20:36,coarse?14:26)),cylinder=geo(new T.CylinderGeometry(1,1,1,coarse?14:24)),digitGeo=geo(new T.CapsuleGeometry(.19,.65,4,10));
  const add=(p,g,m,name)=>{const o=new T.Mesh(g,m);o.name=name;o.castShadow=!coarse;o.receiveShadow=true;p.add(o);return o;};
- const mouth=add(head,sphere,dark,'giant-singing-mouth');mouth.position.set(0,-.273,.462);mouth.scale.set(.10,.018,.018);
- const tooth=add(mouth,sphere,silk,'giant-upper-teeth');tooth.position.y=.55;tooth.scale.set(.84,.18,.6);
  const tailGeo=geo(new T.PlaneGeometry(3,8,8,12)),tailPos=tailGeo.attributes.position;
  for(let i=0;i<tailPos.count;i++)tailPos.setZ(i,Math.sin(tailPos.getX(i)*2)*.13+Math.pow(tailPos.getY(i)/8,2)*.2);tailGeo.computeVertexNormals();
  const tails=[-1,1].map(side=>{const o=add(root,tailGeo,velvet,'giant-inertial-tailcoat-panel');o.position.set(side*5,6.4,-25);o.rotation.y=side*.28;return o;});
@@ -49,9 +46,6 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
   const focus=m.party.find(p=>p.id===(m.raidAttack?.victim||m.turnActor));
   torso.position.y=15.5+breath-Math.sin(bow*Math.PI)*1.4;torso.rotation.x=Math.sin(m.time*.8)*.012+bow*.07;head.rotation.y=Math.atan2(focus?.x||0,40)*.3+Math.sin(m.time*.35)*.015;head.rotation.z=Math.sin(beat*.5)*.015;
   tails.forEach((o,i)=>{o.rotation.x=Math.sin(m.time*1.35+i)*.045+bow*.12;o.rotation.z=Math.sin(m.time*.8+i)*.025;});
-  const singing=!!gyuwonSubtitleAt(5,m.time);mouth.scale.y=singing?.018+Math.abs(Math.sin(m.time*11.5))* .065:.018;jaw.position.y=-.30-(singing?Math.abs(Math.sin(m.time*11.5))*.018:0);
-  brows.forEach((b,i)=>b.rotation.z=(i?1:-1)*(.04+Math.sin(m.time*1.8)*.035));eyes.forEach((e,i)=>{const blink=Math.sin(m.time*.61)> .992;e.scale.y=blink?.1:.65;});
-  lids.forEach(l=>{const blink=Math.sin(m.time*.61)>.992;l.scale.y=blink?.92:.12;});
   for(const arm of arms){
    const e=m.enemies[arm.index];const withdrawn=e.destroyed?1:0;
    arm.target.set(e.x+arm.side*withdrawn*7,e.y+withdrawn*2,e.z-withdrawn*12);

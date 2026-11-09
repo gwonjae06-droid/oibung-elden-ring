@@ -1,3 +1,4 @@
+import {gyuwonPhotoGeometry} from './gyuwon-photo-face.mjs';
 import {createArsenalFx} from './gyuwon-arsenal-view.mjs';
 import {createGyuwonYearWorld} from './gyuwon-year-world.mjs';
 import {createGyuwonRecallMaps} from './gyuwon-recall-maps.mjs';
@@ -49,9 +50,8 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
  // Ending: the exam hall returns for a moment, recedes desk by desk, and only the small
  // student who began it all is left standing. Purely visual; plays inside the existing 8s ending.
  const student=new THREE.Group();student.name='gyuwon-first-student';
- const headGeo=new THREE.SphereGeometry(.2,16,12);
- const head=new THREE.Mesh(headGeo,mat(0xe2c3a6));head.position.set(0,1.72,0);head.castShadow=true;student.add(head);
- const hair=new THREE.Mesh(headGeo,mat(0x2a2623));hair.position.set(0,1.78,-.03);hair.scale.set(1.06,.8,1.06);student.add(hair);
+ const headGeo=gyuwonPhotoGeometry(.2,{coarse});
+ const head=new THREE.Mesh(headGeo,root.getObjectByName('gyuwon-anatomical-face').material);head.position.set(0,1.72,0);head.castShadow=true;student.add(head);
  box(student,0,1.14,0,.46,.78,.28,0xcfd6dc);
  box(student,-.12,.36,0,.14,.72,.16,0x39434f);box(student,.12,.36,0,.14,.72,.16,0x39434f);
  box(student,-.3,1.1,.08,.12,.6,.14,0xcfd6dc);box(student,.3,1.1,.08,.12,.6,.14,0xcfd6dc);

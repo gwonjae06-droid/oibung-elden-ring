@@ -1,3 +1,4 @@
+import {drawGyuwonPhoto} from './gyuwon-photo-face.mjs';
 const TAU=Math.PI*2;
 const ellipse=(c,x,y,rx,ry,fill,stroke='#19202b',line=3)=>{c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fillStyle=fill;c.fill();if(stroke){c.lineWidth=line;c.strokeStyle=stroke;c.stroke();}};
 const line=(c,points,color,width)=>{c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();};
@@ -9,7 +10,7 @@ export function flower(c,x,y,s=1,color='#fff8cf'){c.save();c.translate(x,y);c.sc
 export function jelly(c,x,y,kind='jelly',time=0){c.save();c.translate(x,y);c.rotate(Math.sin(time*3+x)*.18);if(kind==='heart'){c.beginPath();c.moveTo(0,14);c.bezierCurveTo(-32,-4,-10,-28,0,-12);c.bezierCurveTo(10,-28,32,-4,0,14);c.fillStyle='#ff676d';c.fill();c.strokeStyle='#a63340';c.lineWidth=3;c.stroke();}else{ellipse(c,0,0,kind==='gold'?12:9,kind==='gold'?12:15,kind==='gold'?'#ffdf5b':'#43c5ee',kind==='gold'?'#a57923':'#165d86',3);ellipse(c,-3,-5,3,5,'#c6f9ff',null);}c.restore();}
 // Original articulated 2D stage characters. The same action windup and contact
 // phase that drive gameplay place hands, feet, guard and hit reactions here.
-export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,color='#3b91b1',ink=false,miss=false,reach=76}={}){
+export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76}={}){
  c.save();c.translate(x,y);c.scale(scale*face,scale);const outline=ink?'#111315':'#1d2333',coat=ink?'#f6f5e9':color,skin=ink?'#fffaf0':gyuwon?'#e6c0a0':'#edd0ac';
  const run=pose==='run',slide=pose==='slide',crouch=pose==='crouch',jump=pose==='jump',dance=pose==='dance'||pose==='turn'||pose==='quick';
  const pulse=Math.sin(t*11),lift=run?Math.max(0,pulse)*10:dance?Math.abs(Math.sin(t*5))*5:0;
@@ -33,17 +34,19 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
  if(dance){const arm=pose==='turn'?-1:1;right=[[19,shoulder+7],[42,shoulder-4*arm],[51,shoulder-24*arm]];left=[[-20,shoulder+8],[-41,shoulder+arm*17],[-55,shoulder-arm*10]];}
  for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
  if(gyuwon&&!run&&!dance&&!slide){round(c,-38,hipsY-7,15,42,3,'#70414f',outline,3);line(c,[[-35,hipsY+2],[-25,hipsY+2]],'#c6a06a',2);}
+ if(gyuwon)drawGyuwonPhoto(c,portrait,0,headY,24,{mirror:face<0});else{
  ellipse(c,0,headY,20,24,skin,outline,3);
  c.beginPath();c.moveTo(-21,headY+2);c.bezierCurveTo(-26,headY-25,-8,headY-34,11,headY-27);c.bezierCurveTo(27,headY-19,24,headY+4,18,headY+12);c.lineTo(15,headY-7);c.lineTo(3,headY-17);c.lineTo(-2,headY-6);c.lineTo(-8,headY-14);c.lineTo(-17,headY);c.closePath();c.fillStyle=ink?'#29292c':gyuwon?'#39314f':'#203549';c.fill();c.strokeStyle=outline;c.lineWidth=2;c.stroke();
  if(miss){line(c,[[-11,headY+1],[-5,headY+7],[-11,headY+9]],outline,2);line(c,[[8,headY+1],[14,headY+7],[8,headY+9]],outline,2);}else{ellipse(c,-7,headY+3,2,3,outline,null);ellipse(c,9,headY+3,2,3,outline,null);}
  c.beginPath();c.arc(2,headY+11,5,0,Math.PI);c.strokeStyle=outline;c.lineWidth=1.8;c.stroke();
+ }
  if(!ink){path(c,[[-17,shoulder],[-7,shoulder+5],[20,shoulder+2],[41+Math.sin(t*7)*7,shoulder+14],[18,shoulder+9],[-15,shoulder+7]],gyuwon?'#9b79c8':'#d4ae64',outline,1.5);}
  c.restore();
 }
 // Six stagebook silhouettes, four derived from the previously fought bosses.
 // All details are live Canvas paths so they animate with the SAME hit windup
 // used by the army simulation; no tiny text or inaccessible remote sprites.
-export function paperUnit(c,x,y,{type=0,team=1,t=0,wind=0,hp=1,maxHp=1,scale=1}={}){
+export function paperUnit(c,x,y,{type=0,team=1,t=0,wind=0,hp=1,maxHp=1,scale=1,portrait=null}={}){
  c.save();c.translate(x,y);c.scale(scale*team,scale);
  const ink='#18202b',enemy=team<0,shade=enemy?'#6c6573':'#f7eedc',
   gold=enemy?'#a47467':'#e5be75',red=enemy?'#6d2438':'#ab3550';
@@ -99,8 +102,7 @@ export function paperUnit(c,x,y,{type=0,team=1,t=0,wind=0,hp=1,maxHp=1,scale=1}=
   line(c,[[17,-62],[30+strike*12,-85]],'#ac4262',7);
  }else if(type===4){ // Gyuwon: answer sheets and pencil, unmade choices.
   path(c,[[-23,-36],[-16,-79],[18,-79],[22,-36]],'#657792',ink,3);
-  ellipse(c,0,-94,19,20,shade,ink,3);
-  path(c,[[-20,-107],[-7,-121],[13,-115],[20,-101]],'#37465d',ink,2);
+  drawGyuwonPhoto(c,portrait,0,-94,20,{mirror:team<0});
   round(c,-33,-68,23,41,3,'#faf6de',ink,2);
   for(let k=0;k<4;k++)line(c,[[-28,-58+k*9],[-17,-58+k*9]],k===1?'#b85662':'#81909b',2);
   line(c,[[17,-73],[31+strike*10,-95]],'#d8ae6c',6);

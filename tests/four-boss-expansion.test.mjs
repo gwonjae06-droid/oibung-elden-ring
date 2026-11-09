@@ -57,9 +57,9 @@ test('feral eight balls fall from the sky onto three separately warned impact si
 });
 test('new fantasy FX is visual only and production rules still prohibit text tips or cutscene skipping',()=>{
  const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
- assert.ok(existsSync(new URL('../assets/choi.png',import.meta.url)));
- const actor=source('src/gyuwon-actor.mjs'),hand=source('src/gyuwon-shadow-hand.mjs');
- assert.match(actor,/assets\/choi.png/);assert.match(hand,/assets\/choi.png/);
+ assert.ok(existsSync(new URL('../assets/kyu.png',import.meta.url)));
+ const actor=source('src/gyuwon-actor.mjs'),hand=source('src/gyuwon-shadow-hand.mjs'),photo=source('src/gyuwon-photo-face.mjs');
+ assert.match(photo,/assets\/kyu.png/);assert.match(actor,/gyuwonPhotoMaterial/);assert.match(hand,/gyuwonPhotoMaterial/);
  assert.match(actor,/gyuwon-god-face/);assert.match(hand,/ink-hand-articulated-finger/);
  assert.match(source('src/kwon-third-phase-view.mjs'),/kwon-split-falling-moon/);
  assert.match(source('src/clown-phase2-performance.mjs'),/function prewarm/);

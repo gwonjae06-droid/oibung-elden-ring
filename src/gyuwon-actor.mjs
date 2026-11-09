@@ -1,3 +1,4 @@
+import {gyuwonPhotoGeometry,gyuwonPhotoMaterial} from './gyuwon-photo-face.mjs';
 import {arsenalKind} from './gyuwon-arsenal.mjs';
 import * as THREE from 'three';
 import {ridePose,rideFrame,gyuwonWeaponPose} from './gyuwon-year-choreography.mjs';
@@ -14,16 +15,8 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  const cloth=new THREE.MeshPhysicalMaterial({color:0xc5ced5,roughness:.91,sheen:0.3,sheenRoughness:.86});
  const pants=new THREE.MeshStandardMaterial({color:0x232b3d,roughness:.88});
  const skin=new THREE.MeshPhysicalMaterial({color:0xc6a68e,roughness:.76,clearcoat:.035});
- // Source: the uploaded assets/choi.png, curved over the actual sculpted face.
- let photo=null;
- if(typeof document!=='undefined'&&typeof document.createElementNS==='function'){
-  try{photo=new THREE.TextureLoader().load(new URL('../assets/choi.png',import.meta.url).href);photo.colorSpace=THREE.SRGBColorSpace;photo.anisotropy=4;}
-  catch(error){console.warn('Gyuwon portrait unavailable',error);}
- }
- const faceSkin=skin.clone();
- if(photo){faceSkin.map=photo;faceSkin.color.setHex(0xf5ede2);}
+ const {texture:photo,material:faceSkin}=gyuwonPhotoMaterial();
 
- const hair=new THREE.MeshStandardMaterial({color:0x191b23,roughness:.94});
  const shirt=new THREE.MeshStandardMaterial({color:0xdce0dd,roughness:.95});
  const leather=new THREE.MeshStandardMaterial({color:0x151923,roughness:.63});
  const thread=new THREE.MeshStandardMaterial({color:0x83909b,roughness:1});
@@ -84,7 +77,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   feet.push(shoe);
   setBone(thigh,knee,hip);setBone(shin,ankle,knee);
  }
- const bodyMaterials=[cloth,pants,skin,hair],originalColors=bodyMaterials.map(m=>m.color.clone()),goldColor=new THREE.Color(0xffd56d);
+ const bodyMaterials=[cloth,pants,skin],originalColors=bodyMaterials.map(m=>m.color.clone()),goldColor=new THREE.Color(0xffd56d);
  // Shoulder -> upper sleeve -> elbow -> forearm -> wrist -> fingers.
  // Parenting upper body joints to the leaning chest prevents arm gaps.
  const arms=[],forearms=[],wrists=[],fingerChains=[];
@@ -133,56 +126,18 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   articulatedDigit(side*.14,.02,.04,[.095,.073],4,true);
  }
  const head=new THREE.Group();head.name='gyuwon-head';head.position.y=1.20;torso.add(head);
- // One continuous sculpted face surface: temple, cheekbone, bridge and jaw.
- const faceGeo=new THREE.SphereGeometry(.5,detail,coarse?26:48);
- const facePos=faceGeo.getAttribute('position');
- for(let i=0;i<facePos.count;i++){
-  const x=facePos.getX(i),y=facePos.getY(i),z=facePos.getZ(i);
-  const jawT=Math.max(0,Math.min(1,(-y+.025)/.5));
-  const templeT=Math.max(0,Math.min(1,(y-.11)/.4));
-  const cheek=.045*Math.exp(-Math.pow((Math.abs(x)-.23)/.16,2)-Math.pow((y+.065)/.19,2));
-  const bridge=.032*Math.exp(-Math.pow(x/.105,2)-Math.pow((y-.08)/.27,2));
-  const chin=.016*Math.exp(-Math.pow(x/.20,2)-Math.pow((y+.38)/.15,2));
-  facePos.setXYZ(i,x*(1-.22*jawT+.06*templeT),y,
-   z+(z>0?cheek+bridge+chin:0));
- }
- faceGeo.computeVertexNormals();
- const face=mesh(head,faceGeo,faceSkin,0,0,0,'gyuwon-anatomical-face');
- const faceUv=faceGeo.getAttribute('uv');
- for(let i=0;i<faceUv.count;i++){const x=facePos.getX(i),y=facePos.getY(i),z=facePos.getZ(i);
-  if(z>0)faceUv.setXY(i,Math.max(.05,Math.min(.95,.5+x*.78)),Math.max(.06,Math.min(.94,.51+y*.82)));}
- faceUv.needsUpdate=true;
- face.scale.set(.88,1.14,.91);
- const jaw=mesh(head,new THREE.SphereGeometry(.29,minor,coarse?12:24),skin,0,-.30,.13,'gyuwon-jaw');
- jaw.scale.set(1,.57,1.15);
- for(const side of [-1,1]){
-  const ear=mesh(head,new THREE.SphereGeometry(.135,minor,coarse?12:24),skin,side*.44,-.025,-.02,'gyuwon-sculpted-ear');
-  ear.scale.set(.5,1.15,.72);
-  const cheek=mesh(head,new THREE.SphereGeometry(.165,minor,coarse?10:20),skin,side*.22,-.13,.30,'gyuwon-cheekbone');
-  cheek.scale.set(1,.64,.53);
-  const socket=mesh(head,new THREE.SphereGeometry(.075,minor,12),ink,side*.18,.055,.423,'gyuwon-eye-socket');
-  socket.scale.set(1.12,.65,.23);
-  mesh(head,new THREE.SphereGeometry(.031,minor,12),leather,side*.18,.058,.445,'gyuwon-eye');
-  mesh(head,curve([[side*.095,.162,.429],[side*.18,.19,.431],[side*.26,.157,.416]],.022),hair,0,0,0,'gyuwon-brow');
- }
- const nose=mesh(head,lathe([[.025,-.10],[.060,-.07],[.075,.08],[.048,.20],[.022,.23]],minor),skin,0,-.13,.46,'gyuwon-nose');
- nose.rotation.x=Math.PI/2;
- mesh(head,curve([[-.095,-.26,.432],[0,-.285,.458],[.095,-.26,.432]],.012),ink,0,0,0,'gyuwon-mouth');
- const cap=mesh(head,new THREE.SphereGeometry(.513,detail,coarse?15:30,0,Math.PI*2,0,Math.PI*.58),hair,0,.11,-.02,'gyuwon-layered-hair');
- cap.scale.set(.90,1.02,.94);
- for(let i=0;i<(coarse?6:13);i++){
-  const a=(i/Math.max(1,(coarse?6:13)-1)-.5)*2.25;
-  mesh(head,curve([[Math.sin(a)*.34,.43,Math.cos(a)*.31],[Math.sin(a)*.41,.29,Math.cos(a)*.35],[Math.sin(a)*.39,.20,Math.cos(a)*.40]],.025),hair,0,0,0,'gyuwon-hair-strand');
- }
+ // Every retake and every clone uses the same plain spherical photo head.
+ const faceGeo=gyuwonPhotoGeometry(.5,{coarse});
+ mesh(head,faceGeo,faceSkin,0,0,0,'gyuwon-anatomical-face');
  const book=new THREE.Group();wrists[0].add(book);book.position.set(-.1,-.02,.35);book.rotation.x=-.6;
  mesh(book,new THREE.BoxGeometry(.76,.135,.96),leather,0,0,0,'gyuwon-book-cover');
  mesh(book,new THREE.BoxGeometry(.68,.095,.89),paper,0,.08,0,'gyuwon-book-pages');
  for(let i=0;i<6;i++)mesh(book,new THREE.BoxGeometry(.7,.004,.89),ink,0,.031+i*.009,0,'gyuwon-page-edge');
  // The same photographed likeness returns as a suspended godlike 3D visage.
  const divineFace=new THREE.Group();divineFace.name='gyuwon-divine-portrait';root.add(divineFace);
- const godSkin=faceSkin.clone();godSkin.transparent=true;godSkin.opacity=.84;
- const god=mesh(divineFace,new THREE.SphereGeometry(.92,coarse?24:48,coarse?18:32),
-  godSkin,0,0,0,'gyuwon-god-face');god.scale.set(1.17,1.38,.45);
+ const godSkin=faceSkin;
+ const god=mesh(divineFace,gyuwonPhotoGeometry(.92,{coarse}),
+  godSkin,0,0,0,'gyuwon-god-face');god.scale.setScalar(1);
  mesh(divineFace,new THREE.TorusGeometry(1.28,.044,8,coarse?32:72),
   new THREE.MeshStandardMaterial({color:0xf0d3a7,metalness:.69,roughness:.29,emissive:0x896344,emissiveIntensity:.43}),
   0,0,-.25,'gyuwon-portrait-mandorla');
@@ -287,6 +242,6 @@ export function createGyuwonActor(stage,{coarse=false}={}){
    item.visible=!years&&b.phase>1;item.position.set(Math.sin(a)*1.6,2+Math.sin(a*2)*.4,Math.cos(a)*1.6);
    item.rotation.set(.3+Math.sin(t+i)*.08,a,.2);
   }
- },dispose(){yearRig.dispose();photo?.dispose();faceSkin.dispose();godSkin.dispose();}};
+ },dispose(){yearRig.dispose();photo?.dispose();faceSkin.dispose();}};
 }
 

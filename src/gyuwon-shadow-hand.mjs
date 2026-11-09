@@ -1,3 +1,4 @@
+import {gyuwonPhotoGeometry,gyuwonPhotoMaterial} from './gyuwon-photo-face.mjs';
 import * as THREE from 'three';
 // Purely visual. The dark hand traces authoritative rehearsal hazard positions.
 // One sculpted hand, one finger-tipped pointer, and one shared trail mesh;
@@ -46,17 +47,10 @@ export function createGyuwonShadowHand(scene,{coarse=false}={}){
   tip.position.set((i-2)*.26,0,1.48);
   fingers.push({cylinder,tip});
  }
- // The uploaded likeness reappears on an actual curved sculpted back-of-hand cameo.
- let texture=null;
- if(typeof document!=='undefined'&&typeof document.createElementNS==='function'){
-  try{texture=new THREE.TextureLoader().load(new URL('../assets/choi.png',import.meta.url).href);
-   texture.colorSpace=THREE.SRGBColorSpace;}
-  catch(error){console.warn('Gyuwon hand portrait unavailable',error);}
- }
- const faceMat=new THREE.MeshPhysicalMaterial({color:0xd1bdad,map:texture,metalness:.12,roughness:.68});
- const face=make(new THREE.SphereGeometry(.38,coarse?15:28,coarse?12:22),
-  faceMat,'gyuwon-shadow-hand-choi-face');
- face.position.set(0,.23,-.24);face.scale.z=.6;
+ // The same fixed kyu photo sphere is used for the hand cameo.
+ const {texture,material:faceMat}=gyuwonPhotoMaterial();
+ const face=make(gyuwonPhotoGeometry(.38,{coarse}),faceMat,'gyuwon-shadow-hand-kyu-face');
+ face.position.set(0,.23,-.24);
  // Pale tendon lines make the black fingers visible against the black room.
  const trace=make(new THREE.CylinderGeometry(.032,.032,1,coarse?5:9),seams,'ink-hand-tendon-trail');
  const origin=new THREE.Vector3(),destination=new THREE.Vector3(),axis=new THREE.Vector3(0,1,0);

@@ -34,7 +34,12 @@ float sketchHash(vec2 p){
 }
 void main(){
  vec2 px=1.0/max(uResolution,vec2(1.0));
- vec3 original=texture2D(tStage,vUv).rgb;
+ vec4 sourcePixel=texture2D(tStage,vUv);
+ if(sourcePixel.a>.45&&sourcePixel.a<.55){gl_FragColor=vec4(sourcePixel.rgb,1.0);
+  #include <colorspace_fragment>
+  return;
+ }
+ vec3 original=sourcePixel.rgb;
 
  // Stable A/B contour redraws: the geometry and collision location do not
  // jump. Only the sketched edge stencil receives the short hand-drawn wobble.

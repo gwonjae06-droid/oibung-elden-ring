@@ -17,8 +17,6 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
  const purple=material(0x9880b7,{metalness:.16,roughness:.21,clearcoat:.86});
  const olive=material(0x464d42,{roughness:.30,clearcoat:.55});
  const gild=material(0xbba478,{metalness:.72,roughness:.31});
- const skin=material(0xb5907b,{roughness:.75});
- const dark=material(0x24232b,{roughness:.85});
  const curve=(pts,r=.018)=>{
   const path=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));
   const g=new THREE.TubeGeometry(path,coarse?7:17,r,coarse?5:8,false);geos.push(g);return g;
@@ -38,27 +36,7 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
   const g=new THREE.Group();g.name='gyuwon-year-'+n+'-rig-gear';
   parent.add(g);if(!perYear.has(n))perYear.set(n,[]);perYear.get(n).push(g);return g;
  }
- // Detailed facial articulation: lids, brows, under-eye stress and moving jaw
- // without obscuring the provided photographic portrait.
- const face=new THREE.Group();face.name='gyuwon-expression-bones';head.add(face);
- const eyelids=[],brows=[],eyes=[],circles=[];
- for(const side of [-1,1]){
-  const lid=add(face,sphere(.084,24),skin,side*.18,.105,.444,'gyuwon-lid-bone');
-  lid.scale.set(1.12,.12,.22);eyelids.push(lid);
-  const brow=add(face,curve([[side*.09,.168,.443],[side*.17,.203,.444],
-   [side*.275,.156,.416]],.016),dark,0,0,0,'gyuwon-expression-brow');
-  brows.push({mesh:brow,side});
-  const iris=add(face,sphere(.029,20),dark,side*.18,.06,.469,'gyuwon-eye-aim');
-  eyes.push({mesh:iris,side});
-  const circle=add(face,curve([[side*.08,-.080,.435],
-   [side*.16,-.098,.448],[side*.27,-.078,.412]],.008),skin,0,0,0,'gyuwon-exhaustion-crease');
-  circles.push(circle);
- }
- const mouth=add(face,curve([[-.09,-.270,.459],[0,-.286,.476],[.09,-.27,.459]],.012),
-  dark,0,0,0,'gyuwon-expressive-lip');
- // One extra crease sheet follows the existing cheek topology; very thin relief.
- const jaw=add(face,sphere(.25,coarse?12:24),skin,0,-.31,.23,'gyuwon-articulated-jaw-overlay');
- jaw.scale.set(1,.50,.74);
+ // The photo sphere is fixed: no eyelids, brows, jaw or drawn facial overlays.
  const helmet=yearGroup(1,head);
  const helmetShape=new THREE.SphereGeometry(.547,coarse?22:42,coarse?13:28,0,Math.PI*2,0,Math.PI*.53);
  geos.push(helmetShape);
@@ -129,33 +107,14 @@ export function createGyuwonYearRig({torso,head,wrists,coarse=false}={}){
   for(const [n,groups]of perYear)for(const group of groups)
    group.visible=!!e&&!['musical','curtain'].includes(e.mode)&&!arsenalKind(y)&&(stage===n||n===9&&stage>=9||n===11&&y>=11);
   helmet.visible=!!e&&stage===1&&['bike','ultimateBike'].includes(e.cast);
-  for(const lid of eyelids){
-   const blinkPhase=(t*(e?.mode==='exam'?.74:1.08)+y*.31)%3.35;
-   const blink=blinkPhase<.15?Math.sin(Math.PI*blinkPhase/.15):0;
-   lid.scale.y=.10+.48*blink;lid.position.y=.105-.064*blink;
-  }
-  for(const {mesh:brow,side}of brows){
-   const fatigue=Math.min(1,Math.max(0,(y-1)/7));
-   brow.position.y=-(fatigue*.018)+(e?.grade==='failure'?-.045:0);
-   brow.rotation.z=side*(fatigue*.13+(e?.grade==='great'?.07:0));
-  }
-  for(const {mesh:eye,side}of eyes){
-   eye.position.set(side*.18+(e?.mode==='exam'?0:Math.sin(t*.59)*.013),
-    e?.mode==='exam'?.050:.065,.469);
-  }
-  const f=Math.max(0,y-2)/8;
-  for(const fold of circles){fold.visible=!!e&&y>=2;fold.position.y=-.012*f;}
-  jaw.position.y=-.31+(e?.grade==='failure'?-.044:e?.mode==='exam'?Math.sin(t*13)*.006:0);
-  mouth.scale.y=e?.grade==='great'?1.22:e?.grade==='failure'?.6:1;
   for(let i=0;i<strips.length;i++)strips[i].rotation.z=.08*Math.sin(t*3.3+i);
   for(let i=0;i<charms.length;i++)charms[i].rotation.y=.22*Math.sin(t*2.4+i);
  }
  function dispose(){if(disposed)return;disposed=true;
   handProps.dispose();
-  face.removeFromParent();
   for(const groups of perYear.values())for(const g of groups)g.removeFromParent();
   for(const g of new Set(geos))g.dispose();
   for(const m of new Set(mats))m.dispose();
  }
- return {update,dispose,get activeYear(){return activeYear},get tint(){return yearTints.get(activeYear)||null},stats:()=>({activeYear,faceControls:eyelids.length+brows.length+eyes.length,garments:perYear.size,handProps:handProps.stats()})};
+ return {update,dispose,get activeYear(){return activeYear},get tint(){return yearTints.get(activeYear)||null},stats:()=>({activeYear,faceControls:0,garments:perYear.size,handProps:handProps.stats()})};
 }
