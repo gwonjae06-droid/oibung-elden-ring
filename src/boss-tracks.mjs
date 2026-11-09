@@ -6,16 +6,27 @@ import {createBloodSeraphChoirProbe,publishBloodSeraphChoir,
 // After it finishes, reprise a musical midsection rather than the intro.
 export const BLOOD_MUSIC_REPRISE_SECONDS=130;
 // External MP3 boss tracks. Sound effects keep using their own audio buses.
+// Only the opening four Gyuwon years borrow existing, verified Oibung Arena
+// recordings. The official Arena Pages assets remain the source of truth;
+// HTMLAudioElement accepts the HTTPS asset URL without a WebAudio CORS read.
+export const ORENA_MUSIC_URL='https://gwonjae06-droid.github.io/oibung-ballfight-base/assets/music/';
 export const BOSS_TRACKS=Object.freeze({
   kwon:Object.freeze(['swordbgm.mp3','swordbgm2.mp3']),
   clown:Object.freeze(['clown1.mp3','clown2.mp3']),
   dice:Object.freeze(['dicebgm.mp3','dicebgm2.mp3']),
   blood:Object.freeze(['bloodbgm1.mp3','bloodbgm2.mp3']),
-  gyuwon:Object.freeze([null,null,null,null,null,null])
+  gyuwon:Object.freeze([
+    ORENA_MUSIC_URL+'snowflower-night.mp3', // 1/2 years: quieter opening
+    ORENA_MUSIC_URL+'iron-sunlight.mp3',    // 3/4 years: harsher escalation
+    null,null,null,null
+  ])
 });
 export function bossTrack(state){
   if(!state||!Object.hasOwn(BOSS_TRACKS,state.boss))return null;
-  if(state.boss==='gyuwon'){const section=gyuwonMusicSection(state.year),asset=BOSS_TRACKS.gyuwon[section];return asset?{key:'gyuwon:'+section,url:new URL('../assets/music/'+asset,import.meta.url).href}:null;}
+  if(state.boss==='gyuwon'){
+    const section=gyuwonMusicSection(state.year),asset=BOSS_TRACKS.gyuwon[section];
+    return asset?{key:'gyuwon:'+section,url:asset.startsWith('https://')?asset:new URL('../assets/music/'+asset,import.meta.url).href}:null;
+  }
   const phase=state.phase>=2?2:1;
   // The Blood Seraph never swaps/restarts bloodbgm2.mp3 during the phase change.
   // Only the Dice boss uses a separate phase-three playback key.
