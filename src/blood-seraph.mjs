@@ -4,6 +4,7 @@ import {createBloodHead} from './blood-head.mjs';
 import {SERAPH_EYE_ATTACKS} from './blood-seraph-doctrine.mjs';
 import {createBloodSeraphPillars} from './blood-seraph-pillars.mjs';
 import {sculptBloodSeraph} from './blood-seraph-sculpt.mjs';
+import {bloodSeraphSanctity} from './blood-seraph-sanctity.mjs';
 
 // A real, deliberately budgeted 3D seraph rig, NOT a fullscreen image.
 // The enormous seraph is the ONLY visible 3P boss and occupies the real
@@ -159,6 +160,15 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   wings.push({pivot,pair,side,feathers,form});
  }
  const fineSculpt=sculptBloodSeraph(root,{coarse,reduced,wings,featherGeometry:featherGeo});
+ // A single instanced feather cloud splits and reassembles at the two
+ // sacred teleport circles. No disposable objects allocated per teleport.
+ const blinkFeatherMat=new THREE.MeshBasicMaterial({color:0xffd6c4,
+  transparent:true,opacity:.84,depthWrite:false,side:THREE.DoubleSide,
+  blending:THREE.AdditiveBlending});
+ const blinkFeathers=new THREE.InstancedMesh(featherGeo,blinkFeatherMat,coarse?24:48);
+ blinkFeathers.name='blood-seraph-dissolve-reassemble-feathers';
+ blinkFeathers.frustumCulled=false;blinkFeathers.visible=false;
+ scene.add(blinkFeathers);
  for(const side of [-1,1]){
   makeTube(root,[[0,5.3,.8],[side*1.7,3.8,1.2],[side*2.25,1.2,.9],
    [side*.52,-2.6,.85]],.16,pearl,18);
@@ -210,7 +220,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix);
  }
  clouds.instanceMatrix.needsUpdate=true;
- let shown=0,disposed=false;
+ let shown=0,disposed=false,headTurn=0,haloPhase=0,lastSanctity=null;
  function update(g,c,dt=0){
   if(disposed)return;
   const phase=g?.boss?.phase||1;
@@ -218,6 +228,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   root.visible=visible;
   if(!visible){
    shown=0;pillars.clear();chargeRing.visible=false;
+   blinkFeathers.visible=false;
    teleportRings.forEach(r=>r.visible=false);return;
   }
   const s=g.blood,b=g.boss,p=g.player;
@@ -248,8 +259,36 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    ring.scale.setScalar(1+age*(i===0?2.1:1.35));
    ring.material.opacity=.50*(1-ease(age/.62));
   });
+  blinkFeathers.visible=!!blink&&age<.62;
+  if(blinkFeathers.visible){
+   const u=ease(age/.62),half=blinkFeathers.count/2;
+   for(let i=0;i<blinkFeathers.count;i++){
+    const departure=i<half,site=departure?blink.from:blink.to,
+     k=departure?i:i-half,angle=k*2.399963+u*1.3;
+    const radial=.35+(k%7)*.24+u*(departure?2.7:.9);
+    dummy.position.set(site.x+Math.sin(angle)*radial,
+     1+(k%6)*.78+(departure?u*7:(1-u)*5),
+     site.z+Math.cos(angle)*radial);
+    dummy.rotation.set(.18+u*2.4,angle,u*4.5);
+    const volume=departure?1-u:u;
+    dummy.scale.setScalar(Math.max(.01,.48*volume));
+    dummy.updateMatrix();blinkFeathers.setMatrixAt(i,dummy.matrix);
+   }
+   blinkFeathers.instanceMatrix.needsUpdate=true;
+  }
   pillars.update(g);
   const t=g.time||0,pattern=b.state==='pattern'?s.pattern:null;
+  const sanctity=bloodSeraphSanctity(g);lastSanctity=sanctity;
+  haloPhase+=d*(.13*sanctity.haloSpeed);
+  // The head and photo portrait turn independently. Keep the body and
+  // physical combat origin serene while the face tracks the player.
+  const targetAngle=Math.atan2(p.x-b.x,p.z-b.z);
+  const wanted=Math.atan2(Math.sin(targetAngle-(b.yaw||0)),
+   Math.cos(targetAngle-(b.yaw||0)));
+  const gazeTarget=clamp(wanted,-1.18,1.18);
+  headTurn+=Math.atan2(Math.sin(gazeTarget-headTurn),Math.cos(gazeTarget-headTurn))*
+   (1-Math.exp(-d*.95));
+  visage.group.rotation.y=headTurn;
   const first=s.hazards?.length?Math.min(...s.hazards.map(h=>h.warn)):1.2;
   const charge=pattern?ease((s.t||0)/Math.max(.2,first)):0;
   // Never animate at guessed fixed times: use authoritative hazard warns,
@@ -286,24 +325,29 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    h.age<h.warn?Math.min(1,h.age/Math.max(.01,h.warn)):0)):0;
   wings.forEach(({pivot,pair,side})=>{
    const breath=reduced?0:Math.sin(t*(1.05+pair*.19)+side*.55)*.043;
-   const flare=pattern==='seraphCrown'||pattern==='seraphFinale'?charge*.23:
-    ['seraphWingCross','seraphBloodRosette'].includes(pattern)?charge*.3:0;
+   const flare=(pattern==='seraphCrown'||pattern==='seraphFinale'?charge*.23:
+    ['seraphWingCross','seraphBloodRosette'].includes(pattern)?charge*.3:0)+
+    sanctity.wingSpread*(1+pair*.10);
    pivot.rotation.z=(pair===0?.11:pair===1?-.09:.19)+breath+
     side*(slash*.24+flare+featherfall*.16);
    // The three pairs open in sequence as the 2P body condenses.
    const pairBirth=evolving?ease((wingBirth*1.25-pair*.12)/.75):1;
    pivot.rotation.y=side*(.06+charge*.085+slash*.15+closing*.85+
-     (pattern==='seraphWingCross'?charge*.95:0)+(1-pairBirth)*1.08);
+     (pattern==='seraphWingCross'?charge*.95:0)+(1-pairBirth)*1.08+
+      sanctity.wingSpread*.52);
    pivot.rotation.z+=side*(1-pairBirth)*.52;
    pivot.rotation.x=breath*.5+slash*.09+closing*.18+(1-pairBirth)*.43;
    if(pattern==='seraphDescent')pivot.rotation.z-=side*slash*.31;
   });
-  rings.forEach((m,i)=>{m.rotation.z=(reduced?0:t*.12*(i%2?-1:1))+i*.24;
-   const pulse=1+(reduced?0:Math.sin(t*1.7-i)*.02)+charge*.045;
+  rings.forEach((m,i)=>{
+   m.rotation.z=(reduced?0:haloPhase*(i%2?-1:1))+i*.24;
+   const pulse=1+(reduced?0:Math.sin(t*1.7-i)*.02)+charge*.045+
+    sanctity.choir*.22+sanctity.impact*.18;
    m.scale.setScalar(pulse*Math.max(.03,haloBirth));
   });
   visage.update(g,c,d,{cast:charge});
-  holyFaceRing.scale.setScalar(1+charge*.18+eyeCharge*.22);
+  holyFaceRing.scale.setScalar(1+charge*.18+eyeCharge*.22+
+   sanctity.choir*.19);
   const charging=pattern==='seraphSweep'&&(!activeRay||s.t<first);
   chargeRing.visible=charging&&eyeCharge>.05;
   chargeRing.scale.setScalar(.65+eyeCharge*.8);
@@ -347,6 +391,7 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
 
  }
  function clear(){shown=0;root.visible=false;beamPivot.visible=false;
+  headTurn=0;haloPhase=0;lastSanctity=null;blinkFeathers.visible=false;
   pillars.clear();chargeRing.visible=false;
   teleportRings.forEach(r=>r.visible=false);
   wingWheel.visible=false;haloWheel.visible=false;
@@ -356,7 +401,8 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
  function dispose(){
   if(disposed)return;disposed=true;root.parent?.remove(root);
   wingWheel.parent?.remove(wingWheel);haloWheel.parent?.remove(haloWheel);
-  pillars.dispose();
+  pillars.dispose();blinkFeathers.parent?.remove(blinkFeathers);
+  blinkFeatherMat.dispose();
   for(const ring of teleportRings)ring.parent?.remove(ring);
   for(const guide of guides)guide.parent?.remove(guide);
   visage.dispose();
@@ -376,6 +422,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   eyeRayVisible:beamPivot.visible,wingWheelVisible:wingWheel.visible,
   warningGuides:guides.filter(g=>g.visible).length,
   haloWheelVisible:haloWheel.visible,columns:pillars.stats(),
+  faceYaw:headTurn,haloPulse:lastSanctity?.choir??0,
+  sanctity:lastSanctity?.brightness??0,musicSource:lastSanctity?.source??'none',
+  teleportFeathersVisible:blinkFeathers.visible,
   sacredChargeVisible:chargeRing.visible,
   teleportRingsVisible:teleportRings.filter(r=>r.visible).length,
   decorativeOnly:false,

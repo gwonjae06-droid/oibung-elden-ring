@@ -39,7 +39,9 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 function teleportSeraph(g,x,z,reason){
  const b=g.boss,s=g.blood,from={x:b.x,z:b.z};
  if(b.phase!==3||Math.hypot(b.x-x,b.z-z)<.2)return false;
- b.x=x;b.z=z;b.yaw=Math.atan2(g.player.x-b.x,g.player.z-b.z);
+ b.x=x;b.z=z;
+ // The face itself tracks the player gradually; a divine teleport never
+ // spins the entire torso to face the target in one frame.
  const to={x,z};s.seraphBlink={from,to,age:0,duration:.62,reason};
  emit(g,'blood-seraph-teleport',{from,to,reason});return true;
 }
@@ -114,7 +116,9 @@ export function startBloodPattern(g,id){
  if(g.blood.requiredTsunamiStarted&&!g.blood.requiredTsunamiDone)return false;
  const b=g.boss,s=g.blood,p=g.player;
  if(b.phase===3)teleportSeraph(g,0,0,'central-cast');
- const aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false; s.pattern=id;s.patternDuration=spec.duration;s.t=0;s.seraphWingReturn=null;b.state='pattern';b.yaw=aim;s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
+ const aim=Math.atan2(p.x-b.x,p.z-b.z);s.walk=null;s.hazards.length=0;s.heartNodes=[];s.tsunami=null;s.tsunamiSoundPlayed=false; s.pattern=id;s.patternDuration=spec.duration;s.t=0;s.seraphWingReturn=null;b.state='pattern';
+ if(b.phase!==3)b.yaw=aim;
+ s.target={x:p.x,z:p.z};s.origin={x:b.x,z:b.z};
  const circle=(x,z,warn,r=3,extra={})=>hazard(g,'circle',{x,z,warn,r,...extra});
  const lane=(yaw,warn,extra={})=>hazard(g,'lane',{yaw,warn,width:6,length:10,life:2.3,vx:Math.sin(yaw)*18,vz:Math.cos(yaw)*18,...extra});
  const point=(x,z)=>{const d=Math.hypot(x,z),n=d>R.radius-5?(R.radius-5)/d:1;return {x:x*n,z:z*n};};
