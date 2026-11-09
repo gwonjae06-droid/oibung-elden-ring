@@ -78,7 +78,7 @@ export function drawGyuwonArmyWorld(c,m){
  // Paper flags from the ending of Act VI become the army's real banners.
  for(let i=0;i<10;i++){
   const x=80+i*124+Math.sin(t*.18+i)*2,y=400-(i%3)*19;
-  const h=(s.key==='arrival'?clamp(t/12):1)*55;
+  const raised=clamp((t-64.22)/2.92);const h=(s.key==='arrival'?clamp(t/12):1)*(55+raised*25);
   c.strokeStyle='#705a57';c.lineWidth=4;c.beginPath();c.moveTo(x,y+40);c.lineTo(x,y+40-h);c.stroke();
   c.fillStyle=i%2?'#c36679':'#f3d78b';
   c.beginPath();c.moveTo(x,y+40-h);c.lineTo(x+31,y+48-h+Math.sin(t*2+i)*4);
