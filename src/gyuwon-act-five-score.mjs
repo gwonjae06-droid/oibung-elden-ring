@@ -44,7 +44,12 @@ export function actFiveAttackPoint(attack,from,to,age,side=1){
 export function poseActFiveHands(m,dt){
  const pose=actFiveChoreographyAt(m.time,m.songPerformance,{hitUntil:m.hitTargetUntil||0,bpm:m.bpm||136});
  m.handPose=pose;
- const k=1-Math.exp(-Math.max(0,dt)*7.5);
+ // The offered hand and shared embrace travel a long distance across the
+ // stage; complete the sung action inside its actual vocal phrase. Simulation
+ // still owns the hand collider, and contact attacks always override this.
+ const stageRate=m.songPerformance?.gesture==='hand'?17:
+  m.songPerformance?.gesture==='together'?12:7.5;
+ const k=1-Math.exp(-Math.max(0,dt)*stageRate);
  for(let index=0;index<2;index++){
   // Only a hand actually making physical contact owns its wrist. The other
   // hand, both hands during ally/projectile actions, and harmless broken parts
