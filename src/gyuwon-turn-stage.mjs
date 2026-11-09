@@ -85,7 +85,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   const source=bridging?current.handoffFromFive:current;
   // Keep the final physical 5수 world alive beneath the opening 2D runner.
   // Only a presentation copy advances: the defeated parts are never revived.
-  const time=bridging?source.time+current.time*.68:source?.time;
+  const time=bridging?Math.max(source.time,175)+current.time*.68:source?.time;
   const m=bridging?{...source,time,songPerformance:actFivePerformanceAt(time)}:source;
   root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible){runnerBridge.root.visible=false;for(const a of allies)if(a.parent===root)a.scale.setScalar(1);return;}
   const dt=owner===g?Math.max(0,Math.min(.05,m.time-last)):.016;if(owner!==g){seen.clear();owner=g;}last=m.time;
