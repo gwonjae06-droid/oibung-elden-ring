@@ -1,0 +1,364 @@
+{
+  "crossfade": 0.18,
+  "normalization": "EBU R128 -16 LUFS, true peak -1.5 dB",
+  "songs": {
+    "5": {
+      "source": "Welcome to My World!.mp3",
+      "file": "gyuwon5.mp3",
+      "duration": 48,
+      "speed": 1.0050000000000001,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 7,
+          "editStart": 0,
+          "editEnd": 6.965174129353233
+        },
+        {
+          "sourceStart": 26,
+          "sourceEnd": 33,
+          "editStart": 6.786069651741293,
+          "editEnd": 13.751243781094526
+        },
+        {
+          "sourceStart": 40,
+          "sourceEnd": 63.46,
+          "editStart": 13.572139303482587,
+          "editEnd": 36.91542288557213
+        },
+        {
+          "sourceStart": 127.6,
+          "sourceEnd": 136,
+          "editStart": 36.7363184079602,
+          "editEnd": 45.0945273631841
+        },
+        {
+          "sourceStart": 176.8,
+          "sourceEnd": 179.9,
+          "editStart": 44.91542288557214,
+          "editEnd": 48
+        }
+      ]
+    },
+    "6": {
+      "source": "Run Into Tomorrow!.mp3",
+      "file": "gyuwon6.mp3",
+      "duration": 44,
+      "speed": 0.9754545454545455,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 3,
+          "editStart": 0,
+          "editEnd": 3.075489282385834
+        },
+        {
+          "sourceStart": 11.5,
+          "sourceEnd": 14.7,
+          "editStart": 2.890959925442684,
+          "editEnd": 6.17148182665424
+        },
+        {
+          "sourceStart": 21,
+          "sourceEnd": 27,
+          "editStart": 5.986952469711089,
+          "editEnd": 12.137931034482754
+        },
+        {
+          "sourceStart": 34,
+          "sourceEnd": 39.7,
+          "editStart": 11.953401677539608,
+          "editEnd": 17.796831314072694
+        },
+        {
+          "sourceStart": 42.5,
+          "sourceEnd": 54.3,
+          "editStart": 17.612301957129546,
+          "editEnd": 29.709226467847163
+        },
+        {
+          "sourceStart": 91,
+          "sourceEnd": 102,
+          "editStart": 29.524697110904008,
+          "editEnd": 40.801491146318746
+        },
+        {
+          "sourceStart": 176,
+          "sourceEnd": 179.3,
+          "editStart": 40.61696178937559,
+          "editEnd": 44.000000000000014
+        }
+      ]
+    },
+    "7": {
+      "source": "My Little Army!.mp3",
+      "file": "gyuwon7.mp3",
+      "duration": 48,
+      "speed": 1.0087499999999994,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 10.8,
+          "editStart": 0,
+          "editEnd": 10.706319702602238
+        },
+        {
+          "sourceStart": 17,
+          "sourceEnd": 25,
+          "editStart": 10.5278810408922,
+          "editEnd": 18.458488228004974
+        },
+        {
+          "sourceStart": 32,
+          "sourceEnd": 39.7,
+          "editStart": 18.28004956629493,
+          "editEnd": 25.91325898389097
+        },
+        {
+          "sourceStart": 56.5,
+          "sourceEnd": 67,
+          "editStart": 25.734820322180937,
+          "editEnd": 36.143742255266446
+        },
+        {
+          "sourceStart": 115.9,
+          "sourceEnd": 120.7,
+          "editStart": 35.965303593556406,
+          "editEnd": 40.72366790582408
+        },
+        {
+          "sourceStart": 126,
+          "sourceEnd": 130,
+          "editStart": 40.545229244114026,
+          "editEnd": 44.51053283767042
+        },
+        {
+          "sourceStart": 175,
+          "sourceEnd": 178.7,
+          "editStart": 44.33209417596037,
+          "editEnd": 48.000000000000014
+        }
+      ]
+    },
+    "8": {
+      "source": "Dance Until the Morning!.mp3",
+      "file": "gyuwon8.mp3",
+      "duration": 48,
+      "speed": 0.9870833333333332,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 3,
+          "editStart": 0,
+          "editEnd": 3.0392570704938797
+        },
+        {
+          "sourceStart": 10,
+          "sourceEnd": 18,
+          "editStart": 2.8569016462642467,
+          "editEnd": 10.961587167581259
+        },
+        {
+          "sourceStart": 33,
+          "sourceEnd": 47.6,
+          "editStart": 10.779231743351627,
+          "editEnd": 25.570282819755178
+        },
+        {
+          "sourceStart": 94,
+          "sourceEnd": 112,
+          "editStart": 25.387927395525544,
+          "editEnd": 43.62346981848882
+        },
+        {
+          "sourceStart": 174.5,
+          "sourceEnd": 179,
+          "editStart": 43.44111439425919,
+          "editEnd": 48
+        }
+      ]
+    },
+    "9": {
+      "source": "Give Me One More Round!.mp3",
+      "file": "gyuwon9.mp3",
+      "duration": 44,
+      "speed": 1.0904545454545451,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 9,
+          "editStart": 0,
+          "editEnd": 8.253438932888706
+        },
+        {
+          "sourceStart": 41,
+          "sourceEnd": 56.6,
+          "editStart": 8.088370154230931,
+          "editEnd": 22.394330971238023
+        },
+        {
+          "sourceStart": 93,
+          "sourceEnd": 108,
+          "editStart": 22.22926219258025,
+          "editEnd": 35.98499374739477
+        },
+        {
+          "sourceStart": 144,
+          "sourceEnd": 150,
+          "editStart": 35.819924968736984,
+          "editEnd": 41.32221759066279
+        },
+        {
+          "sourceStart": 176,
+          "sourceEnd": 179.1,
+          "editStart": 41.15714881200502,
+          "editEnd": 44.00000000000001
+        }
+      ]
+    },
+    "10": {
+      "source": "A Million Shooting Stars!.mp3",
+      "file": "gyuwon10.mp3",
+      "duration": 48,
+      "speed": 1.0537499999999997,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 4,
+          "editStart": 0,
+          "editEnd": 3.79596678529063
+        },
+        {
+          "sourceStart": 27,
+          "sourceEnd": 33.56,
+          "editStart": 3.625148279952551,
+          "editEnd": 9.850533807829187
+        },
+        {
+          "sourceStart": 53.9,
+          "sourceEnd": 72.72,
+          "editStart": 9.679715302491108,
+          "editEnd": 27.53973902728352
+        },
+        {
+          "sourceStart": 118.64,
+          "sourceEnd": 122.64,
+          "editStart": 27.368920521945444,
+          "editEnd": 31.164887307236086
+        },
+        {
+          "sourceStart": 132,
+          "sourceEnd": 147,
+          "editStart": 30.994068801897996,
+          "editEnd": 45.228944246737846
+        },
+        {
+          "sourceStart": 176.4,
+          "sourceEnd": 179.5,
+          "editStart": 45.05812574139978,
+          "editEnd": 48.00000000000002
+        }
+      ]
+    },
+    "11": {
+      "source": "The Greatest Show of My Life.mp3",
+      "file": "gyuwon11.mp3",
+      "duration": 70,
+      "speed": 1.0437142857142856,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 3,
+          "editStart": 0,
+          "editEnd": 2.8743498494388176
+        },
+        {
+          "sourceStart": 24,
+          "sourceEnd": 31,
+          "editStart": 2.7018888584724885,
+          "editEnd": 9.40870517382973
+        },
+        {
+          "sourceStart": 37.92,
+          "sourceEnd": 44.48,
+          "editStart": 9.236244182863402,
+          "editEnd": 15.521489186969612
+        },
+        {
+          "sourceStart": 54.32,
+          "sourceEnd": 61.6,
+          "editStart": 15.349028196003283,
+          "editEnd": 22.324117163974822
+        },
+        {
+          "sourceStart": 102,
+          "sourceEnd": 108.72,
+          "editStart": 22.151656173008487,
+          "editEnd": 28.590199835751445
+        },
+        {
+          "sourceStart": 108.72,
+          "sourceEnd": 116.08,
+          "editStart": 28.41773884478511,
+          "editEnd": 35.46947714207502
+        },
+        {
+          "sourceStart": 124,
+          "sourceEnd": 157,
+          "editStart": 35.29701615110868,
+          "editEnd": 66.91486449493569
+        },
+        {
+          "sourceStart": 176.5,
+          "sourceEnd": 179.9,
+          "editStart": 66.74240350396934,
+          "editEnd": 70.00000000000001
+        }
+      ]
+    },
+    "ending": {
+      "source": "When the Music Ends.mp3",
+      "file": "gyuwonending.mp3",
+      "duration": 45,
+      "speed": 1.1497777777777776,
+      "regions": [
+        {
+          "sourceStart": 0,
+          "sourceEnd": 12.76,
+          "editStart": 0,
+          "editEnd": 11.097796675686125
+        },
+        {
+          "sourceStart": 77.5,
+          "sourceEnd": 84,
+          "editStart": 10.94124468496328,
+          "editEnd": 16.59451101662157
+        },
+        {
+          "sourceStart": 97,
+          "sourceEnd": 112.26,
+          "editStart": 16.437959025898728,
+          "editEnd": 29.71008890606881
+        },
+        {
+          "sourceStart": 112.26,
+          "sourceEnd": 118.88,
+          "editStart": 29.55353691534597,
+          "editEnd": 35.3111712408195
+        },
+        {
+          "sourceStart": 137,
+          "sourceEnd": 146,
+          "editStart": 35.15461925009664,
+          "editEnd": 42.98221878623888
+        },
+        {
+          "sourceStart": 177,
+          "sourceEnd": 179.5,
+          "editStart": 42.82566679551604,
+          "editEnd": 45.000000000000014
+        }
+      ]
+    }
+  }
+}

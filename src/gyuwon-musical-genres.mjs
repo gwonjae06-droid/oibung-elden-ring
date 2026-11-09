@@ -1,8 +1,9 @@
 // One unbroken, playable eleven-act fight. Acts 1-4 keep the authored
 // annual system. Acts 5-11 replace it with six distinct controls/genres and
 // a final musical. No exam/result roll or fake remote damage is used here.
-import {acceptAnnualDamage,annualFloor,syncAnnualHealth} from './gyuwon-annual-progress.mjs';
 import {playerIncomingDamage} from './weapon-stats.mjs';
+import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
+import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
 const near=(a,b,r)=>Math.hypot(a.x-b.x,a.z-b.z)<r;
@@ -30,8 +31,8 @@ function newState(year){
  const a=GYUWON_MUSICAL_ACTS[year];
  return {year,kind:a.kind,time:0,transition:2.7,title:a.title,color:a.color,
   dialogue:scripted[year-5],dialogueUntil:4.7,
-  shotCooldown:0,invulnerable:0,guard:0,hitFlash:0,combo:0,success:0,
-  turn:'player',turnTime:0,turnWind:0,turnMove:'',turnGuard:false,
+  shotCooldown:0,invulnerable:0,guard:0,hitFlash:0,combo:0,success:0,score:0,
+  turn:'player',turnCount:0,turnTime:0,turnWind:0,turnMove:'',turnGuard:false,
   obstacles:[],runnerSpawn:1.4,runnerDistance:0,jumpY:0,jumpV:0,slide:0,
   money:75,units:[],enemySpawn:2.2,armyPulse:0,armyBase:100,
   beat:.72,beatTime:0,note:null,noteCount:0,
@@ -54,6 +55,8 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  const e=g?.gyuwon?.years;
  if(!e||!isGyuwonMusicalYear(e.year))return false;
  const m=newState(e.year);
+ m.bpm=GYUWON_BEATS[e.year]?.bpm||GYUWON_SONGS[e.year].bpm;m.chartIndex=0;
+ const from={px:g.player.x,pz:g.player.z,bx:g.boss.x,bz:g.boss.z};
  e.musical=m;e.mode='musical';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.subjectLabel=null;e.wards=[];e.signatureUsed=true;
  e.mapPending=false;e.mapClock=0;e.recover=0;e.day=365;
@@ -61,29 +64,30 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  g.gyuwon.hazards.length=0;g.projectiles.length=0;g.gyuwon.stun=0;
  g.boss.state='recovery';g.boss.phase=2;
  locate(g,m);
+ m.entry={...from,tx:g.player.x,tz:g.player.z,btx:g.boss.x,btz:g.boss.z};
+ g.player.x=from.px;g.player.z=from.pz;g.boss.x=from.bx;g.boss.z=from.bz;
  emit('gyuwon-musical-act',{year:e.year,genre:m.kind,title:m.title});
  emit('gyuwon-musical-dialogue',{line:m.dialogue,year:e.year});
  return true;
 }
 function deal(g,amount,emit){
  const e=g.gyuwon.years,m=e.musical;
- if(!m||m.finishing||g.status!=='playing')return 0;
- const result=acceptAnnualDamage(g,Math.max(0,amount));
- const done=result.health;
- if(done>0){
-  g.stats.damage+=done;g.stats.hits++;
-  m.hitFlash=.2;emit('boss-hit',{amount:done,x:g.boss.x,y:1.7,z:g.boss.z});
-  emit('gyuwon-musical-hit',{amount:done,kind:m.kind});
- }
- return done;
+ if(!m||m.finishing||m.songEnded||g.status!=='playing')return 0;
+ const points=Math.max(0,Math.round(amount));
+ m.score+=points;m.combo++;e.performance=(e.performance||0)+points;g.stats.hits++;
+ m.hitFlash=.2;emit('gyuwon-musical-hit',{points,kind:m.kind});
+ return points;
 }
 function take(g,amount,emit){
  const m=g.gyuwon.years?.musical,p=g.player;
  if(!m||m.finishing||p.invuln>0||m.guard>0||m.transition>0)return false;
- const value=Math.min(p.hp,playerIncomingDamage(g,amount));
+ const value=Math.min(p.hp,playerIncomingDamage(g,amount*.4));
  p.hp=Math.max(0,p.hp-value);p.invuln=.67;m.hitFlash=.26;
  emit('hurt',{amount:value});
- if(!p.hp){g.status='lost';emit('death');}
+ if(!p.hp){
+  if(!m.recovered){m.recovered=true;p.hp=p.maxHp*.4;p.invuln=2;m.combo=0;emit('healed');}
+  else{g.status='lost';emit('death');}
+ }
  return true;
 }
 const heal=(g,emit)=>{
@@ -98,11 +102,11 @@ function turnChoice(g,m,type,emit){
  }
  if(m.turn!=='player')return false;
  if(type==='heal'&&!heal(g,emit))return false;
- if(type==='light')deal(g,125,emit);
- if(type==='skill')deal(g,195,emit);
+ if(type==='light'||type==='skill')m.playerStrike={age:0,damage:type==='skill'?195:125,home:g.player.x};
  if(type==='roll')m.guard=2.6;
  m.turn='boss';m.turnWind=1.45;m.turnTime=0;m.turnGuard=false;
- m.turnMove=(m.combo++%3===2)?'crescendo':'swing';
+ m.turnOrigin=g.boss.x;
+ m.turnMove=(m.turnCount++%3===2)?'crescendo':'swing';
  emit('gyuwon-musical-cue',{kind:'turn',wind:1.45});
  return true;
 }
@@ -112,7 +116,7 @@ function rhythmPress(g,m,type,emit){
  if(!note||note.done||!['light','skill','roll'].includes(type))return false;
  const good=note.key===type&&Math.abs(note.time)<=.21;
  if(good){
-  note.done=true;m.success++;m.combo++;deal(g,type==='skill'?135:105,emit);
+  note.done=true;m.success++;deal(g,type==='skill'?135:105,emit);
   m.guard=.18;emit('gyuwon-musical-beat',{good:true,combo:m.combo});
  }else{
   m.combo=0;emit('gyuwon-musical-beat',{good:false});
@@ -121,7 +125,7 @@ function rhythmPress(g,m,type,emit){
 }
 export function actGyuwonMusical(g,type,emit=()=>{}){
  const m=g?.gyuwon?.years?.musical;
- if(!m||g.status!=='playing'||m.finishing||m.transition>0)return false;
+ if(!m||g.status!=='playing'||m.finishing||m.songEnded||m.transition>0)return false;
  if(m.kind==='turn')return turnChoice(g,m,type,emit);
  if(m.kind==='rhythm'||m.kind==='finale')return rhythmPress(g,m,type,emit);
  if(type==='heal')return heal(g,emit);
@@ -129,13 +133,13 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
   if(type==='roll'&&m.jumpY<.01){m.jumpV=9.4;return true;}
   if(type==='skill'){m.slide=.67;return true;}
   if(type==='light'&&m.shotCooldown<=0){
-   m.shotCooldown=.73;deal(g,36,emit);return true;
+   m.shotCooldown=.73;m.bullets.push({x:g.player.x,z:0,life:2,damage:36});return true;
   }
   return false;
  }
  if(m.kind==='army'){
   const setup={light:[30,64,30,3.2,1.8],skill:[55,48,70,9,1.4],roll:[78,135,20,2.6,1.5]}[type];
-  if(!setup||m.money<setup[0])return false;
+  if(!setup||m.money<setup[0]||m.units.length>=48)return false;
   m.money-=setup[0];m.units.push({id:g.nextId++,team:1,
    x:-17,z:0,hp:setup[1],attack:setup[2],range:setup[3],speed:setup[4],
    cool:.4,role:type});
@@ -143,20 +147,17 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
   return true;
  }
  if(m.kind==='fighter'){
-  if(type==='roll'){m.guard=.46;g.player.x=clamp(g.player.x-2.6,-18,15);return true;}
+  if(type==='roll'){m.guard=.46;m.dash={left:.3,vx:-9};return true;}
   if(m.shotCooldown>0||!['light','skill'].includes(type))return false;
   const reach=type==='skill'?5.2:3.6;
   m.shotCooldown=type==='skill'?.87:.38;
-  if(Math.abs(g.player.x-g.boss.x)<=reach){
-   deal(g,type==='skill'?188:104,emit);
-   g.boss.x=clamp(g.boss.x+.6,-16,17);
-  }
+  m.playerStrike={age:0,reach,damage:type==='skill'?188:104};
   return true;
  }
  if(m.kind==='shooter'){
   if(type==='roll'){
    m.guard=.43;m.invulnerable=.43;
-   g.player.x=clamp(g.player.x-2.8,-19,19);
+   m.dash={left:.3,vx:-9};
    return true;
   }
   if(m.shotCooldown>0||!['light','skill'].includes(type))return false;
@@ -173,12 +174,15 @@ export function actGyuwonMusical(g,type,emit=()=>{}){
 function tickTurn(g,m,dt,emit){
  if(m.turn==='boss'){
   m.turnTime+=dt;m.turnWind-=dt;
+  const q=clamp(m.turnTime/1.2,0,1),k=q*q*(3-2*q);
+  g.boss.x=m.turnOrigin+(g.player.x+2.8-m.turnOrigin)*k;
   if(m.turnWind<=0){
-   if(!m.turnGuard&&m.guard<=0)take(g,m.turnMove==='crescendo'?27:19,emit);
+   if(!m.turnGuard&&m.guard<=0&&near(g.player,g.boss,4.15))take(g,m.turnMove==='crescendo'?27:19,emit);
    else{m.success++;emit('gyuwon-musical-parry');}
    m.turn='recover';m.turnTime=.45;
   }
  }else if(m.turn==='recover'){
+  g.boss.x+=(m.turnOrigin-g.boss.x)*Math.min(1,dt*9);
   m.turnTime-=dt;if(m.turnTime<=0)m.turn='player';
  }
 }
@@ -205,11 +209,14 @@ function tickRunner(g,m,dt,emit){
   }
  }
  m.obstacles=m.obstacles.filter(o=>o.x>-21);
+ for(const shot of m.bullets){shot.x+=24*dt;shot.life-=dt;
+  if(near(shot,g.boss,1.6)){shot.life=0;deal(g,shot.damage,emit);}}
+ m.bullets=m.bullets.filter(o=>o.life>0);
 }
 function tickArmy(g,m,dt,emit){
  m.money=clamp(m.money+dt*19,0,220);
  m.enemySpawn-=dt;
- if(m.enemySpawn<=0){
+ if(m.enemySpawn<=0&&m.units.length<48){
   m.enemySpawn=2.05+(m.success%3)*.36;
   m.units.push({id:g.nextId++,team:-1,x:17,z:0,hp:55+(m.success%4)*12,
    attack:16,range:2.7,speed:1.5,cool:.4,role:'enemy'});
@@ -232,31 +239,22 @@ function tickArmy(g,m,dt,emit){
  g.player.x=-19;g.boss.x=19;
 }
 function tickRhythm(g,m,dt,emit,finale=false){
- m.beatTime+=dt;
+ const chart=GYUWON_BEATS[m.year]?.notes||[];
  if(m.note){
-  m.note.time-=dt;
-  if(m.note.time<-.27){
-   if(!m.note.done){m.combo=0;take(g,finale?25:19,emit);}
-   m.note=null;
-  }
+  m.note.time=m.note.at-m.time;
+  if(m.note.time<-.27){if(!m.note.done){m.combo=0;take(g,finale?20:16,emit);}m.note=null;}
  }
- if(!m.note&&m.beatTime>=.19){
-  m.beatTime=0;
-  const cycle=m.noteCount++;
-  const keys=finale?['light','roll','light','skill','light','light','roll','skill']:
-   ['light','light','roll','light','skill','light','roll','light'];
-  m.note={key:keys[cycle%keys.length],time:1.05,done:false,
-   index:cycle%4};
+ while(!m.note&&m.chartIndex<chart.length){
+  const beat=chart[m.chartIndex];
+  if(beat.at<m.time-.27){m.chartIndex++;continue;}
+  if(beat.at-m.time>1.05)break;
+  m.chartIndex++;m.note={at:beat.at,time:beat.at-m.time,key:beat.key,index:beat.lane,done:false};
  }
- if(finale){
-  // The final show changes its choreographed light/wall beat without
-  // replacing the player controls or throwing in unexplained death hits.
-  m.finaleStep=Math.floor(m.time/5)%6;
- }
+ if(finale)m.finaleStep=Math.floor(m.time/5)%6;
 }
 function tickFighter(g,m,dt,input,emit){
  const p=g.player,b=g.boss;
- p.x=clamp(p.x+clamp(input.x,-1,1)*7.8*dt,-18,17);
+ p.x=clamp(p.x+clamp(input.x??0,-1,1)*7.8*dt,-18,17);
  const reach=Math.abs(p.x-b.x);
  m.fightCooldown-=dt;m.fightWind-=dt;
  if(m.fightWind<=0&&m.fightAttack){
@@ -273,8 +271,8 @@ function tickFighter(g,m,dt,input,emit){
 }
 function tickShooter(g,m,dt,input,emit){
  const p=g.player,b=g.boss;
- p.x=clamp(p.x+clamp(input.x,-1,1)*8*dt,-19,19);
- p.z=clamp(p.z+clamp(input.z,-1,1)*8*dt,-14,14);
+ p.x=clamp(p.x+clamp(input.x??0,-1,1)*8*dt,-19,19);
+ p.z=clamp(p.z+clamp(input.z??0,-1,1)*8*dt,-14,14);
  b.z=Math.sin(m.time*.85)*3.8;b.x=10+Math.sin(m.time*.5)*1.1;
  m.enemyWind-=dt;
  if(m.enemyWind<=0){
@@ -303,59 +301,75 @@ function tickShooter(g,m,dt,input,emit){
  m.enemyShots=m.enemyShots.filter(s=>s.life>0&&Math.abs(s.x)<25&&Math.abs(s.z)<25);
  p.yaw=angle(p,b);b.yaw=angle(b,p);
 }
+
+function clearAct(g,m){
+ g.gyuwon.hazards.length=0;g.projectiles.length=0;
+ m.enemyShots=[];m.bullets=[];m.obstacles=[];m.units=[];m.note=null;
+}
+function beginCurtain(g,m,emit){
+ clearAct(g,m);m.finishing=true;m.curtain=0;m.time=0;m.clock=null;
+ m.dialogue='';m.transition=0;g.gyuwon.years.mode='curtain';
+ emit('gyuwon-musical-curtain',{year:11});
+}
+function tickStrike(g,m,dt,emit){
+ const a=m.playerStrike;if(!a)return;a.age+=dt;
+ if(m.kind==='turn'){
+  const q=Math.min(1,a.age/.42),back=Math.max(0,Math.min(1,(a.age-.65)/.4));
+  g.player.x=a.home+(g.boss.x-2.8-a.home)*Math.sin(q*Math.PI/2)*(1-back);
+ }
+ if(!a.hit&&a.age>=.44){a.hit=true;
+  if(near(g.player,g.boss,a.reach||3.6))deal(g,a.damage,emit);
+ }
+ if(a.age>=1.05)m.playerStrike=null;
+}
 export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={}){
  const e=g?.gyuwon?.years,m=e?.musical;
  if(!m||g.status!=='playing')return;
- dt=clamp(dt,0,1/30);m.time+=dt;
+ const realDt=clamp(dt,0,1/30),song=GYUWON_SONGS[gyuwonSongKey(m)];
+ // Finite audio position is authoritative. Buffering freezes gameplay too.
+ dt=m.clock&&['media','fallback'].includes(m.clock.source)?Math.max(0,Math.min(.05,m.clock.time-m.time)):realDt;
+ if(m.clock?.ended)m.time=m.clock.duration;else m.time+=dt;
+ const duration=m.clock?.duration||song.duration;
+ const ended=m.clock?m.clock.ended:m.time>=duration;
+ if(m.finishing){
+  m.curtain=m.time;
+  const start=duration*.8;
+  g.boss.hp=800*(1-clamp((m.time-start)/Math.max(.01,duration-start),0,1));
+  if(ended){g.boss.hp=0;g.boss.state='dead';g.status='won';emit('victory');}
+  return;
+ }
+ if(ended&&!m.songEnded){
+  m.songEnded=true;m.settle=0;m.settleFrom=g.boss.hp;
+  // Keep the last pose visible while old damage ownership is removed.
+  for(const o of [...m.enemyShots,...m.bullets,...m.obstacles,...m.units])o.damage=0;
+  emit('gyuwon-song-ended',{year:e.year,target:song.target});
+ }
+ if(m.songEnded){
+  tickStrike(g,m,realDt,emit);
+  m.settle=Number.isFinite(m.clock?.afterEnd)?m.clock.afterEnd:m.settle+realDt;const q=clamp(m.settle/1.1,0,1),ease=q*q*(3-2*q);
+  g.boss.hp=m.settleFrom+(song.target-m.settleFrom)*ease;
+  if(q===1){g.boss.hp=song.target;clearAct(g,m);
+   if(e.year===11)beginCurtain(g,m,emit);else advance();}
+  return;
+ }
+ if(dt<=0)return;
  m.transition=Math.max(0,m.transition-dt);
  m.guard=Math.max(0,m.guard-dt);m.invulnerable=Math.max(0,m.invulnerable-dt);
  m.shotCooldown=Math.max(0,m.shotCooldown-dt);m.hitFlash=Math.max(0,m.hitFlash-dt);
  g.player.invuln=Math.max(0,g.player.invuln-dt);
- if(m.finishing){
-  m.curtain+=dt;
-  g.boss.hp=Math.max(0,800*(1-clamp((m.curtain-13)/4,0,1)));
-  const lines=[
-   [1.4,'한 소년은 아주 오랫동안 달렸습니다.'],
-   [5.2,'수많은 세상을 여행했지만, 자신의 꿈은 아직 찾지 못했지요.'],
-   [9.0,'그는 마지막으로 무대에 서서 조용히 물었습니다.'],
-   [12.0,'나도… 뭔가 되고 싶었는데.'],
-   [15.0,'그렇게 소년의 긴 공연이 끝났습니다.']
-  ];
-  for(let i=m.curtainLine;i<lines.length;i++)if(m.curtain>=lines[i][0]){
-   m.curtainLine=i+1;m.dialogue=lines[i][1];
-   m.dialogueUntil=m.time+3.45;emit('gyuwon-musical-dialogue',{line:m.dialogue,year:11});
-  }
-  if(m.curtain>=17.6){
-   g.boss.hp=0;g.boss.state='dead';g.status='won';emit('victory');
-  }
+ if(m.dash){const d=m.dash,step=Math.min(dt,d.left);g.player.x=clamp(g.player.x+d.vx*step,-19,19);d.left-=step;if(d.left<=0)m.dash=null;}
+ if(m.transition>0){
+  const q=1-m.transition/2.7,k=q*q*(3-2*q),a=m.entry;
+  if(a){g.player.x=a.px+(a.tx-a.px)*k;g.player.z=a.pz+(a.tz-a.pz)*k;g.boss.x=a.bx+(a.btx-a.bx)*k;g.boss.z=a.bz+(a.btz-a.bz)*k;}
   return;
  }
- if(m.transition>0)return;
- if(e.year===11&&g.boss.hp<=800){
-  // The last 800 HP is not a surprise new fight: it is a locked,
-  // unskippable narrative ending. Clear ALL live projectiles.
-  m.finishing=true;m.curtain=0;m.curtainLine=0;m.dialogue='…이제, 무대가 끝나는 걸까?';
-  m.dialogueUntil=m.time+2.7;e.mode='curtain';
-  g.gyuwon.hazards.length=0;m.enemyShots=[];m.bullets=[];m.obstacles=[];m.units=[];
-  emit('gyuwon-musical-curtain',{year:11});
-  emit('gyuwon-musical-dialogue',{line:m.dialogue,year:11});
-  return;
- }
- const inputs=input||{};
+ tickStrike(g,m,dt,emit);
  if(m.kind==='turn')tickTurn(g,m,dt,emit);
  else if(m.kind==='runner')tickRunner(g,m,dt,emit);
  else if(m.kind==='army')tickArmy(g,m,dt,emit);
  else if(m.kind==='rhythm')tickRhythm(g,m,dt,emit);
- else if(m.kind==='fighter')tickFighter(g,m,dt,inputs,emit);
- else if(m.kind==='shooter')tickShooter(g,m,dt,inputs,emit);
+ else if(m.kind==='fighter')tickFighter(g,m,dt,input||{},emit);
+ else if(m.kind==='shooter')tickShooter(g,m,dt,input||{},emit);
  else if(m.kind==='finale')tickRhythm(g,m,dt,emit,true);
- if(g.status!=='playing')return;
- // Never ask for a random examination grade again after act four.
- // A short curtain bridge gives the stage and camera time to change
- // without an abrupt jump to another set of controls.
- if(g.boss.hp<=annualFloor(g)+.000001){
-  if(!Number.isFinite(m.nextAct))m.nextAct=1.3;
-  m.nextAct-=dt;if(m.nextAct<=0){advance();return;}
- }
- syncAnnualHealth(g);
+ e.day=Math.max(0,Math.ceil(365*(1-m.time/duration)));
 }

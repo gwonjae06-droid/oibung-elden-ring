@@ -1,16 +1,15 @@
-// The year is a narrative milestone, not temporary invulnerability.
-// Real HP loss advances the displayed milestone. Time and surplus hits do not.
+// Four physical HP milestones lead into seven song-owned performance milestones.
 export const GYUWON_CALENDAR_SECONDS=48;
  // The live fight reserves only 1,000 HP for years 1-4; seven musical
  // scenes then receive 600 HP each, followed by the 800 HP ending.
  export const GYUWON_OPENING_YEAR_HP=250;
- export const GYUWON_MUSICAL_ACT_HP=600;
+ export const GYUWON_MUSICAL_ACT_HP=700;
  export const GYUWON_MUSICAL_ENDING_HP=800;
  export const GYUWON_MUSICAL_TOTAL_HP=4*GYUWON_OPENING_YEAR_HP+
-  7*GYUWON_MUSICAL_ACT_HP+GYUWON_MUSICAL_ENDING_HP;
+  6*GYUWON_MUSICAL_ACT_HP+1000+GYUWON_MUSICAL_ENDING_HP;
  export const annualBudget=g=>g.gyuwon.years?.legacyAnnual?
   g.boss.maxHp*.065:g.gyuwon.years?.year<=4?
-  GYUWON_OPENING_YEAR_HP:GYUWON_MUSICAL_ACT_HP;
+  GYUWON_OPENING_YEAR_HP:g.gyuwon.years?.year===11?1000:GYUWON_MUSICAL_ACT_HP;
 export function annualFloorForYear(g,year){
   const e=g.gyuwon.years;
   // Historical challenge probes still use their original year milestones.
@@ -19,9 +18,9 @@ export function annualFloorForYear(g,year){
    return g.boss.maxHp*(1-.065*year);
   }
   const early=Math.min(4,Math.max(0,year));
-  const musical=Math.min(7,Math.max(0,year-4));
+  const musical=Math.min(6,Math.max(0,year-4));
   return Math.max(GYUWON_MUSICAL_ENDING_HP,
-   g.boss.maxHp-early*GYUWON_OPENING_YEAR_HP-musical*GYUWON_MUSICAL_ACT_HP);
+   g.boss.maxHp-early*GYUWON_OPENING_YEAR_HP-musical*GYUWON_MUSICAL_ACT_HP-(year>=11?1000:0));
  }
 export const annualFloor=g=>annualFloorForYear(g,g.gyuwon.years.year);
 // The bar is an HP milestone. Wall time and extra hits at the floor never advance it.
@@ -38,6 +37,7 @@ export function syncAnnualHealth(g){
 }
 export function acceptAnnualDamage(g,amount,{dot=false}={}){
  const e=g.gyuwon.years,b=g.boss,budget=annualBudget(g),damage=Math.max(0,Number.isFinite(amount)?amount:0);
+ if(!e.legacyAnnual&&e.year>=5)return {health:0,credit:0,pressure:0,calendarSeconds:0,accepted:0};
  // The final show owns its last 800 HP; a stray melee/DoT tick cannot
  // bypass the unskippable, character-driven ending.
  const floor=e.mode==='exam'&&e.legacyAnnual?annualFloorForYear(g,e.year+1):

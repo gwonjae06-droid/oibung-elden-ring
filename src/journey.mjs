@@ -120,7 +120,13 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   let t=null,timer=null;
   try{
    t=make();transition=t;
-   const limit=new Promise(resolve=>{timer=(win.setTimeout||globalThis.setTimeout)(()=>resolve('timeout'),TRANSITION_LIMIT_MS);});
+   const limit=new Promise(resolve=>{
+    let activeMs=0,lastWatch=Date.now();
+    const watch=()=>{const now=Date.now();if(!doc.hidden)activeMs+=now-lastWatch;lastWatch=now;
+     if(activeMs>=(t.watchdogMilliseconds||TRANSITION_LIMIT_MS))resolve('timeout');
+     else timer=(win.setTimeout||globalThis.setTimeout)(watch,250);
+    };timer=(win.setTimeout||globalThis.setTimeout)(watch,250);
+   });
    if(await Promise.race([t.finished,limit])==='timeout')throw Error('Cinematic timed out');
    return true;
   }catch(error){
@@ -153,6 +159,9 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    return;
   }
   if(outcome==='flame'||outcome==='complete'){
+   if(outcome==='complete'){
+    await closeBattle();await completeJourney();return;
+   }
    pendingReward={name,complete:outcome==='complete'};
    memory(BOSSES[r.stage],outcome==='complete');return;
   }

@@ -1,104 +1,61 @@
 import {audioChannelGain} from './audio-preferences.mjs';
+import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 
-// Original, instrumental Broadway-style orchestral sketch, NOT a copy of a
-// Disney recording or tune. Sample-free warm strings/brass/piano voicings,
-// soft percussion and room convolution. A mastered instrumental MP3 can later
-// replace this score without changing the stage/camera/gameplay contracts.
-const SONG=Object.freeze([0,2,4,7,9,7,4,2,5,7,9,12,11,9,7,4,
-  4,5,7,11,12,9,7,5,2,4,7,9,7,4,2,0]);
-const PRELUDE=Object.freeze([0,3,7,5,3,0,-2,0,2,5,7,5,3,2,0,-2]);
-const LAMENT=Object.freeze([0,-2,-3,-7,-5,-3,-2,-5,-7,-10,-8,-7,-3,-5,-7,-12]);
-const midi=n=>440*Math.pow(2,(n-69)/12);
-export function createGyuwonMusicalScore(makeContext=()=>null){
- let ctx=null,master=null,rev=null,next=0,beat=0,section='',disposed=false;
- let noise=null,voiceCount=0;
- function ensure(){
+// Combat reads this media clock. Muting changes gain; pausing preserves position.
+export function createGyuwonMusicalScore(makeAudio=url=>new Audio(url),now=()=>performance.now()/1000){
+ let owner=null,key=null,current=null,disposed=false,enabled=false;
+ const cache=new Map();
+ function release(a){a.onended=a.onerror=null;a.pause();a.removeAttribute?.('src');a.load?.();}
+ function get(id){
+  if(cache.has(id))return cache.get(id);
+  const file=id==='prelude'?'swordbgm.mp3':GYUWON_SONGS[id].file;
+  const a=makeAudio(new URL('../assets/music/'+file,import.meta.url).href);
+  a.preload='auto';a.loop=id==='prelude';cache.set(id,a);return a;
+ }
+ function clear(){for(const a of cache.values())release(a);cache.clear();current=null;key=null;}
+ function select(g,id){
+  current?.audio.pause();key=id;
+  const audio=get(id),m=g.gyuwon.years?.musical;
+  current={audio,model:m,clock:{time:0,duration:GYUWON_SONGS[id]?.duration||0,ended:false,source:'media',afterEnd:0},lastTime:0,lastProgress:now(),lastTick:now(),wasEnded:false,fallback:false,pending:false};
+  const entry=current;audio.currentTime=0;
+  audio.onended=()=>{if(current===entry&&enabled&&!entry.fallback&&!audio.loop)entry.clock.ended=true;};
+  audio.onerror=()=>fallback(entry);
+  if(m)m.clock=entry.clock;
+  const next=typeof id==='number'?(id<11?id+1:'ending'):null;
+  for(const [k,a]of cache)if(k!==id&&k!==next){release(a);cache.delete(k);}
+  if(next)get(next);
+ }
+ function fallback(entry){
+  if(current!==entry||entry.fallback)return;
+  entry.fallback=true;entry.audio.pause();entry.clock.source='fallback';
+  entry.clock.time=Math.max(entry.clock.time,entry.model?.time||0);
+ }
+ function bridge(entry){
+  const stamp=now(),delta=Math.max(0,stamp-entry.lastTick);entry.lastTick=stamp;
+  if(entry.clock.ended){if(entry.wasEnded)entry.clock.afterEnd+=delta;entry.wasEnded=true;}
+ }
+ function update(g,{enabled:active=true,muted=false}={}){
   if(disposed)return false;
-  if(ctx)return true;
-  try{
-   ctx=makeContext();
-   if(!ctx)return false;
-   master=ctx.createGain();master.gain.value=0;
-   const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=5400;
-   master.connect(filter);filter.connect(ctx.destination);
-   rev=ctx.createConvolver();
-   const seconds=1.15,len=Math.ceil(ctx.sampleRate*seconds),ir=ctx.createBuffer(2,len,ctx.sampleRate);
-   for(let k=0;k<2;k++){
-    const samples=ir.getChannelData(k);
-    for(let i=0;i<len;i++){
-     const t=i/len;
-     samples[i]=(Math.random()*2-1)*Math.pow(1-t,3)*.22;
-    }
-   }
-   rev.buffer=ir;const wet=ctx.createGain();wet.gain.value=.24;
-   master.connect(rev);rev.connect(wet);wet.connect(ctx.destination);
-   noise=ctx.createBuffer(1,Math.floor(ctx.sampleRate*.2),ctx.sampleRate);
-   const n=noise.getChannelData(0);for(let i=0;i<n.length;i++)n[i]=(Math.random()*2-1)*Math.exp(-i/n.length*9);
-   next=ctx.currentTime+.06;
-   return true;
-  }catch(error){try{ctx?.close?.();}catch{}ctx=null;return false;}
- }
- function tone(note,time,duration,voice='strings',loudness=.1){
-  if(!ctx||!master||voiceCount>90)return;
-  const oscillator=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
-  const hz=midi(note),isBrass=voice==='brass',isPiano=voice==='piano';
-  oscillator.type=isBrass?'sawtooth':isPiano?'triangle':'sawtooth';
-  oscillator.frequency.setValueAtTime(hz,time);
-  filter.type='lowpass';filter.frequency.setValueAtTime(isBrass?2200:isPiano?3100:1250,time);
-  filter.Q.value=isBrass?.8:.2;
-  const attack=isPiano?.012:isBrass?.045:.14;
-  gain.gain.setValueAtTime(.0001,time);
-  gain.gain.exponentialRampToValueAtTime(Math.max(.0002,loudness),time+attack);
-  if(isPiano)gain.gain.exponentialRampToValueAtTime(.0002,time+duration*.91);
-  else{
-   gain.gain.setValueAtTime(Math.max(.0002,loudness),time+Math.max(attack,duration*.72));
-   gain.gain.exponentialRampToValueAtTime(.0002,time+duration);
-  }
-  oscillator.connect(filter);filter.connect(gain);gain.connect(master);
-  oscillator.start(time);oscillator.stop(time+duration+.02);voiceCount++;
-  oscillator.onended=()=>{voiceCount--;oscillator.disconnect();filter.disconnect();gain.disconnect();};
- }
- function drums(time,heavy=false){
-  if(!ctx||!noise)return;
-  const source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
-  source.buffer=noise;filter.type='lowpass';filter.frequency.value=heavy?360:900;
-  gain.gain.setValueAtTime(heavy?.12:.045,time);
-  gain.gain.exponentialRampToValueAtTime(.0001,time+.15);
-  source.connect(filter);filter.connect(gain);gain.connect(master);
-  source.start(time);source.stop(time+.17);source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};
- }
- function schedule(mode,index,time,year){
-  const minor=mode!=='musical',line=mode==='lament'?LAMENT:minor?PRELUDE:SONG;
-  const base=mode==='lament'?60:mode==='prelude'?59:60;
-  const note=base+line[index%line.length];
-  const pulse=mode==='prelude'?.62:mode==='lament'?.88:.38;
-  const toneName=mode==='lament'?'strings':mode==='prelude'?'piano':index%4===0?'brass':'strings';
-  tone(note,time,pulse*1.7,toneName,mode==='lament'?.072:minor?.09:.072);
-  if(index%2===0)tone(base-12+[0,5,9,7][Math.floor(index/4)%4],
-   time,pulse*3.3,'strings',mode==='lament'?.055:.052);
-  if(!minor&&index%4===0){
-   const chord=[0,4,7];for(const part of chord)tone(base-3+part,time,pulse*3.3,'strings',.042);
-  }
-  if(!minor&&index%2===0)drums(time,index%4===0);
- }
- function update(g,{enabled=true,muted=false}={}){
-  if(!enabled||muted||disposed){if(master&&ctx)master.gain.setTargetAtTime(0,ctx.currentTime,.045);return false;}
-  if(!ensure())return false;
-  try{if(ctx.state==='suspended')ctx.resume().catch(()=>{});}catch{}
-  const e=g?.gyuwon?.years;
-  const mode=e?.musical?.finishing?'lament':e?.year>=5?'musical':'prelude';
-  const key=mode+':'+(mode==='musical'?e.year:0);
-  if(section!==key){section=key;beat=0;next=ctx.currentTime+.12;}
-  master.gain.setTargetAtTime(.18*audioChannelGain('music'),ctx.currentTime,.18);
-  const tempo=mode==='lament'?.77:mode==='prelude'?.72:
-   e.year===8?.54:e.year===11?.46:.43;
-  let guard=0;
-  while(next<ctx.currentTime+.15&&guard++<6){
-   schedule(mode,beat++,next,e.year);next+=tempo;
+  if(owner!==g){clear();owner=g;}
+  enabled=active;
+  const m=g?.gyuwon?.years?.musical,id=m?gyuwonSongKey(m):'prelude';
+  if(key!==id)select(g,id);
+  const e=current,a=e.audio;
+  a.muted=muted;a.volume=(id==='prelude'?.24:.7)*audioChannelGain('music');
+  if(!active){a.pause();e.lastProgress=e.lastTick=now();return true;}
+  if(e.fallback){e.clock.time+=Math.max(0,now()-e.lastTick);e.clock.ended=e.clock.time>=e.clock.duration;bridge(e);return false;}
+  if(Number.isFinite(a.duration)&&a.duration>0)e.clock.duration=a.duration;
+  if(Number.isFinite(a.currentTime))e.clock.time=Math.max(e.clock.time,a.currentTime);
+  if(a.ended&&!a.loop)e.clock.ended=true;bridge(e);
+  if(e.clock.time>e.lastTime+.005){e.lastTime=e.clock.time;e.lastProgress=now();}
+  if(!e.clock.ended&&now()-e.lastProgress>6)fallback(e);
+  if(a.paused&&!e.clock.ended&&!e.pending&&!e.fallback){
+   e.pending=true;
+   try{Promise.resolve(a.play()).catch(()=>fallback(e)).finally(()=>{e.pending=false;if(!enabled||current!==e)a.pause();});}
+   catch{e.pending=false;fallback(e);}
   }
   return true;
  }
- function stop(){if(master&&ctx)master.gain.setTargetAtTime(0,ctx.currentTime,.035);}
- function dispose(){if(disposed)return;disposed=true;stop();try{ctx?.close?.();}catch{}ctx=null;}
- return {update,stop,dispose,get mode(){return section;}};
+ function stop(){enabled=false;current?.audio.pause();if(current)current.lastProgress=current.lastTick=now();}
+ return {update,stop,dispose(){if(disposed)return;disposed=true;stop();clear();},get mode(){return key;}};
 }

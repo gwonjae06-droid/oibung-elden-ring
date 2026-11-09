@@ -197,7 +197,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
  let rideBlend=0;
  const motion=createGyuwonMotionDirector();
  return {root,update(g,death=0,dt=0){
-  const s=g.gyuwon,b=g.boss,p=motion.update(g,dt),t=Number.isFinite(g.time)?g.time:0;
+  const s=g.gyuwon,b=g.boss,p=motion.update(g,dt),t=s.years?.musical?.time??(Number.isFinite(g.time)?g.time:0);
   const years=s.years,weapon=gyuwonWeaponPose(years,s.hazards);
   const mounted=ridePose(years);
   const mountTarget=mounted?1:0;
@@ -212,6 +212,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const rider=mounted?rideFrame(mounted):null;
   root.position.set(rider?.x??b.x,g.status==='won'?death*death*1.5:rider?.y||0,rider?.z??b.z);
   root.rotation.set(rider?.pitch||0,p.facing,rider?.bank||0,'YXZ');
+  if(years?.musical?.finishing)root.position.y-=.72*Math.min(1,years.musical.curtain/8);
   const roll=s.years?.dodge;
   if(roll)root.rotation.z=Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);

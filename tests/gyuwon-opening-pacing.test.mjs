@@ -14,17 +14,17 @@ const create=()=>{
  g.player.invuln=10000;
  return g;
 };
-test('live Gyuwon total HP is 6000; years 1-4 consume exactly 1000 in four 250-HP milestones',()=>{
+test('live Gyuwon total HP is 7000; years 1-4 consume exactly 1000 in four 250-HP milestones',()=>{
  const g=create();
  assert.equal(g.boss.maxHp,GYUWON_MUSICAL_TOTAL_HP);
- assert.equal(g.boss.maxHp,6000);
+ assert.equal(g.boss.maxHp,7000);
  assert.equal(GYUWON_OPENING_YEAR_HP,250);
  for(let year=1;year<=4;year++){
-  assert.equal(annualFloorForYear(g,year),6000-year*250);
+  assert.equal(annualFloorForYear(g,year),7000-year*250);
  }
- assert.equal(annualFloorForYear(g,4),5000);
- for(let year=5;year<=11;year++){
-  assert.equal(annualFloorForYear(g,year),5000-(year-4)*GYUWON_MUSICAL_ACT_HP);
+ assert.equal(annualFloorForYear(g,4),6000);
+ for(let year=5;year<=10;year++){
+  assert.equal(annualFloorForYear(g,year),6000-(year-4)*GYUWON_MUSICAL_ACT_HP);
  }
  assert.equal(annualFloorForYear(g,11),GYUWON_MUSICAL_ENDING_HP);
 });
@@ -51,17 +51,17 @@ test('all random grade outcomes have zero HP effect and no deferred overflow',()
 test('final exam subject cannot restore boss HP and attacks cannot lower HP during exam',()=>{
  const g=create(),e=g.gyuwon.years;
  damageGyuwon(g,100000);
- assert.equal(g.boss.hp,5750);
+ assert.equal(g.boss.hp,6750);
  e.signatureUsed=true;e.cast=null;e.recover=0;e.day=0;
  stepGyuwon(g,.03);
  assert.equal(e.mode,'exam');
  assert.equal(damageGyuwon(g,7777),0);
  advance(g,GYUWON_LIVE_SUBJECT_SECONDS*5+.3);
  assert.equal(e.mode,'result');
- assert.equal(g.boss.hp,5750);
+ assert.equal(g.boss.hp,6750);
  assert.equal(e.inquiry,null);
 });
-test('three short exams and fourth-year seamless entry into the musical leave 5000 HP',()=>{
+test('three short exams and fourth-year seamless entry into the musical leave 6000 HP',()=>{
  const g=create(),e=g.gyuwon.years;
  for(let year=1;year<=4;year++){
   assert.equal(e.year,year);
@@ -88,7 +88,7 @@ test('three short exams and fourth-year seamless entry into the musical leave 50
    assert.equal(e.year,5);
    assert.equal(e.mode,'musical');
    assert.equal(e.grade,null);
-   assert.equal(g.boss.hp,5000);
+   assert.equal(g.boss.hp,6000);
   }
  }
 });

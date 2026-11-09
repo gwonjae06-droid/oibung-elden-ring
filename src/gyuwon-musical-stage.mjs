@@ -9,6 +9,14 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  const ball=new THREE.SphereGeometry(1,coarse?10:18,coarse?8:12);
  const torus=new THREE.TorusGeometry(1,.105,coarse?6:10,coarse?18:28);
  const plane=new THREE.CircleGeometry(1,coarse?20:40);
+ const soldier=new THREE.LatheGeometry([[0,0],[.35,0],[.38,.12],[.18,.18],[.24,.6],[.32,.85],[.16,1],[.22,1.07],[.25,1.3],[.18,1.5],[0,1.52]].map(p=>new THREE.Vector2(...p)),coarse?16:32);
+ const boards=new THREE.Group();root.add(boards);
+ const oak=new THREE.MeshStandardMaterial({color:0x66503b,roughness:.72,metalness:.03});
+ for(let i=0;i<24;i++){const plank=new THREE.Mesh(box,oak);plank.position.set((i-11.5)*1.8,-.15,0);plank.scale.set(1.78,.22,28);plank.receiveShadow=true;boards.add(plank);}
+ const drape=new THREE.MeshStandardMaterial({color:0x471d28,roughness:1,side:THREE.DoubleSide});
+ const curtainGeo=new THREE.PlaneGeometry(12,15,coarse?24:64,8),pos=curtainGeo.attributes.position;
+ for(let i=0;i<pos.count;i++)pos.setZ(i,Math.sin(pos.getX(i)*3.2)*.35);curtainGeo.computeVertexNormals();
+ for(const side of [-1,1]){const fabric=new THREE.Mesh(curtainGeo,drape);fabric.position.set(side*24,7,-10);root.add(fabric);}
  const materials=[
   0xf4d18a,0xe87eb4,0x69acd6,0xa18eea,0xe86a67,0x73bfa0,0xe4c583,
   0x2c354a,0xffffff,0xffb66e,0x88c5f1,0xe1a1ea
@@ -35,7 +43,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   const o=cues[i];if(!o)return;
   o.visible=true;o.material=materials[Math.abs(color)%materials.length];
   o.position.set(x,y,z);o.scale.set(sx,sy,sz);
-  o.rotation.set(flat?-Math.PI/2:0,rotate,0);
+  o.rotation.set(flat?-Math.PI/2:0,rotate,0);if(flat){o.geometry=plane;o.scale.set(sx,sz,1);}
  }
  function update(g){
   if(disposed)return;
@@ -43,7 +51,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   root.visible=!!m&&g.status==='playing';
   if(!root.visible)return;
   const year=m.year,kind=m.kind,color=Math.max(0,year-5),t=m.time;
-  for(const o of cues)o.visible=false;
+  for(let i=0;i<cues.length;i++){const o=cues[i];o.visible=false;o.geometry=i%9===0?torus:i%3===0?box:ball;}
   const beatPhase=t*1.7;
   for(let i=0;i<spotlights.length;i++){
    const o=spotlights[i];
@@ -54,7 +62,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   }
   stageRing.visible=kind==='rhythm'||kind==='finale';
   if(stageRing.visible){
-   stageRing.position.set(g.boss.x,2.2+(Math.sin(t*3)*.2),g.boss.z);
+   stageRing.position.set(0,5.5+(Math.sin(t*3)*.12),-12);stageRing.rotation.x=0;
    const pulse=1+Math.sin(t*(kind==='finale'?7:5))*.08;
    stageRing.scale.set(3.1*pulse,3.1*pulse,3.1*pulse);
   }
@@ -65,8 +73,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     showAt(i,{x:Math.sin(a)*11,y:.08,z:Math.cos(a)*11,
      sx:2.4,sy:.065,sz:2.4,color,flat:true});
    }
-   if(m.turn==='boss')showAt(7,{x:g.boss.x-2.5,y:1,z:0,
-    sx:2.3,sy:3,sz:1,color:4});
+
   }else if(kind==='runner'){
    for(let i=-1;i<=1;i++)showAt(i+2,{x:i*13,y:.015,z:0,
     sx:4,sy:.05,sz:2.8,color:9});
@@ -84,6 +91,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     const u=m.units[i],c=u.team>0?2:4;
     showAt(i,{x:u.x,y:u.role==='roll'?1.1:.8,z:u.team*.28,
      sx:u.role==='roll'?.8:.65,sy:u.role==='roll'?1.1:.8,sz:.75,color:c});
+    cues[i].geometry=soldier;cues[i].position.y=0;
     if(u.role==='skill')showAt((i+78)%cues.length,{x:u.x,y:1.8,z:u.team*.28,
       sx:.2,sy:.85,sz:.2,color:6});
    }
@@ -103,8 +111,6 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   }else if(kind==='fighter'){
    if(m.fightAttack&&m.fightWind>0){
     // Readable physical attack cone at the location the boss will strike.
-    showAt(5,{x:g.boss.x-2.1,y:.08,z:0,
-     sx:3.5,sy:.06,sz:3.4,color:4,flat:true});
     showAt(6,{x:g.boss.x-2.6,y:1.3,z:0,
      sx:1.4,sy:.25,sz:.35,color:4});
    }
@@ -121,8 +127,9 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
    }
    if(m.enemyTarget){
     const p=m.enemyTarget;
-    showAt(70,{x:p.x,y:.09,z:p.z,
-     sx:1.65,sy:1.65,sz:1.65,color:4,flat:true});
+    const charge=.3+.7*Math.min(1,p.age/p.wind);
+    showAt(70,{x:g.boss.x-1,y:1.6,z:g.boss.z,
+     sx:charge,sy:charge,sz:charge,color:4});
    }
   }
   if(m.finishing){
@@ -135,7 +142,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  }
  function dispose(){
   if(disposed)return;disposed=true;root.removeFromParent();
-  for(const geo of [box,ball,torus,plane])geo.dispose();
+  for(const geo of [box,ball,torus,plane,soldier,curtainGeo])geo.dispose();oak.dispose();drape.dispose();
   for(const mat of materials)mat.dispose();
   soft.dispose();for(const s of spotlights)s.material.dispose();
  }

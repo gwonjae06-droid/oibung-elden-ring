@@ -31,6 +31,17 @@ export const GYUWON_GESTURES=Object.freeze({
 function annualExamMotion(g){
  const e=g?.gyuwon?.years,b=g?.boss;if(!e||!b)return null;
  const t=e.castT||0,charge=e.cast?Math.min(1,t/1.15):0;
+ if(e.musical){
+  const m=e.musical,beat=m.time*Math.PI*2/(60/(m.bpm||136)),sway=Math.sin(beat)*.16;
+  const closing=m.finishing,fall=closing?ease(m.curtain/9):0;
+  const wind=m.kind==='fighter'&&m.fightAttack?ease(1-m.fightWind/1.4):m.turn==='boss'?ease(1-m.turnWind/1.45):0;
+  const hit=m.hitFlash>0?.2:0;
+  return {lean:closing?-.75*fall:sway*.2+wind*.26-hit,twist:closing?0:sway+wind*.4,
+   headPitch:closing?.7*fall:-.12+sway*.25,headYaw:closing?0:sway*.4,
+   leftArm:closing?-.3:-.9-sway*2-wind*.45,rightArm:closing?-.3:-.9+sway*2-wind*1.1,
+   leftElbow:-.4-wind*.35,rightElbow:-.4-wind*.6,leftWrist:.1,rightWrist:-.1,
+   weightShift:closing?0:sway,book:-.8};
+ }
  if(e.mode==='exam'){
   const hand=Math.sin(g.time*17)*.14;
   return {lean:-.64,twist:-.05,headPitch:.45,headYaw:Math.sin(g.time*2)*.035,
@@ -217,7 +228,8 @@ export function createGyuwonMotionDirector(){
   const target=b.state==='pattern'||b.state==='transition'?b.yaw:Math.atan2(g.player.x-b.x,g.player.z-b.z);
   facing+=Math.atan2(Math.sin(target-facing),Math.cos(target-facing))*poseAlpha(8,h);
   const out=pose.step(gyuwonRawMotion(g),h,{owner:g,time:g.time,rate:b.state==='pattern'?22:11});
-  return {...out,steps:ridePose(g.gyuwon?.years)?0:speed,facing:ridePose(g.gyuwon?.years)?.yaw??(gyuwonWeaponPose(g.gyuwon?.years,g.gyuwon?.hazards).rifle?b.yaw:facing)};
+  const m=g.gyuwon?.years?.musical,musicalSteps=m&&!m.finishing?(m.kind==='runner'?.8:['rhythm','finale'].includes(m.kind)?Math.abs(Math.sin(m.time*Math.PI*m.bpm/60))*.7:0):0;
+  return {...out,steps:ridePose(g.gyuwon?.years)?0:Math.max(speed,musicalSteps),facing:ridePose(g.gyuwon?.years)?.yaw??(gyuwonWeaponPose(g.gyuwon?.years,g.gyuwon?.hazards).rifle?b.yaw:facing)};
  }
  return {update,reset};
 }

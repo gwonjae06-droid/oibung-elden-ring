@@ -1,4 +1,6 @@
 import {GYUWON_MUSICAL_ACTS} from './gyuwon-musical-genres.mjs';
+import {gyuwonSubtitleAt} from './gyuwon-subtitles.mjs';
+import {gyuwonSongKey} from './gyuwon-song-data.mjs';
 
 // All seven genres share one compact, responsive controller. Only game state
 // changes the UI; the UI cannot invent collision, damage or a fake result.
@@ -48,11 +50,13 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
  const beat=doc.createElement('div');beat.className='gy-musical-beat';beat.hidden=true;
  top.append(title,info,beat);
  const dialogue=doc.createElement('div');dialogue.className='gy-musical-dialogue';dialogue.hidden=true;
+ const english=doc.createElement('div'),korean=doc.createElement('div');english.className='gy-lyric-en';korean.className='gy-lyric-ko';dialogue.append(english,korean);
+ style.textContent+='\n.gy-musical-dialogue{bottom:clamp(116px,22vh,180px);padding:8px 14px;border-radius:5px;width:max-content;max-width:88vw;box-sizing:border-box;pointer-events:none}.gy-lyric-en{font:500 clamp(10px,1.45vw,17px)/1.5 system-ui;color:#fff;white-space:nowrap}.gy-lyric-ko{font:600 clamp(12px,1.7vw,21px)/1.5 system-ui;color:#ffefce;white-space:nowrap}.gy-musical-layer.curtain .gy-musical-dialogue{bottom:24%}.gy-musical-layer.curtain .gy-musical-actions,.gy-musical-layer.curtain .gy-musical-phases{display:none}.gy-musical-title{font-weight:600;font-size:clamp(12px,1.5vw,18px)}';
  const actions=doc.createElement('div');actions.className='gy-musical-actions';
  const btns=TYPES.map((type,index)=>{
   const btn=doc.createElement('button');btn.type='button';btn.dataset.musicalAction=type;
   btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!btn.disabled)onAction(type);});
-  actions.appendChild(btn);return btn;
+  btn.addEventListener('click',e=>{if(e.detail===0&&!btn.disabled)onAction(type);});actions.appendChild(btn);return btn;
  });
  wrap.append(phases,top,dialogue,actions);shell.appendChild(wrap);
  let lastKind=null,lastTitle='',currentYear=0;
@@ -69,7 +73,7 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
   if(lastKind!==m.kind){lastKind=m.kind;
    btns.forEach((b,i)=>b.textContent=BUTTONS[m.kind]?.[i]||TYPES[i]);
   }
-  btns.forEach(b=>b.disabled=paused||m.transition>0||isCurtain);
+  btns.forEach(b=>b.disabled=paused||m.transition>0||m.songEnded||isCurtain);
   const period=m.transition>0?m.title:e.year+'수 · '+GYUWON_MUSICAL_ACTS[e.year].name;
   if(period!==lastTitle){title.textContent=period;lastTitle=period;}
   const status=m.kind==='turn'?m.turn==='player'?'당신의 차례':m.turn==='boss'?'최규원의 차례':'다음 턴':
@@ -78,7 +82,7 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
    m.kind==='fighter'?'연속 공격 '+m.combo:
    m.kind==='shooter'?'발사체 '+m.bullets.length+' · 회피':
    '콤보 '+m.combo;
-  info.textContent=status;
+  info.textContent=status+' · '+m.score;
   const hasNote=!!m.note&&!m.note.done&&['rhythm','finale'].includes(m.kind);
   beat.hidden=!hasNote;
   if(hasNote){
@@ -87,9 +91,10 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
    beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';
    beat.dataset.note=m.note.key;
   }
-  const showLine=g.time>=0&&(m.time<m.dialogueUntil||isCurtain&&m.curtain<16.5);
-  dialogue.hidden=!showLine||!m.dialogue;
-  if(showLine&&dialogue.textContent!==m.dialogue)dialogue.textContent=m.dialogue;
+  const cue=gyuwonSubtitleAt(gyuwonSongKey(m),m.time);
+  dialogue.hidden=!cue;
+  english.textContent=cue?.en||'';korean.textContent=cue?.ko||'';
+  wrap.style.background=isCurtain?'rgba(0,0,0,'+Math.max(0,Math.min(1,(m.curtain-41)/4))+')':'';
  }
  return {update,onAction(fn){onAction=fn;},dispose(){wrap.remove();style.remove();}};
 }

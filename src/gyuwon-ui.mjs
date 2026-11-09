@@ -18,7 +18,7 @@ export function createGyuwonUi({coarse=false,doc=globalThis.document}={}){
  const yearsHud=createGyuwonYearsHud(doc,shell);
  const musicalHud=createGyuwonMusicalHud(doc,shell);
  const musicStyle=doc.createElement('style');
- musicStyle.textContent='[data-musical="on"] .touch-actions{display:none!important}[data-musical="on"] #reticle{display:none!important}';
+ musicStyle.textContent='[data-musical="on"] .touch-actions{display:none!important}[data-musical="on"] #reticle{display:none!important}[data-musical="on"] #skill-hud,[data-musical="on"] #lock-label{display:none!important}[data-musical="on"] #player-hud{max-width:250px;padding:10px}[data-musical="on"] .brand{max-width:220px}@media(max-height:500px){[data-musical="on"] #player-hud{max-width:180px;font-size:10px}}[data-musical-ending="on"] #world{opacity:0}[data-musical-ending="on"] .brand,[data-musical-ending="on"] #pause{visibility:hidden}';
  shell.appendChild(musicStyle);
  let disposed=false;const styles=loadBattleStyles(root,doc,['../style.css?v=ui-safe-layout-v2-20261107','../skills.css?v=ui-refine-20261107'].map(path=>new URL(path,import.meta.url))),ready=styles.ready.then(ok=>{if(!disposed)shell.style.visibility='';return ok;});doc.body.appendChild(d);
  function mode(value){$('menu').hidden=true;$('pause-screen').hidden=value!=='paused';$('result').hidden=value!=='result';for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;$('touch').hidden=!coarse||value!=='playing';$('pause').disabled=!['playing','paused'].includes(value);}
@@ -26,8 +26,10 @@ export function createGyuwonUi({coarse=false,doc=globalThis.document}={}){
    const fill=$('boss-fill');
    fill.style.background=s.years.musical?s.years.musical.color:'';
    const musical=!!s.years.musical;
-   shell.dataset.musical=musical?'on':'off';
+   shell.dataset.musical=musical?'on':'off';shell.dataset.musicalEnding=musical&&g.status==='won'?'on':'off';shell.style.background=musical&&g.status==='won'?'#000':'';
    $('controls').hidden=musical;
+   const closing=s.years.musical?.finishing,fade=closing?Math.max(0,1-(s.years.musical.curtain-27)/9):1;
+   $('boss-hud').style.opacity=$('player-hud').style.opacity=String(fade);
    return;}$('boss-hud').querySelector('h2').textContent=b.phase>=2?R.phaseName:R.name;$('phase-label').textContent=b.phase===3?'세 번째 단계 · 황금의 기억':b.phase===2?'두 번째 단계 · '+(s.space==='white'?'백지':'암전'):'첫 번째 단계 · 존재의 시험';$('boss-action').textContent='';$('boss-action').removeAttribute('data-critical');$('notice').textContent='';$('notice').classList.remove('visible');yearsHud.update(g);}
  return {d,root,shell,$,canvas:$('world'),ready,mode,render,onMusicalAction(fn){musicalHud.onAction(fn);},loading(value){loadingCard.hidden=!value;if(!value)loadingCard.remove();},dispose(){if(disposed)return;disposed=true;styles.dispose();yearsHud.dispose();musicalHud.dispose();musicStyle.remove();if(d.open)d.close();d.remove();}};
 }
