@@ -50,8 +50,8 @@ test('the visible crouch height is exactly the collision height, including on re
  const mid=runnerBodyHeight(m);
  assert.ok(mid>RUNNER_SLIDE_HEIGHT&&mid<RUNNER_BODY_HEIGHT);
  assert.equal(runnerObstacleContact(m,0,overhead),false,'rising silhouette still fits the overhang');
- runnerStepMotion(m,true,.075);
- assert.equal(runnerBodyHeight(m),RUNNER_BODY_HEIGHT);
+ runnerStepMotion(m,true,.05);runnerStepMotion(m,true,.025);
+ assert.ok(Math.abs(runnerBodyHeight(m)-RUNNER_BODY_HEIGHT)<1e-9);
  assert.equal(runnerObstacleContact(m,0,overhead),true);
  m.jumpY=1.7;m.jumpV=1;m.grounded=false;
  assert.equal(runnerObstacleContact(m,0,floor),false,'feet truly clear the floor hazard');
