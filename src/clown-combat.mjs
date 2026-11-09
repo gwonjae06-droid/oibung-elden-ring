@@ -1,5 +1,4 @@
 import {applyBossHitTrait} from './boss-hit-traits.mjs';
-import {BALLET_DEFINITIONS,BALLET_PATTERNS,BALLET_RUN} from './clown-ballet-score.mjs';
 import {BEAST_PATTERNS,CRAWL_PATTERNS} from './clown-beast-pose.mjs';
 import {createCircusTroupe,stepCircusTroupe,clearCircusTroupe,prepareCircusPhaseTransition} from './clown-troupe.mjs';
 import {balanceClownTroupeWarning,protectClownEscapeFromDirector} from './clown-escape-routes.mjs';
@@ -352,7 +351,6 @@ const definitions = [
   ['stageCapsize', '무대 전복', 5.6, 1.7, [2]],
   ['lastMagic', '마지막 마술', 6.4, 1.9, [2]],
   ...HORROR_DEFINITIONS.map(([key,name,dur,recover,phases])=>[key,name,dur,recover,phases]),
-  ...BALLET_DEFINITIONS,
 ];
 export const PATTERNS = Object.fromEntries(
   definitions.map(([key, name, dur, recover, phases]) => [
@@ -1070,8 +1068,6 @@ function crawlPart(g,c,a,t,start,key,{reach=9,anticipation=.72,travel=1.3,damage
 const HORROR_API=Object.freeze({once,zone,cone,bomb,emit,dashPart,crawlPart});
 Object.assign(RUN,Object.fromEntries(Object.entries(HORROR_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
-Object.assign(RUN,Object.fromEntries(Object.entries(BALLET_RUN).map(([key,fn])=>
- [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
 // Vintage pattern names now use troupe choreography, never toy-ball poses.
 Object.assign(RUN,Object.fromEntries(Object.entries(REMASTERED_CIRCUS_RUN).map(([key,fn])=>
  [key,(g,c,a,t)=>fn(g,c,a,t,HORROR_API)])));
@@ -1092,12 +1088,6 @@ export const LIVE_REPERTOIRE=Object.freeze([
 const DIRECTOR_SIGNATURES=new Set(RINGMASTER_ATTACK_DEFINITIONS.map(a=>a[0]));
 export function choosePattern(g) {
  const c=g.clown,phase=g.boss.phase,d=dist(g.boss,g.player);
- if(phase===3){
-  const unseen=BALLET_PATTERNS.filter(k=>!(c.used?.[k]>0));
-  c.seq++;
-  return drawPatternShuffle(g.patternShuffle,'clown-wooden-lovers-third-act',BALLET_PATTERNS,
-   {preferred:unseen,avoid:c.last});
- }
  // The close-contact shove stays a situational defensive reaction, not an
  // unfairly common attack occupying half the regular performance cycle.
  if(d<4&&c.shoveCd<=0&&c.seq>0&&c.seq%7===0&&c.last!=='shove'){
@@ -1278,12 +1268,12 @@ function updateClown(g, dt) {
   c.time += dt;
   c.hug = dist(p, b) < HUG_DIST ? c.hug + dt : 0;
   c.shoveCd = Math.max(0, c.shoveCd - dt);
-  const nextStage=b.phase===3?3:b.phase===2?2:1;
-  if(nextStage!==c.horrorStage){c.horrorStage=nextStage;
-   if(nextStage===3)emit(g,'clown-ballet-start');
+  // Phase two continues to death, with its former 25%-HP horror crescendo.
+  const nextStage=b.phase===2?(b.hp<=b.maxHp*.25?3:2):1;
+  if(nextStage!==c.horrorStage){
+   c.horrorStage=nextStage;
+   if(nextStage===3)emit(g,'clown-phase3');
   }
-  // Preserve the partner's physical attack anchors while the cast plays.
-  if(b.phase===3&&c.state==='idle')c.duetOrbitYaw=(c.duetOrbitYaw??c.yaw)+dt*.12;
   updateBombs(g, dt);
   updateZones(g, dt);
   updateWaves(g, dt);
@@ -1336,7 +1326,6 @@ export function createClownGame(weapon = 'sword', options) {
     hits: [],
     vis: newVis(),
     horrorStage:1,
-    duetOrbitYaw:0,
     beastSince:null,
     beastRecoverAt:null,
     stageBall:null,
@@ -1361,8 +1350,7 @@ export function stepClown(g, dt, input = {}) {
     const e = g.events[i];
     if (e.type === 'skill-stun') c.stunT = 1;
     else if (e.type === 'phase') {
-      if(e.phase===3){clearCircusTroupe(g);c.duetOrbitYaw=c.yaw;}
-      else prepareCircusPhaseTransition(g);
+      prepareCircusPhaseTransition(g);
       Object.assign(c, {
         zones: [],
         bombs: [],
@@ -1378,12 +1366,12 @@ export function stepClown(g, dt, input = {}) {
       Object.assign(b, {state: 'clown', stun: 1e9, poise: 0});
       Object.assign(c, {
         state: 'idle',
-        wait: b.phase===3?1.35:0.8,
+        wait: 0.8,
         beastSince: c.time,
         used: {},
         prevPlayer: {x: g.player.x, z: g.player.z},
       });
-      emit(g, b.phase===3?'clown-ballet-armed':'clown-phase2');
+      emit(g,'clown-phase2');
     } else if (e.type === 'victory') {
       clearCircusTroupe(g);
       Object.assign(c, {zones: [], bombs: [], waves: [], state: 'defeated'});
@@ -1409,8 +1397,8 @@ export function clownView(g) {
   let action = ''; // Only motion, sound and physical effects reveal the attack.
   return {
     name: '광대 오슬우',
-    sub: b.phase===3?'3막 · 두 목각 연인의 파드되':b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',
-    phase: c.horrorStage||b.phase,
+    sub: b.phase===2?'2막 · 끝나지 않는 앙코르':'1막 · 웃지 않는 광대',
+    phase: b.phase,
     hp: b.hp,
     maxHp: b.maxHp,
     action,
