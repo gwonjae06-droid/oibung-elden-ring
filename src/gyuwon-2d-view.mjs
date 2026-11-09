@@ -3,6 +3,7 @@ import {usesReference2d} from './gyuwon-reference-rules.mjs';
 import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './gyuwon-2d-art.mjs';
 import {drawArmoredRunner,drawGyuwonRunnerGuide} from './gyuwon-runner-art.mjs';
 import {gyuwonRunnerScene,gyuwonRunnerGuideAt,gyuwonRunnerAccent} from './gyuwon-runner-director.mjs';
+import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const TAU=Math.PI*2;
 export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={}){
@@ -162,6 +163,12 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     c.beginPath();c.moveTo(x,550);c.lineTo(x,410-(i%2)*24);c.stroke();
     c.fillStyle=i%2?'#a45061':'#d9ba82';
     c.beginPath();c.moveTo(x,411-(i%2)*24);c.lineTo(x+38*q,425-(i%2)*24);c.lineTo(x,444-(i%2)*24);c.fill();}
+   // Reveal the same paper kingdom seen in Act VII's first verse.
+   c.save();c.globalAlpha=q;c.fillStyle='#c7a78d';
+   c.beginPath();c.moveTo(910,530);c.lineTo(1060,417);c.lineTo(1280,505);c.lineTo(1280,565);c.fill();
+   c.fillStyle='#f9e6cb';c.fillRect(1115,382,110,108);
+   c.fillStyle='#ba777d';c.beginPath();c.moveTo(1095,382);c.lineTo(1170,324);c.lineTo(1245,382);c.fill();
+   c.fillStyle='#647987';c.fillRect(1155,435,25,55);c.restore();
   }
   standardHeader(g,m,{dark:true,color:quiet?'#dae0ff':'#3e89a4'});
   round(c,25,89,327,42,17,'#fffbd6bb','#637c46');
@@ -184,18 +191,59 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   c.restore();bar(c,x-66,275,132,12,hp,max,enemy?'#df8079':'#6ac9c2');label(c,Math.ceil(hp)+'/'+max,x,254,16,'#fff','center',4);
  }
  function army(g,m){
-  const bg=c.createLinearGradient(0,0,0,600);bg.addColorStop(0,'#8bd8ef');bg.addColorStop(.75,'#e9f5ea');bg.addColorStop(1,'#b9d576');c.fillStyle=bg;c.fillRect(0,0,1280,720);
-  for(let i=0;i<7;i++){const x=(i*263-m.time*3)%1500;c.fillStyle='#ffffffc9';c.beginPath();c.ellipse(x,140+(i%3)*39,100,22,0,0,TAU);c.fill();}
-  c.fillStyle='#a6c66b';c.beginPath();c.moveTo(0,467);for(let x=0;x<=1280;x+=32)c.lineTo(x,438+Math.sin(x/113)*14);c.lineTo(1280,720);c.lineTo(0,720);c.fill();
-  c.fillStyle='#9e794b';c.fillRect(0,548,1280,172);c.fillStyle='#bdd586';c.fillRect(0,529,1280,22);
-  const sx=x=>640+x*29;
-  castle(sx(-18),false,m.baseHp,m.baseMaxHp);castle(sx(18),true,m.enemyBaseHp,m.enemyBaseMaxHp);
-  if(m.armyTruce){c.fillStyle='#d8e4ff18';c.fillRect(0,0,1280,530);for(let i=0;i<7;i++)flower(c,210+i*145,480,1.1,'#f8f0c2');}
-   const sorted=[...m.units].sort((a,b)=>a.team-b.team||a.x-b.x);
-  for(const u of sorted)paperUnit(c,sx(u.x),546,{type:u.type,team:u.team,t:m.time+u.id,wind:u.wind,hp:u.hp,maxHp:u.maxHp,scale:u.type===5?1.55:1.05,portrait});
-  if(m.cannonShot){const a=m.cannonShot;if(a.age<.65)burst(c,sx(-18),473,14+a.age*36,a.age,'#c6f9ff');else{c.strokeStyle='#bcfaff';c.lineWidth=9;c.beginPath();c.moveTo(sx(-18),470);c.lineTo(sx(Math.min(18,a.x)),470);c.stroke();burst(c,sx(Math.min(18,a.x)),470,38,a.age);}}
-  standardHeader(g,m,{dark:true,color:'#126d83'});label(c,Math.floor(m.money)+' / '+m.moneyCap+' 원',1210,112,31,'#ffdc6c','right',5);
-  bar(c,1008,151,200,13,m.cannon,100,'#c9eaff');label(c,'LEVEL '+m.workerLevel,36,599,21,'#fff8d8','left',4);
+  const scene=drawGyuwonArmyWorld(c,m),t=scene.time;
+  const sx=x=>640+x*29,quiet=m.armyTruce;
+  castle(sx(-18),false,m.baseHp,m.baseMaxHp);
+  castle(sx(18),true,m.enemyBaseHp,m.enemyBaseMaxHp);
+  if(m.enemyFort>=2){
+   const x=sx(18),height=m.enemyFort===3?107:61;
+   c.fillStyle=m.enemyFort===3?'#625876':'#79717a';
+   c.fillRect(x-66,311-height,132,height);
+   for(let i=0;i<5;i++)c.fillRect(x-75+i*32,296-height,22,24);
+   c.strokeStyle=m.enemyFort===3?'#e8be94':'#c6b9a4';c.lineWidth=4;
+   c.strokeRect(x-66,311-height,132,height);
+   if(m.enemyBaseHp<=0){c.fillStyle='#392c2fbd';c.fillRect(x-68,275-height,136,height+34);}
+  }
+  // The ground, not a tutorial overlay, announces the chosen production line.
+  const activeY=gyuwonArmyLaneY(m.deployLane||0);
+  c.fillStyle='#e8f7d723';c.fillRect(35,activeY+10,1209,9);
+  for(let i=0;i<8;i++){const x=105+i*149;
+   c.fillStyle=(m.deployLane||0)===0?'#f8e8b8ad':'#cbf4e5ad';
+   c.beginPath();c.arc(x,activeY+12,3+Math.sin(t*3+i)*.8,0,TAU);c.fill();}
+  const sorted=[...m.units].sort((a,b)=>(a.lane??0)-(b.lane??0)||a.team-b.team||a.x-b.x);
+  for(const u of sorted){
+   const uy=gyuwonArmyLaneY(u.lane??0);
+   paperUnit(c,sx(u.x),uy,{type:u.type,team:u.team,t:m.time+u.id,
+    wind:u.wind,hp:u.hp,maxHp:u.maxHp,scale:u.type===5?1.48:1.02,portrait});
+   if(u.kind==='supply'){
+    c.fillStyle='#8e694b';c.fillRect(sx(u.x)-30,uy+6,62,13);
+    for(const side of [-1,1]){c.fillStyle='#4c555a';c.beginPath();c.arc(sx(u.x)+side*20,uy+20,8,0,TAU);c.fill();}
+   }
+   if(quiet&&u.team>0){c.strokeStyle='#e8deb1a1';c.lineWidth=3;
+    c.beginPath();c.moveTo(sx(u.x)-11,uy-43);c.lineTo(sx(u.x)+4,uy-55);c.stroke();}
+  }
+  if(m.cannonShot){const a=m.cannonShot;for(const lane of [0,1]){
+   const y=gyuwonArmyLaneY(lane)-70;
+   if(a.age<.65)burst(c,sx(-18),y,14+a.age*36,a.age,'#c6f9ff');
+   else{c.strokeStyle='#bcfaff';c.lineWidth=8;c.beginPath();c.moveTo(sx(-18),y);
+    c.lineTo(sx(Math.min(18,a.x)),y);c.stroke();burst(c,sx(Math.min(18,a.x)),y,27,a.age);}
+  }}
+  if(m.armySiegeFlash>0){c.fillStyle='#f6e4ba';c.globalAlpha=Math.min(.38,m.armySiegeFlash);
+   c.fillRect(sx(18)-55,270,110,268);c.globalAlpha=1;}
+  if(m.rallyPulse>0){const q=1-m.rallyPulse/2.4;
+   c.strokeStyle='#ffe6aa';c.lineWidth=8*(1-q)+2;c.globalAlpha=.75*(1-q);
+   c.beginPath();c.arc(sx(-18),440,60+380*q,Math.PI,Math.PI*2);c.stroke();c.globalAlpha=1;}
+  if(scene.key==='arrival'){
+   const q=scene.opening;
+   c.fillStyle='rgba(249,225,180,'+(.29*q)+')';c.fillRect(0,0,1280,600);
+   c.fillStyle='#d8ba8e';c.beginPath();c.moveTo(0,470);
+   c.lineTo(280,390+18*(1-q));c.lineTo(500,475);c.closePath();c.fill();
+  }
+  standardHeader(g,m,{dark:!scene.quiet,color:scene.quiet?'#d7ddf8':'#126d83'});
+  label(c,Math.floor(m.money)+' / '+m.moneyCap+' 원',1210,112,28,'#ffe29b','right',4);
+  bar(c,1008,151,200,13,m.cannon,100,'#c9eaff');
+  label(c,'LEVEL '+m.workerLevel,36,606,18,'#fff8d8','left',4);
+  label(c,(m.deployLane||0)===0?'▲':'▼',135,606,24,'#fff1c3','center',4);
  }
  function dance(g,m){
   c.fillStyle='#151437';c.fillRect(0,0,1280,720);
