@@ -683,6 +683,7 @@ export const GYUWON_SUBTITLES={
  // and use the existing bilingual *authored libretto* as provisional captions
  // through other passages. These are not verified vocal timestamps.
  import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
+ import {gyuwonMasterCaptionOverride} from './gyuwon-caption-overrides.mjs';
  export const GYUWON_ORIGINAL_SUBTITLES=Object.freeze(Object.fromEntries(
   Object.entries(GYUWON_SUBTITLES).map(([key,cues])=>[key,cues.flatMap(c=>{
    const mapped=originalTimingForEditedCue(key,c);return mapped?[{...c,...mapped,verified:true}]:[];
@@ -699,7 +700,10 @@ export const GYUWON_SUBTITLES={
    return [key,slots];
   })));
  export function gyuwonSubtitleAt(key,time){
-  const verified=GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
-  if(verified)return verified;
-  return GYUWON_PROVISIONAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end)||null;
+  const corrected=gyuwonMasterCaptionOverride(key,time);
+  if(corrected)return {...corrected,verified:true,source:'original-master-manual'};
+  const mapped=GYUWON_ORIGINAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
+  if(mapped)return {...mapped,source:'archived-source-excerpt',verified:false};
+  const guide=GYUWON_PROVISIONAL_SUBTITLES[key]?.find(c=>time>=c.start&&time<c.end);
+  return guide?{...guide,source:'unverified-libretto-guide',verified:false}:null;
  }

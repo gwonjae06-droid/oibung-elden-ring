@@ -32,7 +32,8 @@ test('turn stage opens as theater, defeated foes wait for real verse waves',()=>
 });
 test('long runner changes scenes and army has an interlude before final fort',()=>{
  const r=at(6);reachSong(r.g,r.m,65);assert.equal(r.m.runnerBiome,'rain');
- reachSong(r.g,r.m,112);assert.equal(r.m.runnerBiome,'quiet');
+ reachSong(r.g,r.m,96);assert.equal(r.m.runnerBiome,'quiet');
+ reachSong(r.g,r.m,112);assert.equal(r.m.runnerBiome,'sunrise');
  const a=at(7);reachSong(a.g,a.m,77);assert.equal(a.m.enemyFort,2);
  reachSong(a.g,a.m,112);assert.equal(a.m.armyTruce,true);
  reachSong(a.g,a.m,146);assert.equal(a.m.enemyFort,3);assert.equal(a.m.armyTruce,false);

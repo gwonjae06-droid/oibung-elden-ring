@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {REFERENCE_PARTY} from './gyuwon-reference-rules.mjs';
+import {createGyuwonBossParty} from './gyuwon-party-portraits.mjs';
 export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
  const root=new THREE.Group();root.name='gyuwon-three-dimensional-turn-arena';root.visible=false;scene.add(root);
  const mats=new Set(),geos=new Set(),ownMat=m=>(mats.add(m),m),ownGeo=g=>(geos.add(g),g);
@@ -23,7 +24,10 @@ export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
  const inset=new THREE.Mesh(ownGeo(new THREE.CircleGeometry(6.3,64)),ownMat(new THREE.MeshStandardMaterial({color:0x112231,roughness:.6,metalness:.5})));inset.position.set(0,6,-28.2);root.add(inset);
  for(let i=-2;i<=2;i++){const stripe=new THREE.Mesh(box,blue);stripe.position.set(i*2.6,3,-27.4);stripe.scale.set(.1,5,.08);root.add(stripe);}
  const cloneTint=(source,color)=>{const rig=source.clone(true),cache=new Map();rig.traverse(o=>{if(o.material){const values=[].concat(o.material).map(m=>{if(!cache.has(m)){const a=m.clone();if(a.color)a.color.lerp(new THREE.Color(color),.2);cache.set(m,ownMat(a));}return cache.get(m);});o.material=Array.isArray(o.material)?values:values[0];}if(/rifle|cigarette|scooter|bike|bow-rig|hammer-rig|gacha|octopus|arsenal/i.test(o.name))o.visible=false;});return rig;};
- const allies=REFERENCE_PARTY.map((p,i)=>{const a=cloneTint(player.rig,p.color);a.name='musical-party-'+i;const grip=a.getObjectByName('player-weapon-grip');if(grip)grip.children.forEach((o,k)=>o.visible=k===i);root.add(a);return a;});
+ // A full quartet of real prior-boss meshes, not four tinted player clones.
+ const guestParty=createGyuwonBossParty({coarse});
+ const allies=guestParty.roles;
+ for(const a of allies)root.add(a);
  const enemies=[null,cloneTint(boss,0x7999b5),cloneTint(boss,0xa395b9)];
  for(const r of enemies)if(r)root.add(r);
  const droneGeo=ownGeo(new THREE.IcosahedronGeometry(1.3,coarse?1:2)),trimGeo=ownGeo(new THREE.TorusGeometry(1.5,.12,8,40));
@@ -39,13 +43,8 @@ export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
  function update(g){
   const m=g.gyuwon?.years?.musical;root.visible=!!m?.reference&&m.year===5&&!m.finishing&&g.status==='playing';if(!root.visible)return;
   scene.background.setHex(0x111d2b);scene.fog.color.setHex(0x111d2b);scene.fog.density=.009;
-  for(let i=0;i<allies.length;i++){
-   const p=m.party[i],a=allies[i],motion=m.actorMotion?.actorId===p.id?m.actorMotion:null;
-   a.visible=p.hp>0;a.position.set(p.x,.2,p.z);a.rotation.y=Math.atan2((m.enemies[m.targetIndex]?.x||0)-p.x,(m.enemies[m.targetIndex]?.z||-10)-p.z);a.scale.setScalar(1.35);
-   const body=a.getObjectByName('player-articulated-body'),grip=a.getObjectByName('player-weapon-grip'),l=a.getObjectByName('player-shoulder-L'),r=a.getObjectByName('player-shoulder-R');
-   const strike=motion?Math.sin(Math.min(1,motion.age/1.15)*Math.PI):0;
-   if(body)body.rotation.set(-strike*.24,0,0);if(grip)grip.rotation.x=-.5-strike*2;if(l)l.rotation.x=-strike*.7;if(r)r.rotation.x=-strike*1.4;
-  }
+  guestParty.update(m);
+  // Every attack's physical target and the staged cast positions use m.party.
   for(let i=0;i<enemies.length;i++){
    const e=m.enemies[i],a=i===0?boss:enemies[i];a.visible=e.hp>0;a.position.set(e.x,i<3?.2:3.6+Math.sin(m.time*2+i)*.28,e.z);a.scale.setScalar(i<3?1.35:1);
    if(i===0){
@@ -72,5 +71,5 @@ export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
  }
  function projectTargets(g,camera,canvas,shell){const m=g.gyuwon?.years?.musical;if(!root.visible||!m)return;camera.updateMatrixWorld();const r=canvas.getBoundingClientRect(),s=shell.getBoundingClientRect();m.targetScreens=m.enemies.map(e=>{project.set(e.x,e.index<3?5.3:5.7,e.z).project(camera);return {left:r.left-s.left+(project.x*.5+.5)*r.width,top:r.top-s.top+(-project.y*.5+.5)*r.height,visible:project.z<1&&e.hp>0};});}
  async function prewarm(renderer,camera){const visible=root.visible,previous=renderer.getRenderTarget(),target=new THREE.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
- return {root,update,projectTargets,prewarm,stats:()=>({allies:allies.length,enemies:5,dimension:3}),dispose(){if(disposed)return;disposed=true;root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
+ return {root,update,projectTargets,prewarm,ensembleRoles:allies,stats:()=>({allies:allies.length,enemies:5,dimension:3}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }

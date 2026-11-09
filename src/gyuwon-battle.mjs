@@ -57,7 +57,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
 const playerProjectiles=createPlayerProjectileView(scene);
 startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);const traitView=createBossHitTraitView(scene,player.body,shell,{reduced});startup.own('Gyuwon trait view',()=>traitView.dispose());const camera=new THREE.PerspectiveCamera(KWON_CAMERA_REFERENCE.fov,1,.1,1000);
-  const turnStage=createGyuwonTurnStage(scene,{player,boss:study.root,coarse});startup.own('Gyuwon reference turn stage',()=>turnStage.dispose());
+  const turnStage=createGyuwonTurnStage(scene,{player,boss:study.root,coarse});startup.own('Gyuwon reference turn stage',()=>turnStage.dispose());musicalStage.setEnsemble(turnStage.ensembleRoles);
   const flatView=createGyuwon2dView(document,shell,{onPointer:point=>{const m=g.gyuwon.years?.musical;if(m)m.pointerTarget=point;},focus:()=>{if(ready&&mode==='playing')sound();}});startup.own('Gyuwon true 2D view',()=>flatView.dispose());
   const contexts=[],makeAudio=()=>{const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return null;const ctx=new C();contexts.push(ctx);if(startup.pending)startup.own('Gyuwon audio context',()=>ctx.close?.());return ctx;};
   const musicalScore=createGyuwonMusicalScore();

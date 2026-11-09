@@ -1,18 +1,19 @@
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
+import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
- {name:'종이병',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
- {name:'방패병',cost:80,hp:195,attack:10,range:1.6,speed:1.1,cool:3.5},
- {name:'장궁병',cost:125,hp:62,attack:30,range:7.4,speed:1.35,cool:4.4},
- {name:'검투사',cost:175,hp:140,attack:48,range:2.4,speed:1.7,cool:5},
- {name:'마도사',cost:240,hp:88,attack:65,range:8.5,speed:1.1,cool:6},
- {name:'거인병',cost:360,hp:390,attack:84,range:3.2,speed:.8,cool:8}
+ {name:'턱검 기사',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
+ {name:'광대 인형',cost:80,hp:195,attack:10,range:1.6,speed:1.1,cool:3.5},
+ {name:'카지노 주사위',cost:125,hp:62,attack:30,range:7.4,speed:1.35,cool:4.4},
+ {name:'혈익 전사',cost:175,hp:140,attack:48,range:2.4,speed:1.7,cool:5},
+ {name:'답안 마도사',cost:240,hp:88,attack:65,range:8.5,speed:1.1,cool:6},
+ {name:'거대 행진자',cost:360,hp:390,attack:84,range:3.2,speed:.8,cool:8}
 ]);
 export const REFERENCE_PARTY=Object.freeze([
- {name:'검의 서약',weapon:'sword',speed:118,color:'#7abbe4'},
- {name:'철추의 서약',weapon:'hammer',speed:92,color:'#efb668'},
- {name:'화살의 서약',weapon:'bow',speed:126,color:'#95d4ac'},
- {name:'문양의 서약',weapon:'cards',speed:108,color:'#c5a0e7'}
+ {name:'이권재 · 턱검',weapon:'sword',speed:118,color:'#7abbe4'},
+ {name:'오슬우 · 광대',weapon:'hammer',speed:92,color:'#efb668'},
+ {name:'박성원 · 주사위',weapon:'bow',speed:126,color:'#95d4ac'},
+ {name:'배서준 · 혈술',weapon:'cards',speed:108,color:'#c5a0e7'}
 ]);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:0));
 const dist=(a,b)=>Math.hypot(a.x-b.x,(a.z||0)-(b.z||0));
@@ -48,7 +49,9 @@ export function setupReferenceMinigame(g,m){
   while(start+period*8<GYUWON_SONGS[8].duration-4){
    if(start>GYUWON_SONGS[8].duration*.57&&start<GYUWON_SONGS[8].duration*.68){start=GYUWON_SONGS[8].duration*.69;continue;}
    const kind=['pose','turn','pose','quick'][index%4],count=kind==='quick'?1:index%3===1?4:3;
-   const cue=start+period*(kind==='turn'?3:3.5),first=start+period*(kind==='pose'?6:kind==='turn'?5:5.5);
+   const prepared=start+period*(kind==='turn'?3:3.5);
+   const first=gyuwonAlignDanceBeat(start+period*(kind==='pose'?6:kind==='turn'?5:5.5));
+   const cue=Math.max(start,prepared+(first-(start+period*(kind==='pose'?6:kind==='turn'?5:5.5))));
    m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,done:[],misses:[],facing:index%2?-1:1});
    start=first+period*((count-1)*(kind==='pose'?2:1)+2.7);
     if(index%5===4)start+=period*7;
@@ -164,8 +167,8 @@ function tickReferenceTurn(g,m,dt,c){
  g.boss.x=m.enemies[0].x;g.boss.z=m.enemies[0].z;
 }
 function tickReferenceRunner(g,m,dt,c){
- const p=g.player,progress=m.actProgress||0,relief=progress>.57&&progress<.69;
- m.runnerBiome=progress<.33?'meadow':progress<.55?'rain':progress<.75?'quiet':'sunrise';
+ const p=g.player,progress=m.actProgress||0,scene=gyuwonMasterScene(6,m.time).kind,relief=scene==='quiet';
+ m.runnerBiome=['overture','meadow','bridge'].includes(scene)?'meadow':scene==='rain'?'rain':scene==='quiet'?'quiet':'sunrise';
  const speed=m.bonus>0?17:relief?11:13;
  m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;m.energy=Math.max(0,m.energy-dt*1.35);m.slide=m.slideHeld?.95:Math.max(0,m.slide-dt);
  for(const platform of m.platforms){platform.x-=speed*dt;platform.end-=speed*dt;}
@@ -190,9 +193,9 @@ function tickReferenceRunner(g,m,dt,c){
 function tickReferenceArmy(g,m,dt,c){
  m.money=Math.min(m.moneyCap,m.money+dt*(22+m.workerLevel*7));m.cannon=Math.min(100,m.cannon+dt*4.8);m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
  const p=m.actProgress||0;
- m.armyTruce=p>=.59&&p<.70;
+ m.armyTruce=m.time>=108&&gyuwonMasterScene(7,m.time).kind!=='reunion'&&gyuwonMasterScene(7,m.time).kind!=='exit';
  if(m.armyTruce){m.enemySpawn=Math.max(m.enemySpawn,.8);return;}
- if((m.enemyFort<2&&p>=.39)||(m.enemyFort<3&&p>=.77)){m.enemyFort++;m.enemyBaseHp=m.enemyBaseMaxHp=Math.round(3000*(1+.35*(m.enemyFort-1)));m.enemySpawn=.6;}
+ if((m.enemyFort<2&&m.time>=56.5)||(m.enemyFort<3&&m.time>=126)){m.enemyFort++;m.enemyBaseHp=m.enemyBaseMaxHp=Math.round(3000*(1+.35*(m.enemyFort-1)));m.enemySpawn=.6;}
  m.enemySpawn-=dt;if(m.enemySpawn<=0&&m.units.length<48&&m.enemyBaseHp>0){const type=(m.armyWave++%6),s=REFERENCE_UNIT_TYPES[type];m.enemySpawn=1.9+(type%3)*.28;m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*.72,maxHp:s.hp*.72,attack:s.attack*.65,range:s.range,speed:s.speed*.85,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:type===2||type===4?'ranged':'melee'});}
  for(const u of m.units){if(u.hp<=0)continue;u.cool=Math.max(0,u.cool-dt);u.x+=u.knock*dt;u.knock*=Math.exp(-dt*8);
   let target=null,best=Infinity;for(const v of m.units){const d=Math.abs(u.x-v.x);if(v.hp>0&&v.team!==u.team&&d<best){target=v;best=d;}}
@@ -219,12 +222,12 @@ function tickReferenceDance(g,m,dt,c){
 }
 function tickReferenceFighter(g,m,dt,input,c){
  const [p,b]=m.fighters;
- const progress=m.actProgress||0,cut=m.fightRound===1?.35:m.fightRound===2?.72:1;
+ const progress=m.actProgress||0,cut=m.fightRound===1?41/180:m.fightRound===2?108/180:1;
  if(m.fightReset>0){
   if(progress>=cut&&m.fightRound<3){for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.fightReset=0;m.enemyThink=1.35;}
   else{m.fightReset=1;return;}
  }
- if((m.fightRound===1&&progress>=.35)||(m.fightRound===2&&progress>=.72)){
+ if((m.fightRound===1&&m.time>=41)||(m.fightRound===2&&m.time>=108)){
   for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=100;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;}m.fightRound++;m.enemyThink=1.1;
  }
  p.crouch=(input.z||0)<-.35;p.guard=!!input.guard||!!m.guardHeld||((input.x||0)*p.facing<-.3);p.facing=p.x<b.x?1:-1;b.facing=-p.facing;
@@ -245,12 +248,23 @@ function tickReferenceFighter(g,m,dt,input,c){
 function tickReferenceShooter(g,m,dt,input,c){
  const p=g.player;if(m.pointerTarget){const dx=m.pointerTarget.x-p.x,dz=m.pointerTarget.z-p.z,d=Math.hypot(dx,dz),q=Math.min(1,dt*26/Math.max(.001,d));p.x+=dx*q;p.z+=dz*q;}p.x=clamp(p.x+(input.x||0)*10*dt,-11,11);p.z=clamp(p.z-(input.z||0)*10*dt,-8,16);m.scroll+=dt*5;m.bombEffect=Math.max(0,m.bombEffect-dt);m.chainTime=Math.max(0,m.chainTime-dt);if(m.chainTime===0)m.chain=0;
  m.shotCooldown-=dt;if(m.shotCooldown<=0){m.shotCooldown=.115;for(let i=0;i<m.power;i++){const d=(i-(m.power-1)/2)*(m.weaponMode==='laser'?.18:.52);m.bullets.push({x:p.x+d,z:p.z-1,life:2.5,vx:d*1.2,vz:-30,damage:9,kind:m.weaponMode==='laser'?'laser':'shot'});}}
- const progress=m.actProgress||0,quiet=progress>.57&&progress<.69;
- if(progress>.76&&!m.finalCarrierSpawned){m.finalCarrierSpawned=true;m.shooterTargets.push({id:g.nextId++,x:0,z:-15,hp:1100,maxHp:1100,phase:7,wind:3.2,aim:0,kind:'carrier'});}
- if(!quiet)m.shooterSpawn-=dt;if(m.shooterSpawn<=0&&!quiet&&m.shooterTargets.length<7&&progress<.87){m.shooterSpawn=4;const side=m.turnCount++%2?-1:1;m.shooterTargets.push({id:g.nextId++,x:side*9,z:-19,hp:45,maxHp:45,phase:m.turnCount,wind:1.4,aim:0,kind:'fighter'});}
+ const progress=m.actProgress||0,scene=gyuwonMasterScene(10,m.time).kind,quiet=scene==='starlight';
+ if(m.time>=132&&!m.finalCarrierSpawned){m.finalCarrierSpawned=true;m.shooterTargets.push({id:g.nextId++,x:0,z:-15,hp:1100,maxHp:1100,phase:7,wind:3.2,aim:0,kind:'carrier'});}
+ if(!quiet)m.shooterSpawn-=dt;if(m.shooterSpawn<=0&&!quiet&&m.shooterTargets.length<7&&m.time<147){m.shooterSpawn=4;const side=m.turnCount++%2?-1:1;m.shooterTargets.push({id:g.nextId++,x:side*9,z:-19,hp:45,maxHp:45,phase:m.turnCount,wind:1.4,aim:0,kind:'fighter'});}
  for(const e of m.shooterTargets){
-  if(e.hp<=0)continue;e.z+=e.kind==='fighter'?dt*3:Math.sin(m.time*.7+e.phase)*dt*.45;e.x+=Math.sin(m.time*.8+e.phase)*dt*.6;e.wind-=dt;
-  if(e.wind<=0){const angle=Math.atan2(p.x-e.x,p.z-e.z);for(let i=-2;i<=2;i++){const a=angle+i*(e.kind==='carrier'?.19:.12);m.enemyShots.push({x:e.x,z:e.z+1,vx:Math.sin(a)*6.5,vz:Math.cos(a)*6.5,life:7,age:0,kind:e.phase%2?'amber':'red'});}e.wind=e.kind==='carrier'?2.15:2.7;}
+  if(e.hp<=0)continue;e.z+=e.kind==='fighter'?dt*3:Math.sin(m.time*.7+e.phase)*dt*.45;e.x+=Math.sin(m.time*.8+e.phase)*dt*.6;
+  // Lock direction during a visible aiming pose, instead of retargeting
+  // instantly on the firing frame. VFX and bullets use e.lockedAim together.
+  if(e.wind>1.13&&e.wind-dt<=1.13)e.lockedAim=Math.atan2(p.x-e.x,p.z-e.z);
+  e.wind-=dt;
+  if(e.wind<=0){
+   const angle=e.lockedAim??Math.atan2(p.x-e.x,p.z-e.z);
+   for(let i=-2;i<=2&&m.enemyShots.length<100;i++){
+    const a=angle+i*(e.kind==='carrier'?.19:.12);
+    m.enemyShots.push({x:e.x,z:e.z+1,vx:Math.sin(a)*6.5,vz:Math.cos(a)*6.5,life:7,age:0,kind:e.phase%2?'amber':'red'});
+   }
+   e.lockedAim=null;e.wind=e.kind==='carrier'?2.15:2.7;
+  }
  }
  for(const a of m.bullets){a.x+=a.vx*dt;a.z+=a.vz*dt;a.life-=dt;for(const e of m.shooterTargets)if(e.hp>0&&dist(a,e)<(e.kind==='carrier'?1.45:.85)){e.hp-=a.damage;a.life=0;c.deal(g,a.damage,c.emit);if(e.hp<=0){m.chain++;m.chainTime=2.5;c.deal(g,500+m.chain*50,c.emit);m.powerItems.push({x:e.x,z:e.z,kind:m.chain%3===0?'power':'medal'});}break;}}
  for(const a of m.enemyShots){a.x+=a.vx*dt;a.z+=a.vz*dt;a.life-=dt;a.age+=dt;if(dist(a,p)<.68){a.life=0;c.take(g,18,c.emit);m.chain=0;}}

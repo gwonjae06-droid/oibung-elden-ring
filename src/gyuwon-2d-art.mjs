@@ -40,24 +40,82 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
  if(!ink){path(c,[[-17,shoulder],[-7,shoulder+5],[20,shoulder+2],[41+Math.sin(t*7)*7,shoulder+14],[18,shoulder+9],[-15,shoulder+7]],gyuwon?'#9b79c8':'#d4ae64',outline,1.5);}
  c.restore();
 }
+// Six stagebook silhouettes, four derived from the previously fought bosses.
+// All details are live Canvas paths so they animate with the SAME hit windup
+// used by the army simulation; no tiny text or inaccessible remote sprites.
 export function paperUnit(c,x,y,{type=0,team=1,t=0,wind=0,hp=1,maxHp=1,scale=1}={}){
- c.save();c.translate(x,y);c.scale(scale*team,scale);const attack=wind>0?Math.sin((.55-wind)/.55*Math.PI/2):Math.sin(t*5)*.12,ink='#15191d';
- ellipse(c,0,0,24,5,'#00000020',null);
- if(type===5){path(c,[[-26,-70],[-33,-37],[-21,-8],[20,-8],[32,-39],[23,-70]],'#f7f7eb',ink,4);}
- else{ellipse(c,0,-40,19,29,'#fffdf0',ink,3);}
- for(const side of [-1,1]){line(c,[[side*10,-19],[side*13+Math.sin(t*6+side)*7,-3]],ink,6);ellipse(c,side*13+Math.sin(t*6+side)*7,-2,8,4,'#fffef2',ink,2);}
- const headY=type===5?-88:type===2?-82:-69;
- if(type===2)line(c,[[0,-42],[0,headY+8]],ink,11);
- path(c,[[-19,headY+5],[-20,headY-13],[-11,headY-7],[0,headY-18],[12,headY-8],[21,headY-13],[20,headY+7]],'#fffef1',ink,3);
- ellipse(c,0,headY+3,20,18,'#fffef1',ink,3);
- for(const side of [-1,1]){ellipse(c,side*7,headY+2,1.6,2.5,ink,null);line(c,[[side*7,headY+10],[0,headY+8]],ink,1.5);}
- if(type===1){round(c,10,-55,27,41,10,'#dfdfd2',ink,3);line(c,[[17,-48],[32,-30],[17,-20]],ink,2);}
- else if(type===2){c.beginPath();c.arc(24,-44,24,-1.2,1.2);c.strokeStyle=ink;c.lineWidth=4;c.stroke();line(c,[[33,-66],[33,-22]],ink,1);line(c,[[12,-44],[50+attack*10,-44]],ink,2);}
- else if(type===4){line(c,[[25,-5],[25+attack*13,-82]],ink,5);ellipse(c,25+attack*13,-88,8,11,'#bfa2dd',ink,2);}
- else{line(c,[[15,-40],[30+attack*20,-40]],ink,7);path(c,[[28+attack*20,-43],[49+attack*28,-62],[52+attack*28,-56],[32+attack*20,-36]],'#e2e5dd',ink,2);}
- if(team<0)path(c,[[-17,-55],[-39,-32],[-28,-18],[-7,-42]],'#bb7774',ink,2);
+ c.save();c.translate(x,y);c.scale(scale*team,scale);
+ const ink='#18202b',enemy=team<0,shade=enemy?'#6c6573':'#f7eedc',
+  gold=enemy?'#a47467':'#e5be75',red=enemy?'#6d2438':'#ab3550';
+ const strike=wind>0?Math.min(1,Math.max(0,(.55-wind)/.55)):0,
+  sway=Math.sin(t*5),bounce=Math.max(0,Math.sin(t*4))*(type===2?2:1.6);
+ ellipse(c,0,0,26,5,'#101b2b26',null);
+ c.translate(0,-bounce);
+ // Distinct feet and weighted walking. Boss 5 is a towering marching frame.
+ const height=type===5?1.26:1;
+ for(const side of [-1,1]){
+  const foot=side*13+sway*side*3;
+  line(c,[[side*9,-22*height],[foot,-7],[foot+side*2,-2]],ink,6);
+  round(c,foot-9,-8,20,9,3,ink);
+ }
+ if(type===0){ // Kwon: elongated angular chin/blade and charcoal knight.
+  path(c,[[-23,-34],[-13,-75],[15,-75],[26,-35],[12,-19],[-15,-19]],'#344554',ink,3);
+  path(c,[[-14,-55],[3,-100],[18,-55],[9,-48]],'#d4dddf',ink,3);
+  ellipse(c,0,-80,18,19,shade,ink,3);
+  path(c,[[-10,-70],[0,-35],[10,-70],[0,-60]],'#e6dca8',ink,2);
+  path(c,[[21,-73],[27+strike*17,-108],[38+strike*18,-112],[32,-55]],'#d6dbda',ink,2);
+  line(c,[[-12,-64],[-32,-58]],'#9caabd',8);
+ }else if(type===1){ // Oslu: off-kilter clown silhouette, red-white collar and gloves.
+  path(c,[[-25,-34],[-20,-68],[0,-81],[24,-68],[29,-33]],'#a53b52',ink,3);
+  for(let i=0;i<6;i++){const a=i*Math.PI/3;ellipse(c,Math.sin(a)*23,-66+Math.cos(a)*6,7,11,i%2?'#efe2ca':'#783a69',ink,1);}
+  ellipse(c,0,-93,20,22,shade,ink,3);
+  path(c,[[-17,-106],[-22,-120],[-8,-114],[0,-126],[13,-114],[23,-121],[19,-106]],'#812b47',ink,2);
+  ellipse(c,-6,-92,3,4,ink,null);ellipse(c,8,-92,3,4,ink,null);
+  ellipse(c,1,-85,5,5,'#b53550',ink,1);
+  c.strokeStyle=ink;c.lineWidth=2.5;c.beginPath();c.arc(2,-84,12,.15,Math.PI-.2);c.stroke();
+  ellipse(c,29+strike*17,-61-strike*10,10,10,'#f5eee0',ink,2);
+  ellipse(c,-28,-51,9,9,'#f5eee0',ink,2);
+ }else if(type===2){ // Sungwon: a genuinely rotating six-faced casino die.
+  const rot=sway*.1+strike*.35;c.save();c.translate(0,-56);c.rotate(rot);
+  round(c,-27,-30,54,56,6,'#353a46',gold,4);
+  round(c,-20,-23,40,40,4,'#e9dcc5',ink,2);
+  const dots=[[-10,-11],[10,-11],[-10,1],[10,1],[-10,13],[10,13]];
+  for(let k=0;k<6;k++)ellipse(c,dots[k][0],dots[k][1],3.4,3.4,'#8d3146',null);
+  c.restore();
+  line(c,[[-20,-60],[-29,-45]],gold,6);
+  line(c,[[20,-60],[33+strike*15,-43]],gold,7);
+  ellipse(c,35+strike*15,-40,9,9,'#efe7d5',ink,2);
+ }else if(type===3){ // Baeseojun: blood wings, halo and head.
+  path(c,[[-22,-39],[-13,-72],[15,-72],[25,-39]],'#641f35',ink,3);
+  for(const side of [-1,1]){
+   for(let k=0;k<4;k++){
+    const a=side*(20+k*10),wave=sway*3;
+    path(c,[[side*12,-70],[a,-108-k*7+wave],[a+side*8,-75-k*5],[side*23,-47]],k%2?'#a9405c':'#7b2646',ink,1);
+   }
+  }
+  ellipse(c,0,-90,19,20,shade,ink,3);
+  c.strokeStyle='#e8c2a3';c.lineWidth=3;c.beginPath();c.ellipse(0,-117,26,9,0,0,TAU);c.stroke();
+  ellipse(c,0,-84,4,5,'#ad4d60',null);
+  line(c,[[17,-62],[30+strike*12,-85]],'#ac4262',7);
+ }else if(type===4){ // Gyuwon: answer sheets and pencil, unmade choices.
+  path(c,[[-23,-36],[-16,-79],[18,-79],[22,-36]],'#657792',ink,3);
+  ellipse(c,0,-94,19,20,shade,ink,3);
+  path(c,[[-20,-107],[-7,-121],[13,-115],[20,-101]],'#37465d',ink,2);
+  round(c,-33,-68,23,41,3,'#faf6de',ink,2);
+  for(let k=0;k<4;k++)line(c,[[-28,-58+k*9],[-17,-58+k*9]],k===1?'#b85662':'#81909b',2);
+  line(c,[[17,-73],[31+strike*10,-95]],'#d8ae6c',6);
+  ellipse(c,32+strike*10,-96,6,8,'#f6d79e',ink,1);
+ }else{ // Towering finale marcher / choir stagehand.
+  path(c,[[-28,-44],[-30,-92],[-11,-103],[17,-103],[33,-86],[26,-44]],'#4d405e',ink,4);
+  ellipse(c,0,-118,26,30,shade,ink,4);
+  path(c,[[-32,-112],[0,-148],[32,-112],[0,-124]],gold,ink,2);
+  for(const side of [-1,1])line(c,[[side*24,-85],[side*(35+strike*14),-54]],ink,12);
+  line(c,[[0,-108],[0,-165]],gold,8);
+  path(c,[[-7,-165],[7,-165],[0,-178]],red,ink,2);
+ }
+ if(enemy){path(c,[[-29,-44],[-12,-36],[-1,-43],[-15,-59]],'#a53a43',ink,2);}
  c.restore();
- if(hp<maxHp){bar(c,x-22*scale,y-114*scale,44*scale,4,hp,maxHp,team>0?'#5ed4bf':'#e89477');}
+ if(hp<maxHp)bar(c,x-25*scale,y-(type===5?188:137)*scale,50*scale,5,hp,maxHp,team>0?'#5ed4bf':'#e89477');
 }
 export function tank(c,x,y,{enemy=false,large=false,t=0,flash=0,pixel=1}={}){
  c.save();c.translate(Math.round(x),Math.round(y));const s=large?1.55:1;c.scale(s,s);const metal=enemy?'#73775e':'#7c9d8f',dark='#252e33',light='#d3cfaa';

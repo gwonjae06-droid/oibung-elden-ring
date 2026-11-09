@@ -4,6 +4,8 @@ import {createGyuwonGame,actGyuwon,stepGyuwon,damageGyuwon} from '../src/gyuwon-
 import {annualFloor,annualFloorForYear} from '../src/gyuwon-annual-progress.mjs';
 import {GYUWON_MUSICAL_ACTS,isGyuwonMusicalYear} from '../src/gyuwon-musical-genres.mjs';
 import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from '../src/gyuwon-ending-survival.mjs';
+import {gyuwonMasterScene,gyuwonMasterRhythmNotes,gyuwonVerifiedMasterAccents} from '../src/gyuwon-master-director.mjs';
+import {gyuwonFinaleMemoryPhase} from '../src/gyuwon-musical-genres.mjs';
 
 const advance=(g,seconds,keys={})=>{
  for(let i=0;i<Math.ceil(seconds*60)&&g.status==='playing';i++)
@@ -120,4 +122,34 @@ test('6수 낙하 공격과 11수 피날레 공격도 1 HP에서 정상 진행�
  advance(finale,.2);
  assert.equal(finale.player.hp,1);
  assert.equal(finale.status,'playing');
+});
+
+test('original masters drive authored sections and traceable excerpt-derived rhythm cues',()=>{
+ assert.equal(gyuwonMasterScene(6,96).kind,'quiet');
+ assert.equal(gyuwonMasterScene(6,115).kind,'sunrise');
+ assert.equal(gyuwonMasterScene(7,118).kind,'lonely');
+ assert.equal(gyuwonMasterScene(10,134).kind,'carrier');
+ assert.equal(gyuwonMasterScene(11,144).kind,'grand-chorus');
+ assert.equal(gyuwonFinaleMemoryPhase(102),3);
+ assert.equal(gyuwonFinaleMemoryPhase(125),5);
+ const notes=gyuwonMasterRhythmNotes(11),verified=gyuwonVerifiedMasterAccents(11);
+ assert.ok(verified.length>0);
+ assert.ok(notes.some(n=>n.source==='source-excerpt'));
+ assert.ok(notes.some(n=>n.source==='guide-grid'));
+ assert.ok(notes.every(n=>n.at>0&&n.at<180));
+ assert.ok(notes.every((n,i)=>i===0||n.at>notes[i-1].at));
+});
+test('11수 swordlike finale notes have a real physical counterattack with range',()=>{
+ const g=at(11),m=g.gyuwon.years.musical;m.finaleNext=999;
+ const before=m.score;
+ assert.equal(actGyuwon(g,'light'),true);
+ advance(g,.6);
+ assert.equal(m.score,before,'theater swing cannot score across the stage');
+ advance(g,.6);
+ g.player.x=0;g.player.z=-6;g.boss.x=0;g.boss.z=-6;
+ m.shotCooldown=0;m.playerStrike=null;
+ assert.equal(actGyuwon(g,'skill'),true);
+ advance(g,.52);
+ assert.ok(m.score>before,'melee should score only after visible windup and actual proximity');
+ assert.equal(g.boss.hp,1800,'the 3-minute master, not local score, owns Gyuwon HP');
 });

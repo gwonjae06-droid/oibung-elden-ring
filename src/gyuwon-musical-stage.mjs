@@ -42,7 +42,8 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  });
  const stageRing=new THREE.Mesh(torus,materials[6]);stageRing.rotation.x=Math.PI/2;
  stageRing.position.y=2.3;stageRing.scale.setScalar(4);root.add(stageRing);
- let disposed=false;
+ let disposed=false,ensemble=[];
+ function setEnsemble(roles){ensemble=Array.isArray(roles)?roles:[];}
  function showAt(i,{x=0,y=1,z=0,sx=1,sy=1,sz=1,color=0,rotate=0,flat=false}={}){
   const o=cues[i];if(!o)return;
   o.visible=true;o.material=materials[Math.abs(color)%materials.length];
@@ -61,6 +62,20 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
    fabric.rotation.y=side*.2*draw;}
   lintel.visible=edgeLamps[0].visible=edgeLamps[1].visible=opening;
   for(let i=0;i<cues.length;i++){const o=cues[i];o.visible=false;o.geometry=i%9===0?torus:i%3===0?box:ball;}
+  // Reuse the 5수 guest cast instead of loading another set of 3D actors.
+  if(kind==='finale'){
+   const alive=!m.finishing&&t>=37.92,entrance=THREE.MathUtils.smoothstep(t,37.92,48);
+   ensemble.forEach((role,i)=>{
+    if(role.parent!==root)root.add(role);
+    role.visible=alive;
+    const x=-12+i*8,from=i%2?-24:24;
+    role.position.set(from+(x-from)*entrance,
+      .18+Math.sin(t*1.7+i)*.12*(alive?1:0),-9+Math.sin(i*2.4)*2);
+    role.rotation.y=Math.sin(t*.31+i)*.36;
+    role.rotation.z=Math.sin(t*1.35+i*.9)*.06;
+    if(t>=124)role.rotation.z+=Math.sin(t*3+i)*.075;
+   });
+  }
   const beatPhase=t*1.7;
   for(let i=0;i<spotlights.length;i++){
    const o=spotlights[i];
@@ -122,11 +137,23 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     for(let i=0;i<Math.min(12,m.finaleHazards?.length||0);i++){
      const h=m.finaleHazards[i],q=Math.min(1,h.age/h.wind),after=h.age>h.wind;
      const star=h.kind==='star',banner=h.kind==='banner';
-     showAt(60+i,{x:h.x,y:star?8.8*(1-q)+.6:banner?1.5:1.0,
-      z:h.z,sx:star?1.0+q*1.1:1.3,sy:star?1.0+q*1.1:2.5,sz:star?1.0+q*1.1:1.3,
+     // Soft shadow is positioned at the exact contact center.
+     showAt(77+i,{x:h.x,y:.03,z:h.z,sx:h.radius||2.3,sy:1,sz:h.radius||2.3,
+      color:star?9:banner?2:6,flat:true});
+     cues[77+i].material=soft;cues[77+i].material.opacity=.17+.16*Math.sin(Math.min(1,q)*Math.PI/2);
+     // Airborne source approaches the marked contact point while the music plays.
+     showAt(60+i,{x:h.fxX??h.x,y:star?8.8*(1-q)+.6:banner?1.5:1.0,
+      z:h.fxZ??h.z,sx:star?1.0+q*1.1:1.3,sy:star?1.0+q*1.1:2.5,sz:star?1.0+q*1.1:1.3,
       color:star?9:banner?0:2,rotate:t*.2});
      cues[60+i].geometry=star?ball:banner?soldier:torus;
      if(after)cues[60+i].scale.multiplyScalar(Math.max(.06,1-(h.age-h.wind)/.9));
+    }
+   }
+   if(kind==='finale'&&t>=124&&t<176.5){
+    for(let i=0;i<5;i++){
+     const a=i*Math.PI*2/5+t*.25;
+     showAt(72+i,{x:Math.sin(a)*16,y:8.5+Math.sin(t+i)*.7,z:-8+Math.cos(a)*7,
+      sx:.42,sy:1.6,sz:.42,color:(i+6)%7});
     }
    }
    if(kind==='finale')for(let i=0;i<5;i++){
@@ -172,5 +199,5 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   for(const mat of materials)mat.dispose();
   soft.dispose();for(const s of spotlights)s.material.dispose();
  }
- return {root,update,dispose};
+ return {root,update,dispose,setEnsemble};
 }
