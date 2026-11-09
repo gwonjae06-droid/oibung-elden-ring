@@ -47,7 +47,8 @@ test('songs own exact HP targets and cannot be skipped by direct damage or DoT',
  }
  assert.equal(e.mode,'curtain');assert.equal(actGyuwon(g,'light'),false);
  advance(g,30);assert.equal(g.status,'playing');assert.equal(g.boss.hp,800);
- advance(g,16);assert.equal(g.status,'won');assert.equal(g.boss.hp,0);
+ // Original 3-minute ending replaces the old 45-second edited master.
+ advance(g,151);assert.equal(g.status,'won');assert.equal(g.boss.hp,0);
  assert.equal(g.events.filter(e=>e.type==='victory').length,1);
 });
 test('a stalled media clock freezes every genre and song ended is idempotent',()=>{

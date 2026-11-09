@@ -1,4 +1,5 @@
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
+import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
  {name:'종이병',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
  {name:'방패병',cost:80,hp:195,attack:10,range:1.6,speed:1.1,cool:3.5},
@@ -44,11 +45,13 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
   m.dancePeriod=period;m.dancePatterns=[];let start=3.2,index=0;
-  while(start+period*8<47){
+  while(start+period*8<GYUWON_SONGS[8].duration-4){
    const kind=['pose','turn','pose','quick'][index%4],count=kind==='quick'?1:index%3===1?4:3;
    const cue=start+period*(kind==='turn'?3:3.5),first=start+period*(kind==='pose'?6:kind==='turn'?5:5.5);
    m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,done:[],misses:[],facing:index%2?-1:1});
-   start=first+period*((count-1)*(kind==='pose'?2:1)+2.7);index++;
+   start=first+period*((count-1)*(kind==='pose'?2:1)+2.7);
+    if(index%5===4)start+=period*7;
+    index++;
   }
   m.dancePose=0;m.danceFacing=1;m.danceFlash=0;m.danceLastCue=-1;m.danceCue='';m.danceError=0;m.note=null;
  }else if(m.year===9){

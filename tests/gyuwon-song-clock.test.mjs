@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {createGyuwonMusicalScore} from '../src/gyuwon-musical-score.mjs';
 import {createGyuwonGame,stepGyuwon} from '../src/gyuwon-combat.mjs';
 import {GYUWON_SONGS} from '../src/gyuwon-song-data.mjs';
-import {GYUWON_SUBTITLES,gyuwonSubtitleAt} from '../src/gyuwon-subtitles.mjs';
+import {GYUWON_SUBTITLES,GYUWON_ORIGINAL_SUBTITLES,gyuwonSubtitleAt} from '../src/gyuwon-subtitles.mjs';
 function rig(){
  const sounds=[];let time=0;
  const score=createGyuwonMusicalScore(url=>{const a={url,paused:true,currentTime:0,duration:48,ended:false,play(){this.paused=false;return Promise.resolve();},pause(){this.paused=true;},load(){},removeAttribute(){}};sounds.push(a);return a;},()=>time);
@@ -24,22 +24,26 @@ test('successful playback never ends at the fallback duration, stale ended callb
  const stale=a.onended;g.gyuwon.years.year=6;g.gyuwon.years.musical={year:6,time:0};score.update(g);
  stale();assert.equal(g.gyuwon.years.musical.clock.ended,false);assert.equal(a.paused,true);score.dispose();
 });
-test('missing, rejected and permanently stalled audio fall back without trapping the act',async()=>{
+test('missing/rejected/stalled score never marks an act complete',async()=>{
  for(const failure of ['error','rejected','stalled']){
   const {score,g,sounds,setTime}=rig(),a=sounds[0],m=g.gyuwon.years.musical;
   if(failure==='error')a.onerror();
   else if(failure==='stalled'){setTime(7);score.update(g);}
   else{await Promise.resolve();await Promise.resolve();a.paused=true;a.play=()=>Promise.reject(Error('decode'));score.update(g);await new Promise(r=>setImmediate(r));}
-  assert.equal(m.clock.source,'fallback',failure);setTime(100);score.update(g);assert.equal(m.clock.ended,true);score.dispose();
+  assert.equal(m.clock.source,'error');setTime(1000);score.update(g);
+  assert.equal(m.clock.ended,false);assert.equal(m.clock.time,0);score.dispose();
  }
 });
-test('edited masters exist and subtitles have finite, ordered bilingual intervals with silent gaps',()=>{
+test('original masters and source-located bilingual subtitles',()=>{
  for(const [id,song]of Object.entries(GYUWON_SONGS)){
+  assert.equal(song.file,song.source);assert.ok(song.duration>=175);
   assert.ok(fs.statSync(new URL('../assets/music/'+song.file,import.meta.url)).size>100000);
-  let end=0;for(const cue of GYUWON_SUBTITLES[id]){
+  let end=0;for(const cue of GYUWON_ORIGINAL_SUBTITLES[id]){
    assert.ok(cue.start>=end&&cue.end>cue.start&&cue.end<=song.duration,id);end=cue.end;
    assert.ok(cue.en&&cue.ko);assert.equal(gyuwonSubtitleAt(id,cue.start),cue);
   }
+  assert.ok(GYUWON_ORIGINAL_SUBTITLES[id].length>0);
+  assert.ok(GYUWON_SUBTITLES[id].length>=GYUWON_ORIGINAL_SUBTITLES[id].length);
   assert.equal(gyuwonSubtitleAt(id,song.duration-.1),null);
  }
 });
