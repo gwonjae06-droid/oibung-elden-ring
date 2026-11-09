@@ -1,4 +1,5 @@
 import {drawGyuwonPhoto} from './gyuwon-photo-face.mjs';
+import {gyuwonCinematicMotionAt} from './gyuwon-cinematic-motion-score.mjs';
 const TAU=Math.PI*2;
 const ellipse=(c,x,y,rx,ry,fill,stroke='#19202b',line=3)=>{c.beginPath();c.ellipse(x,y,rx,ry,0,0,TAU);c.fillStyle=fill;c.fill();if(stroke){c.lineWidth=line;c.strokeStyle=stroke;c.stroke();}};
 const line=(c,points,color,width)=>{c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.lineJoin='round';c.stroke();};
@@ -13,6 +14,9 @@ export function jelly(c,x,y,kind='jelly',time=0){c.save();c.translate(x,y);c.rot
 export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76,theater=false,choreography=null,lyric=null}={}){
  c.save();c.translate(x,y);c.scale(scale*face,scale);const outline=ink?'#111315':'#1d2333',coat=ink?'#f6f5e9':color,skin=ink?'#fffaf0':gyuwon?'#e6c0a0':'#edd0ac';
  const lyricGesture=lyric?.gesture||'',lyricPhase=Math.max(0,Math.min(1,lyric?.phase||0));
+ const cinematic=lyric?gyuwonCinematicMotionAt(lyric.year,lyric.time??t)?.pose:null;
+ const poseIsCombat=['strike','wind','guard','crouch'].includes(pose);
+ const acting=cinematic&&!poseIsCombat?cinematic:null;
  const lyricWeight=lyric?Math.sin(Math.PI*lyricPhase):0;
  const run=pose==='run'||['run','walk'].includes(lyricGesture)&&pose==='idle',
   slide=pose==='slide',crouch=pose==='crouch',jump=pose==='jump'||lyricGesture==='jump'&&pose==='idle',
@@ -24,15 +28,23 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
   (theater?1.2+3.3*preparation:Math.abs(Math.sin(t*5))*5):0;
  const down=slide?67:crouch?35:miss?12:0,lean=run?.23:slide?1.1:pose==='strike'?.16:pose==='wind'?-.16:0;
  ellipse(c,0,1,32,6,'#00000035',null);
- c.translate(0,down-lift);
+ c.translate(0,down-lift-(acting?.height||0)*17);
+ // Stage accents are physical joint motion, not camera shake or false
+ // collision offsets. The fighter's X position always stays at its collider.
  // A small anticipatory weight shift precedes the turn; no pose teleport.
  c.rotate(lean+(theater&&choreography?(turning?-.12+.21*preparation:
-   Math.sin(t*1.8)*.035*preparation):0));
+   Math.sin(t*1.8)*.035*preparation):0)+(acting?.bank||0)*.20+(acting?.chest||0)*.065);
  const hipsY=-55+(crouch?10:0),shoulder=-96+(crouch?16:0),headY=-119+(crouch?20:0);
  const stepSide=lyricGesture==='stepleft'?-1:lyricGesture==='stepright'?1:0;
  const legSwing=stepSide?stepSide*(4+22*lyricWeight):run?Math.sin(t*13)*24:dance?
   (theater?(turning?3+preparation*8:Math.sin(t*8)*4+preparation*7):Math.sin(t*8)*10):0;
- for(const side of [-1,1]){const hip=side*10,kneeX=hip+(slide?side*30:legSwing*side*.7),kneeY=hipsY/2+(slide?4:-2),footX=side*16+legSwing*side,footY=-down+lift+(jump?side*6:0);
+ for(const side of [-1,1]){
+  const stride=side<0?(acting?.leftStep||0):(acting?.rightStep||0);
+  const lifted=side>0?(acting?.kneeLift||0)*14:0;
+  const hip=side*10,kneeX=hip+(slide?side*30:legSwing*side*.7)+stride*11,
+    kneeY=hipsY/2+(slide?4:-2)-lifted*.45,
+    footX=side*16+legSwing*side+stride*16,
+    footY=-down+lift+(jump?side*6:0)-lifted;
   line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],outline,17);line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],ink?'#e4e4d8':'#202a40',11);round(c,footX-7,footY-10,24,12,4,ink?'#fff':'#15202e',outline,2);
  }
  if(theater){
@@ -84,14 +96,39 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
    left=[[-20,shoulder+8],[-32-12*q,shoulder+22],[-44-14*q,shoulder+4]];
   }
  }
-  for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
+  // Source-specific cinematic blocking articulates both elbows and wrists.
+ // Combat windups/strikes take precedence, so visuals cannot desync contact.
+ if(acting){
+  const bentArm=(side,angle,elbow)=>{
+   const sx=side*20,spread=side*(29+Math.abs(angle)*21);
+   const ex=spread+(acting.turn||0)*5,ey=shoulder+32+angle*63;
+   const midX=side*(29+Math.abs(angle)*10)+(acting.turn||0)*3,
+     midY=shoulder+20+angle*27+elbow*13;
+   return [[sx,shoulder+7],[midX,midY],[ex,ey]];
+  };
+  left=bentArm(-1,acting.leftArm,acting.leftElbow);
+  right=bentArm(1,acting.rightArm,acting.rightElbow);
+  if(['clap','snap'].includes(lyricGesture)){
+   const motion=Math.sin(lyricPhase*Math.PI);
+   left[2]=[-6-7*(1-motion),shoulder-29-motion*11];
+   right[2]=[6+7*(1-motion),shoulder-29-motion*11];
+  }
+  if(lyricGesture==='listen')right[2]=[14,headY-6];
+  if(lyricGesture==='heart'){
+   left[2]=[-8,shoulder+13];right[2]=[8,shoulder+13];
+  }
+ }
+ for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
  if(gyuwon&&!run&&!dance&&!slide){round(c,-38,hipsY-7,15,42,3,'#70414f',outline,3);line(c,[[-35,hipsY+2],[-25,hipsY+2]],'#c6a06a',2);}
+ c.save();
+ if(acting){c.translate(0,headY);c.rotate((acting.headYaw||0)*.15+(acting.headPitch||0)*.065);c.translate(0,-headY);}
  if(gyuwon)drawGyuwonPhoto(c,portrait,0,headY,24,{mirror:face<0});else{
  ellipse(c,0,headY,20,24,skin,outline,3);
  c.beginPath();c.moveTo(-21,headY+2);c.bezierCurveTo(-26,headY-25,-8,headY-34,11,headY-27);c.bezierCurveTo(27,headY-19,24,headY+4,18,headY+12);c.lineTo(15,headY-7);c.lineTo(3,headY-17);c.lineTo(-2,headY-6);c.lineTo(-8,headY-14);c.lineTo(-17,headY);c.closePath();c.fillStyle=ink?'#29292c':gyuwon?'#39314f':'#203549';c.fill();c.strokeStyle=outline;c.lineWidth=2;c.stroke();
  if(miss){line(c,[[-11,headY+1],[-5,headY+7],[-11,headY+9]],outline,2);line(c,[[8,headY+1],[14,headY+7],[8,headY+9]],outline,2);}else{ellipse(c,-7,headY+3,2,3,outline,null);ellipse(c,9,headY+3,2,3,outline,null);}
  c.beginPath();c.arc(2,headY+11,5,0,Math.PI);c.strokeStyle=outline;c.lineWidth=1.8;c.stroke();
  }
+ c.restore();
  if(!ink){path(c,[[-17,shoulder],[-7,shoulder+5],[20,shoulder+2],[41+Math.sin(t*7)*7,shoulder+14],[18,shoulder+9],[-15,shoulder+7]],gyuwon?'#9b79c8':'#d4ae64',outline,1.5);}
  if(theater){
   // Tailored theatrical waistcoat, gold piping, gloves and lapel highlights.
