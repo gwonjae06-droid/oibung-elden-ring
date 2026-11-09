@@ -4,7 +4,8 @@ import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
 import {gyuwonDanceScene,gyuwonDanceAction} from './gyuwon-dance-director.mjs';
 import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
-import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady} from './gyuwon-runner-director.mjs';
+import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
+import {runnerInitMotion,runnerPressJump,runnerPressSlide,runnerReleaseSlide,runnerStepMotion,runnerObstacleContact,runnerGuideReset,runnerGuideBridge,runnerGuideCatch,runnerGuideWarning} from './gyuwon-runner-physics.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
  {name:'턱검 기사',cost:40,hp:74,attack:15,range:1.8,speed:2,cool:2.2},
  {name:'광대 인형',cost:80,hp:195,attack:10,range:1.6,speed:1.1,cool:3.5},
@@ -28,7 +29,7 @@ export function setupReferenceMinigame(g,m){
  if(m.year===5){
   setupGiantRaid(g,m,REFERENCE_PARTY);
  }else if(m.year===6){
-  g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;
+  g.player.x=-10;g.player.z=0;runnerInitMotion(m);m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;m.guideRescues=0;m.guideBridgesLeft=0;m.guideAction='';m.guideActionUntil=0;m.guideScene='overture';m.runnerLyric=null;
  }else if(m.year===7){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;
  }else if(m.year===8){
@@ -130,12 +131,14 @@ export function actReferenceMinigame(g,m,type,c){
 function tickReferenceRunner(g,m,dt,c){
  const p=g.player,scene=gyuwonRunnerScene(m.time,m.clock?.duration||GYUWON_SONGS[6].duration);
  const previous=m.runnerScene?.key;
- m.runnerScene=scene;m.runnerBiome=scene.biome;m.runnerGuided=true;
+ m.runnerScene=scene;m.runnerBiome=scene.biome;m.runnerLyric=gyuwonRunnerLyricStage(scene.time);m.runnerGuided=true;
  const relief=scene.relief,opening=scene.opening>.01,
   accent=gyuwonRunnerAccent(scene.time);
- if(previous!==scene.key&&(scene.key==='quiet'||scene.key==='exit')){
-  // A calm orchestral phrase is a real pause, not an unavoidable leftover hit.
-  m.obstacles.length=0;m.runnerSpawn=2.4;
+ if(previous!==scene.key){
+  runnerGuideReset(m,scene);
+  // Reset the old attack's warning; no "invisible" windups across new acts.
+  if(relief){m.obstacles.length=0;m.runnerSpawn=2.4;}
+  else m.runnerSpawn=Math.max(m.runnerSpawn,1.2);
  }
  m.dashTime=Math.max(0,m.dashTime-dt);
  m.dashCooldown=Math.max(0,m.dashCooldown-dt);
@@ -143,36 +146,50 @@ function tickReferenceRunner(g,m,dt,c){
  m.runnerSpeed=speed;
  m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;
  m.energy=Math.max(0,m.energy-dt*(relief?.5:1.25));
- m.slide=m.slideHeld?.95:Math.max(0,m.slide-dt);
  m.fallRecovery=Math.max(0,m.fallRecovery-dt);
+ // The entire world moves past the stationary armored knight.
  for(const platform of m.platforms){platform.x-=speed*dt;platform.end-=speed*dt;}
  m.platforms=m.platforms.filter(a=>a.end>-35);
  let last=m.platforms.at(-1);
- if(!last){m.platforms.push({x:p.x+4,end:p.x+23,y:0});last=m.platforms[0];} // The fall must still register before a rescue platform appears.
+ if(!last){m.platforms.push({x:p.x+4,end:p.x+23,y:0});last=m.platforms[0];}
  if(last.end<37){
   const gap=gyuwonRunnerGap(scene,m.pickups);
-  m.platforms.push({x:last.end+gap,end:last.end+gap+21+(m.pickups%3)*2,y:0});
+  const bridge=runnerGuideBridge(m,last.end,gap,m.time);
+  const next={x:last.end+gap,end:last.end+gap+21+(m.pickups%3)*2,y:0};
+  // All road segments remain ordered left→right, including physical bridges.
+  if(bridge)m.platforms.push(bridge);
+  m.platforms.push(next);
  }
  const grounded=m.platforms.some(a=>p.x>=a.x&&p.x<=a.end);
- m.jumpY+=m.jumpV*dt;m.jumpV-=24*dt;
- if(grounded&&m.jumpY<=0&&m.jumpV<=0){m.jumpY=0;m.jumpV=0;m.jumpCount=0;}
- if(m.jumpY<-5){
+ runnerStepMotion(m,grounded,dt);
+ if(m.jumpY< -3&&runnerGuideCatch(m,p,m.time)){
+  c.emit('gyuwon-runner-bridge-rescue',{year:6,biome:scene.biome});
+ }
+ if(m.jumpY< -5){
   if(m.fallRecovery<=0)c.take(g,25,c.emit);
   m.energy=Math.max(0,m.energy-12);m.jumpY=2.8;m.jumpV=0;m.jumpCount=0;
-  m.fallRecovery=1.4;m.platforms.push({x:p.x-3,end:p.x+12,y:0});
+  m.grounded=false;m.fallRecovery=1.4;
+  m.platforms.push({x:p.x-3,end:p.x+12,y:0});
+  m.platforms.sort((a,b)=>a.x-b.x);
  }
  p.floorY=m.jumpY;
- // Intro / quiet / outro are designed breathers, including the handoff.
+ // Every obstacle is born offscreen right, with a real approach interval.
  if(!relief&&!opening){
   m.runnerSpawn-=dt;
   if(m.runnerSpawn<=0){
-   m.runnerSpawn=scene.key==='final-sprint'?1.25:scene.key==='bridge'?1.9:scene.key==='rain'?1.7:2.1+(m.pickups%4)*.14;
+   const period=scene.key==='final-sprint'?.86:
+    scene.key==='skyroad'?1.1:scene.key==='bridge'?1.28:scene.key==='rain'?1.34:
+    scene.key==='sunrise'?1.44:1.8;
+   m.runnerSpawn=period+(m.nextId%4===3?.25:0);
    const index=m.nextId||0;
-   m.obstacles.push({id:g.nextId++,x:24,kind:index%2?'low':'high',
-     variant:gyuwonRunnerObstacleVariant(scene,index),width:1.3,hit:false});
+   const kind=index%2?'low':'high';
+   m.obstacles.push({id:g.nextId++,x:24,kind,
+    variant:gyuwonRunnerObstacleVariant(scene,index),width:1.3,hit:false,
+    section:scene.key,spawnTime:m.time});
    m.nextId=index+1;
   }
  }else m.runnerSpawn=Math.max(m.runnerSpawn,opening?1.9:1.4);
+ runnerGuideWarning(m,p.x,m.time);
  m.runnerRecoverClock-=dt;
  if(m.runnerRecoverClock<=0){
   m.runnerRecoverClock=14;
@@ -180,11 +197,15 @@ function tickReferenceRunner(g,m,dt,c){
  }
  for(const o of m.obstacles){
   o.x-=speed*dt;
-  const bottom=m.jumpY,top=bottom+(m.slide>0?.72:2.1),lo=o.kind==='low'?1.5:0,hi=o.kind==='low'?3.6:1.2;
-  if(!o.hit&&Math.abs(o.x-p.x)<1.02&&top>lo&&bottom<hi){
+  if(!o.hit&&runnerObstacleContact(m,p.x,o)){
    o.hit=true;
-   if(dash){m.success++;m.starCharge=Math.min(100,m.starCharge+2);c.deal(g,75,c.emit);}
-   else{m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);}
+   if(dash){
+    m.success++;m.starCharge=Math.min(100,m.starCharge+2);
+    c.deal(g,75,c.emit);
+   }else{
+    m.combo=0;c.take(g,20,c.emit);
+    m.energy=Math.max(0,m.energy-8);
+   }
   }
  }
  m.obstacles=m.obstacles.filter(o=>o.x>-30);
@@ -197,7 +218,7 @@ function tickReferenceRunner(g,m,dt,c){
  }
  for(const j of m.jellies){
   j.x-=speed*dt;
-  if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slide>0?.4:1)))<1){
+  if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slideVisual>.5?.4:1)))<1){
    j.collected=true;m.pickups++;
    m.energy=Math.min(100,m.energy+(j.kind==='heart'?18:.55));
    m.starCharge=Math.min(100,m.starCharge+(j.kind==='gold'?15:j.kind==='heart'?6:1.6));
