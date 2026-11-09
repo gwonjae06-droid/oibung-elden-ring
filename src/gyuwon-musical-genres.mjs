@@ -9,6 +9,7 @@ import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
 import {GYUWON_RUNNER_ENTER_SECONDS} from './gyuwon-runner-director.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {gyuwonMasterScene} from './gyuwon-master-director.mjs';
+import {gyuwonLyricActionAt} from './gyuwon-lyric-actions.mjs';
 import {gyuwonCurtainCallAt,isGyuwonCurtainCall} from './gyuwon-curtain-call.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -400,6 +401,9 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  const duration=m.clock?.duration||song.duration;
  m.actProgress=clamp(m.time/duration,0,1);
  m.masterScene=gyuwonMasterScene(gyuwonSongKey(m),m.time);
+ // The complete 170-line performance is sampled from the actual audio clock.
+ // Year 7 and year 10 are explicitly excluded from this lyric layer.
+ m.lyricAction=gyuwonLyricActionAt(gyuwonSongKey(m),m.time);
  if(isGyuwonCurtainCall(m))tickCurtainCall(g,m,m.clock?.duration||song.duration);
  const ended=m.clock?m.clock.ended:m.time>=duration;
  if(m.finishing){
