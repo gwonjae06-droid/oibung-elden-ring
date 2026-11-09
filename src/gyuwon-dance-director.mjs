@@ -164,7 +164,12 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  const rivalColors={handoff:'#7b6889',invitation:'#594176',footsteps:'#865e86',
   stars:'#7ba6b7',ensemble:'#794267',grand:'#b881a6',encore:'#7f87b9',
   rain:'#5981a7',reunion:'#a57b93',sunrise:'#c68d79',bow:'#e1b48c'};
- stagePerson(c,315,530,{scale:1.70,t:t+.12,pose:guidePose,
+ // A literal left/right lyric moves the entire dancer's centre of mass,
+ // not only the feet. No gameplay hitbox exists for the show leader.
+ const stepCue=m.lyricAction,stepWeight=stepCue?Math.sin(Math.PI*stepCue.phase):0;
+ const gyuwonStepX=stepCue?.gesture==='stepleft'?-52*stepWeight:
+   stepCue?.gesture==='stepright'?52*stepWeight:0;
+ stagePerson(c,315+gyuwonStepX,530,{scale:1.70,t:t+.12,pose:guidePose,
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
   theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null,
   lyric:tele?.active?null:m.lyricAction});
