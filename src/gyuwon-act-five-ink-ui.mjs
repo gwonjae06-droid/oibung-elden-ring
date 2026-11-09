@@ -1,6 +1,7 @@
 // Only paint the existing controls. Their DOM, handlers, focus and hit areas
 // stay intact; none of the irregular ink borders intercept pointer events.
 export const ACT_FIVE_INK_UI=`
+[data-ink-ui="on"] :is(#player-hud,#boss-hud,.gy-dday-clock,.gy-dday-subject){border:2px solid #34303d;border-radius:8px 15px 6px 13px;background:#efe0bce8;color:#272b39;box-shadow:3px 3px #141b2a88;text-shadow:none}
 [data-ink-ui="on"] .gy-musical-layer,[data-ink-ui="on"] #pause-screen{font-family:"Segoe Print","Comic Sans MS","Malgun Gothic",sans-serif;color:#f9eed5}
 [data-ink-ui="on"] :is(.gy-musical-title,.gy-musical-info,.gy-turn-points,.gy-party-card,.gy-turn-target,.gy-turn-queue>div,.gy-musical-actions button,#pause,.gy-musical-audio-retry){border:2px solid #211e2e;border-radius:9px 16px 7px 13px / 12px 7px 14px 8px;box-shadow:3px 3px 0 #090e18c9;background:#f7e6bd;color:#242032;text-shadow:none}
 [data-ink-ui="on"] :is(.gy-party-card,.gy-turn-target,.gy-musical-actions button,.gy-musical-title,.gy-turn-points)::after{content:"";position:absolute;inset:2px 3px;pointer-events:none;border:1px solid currentColor;border-radius:13px 7px 15px 8px / 7px 14px 8px 11px;opacity:.35;transform:rotate(-.6deg)}

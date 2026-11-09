@@ -1,3 +1,4 @@
+import {gyuwonDisplayYear} from './gyuwon-musical-route.mjs';
 import {GYUWON_FACE_URL} from './gyuwon-photo-face.mjs';
 import {usesReference2d} from './gyuwon-reference-rules.mjs';
 import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './gyuwon-2d-art.mjs';
@@ -26,7 +27,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
  function standardHeader(g,m,{color='#6dd9e6',dark=false}={}){
   const fg=dark?'#162d37':'#fff5db';
   round(c,22,18,330,59,15,dark?'#ffffffb8':'#142332de','#b7d9d8',2);
-  label(c,m.year+'수',43,45,21,color);label(c,Math.round(m.score).toLocaleString(),325,45,31,fg,'right',dark?0:3);
+  label(c,gyuwonDisplayYear(m.year)+'수',43,45,21,color);label(c,Math.round(m.score).toLocaleString(),325,45,31,fg,'right',dark?0:3);
   // The central top belongs to the seven-act theater progress ribbon.
   bar(c,960,28,290,12,g.boss.hp,g.boss.maxHp,'#ba394e',dark?'#6c755b':'#23151c');
   label(c,Math.round(g.boss.hp)+' / '+g.boss.maxHp,1095,60,17,fg,'center',dark?0:2);
@@ -166,7 +167,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     c.setLineDash([]);c.restore();
    }
    drawGyuwonRunnerGuide(c,x,y,{scale:guide.kind==='moon'?.56:.73,t,
-    opacity:guide.opacity,gesture:guide.gesture||guide.kind});
+    opacity:guide.opacity,gesture:guide.gesture||guide.kind,portrait});
   }
   for(const a of m.platforms){
    const x=sx(a.x),w=(a.end-a.x)*1280/44;
@@ -437,7 +438,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
      }
      lastDance2d.clearRect(0,0,lastDanceFrame.width,lastDanceFrame.height);
      lastDance2d.drawImage(canvas,0,0);
-    }else if(m.year===9&&m.time<5.9&&lastDanceFrame.width>0){
+    }else if(m.year===9&&m.fromYear===8&&m.time<5.9&&lastDanceFrame.width>0){
      const q=clamp(m.time/5.9,0,1);
      c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=(1-q)*.88;
      c.drawImage(lastDanceFrame,0,0,canvas.width,canvas.height);c.restore();
@@ -448,7 +449,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     }
     lastRunner2d.clearRect(0,0,lastRunnerFrame.width,lastRunnerFrame.height);
     lastRunner2d.drawImage(canvas,0,0);
-   }else if(m.year===7&&m.time<4.5&&lastRunnerFrame.width>0){
+   }else if(m.year===8&&m.fromYear===6&&m.time<4.5&&lastRunnerFrame.width>0){
     c.save();c.setTransform(1,0,0,1,0,0);
     c.globalAlpha=1-clamp(m.time/4.5,0,1);
     c.drawImage(lastRunnerFrame,0,0,canvas.width,canvas.height);c.restore();

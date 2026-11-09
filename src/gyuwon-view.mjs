@@ -76,8 +76,8 @@ export function buildGyuwonView(scene,{reduced=false,coarse=false}={}){
   student.visible=hello>0;if(hello>0){student.scale.setScalar(hello);student.position.set(b.x,0,b.z);}
   // Keep transitions legible, without a white-screen flash or per-frame allocation.
    const blend=dt>0?1-Math.exp(-Math.min(.05,dt)*4.4):1;
-   scene.background.lerp(white?whiteTint:voidSpace?voidTint:studyTint,blend);
-  scene.fog.color.copy(scene.background);scene.fog.density=g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
+   scene.background.lerp(s.years?.musical&&!s.years.musical.finishing?studyTint:white?whiteTint:voidSpace?voidTint:studyTint,blend);
+  scene.fog.color.copy(scene.background);scene.fog.density=s.years?.musical?.year===11&&!s.years.musical.finishing?.002:g.gyuwon.hazards.some(h=>h.shape==='wave')?.0035:.009;
   // A continuous, non-colliding floor makes metaphysical spaces legible.
   floor.visible=!s.years&&!won&&!(b.phase===3&&['sword','circus','gamble','tsunami'].includes(s.stageMemory));
    floor.material.color.lerp(voidSpace?(white?whiteFloor:darkFloor):studyFloor,blend);

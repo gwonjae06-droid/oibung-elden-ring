@@ -1,8 +1,8 @@
 import {setupReferenceMinigame,actReferenceMinigame,tickReferenceMinigame} from './gyuwon-reference-rules.mjs';
 import {actFivePerformanceAt,poseActFiveHands} from './gyuwon-act-five-score.mjs';
-// One unbroken, playable eleven-act fight. Acts 1-4 keep the authored
-// annual system. Acts 5-11 replace it with six distinct controls/genres and
-// a final musical. No exam/result roll or fake remote damage is used here.
+import {gyuwonDisplayYear} from './gyuwon-musical-route.mjs';
+// The live route keeps four exam years, then four playable genres and a
+// noncombat ensemble finale. Recording IDs 7/10 remain archive fixtures. No exam/result roll or fake remote damage is used here.
 import {playerIncomingDamage} from './weapon-stats.mjs';
 import {applyGyuwonPlayerDamage,gyuwonPlayerHpFloor} from './gyuwon-ending-survival.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
@@ -21,8 +21,8 @@ export const GYUWON_MUSICAL_ACTS=Object.freeze({
  5:Object.freeze({kind:'turn',name:'턴제 모험',color:'#e7a43f',title:'첫 번째 노래 · 새로운 모험'}),
  6:Object.freeze({kind:'runner',name:'끝없는 달리기',color:'#e879b5',title:'두 번째 노래 · 달려, 달려!'}),
  7:Object.freeze({kind:'army',name:'작은 전쟁',color:'#6db1eb',title:'세 번째 노래 · 모두 함께'}),
- 8:Object.freeze({kind:'rhythm',name:'박자 맞추기',color:'#ad88eb',title:'네 번째 노래 · 발끝의 박자'}),
- 9:Object.freeze({kind:'fighter',name:'격투 극장',color:'#df6261',title:'다섯 번째 노래 · 마지막 한 판'}),
+ 8:Object.freeze({kind:'rhythm',name:'박자 맞추기',color:'#ad88eb',title:'세 번째 노래 · 발끝의 박자'}),
+ 9:Object.freeze({kind:'fighter',name:'격투 극장',color:'#df6261',title:'네 번째 노래 · 마지막 한 판'}),
  10:Object.freeze({kind:'shooter',name:'총알의 왈츠',color:'#6eaf8a',title:'여섯 번째 노래 · 빗발치는 별'}),
  11:Object.freeze({kind:'finale',name:'마지막 뮤지컬',color:'#e0bd79',title:'마지막 노래 · 잊지 못할 무대'})
 });
@@ -66,6 +66,8 @@ export function enterGyuwonMusical(g,emit=()=>{}){
  if(!e||!isGyuwonMusicalYear(e.year))return false;
  const previous=e.musical;
  const m=newState(e.year);
+ m.displayYear=gyuwonDisplayYear(e.year);m.fromYear=previous?.year??null;
+ if(e.year===8&&previous?.year===6)m.danceHandoff={count:4,kinds:[0,1,2,3],fromRunner:true};
  // Preserve a concrete cast from the last seconds of VII instead of replacing
  // them with anonymous dancers at the VIII opening. The original song clocks
  // remain independent; the image carryover is a normal, unskippable transition.

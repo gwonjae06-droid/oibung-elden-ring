@@ -31,7 +31,7 @@ test('visible combat overlays cover the home button and no duplicate dice exits 
  assert.match(session,/oibung:home/);
  assert.match(hud,/home\.addEventListener\('keydown',keydown\)/);
  assert.doesNotMatch(read('src/dice-ui.mjs'),/광대전 결과로/);
- assert.match(read('spider-combat.html'),/gyuwon-ui\.mjs\?v=ui-safe-layout-v2-20261107/);
+ assert.match(read('spider-combat.html'),/gyuwon-ui\.mjs\?v=gyuwon-reduced-ink-curtain-20261110/);
 });
 
 

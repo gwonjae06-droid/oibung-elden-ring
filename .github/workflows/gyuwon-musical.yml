@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
-      - run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-act-five-acting.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-runner-helper-physics.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/journey-controller.test.mjs
+      - run: node --test tests/gyuwon-act-five-score.test.mjs tests/gyuwon-act-five-acting.test.mjs tests/gyuwon-sculpted-actor.test.mjs tests/gyuwon-living-doodle.test.mjs tests/gyuwon-reverie.test.mjs tests/gyuwon-giant-raid.test.mjs tests/gyuwon-caption-sync.test.mjs tests/gyuwon-reference-games.test.mjs tests/gyuwon-runner-handoff.test.mjs tests/gyuwon-runner-helper-physics.test.mjs tests/gyuwon-musical-genres.test.mjs tests/gyuwon-song-clock.test.mjs tests/gyuwon-opening-pacing.test.mjs tests/gyuwon-curtain-call.test.mjs tests/gyuwon-musical-route.test.mjs tests/journey-controller.test.mjs
       - run: npx playwright-core install --with-deps chromium
       - run: node scripts/gyuwon-musical-qa.mjs
       - run: node scripts/gyuwon-reference-qa.mjs
@@ -41,11 +41,14 @@ jobs:
         run: node scripts/gyuwon-reverie-qa.mjs
       - name: Full original 5su raid with native UI combat
         run: node scripts/gyuwon-giant-raid-qa.mjs
+      - name: Retained songs, full-story ink and ensemble finale
+        run: node scripts/gyuwon-reduced-route-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: gyuwon-musical-screenshots
           path: |
+            qa-output/reduced-route/
             qa-output/musical/
             qa-output/reference/
             qa-output/giant-raid/

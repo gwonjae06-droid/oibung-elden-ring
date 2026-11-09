@@ -1,5 +1,6 @@
 import {audioChannelGain} from './audio-preferences.mjs';
 import {GYUWON_SONGS,gyuwonSongKey} from './gyuwon-song-data.mjs';
+import {gyuwonNextPerformance} from './gyuwon-musical-route.mjs';
 
 // Combat reads this media clock. Muting changes gain; pausing preserves position.
 export function createGyuwonMusicalScore(makeAudio=url=>new Audio(url),now=()=>performance.now()/1000){
@@ -21,7 +22,7 @@ export function createGyuwonMusicalScore(makeAudio=url=>new Audio(url),now=()=>p
   audio.onended=()=>{if(current===entry&&enabled&&!entry.failed&&!audio.loop)entry.clock.ended=true;};
   audio.onerror=()=>fail(entry);
   if(m)m.clock=entry.clock;
-  const next=typeof id==='number'?(id<11?id+1:'ending'):null;
+  const next=typeof id==='number'?gyuwonNextPerformance(id):null;
   for(const [k,a]of cache)if(k!==id&&k!==next){release(a);cache.delete(k);}
   if(next)get(next);
  }

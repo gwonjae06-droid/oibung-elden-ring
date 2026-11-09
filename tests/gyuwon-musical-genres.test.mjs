@@ -1,3 +1,5 @@
+import {GYUWON_PERFORMANCE_ROUTE as ROUTE,gyuwonNextPerformance} from '../src/gyuwon-musical-route.mjs';
+import {GYUWON_SONGS} from '../src/gyuwon-song-data.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGyuwonGame,actGyuwon,stepGyuwon,damageGyuwon} from '../src/gyuwon-combat.mjs';
@@ -40,13 +42,13 @@ test('first four exam years remain original, seven white stage acts have distinc
 // Genre contact and control regressions live in gyuwon-reference-games.test.mjs.
 test('songs own exact HP targets and cannot be skipped by direct damage or DoT',()=>{
  const g=at(5),e=g.gyuwon.years;g.player.invuln=1e6;g.stats.damage=77;
- const targets=[5300,4600,3900,3200,2500,1800,800];
- for(let year=5;year<=11;year++){
+ const targets=Object.fromEntries(ROUTE.map(y=>[y,GYUWON_SONGS[y].target]));
+ for(const year of ROUTE){
   const m=e.musical,hp=g.boss.hp;assert.equal(e.year,year);
   assert.equal(damageGyuwon(g,1e9),0);assert.equal(damageGyuwon(g,1e9,null,{dot:true}),0);
   advance(g,2);assert.equal(g.boss.hp,hp);
   m.clock={source:'media',time:4,duration:48,ended:true};advance(g,1.2);
-  assert.equal(g.boss.hp,targets[year-5]);assert.equal(g.stats.damage,77);
+  assert.equal(g.boss.hp,targets[year]);assert.equal(g.stats.damage,77);
  }
  assert.equal(e.mode,'curtain');assert.equal(actGyuwon(g,'light'),false);
  advance(g,30);assert.equal(g.status,'playing');assert.equal(g.boss.hp,800);
@@ -59,8 +61,8 @@ test('semicolon advance skips acts 5-11 exactly once, keeps HP targets, and neve
  assert.equal(actGyuwon(early,'skip-act'),false);
  assert.equal(early.gyuwon.years.year,1);
  const g=at(5),e=g.gyuwon.years;
- const targets=[5300,4600,3900,3200,2500,1800,800];
- for(let year=5;year<=11;year++){
+ const targets=Object.fromEntries(ROUTE.map(y=>[y,GYUWON_SONGS[y].target]));
+ for(const year of ROUTE){
   assert.equal(e.year,year);
   const m=e.musical;
   m.transition=2.7; // Skip must work during the introductory theatrical pose.
@@ -70,12 +72,12 @@ test('semicolon advance skips acts 5-11 exactly once, keeps HP targets, and neve
   assert.equal(actGyuwon(g,'skip-act'),false,'repeating key must not queue two act skips');
   assert.equal(g.boss.hp,oldHp,'damage should settle only on next game tick');
   advance(g,.05);
-  assert.equal(g.boss.hp,targets[year-5]);
-  assert.equal(e.year,Math.min(year+1,11));
+  assert.equal(g.boss.hp,targets[year]);
+  assert.equal(e.year,year===11?11:gyuwonNextPerformance(year));
   assert.equal(e.mode,year===11?'curtain':'musical');
  }
- assert.equal(g.events.filter(event=>event.type==='gyuwon-musical-skip').length,7);
- assert.equal(g.events.filter(event=>event.type==='gyuwon-song-ended'&&event.skipped).length,7);
+ assert.equal(g.events.filter(event=>event.type==='gyuwon-musical-skip').length,5);
+ assert.equal(g.events.filter(event=>event.type==='gyuwon-song-ended'&&event.skipped).length,5);
  assert.equal(actGyuwon(g,'skip-act'),false,'the unskippable final cutscene is protected');
  assert.equal(g.boss.hp,800);
 });
@@ -178,7 +180,7 @@ test('11수 is a noncombat curtain call that becomes credits halfway through the
  assert.equal(m.curtainCall.mode,'recollection');
  assert.equal(g.player.x,0);
  assert.equal(g.player.z,5);
- m.clock.time=98;
+ m.clock.time=104;
  advance(g,.05);
  assert.equal(m.curtainCall.mode,'credits');
  assert.equal(m.curtainCall.actorIndex,-1);

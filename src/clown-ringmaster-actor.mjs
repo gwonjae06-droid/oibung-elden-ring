@@ -310,6 +310,7 @@ export function createClownActor({coarse=false}={}){
       target=[s*(1.18+spread*.37),3.16+spread*.27,1.27+transform.bind*.43];
      else target=[s*(1.5+spread*.85),2.4+spread*.9,1.1+spread*.7];
     }
+   if(c.curtainDance){const dance=c.curtainDance;target=[s*(1.35+.35*Math.abs(dance.step)),2.45+dance.arm*.8,.65+Math.max(0,-s*dance.step)*.4];}
    const frameRate=1-Math.exp(-step*18);
    if(!a.smoothed)a.smoothed=target;else a.smoothed=a.smoothed.map((x,i)=>x+(target[i]-x)*frameRate);
    if(phase&&q.active){

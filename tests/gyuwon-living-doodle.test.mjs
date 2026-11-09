@@ -14,15 +14,10 @@ function fakeRenderer(){
  };
 }
 
-test('only the 5수 original 3D reference act receives the living doodle',()=>{
+test('every Gyuwon year and the final song share colored ink',()=>{
  assert.equal(isGyuwonLivingDoodleAct(null),false);
- assert.equal(isGyuwonLivingDoodleAct({year:4,reference:true}),false);
- assert.equal(isGyuwonLivingDoodleAct({year:5,reference:false}),false);
- assert.equal(isGyuwonLivingDoodleAct({year:5,reference:true}),true);
- assert.equal(isGyuwonLivingDoodleAct({year:5,reference:true,giantRaid:true}),true);
- assert.equal(isGyuwonLivingDoodleAct({year:5,reference:true,finishing:true}),false);
- assert.equal(isGyuwonLivingDoodleAct({year:6,reference:true}),false);
- assert.equal(isGyuwonLivingDoodleAct({year:11,reference:false}),false);
+ for(let year=1;year<=11;year++)assert.equal(isGyuwonLivingDoodleAct({year}),true);
+ assert.equal(isGyuwonLivingDoodleAct({year:11,finishing:true}),true);
 });
 
 test('two hand-ink drawings alternate eight times a second, frozen on reduced motion',()=>{
@@ -75,4 +70,19 @@ test('an unsupported shader falls back to unfiltered battle render rather than b
  assert.equal(pass.render(stage,camera,{active:true,time:.5}),false);
  assert.equal(pass.stats().active,false);
  pass.dispose();
+});
+
+test('2D ink reuses one texture and restores renderer state before returning to a resized 3D world',()=>{
+ const renderer=fakeRenderer();renderer.autoClear=true;
+ const pass=createGyuwonLivingDoodle(renderer),canvas={width:640,height:360};
+ assert.equal(pass.renderCanvas(canvas,{time:2,opacity:.4}),true);
+ const quad=renderer.calls.at(-1).scene.children[0],texture=quad.material.uniforms.tStage.value;
+ // tStage is restored immediately; observe the uploaded canvas via render.
+ const render=renderer.render.bind(renderer);let first=null,again=null;
+ renderer.render=(scene,camera)=>{if(scene.children[0]?.material?.uniforms){const tex=scene.children[0].material.uniforms.tStage.value;if(tex.isCanvasTexture){if(!first)first=tex;else again=tex;}}render(scene,camera);};
+ pass.renderCanvas(canvas,{time:3});pass.renderCanvas(canvas,{time:4});assert.equal(first,again);
+ assert.equal(renderer.autoClear,true);assert.equal(quad.material.transparent,false);assert.equal(quad.material.uniforms.uCompositeAlpha.value,1);
+ renderer.getDrawingBufferSize=v=>v.set(800,450);
+ pass.render(new THREE.Scene(),new THREE.PerspectiveCamera(),{active:true});
+ assert.deepEqual([texture.image.width,texture.image.height],[800,450]);assert.equal(pass.stats().source,'world');pass.dispose();
 });

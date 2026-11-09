@@ -1,3 +1,4 @@
+import {gyuwonNextPerformance} from './gyuwon-musical-route.mjs';
 import {beginGyuwonReverie,tickGyuwonReverie} from './gyuwon-reverie.mjs';
 import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,spawnArsenal,tickArsenal} from './gyuwon-arsenal.mjs';
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage,MARKSMAN_VOLLEYS} from './gyuwon-nightmare-mechanics.mjs';
@@ -146,7 +147,7 @@ function pickMemoryMap(g){
 function startNextYear(g,emit){
  const e=g.gyuwon.years;
  if(beginGyuwonReverie(g,emit))return;
- e.year=e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
+ e.year=!e.legacyAnnual&&e.musical?gyuwonNextPerformance(e.year):e.year+1;e.day=365;e.season=0;e.mode='combat';e.cast=null;e.castT=0;
  e.grade=null;e.gradeT=0;e.recover=1.9;e.bannerUntil=g.time+2.65;e.dodge=null;
  e.mapClock=0;e.mapPending=false;e.chat=[];e.wards=[];applyAnnualCarry(g);e.yearStartHp=g.boss.hp;e.weaponPlan=null;
  e.signatureUsed=false;e.marksmanFinaleCompleted=false;e.nightmareUsed=false;e.rideTrack=[];

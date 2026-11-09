@@ -15,7 +15,7 @@ try{
  while(Date.now()-begun<95000){
   last=await page.evaluate(()=>{const s=window.__session(),g=s.game,e=g.gyuwon.years,r=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;return {year:e.year,mode:e.mode,time:e.reverie?.time,hp:g.boss.hp,playerHP:g.player.hp,playerX:g.player.x,hits:g.stats.hits,graphics:s.diagnostics(),caption:r.querySelector('.gy-film-caption').textContent,bossDisplay:getComputedStyle(r.getElementById('boss-hud')).display,musicPlaying:window.__media.some(a=>decodeURIComponent(a.src).endsWith('/Welcome to My World!.mp3')&&!a.paused)};});
   if(last.year===5)break;
-  assert.equal(last.graphics.livingDoodle.applied,false,'the real-world cinematic stays outside the imaginary ink world');assert.equal(last.mode,'reverie');assert.equal(last.hp,6000);assert.equal(last.hits,0);assert.equal(last.musicPlaying,false);assert.equal(last.bossDisplay,'none');
+  assert.equal(last.graphics.livingDoodle.applied,true,'the full Gyuwon story shares the colored ink world');assert.equal(last.mode,'reverie');assert.equal(last.hp,6000);assert.equal(last.hits,0);assert.equal(last.musicPlaying,false);assert.equal(last.bossDisplay,'none');
   if(next<capture.length&&last.time>=capture[next]){await page.screenshot({path:`qa-output/reverie/scene-${next}-${Math.floor(last.time)}.png`});frames.push(last);console.log('Reverie scene',last.graphics.reverie.shot,last.time.toFixed(2));next++;}
   if(!paused&&last.time>=21){
    await page.locator('#gyuwon-battle').locator('#world').focus();await page.keyboard.press('Escape');

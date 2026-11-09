@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-// Act V alone takes place inside a living hand-drawn theatrical illustration.
+// Every Gyuwon act shares the colored hand-drawn world, including 2D frames.
 // Keep Three.js as the animation/hit-test authority. Only the WORLD render is
 // stylized; HTML captions, controls, target selection and HP remain sharp.
-export const isGyuwonLivingDoodleAct=m=>Boolean(m?.reference&&m.year===5&&!m.finishing);
+export const isGyuwonLivingDoodleAct=m=>Boolean(m&&m.year>=1);
 export const gyuwonDoodleDrawingAt=(time,reducedMotion=false)=>reducedMotion?0:Math.floor(Math.max(0,Number.isFinite(time)?time:0)*8)%2;
 
 // The world's detailed meshes become two subtly different ink renderings.
@@ -24,6 +24,7 @@ uniform sampler2D tStage;
 uniform vec2 uResolution;
 uniform float uDrawing;
 uniform float uStrength;
+uniform float uCompositeAlpha;
 varying vec2 vUv;
 
 float brightness(vec3 c){return dot(c,vec3(.299,.587,.114));}
@@ -35,7 +36,7 @@ float sketchHash(vec2 p){
 void main(){
  vec2 px=1.0/max(uResolution,vec2(1.0));
  vec4 sourcePixel=texture2D(tStage,vUv);
- if(sourcePixel.a>.45&&sourcePixel.a<.55){gl_FragColor=vec4(sourcePixel.rgb,1.0);
+ if(sourcePixel.a>.45&&sourcePixel.a<.55){gl_FragColor=vec4(sourcePixel.rgb,uCompositeAlpha);
   #include <colorspace_fragment>
   return;
  }
@@ -76,7 +77,7 @@ void main(){
       *smoothstep(.82,1.0,sin((gl_FragCoord.x+gl_FragCoord.y)*.36));
  painted=mix(painted,inkColor,.060*hatch*uStrength);
  vec3 done=mix(painted,inkColor,min(.95,ink*uStrength));
- gl_FragColor=vec4(clamp(done,0.0,1.0),1.0);
+ gl_FragColor=vec4(clamp(done,0.0,1.0),uCompositeAlpha);
  #include <colorspace_fragment>
 }
 `;
@@ -88,7 +89,7 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
  target.texture.generateMipmaps=false;
  const uniforms={
   tStage:{value:target.texture},uResolution:{value:new THREE.Vector2(1,1)},
-  uDrawing:{value:0},uStrength:{value:coarse?.88:1}
+  uDrawing:{value:0},uStrength:{value:coarse?.88:1},uCompositeAlpha:{value:1}
  };
  const material=new THREE.ShaderMaterial({uniforms,vertexShader,fragmentShader,
   depthTest:false,depthWrite:false,toneMapped:false});
@@ -98,16 +99,17 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
  const outputScene=new THREE.Scene();outputScene.add(quad);
  const outputCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
  const dims=new THREE.Vector2();
- let width=0,height=0,disposed=false,broken=false,lastApplied=false,worldCalls=0,worldTriangles=0;
+ let width=0,height=0,disposed=false,broken=false,lastApplied=false,worldCalls=0,worldTriangles=0,canvasTexture=null,canvasSource=null,source='world';
  function render(scene,camera,{active=false,time=0}={}){
   if(disposed)return false;
   lastApplied=false;
+  source='world';
   if(!active||broken){renderer.render(scene,camera);return false;}
   const originalTarget=renderer.getRenderTarget();
   try{
    renderer.getDrawingBufferSize(dims);
    const w=Math.max(1,Math.floor(dims.x)),h=Math.max(1,Math.floor(dims.y));
-   if(w!==width||h!==height){
+   if(w!==target.width||h!==target.height){
     width=w;height=h;target.setSize(w,h);
     uniforms.uResolution.value.set(w,h);
    }
@@ -128,6 +130,18 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
    return false;
   }
  }
+ function renderCanvas(canvas,{time=0,opacity=1}={}){
+  if(disposed||broken)return false;
+  const clear=renderer.autoClear;
+  try{
+   if(canvasSource!==canvas){canvasTexture?.dispose();canvasSource=canvas;canvasTexture=new THREE.CanvasTexture(canvas);canvasTexture.colorSpace=THREE.SRGBColorSpace;canvasTexture.generateMipmaps=false;canvasTexture.minFilter=THREE.LinearFilter;}
+   canvasTexture.needsUpdate=true;renderer.getDrawingBufferSize(dims);uniforms.uResolution.value.copy(dims);width=dims.x;height=dims.y;
+   uniforms.tStage.value=canvasTexture;uniforms.uDrawing.value=gyuwonDoodleDrawingAt(time,reducedMotion);uniforms.uCompositeAlpha.value=opacity;
+   material.transparent=true;renderer.autoClear=false;renderer.render(outputScene,outputCamera);
+   lastApplied=true;source='canvas2d';worldCalls=1;worldTriangles=2;return true;
+  }catch(error){console.warn('Gyuwon canvas ink unavailable; native 2D restored',error);return false;}
+  finally{renderer.autoClear=clear;material.transparent=false;uniforms.uCompositeAlpha.value=1;uniforms.tStage.value=target.texture;}
+ }
  function suspend(){lastApplied=false;}
  function prewarm(){
   if(disposed)return;
@@ -138,7 +152,8 @@ export function createGyuwonLivingDoodle(renderer,{coarse=false,reducedMotion=fa
   if(disposed)return;disposed=true;
   outputScene.remove(quad);
   geometry.dispose();material.dispose();target.dispose();
+  canvasTexture?.dispose();canvasSource=null;
  }
- return {render,suspend,prewarm,dispose,
-  stats:()=>({active:!broken&&!disposed,applied:lastApplied,width,height,frame:uniforms.uDrawing.value,kind:'act5-world-ink-ab',worldCalls,worldTriangles})};
+ return {render,renderCanvas,suspend,prewarm,dispose,
+  stats:()=>({active:!broken&&!disposed,applied:lastApplied,width,height,frame:uniforms.uDrawing.value,kind:'gyuwon-colored-ink-ab',source,worldCalls,worldTriangles})};
 }

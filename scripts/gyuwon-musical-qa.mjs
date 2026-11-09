@@ -1,3 +1,4 @@
+import {GYUWON_PERFORMANCE_ROUTE,gyuwonNextPerformance} from '../src/gyuwon-musical-route.mjs';
 import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import http from 'node:http';import {chromium} from 'playwright-core';
 const root=process.cwd(),port=8147;
 const server=http.createServer((req,res)=>{try{let f=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!f.startsWith(root+path.sep))throw Error();if(fs.statSync(f).isDirectory())f=path.join(f,'index.html');const size=fs.statSync(f).size,mime={'.mjs':'text/javascript','.js':'text/javascript','.html':'text/html','.css':'text/css','.mp3':'audio/mpeg','.png':'image/png','.jpg':'image/jpeg'};res.setHeader('Content-Type',mime[path.extname(f)]||'application/octet-stream');res.setHeader('Cache-Control','no-store');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);let a=0,b=size-1;if(range){a=+range[1];b=range[2]?Math.min(+range[2],b):b;res.writeHead(206,{'Content-Range':`bytes ${a}-${b}/${size}`,'Content-Length':b-a+1});}else res.setHeader('Content-Length',size);fs.createReadStream(f,{start:a,end:b}).pipe(res);}catch{res.writeHead(404).end();}}).listen(port,'127.0.0.1');
@@ -30,11 +31,11 @@ try{
  assert.equal(await page.evaluate(()=>window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop)?.muted),true);
  await page.evaluate(()=>localStorage.setItem('oibung-muted','0'));
  const results=[];
- for(let y=5;y<=11;y++){
+ for(const y of GYUWON_PERFORMANCE_ROUTE){
   await page.waitForFunction(y=>window.__session().game.gyuwon.years.year===y&&window.__session().game.gyuwon.years.musical.time>3,y,{timeout:15000});
   await page.screenshot({path:`qa-output/musical/act-${y}.png`,timeout:30000});console.log('Verified act',y);
   results.push(await page.evaluate(()=>{const s=window.__session();return {year:s.game.gyuwon.years.year,hp:s.game.boss.hp,clock:s.game.gyuwon.years.musical.clock,graphics:s.diagnostics()};}));
-  assert.equal(results.at(-1).graphics.livingDoodle.applied,y===5,'ink overlay must be 5수 only');
+  assert.equal(results.at(-1).graphics.livingDoodle.applied,true,'all retained acts share colored ink');
   if(y===5){
    // End of the 3D show must open the actual luminous path before 6수.
    await page.evaluate(()=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);a.currentTime=a.duration-11;});
@@ -74,7 +75,7 @@ try{
    await page.screenshot({path:'qa-output/musical/act-11-credits.png',timeout:30000});
   }
   await page.evaluate(y=>{const a=window.__media.find(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop);if(!a)throw Error('missing playing master '+y);a.currentTime=a.duration-.12;},y);
-  await page.waitForFunction(y=>y===11?window.__session().game.gyuwon.years.mode==='curtain':window.__session().game.gyuwon.years.year===y+1,y,{timeout:15000});
+  await page.waitForFunction(({y,next})=>y===11?window.__session().game.gyuwon.years.mode==='curtain':window.__session().game.gyuwon.years.year===next,{y,next:gyuwonNextPerformance(y)},{timeout:15000});
   assert.equal(await page.evaluate(()=>window.__session().game.boss.hp),[5300,4600,3900,3200,2500,1800,800][y-5]);
  }
  await page.waitForFunction(()=>window.__media.some(a=>a.src.includes('/assets/music/')&&!a.paused&&!a.loop),{timeout:10000});
@@ -90,7 +91,7 @@ try{
  await page.evaluate(async()=>{window.__battle.close();window.__finale=(await import('./src/journey-finale.mjs')).playJourneyFinale(document,window);});
  await page.waitForTimeout(1800);await page.screenshot({path:'qa-output/musical/finale-seals.png'});
  await page.waitForTimeout(6500);await page.screenshot({path:'qa-output/musical/finale-corridor.png'});
- assert.equal(await page.evaluate(()=>window.__finale.finished),true);console.log('Verified finale');assert.equal(await page.locator('.od-final').count(),0);
+ await page.waitForFunction(()=>window.__finale.finished,null,{timeout:60000});assert.equal(await page.evaluate(()=>window.__finale.finished),true);console.log('Verified finale');assert.equal(await page.locator('.od-final').count(),0);
  // The actual touch layout shares the same controls and bilingual captions.
  await page.setViewportSize({width:844,height:390});
  await page.evaluate(async()=>{window.__battle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({configure(g){g.gyuwon.years.year=8;g.boss.hp=3900;g.player.invuln=1e6;}});});
@@ -99,5 +100,5 @@ try{
  const boxes=await page.evaluate(()=>{const r=document.getElementById('gyuwon-battle').firstElementChild.shadowRoot;return ['.gy-musical-dialogue','.gy-musical-actions','.gy-musical-beat','#boss-hud'].map(q=>{const a=r.querySelector(q),b=a.getBoundingClientRect();return {q,x:b.x,y:b.y,w:b.width,h:b.height,hidden:a.hidden};});});
  for(const b of boxes)if(!b.hidden)assert.ok(b.x>=0&&b.x+b.w<=845&&b.y>=0&&b.y+b.h<=391,JSON.stringify(b));
  await page.evaluate(()=>window.__battle.close());
- assert.deepEqual(errors,[]);fs.writeFileSync('qa-output/musical/browser-report.json',JSON.stringify({results,boxes,errors},null,2));console.log('PASS: seven native music endings, exact HP, real input, pause/mute, sad ending, corridor, compact layout');
+ assert.deepEqual(errors,[]);fs.writeFileSync('qa-output/musical/browser-report.json',JSON.stringify({results,boxes,errors},null,2));console.log('PASS: retained native music endings, exact HP, real input, pause/mute, sad ending, corridor, compact layout');
 }finally{await browser.close();await new Promise(r=>server.close(r));}
