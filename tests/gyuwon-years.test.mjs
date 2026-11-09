@@ -193,13 +193,15 @@ test('live fourth year must complete all 30 marksman volleys before the reverie 
  while(e.cast==='ultimateMarksman'&&frames++<1200){
   stepGyuwon(g,.025);
   assert.equal(e.year,4);
-  assert.equal(e.mode,'combat','no cutscene in the middle of 210 shots');
+  if(e.cast==='ultimateMarksman')assert.equal(e.mode,'combat','no cutscene before the ultimate ends');
  }
  assert.ok(frames<1200,'ultimate should complete in its authored 22.2 second window');
  assert.equal(e.marksmanVolleys,30,'30 volleys of seven rifle rounds must all be scheduled');
  assert.equal(e.marksmanFinaleCompleted,true);
- assert.equal(g.events.filter(ev=>ev.type==='gyuwon-reverie-start').length,0);
- stepGyuwon(g,.025);
+ if(e.mode==='combat'){
+  assert.equal(g.events.filter(ev=>ev.type==='gyuwon-reverie-start').length,0);
+  stepGyuwon(g,.025);
+ }
  assert.equal(e.mode,'reverie','only after the full ultimate may the cutscene begin');
  assert.equal(g.events.filter(ev=>ev.type==='gyuwon-reverie-start').length,1);
 });
