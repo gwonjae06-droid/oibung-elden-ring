@@ -22,7 +22,7 @@ export function gyuwonLifeFrame(seconds){
  return {time,shot:shot.id,progress,line:shot.line,label:shot.label,zoom,complete:time>=GYUWON_LIFE_SECONDS};
 }
 const stageCss=`
-.gy-life-film{position:absolute;inset:0;z-index:90;pointer-events:none;overflow:hidden;color:#fff5e0;background:#0d1520;font-family:system-ui,sans-serif}
+.gy-life-film{position:absolute;inset:0;z-index:90;pointer-events:auto;overflow:hidden;color:#fff5e0;background:#0d1520;font-family:system-ui,sans-serif}
 .gy-life-film[hidden]{display:none!important}
 .gy-life-vista{position:absolute;inset:0;transition:background 2s ease;overflow:hidden;background:linear-gradient(#28334d 0%,#bc827c 55%,#dfb88e 100%)}
 .gy-life-film[data-shot="realization"] .gy-life-vista{background:linear-gradient(#121626,#323956 60%,#766876)}
