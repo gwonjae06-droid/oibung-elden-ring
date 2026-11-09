@@ -10,6 +10,7 @@ const TAU=Math.PI*2;
 export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={}){
  const canvas=doc.createElement('canvas');canvas.className='gy-reference-canvas';canvas.setAttribute('aria-label','최규원 2D 미니게임');canvas.tabIndex=0;canvas.hidden=true;canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:12;touch-action:none;background:#080c12';shell.appendChild(canvas);
  const portrait=doc.createElement('img');portrait.src=GYUWON_FACE_URL;portrait.decoding='async';
+ const lastRunnerFrame=doc.createElement('canvas');const lastRunner2d=lastRunnerFrame.getContext('2d');
  const c=canvas.getContext('2d',{alpha:false}),state={g:null,width:1280,height:720,scale:1,left:0,top:0,active:false},report={mode:'canvas2d',drawMs:0,sprites:0,width:0,height:0};
  let pointer=null;
  const worldX=(x,w=1280)=>w/2+x*w/44;
@@ -374,6 +375,19 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const vw=m.year===10?540:1280,vh=m.year===10?900:720,scale=Math.min(w/vw,h/vh),left=(w-vw*scale)/2,top=(h-vh*scale)/2;
   Object.assign(state,{width:vw,height:vh,scale,left,top});c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#080d16';c.fillRect(0,0,w,h);c.translate(left,top);c.scale(scale,scale);c.save();c.beginPath();c.rect(0,0,vw,vh);c.clip();
   if(m.year===6)runner(g,m);else if(m.year===7)army(g,m);else if(m.year===8)dance(g,m);else if(m.year===9)fighter(g,m);else if(m.year===10)shooter(g,m);c.restore();
+   // Preserve the final VI frame in an offscreen surface. The same painted
+   // hill and banners dissolve into VII instead of a black genre cut.
+   if(m.year===6&&m.runnerScene?.key==='exit'&&lastRunner2d){
+    if(lastRunnerFrame.width!==canvas.width||lastRunnerFrame.height!==canvas.height){
+     lastRunnerFrame.width=canvas.width;lastRunnerFrame.height=canvas.height;
+    }
+    lastRunner2d.clearRect(0,0,lastRunnerFrame.width,lastRunnerFrame.height);
+    lastRunner2d.drawImage(canvas,0,0);
+   }else if(m.year===7&&m.time<4.5&&lastRunnerFrame.width>0){
+    c.save();c.setTransform(1,0,0,1,0,0);
+    c.globalAlpha=1-clamp(m.time/4.5,0,1);
+    c.drawImage(lastRunnerFrame,0,0,canvas.width,canvas.height);c.restore();
+   }
   report.drawMs=performance.now()-started;report.width=w;report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
  }
  return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();portrait.removeAttribute('src');canvas.remove();}};
