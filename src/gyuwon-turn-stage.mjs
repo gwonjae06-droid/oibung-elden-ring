@@ -2,7 +2,9 @@ import * as T from 'three';
 import {createGyuwonBossParty} from './gyuwon-party-portraits.mjs';
 import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
 import {createActFiveStagecraft} from './gyuwon-act-five-stagecraft.mjs';
-import {ACT_FIVE_SCORE,scoreEase} from './gyuwon-act-five-score.mjs';
+import {ACT_FIVE_SCORE,scoreEase,actFivePerformanceAt} from './gyuwon-act-five-score.mjs';
+import {createGyuwonFiveSixBridge} from './gyuwon-five-six-bridge.mjs';
+import {gyuwonRunnerBridgeAt,GYUWON_RUNNER_ENTER_SECONDS} from './gyuwon-runner-director.mjs';
 import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
 import {actFiveCameraDirection} from './gyuwon-act-five-camera.mjs';
 export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
@@ -27,6 +29,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const footlight=new T.DirectionalLight(0xf0e6d6,1.6);footlight.position.set(0,9,23);footlight.target.position.set(0,2,8);root.add(footlight,footlight.target);
  const giant=createGiantGyuwon(root,boss,{coarse});
  const stagecraft=createActFiveStagecraft(root,giant.head,{coarse});
+ const runnerBridge=createGyuwonFiveSixBridge(root,{coarse});
  const backStage=mesh(root,box,iron,'giant-waist-stage-front');backStage.position.set(0,3.4,-26);backStage.scale.set(20,6.8,6);
  const lighting=new T.Group();lighting.name='raid-lighting-core';root.add(lighting);
  const crystal=mesh(lighting,geo(new T.OctahedronGeometry(2.2,1)),glow);crystal.position.y=0;
@@ -75,11 +78,19 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const fragments=Array.from({length:40},(_,i)=>{const p=mesh(root,i%3===0?box:geo(new T.TetrahedronGeometry(.4,0)),i%2?gold:cream,'raid-pooled-fragment');p.visible=false;return {mesh:p,at:-99,from:new T.Vector3(),index:i};});
  const seen=new Set(),project=new T.Vector3();let disposed=false,last=0,owner=null;
  function update(g){
-  const m=g.gyuwon?.years?.musical;root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible){for(const a of allies)if(a.parent===root)a.scale.setScalar(1);return;}
+  const current=g.gyuwon?.years?.musical;
+  const bridging=!!(current?.year===6&&current.handoffFromFive&&current.time<GYUWON_RUNNER_ENTER_SECONDS);
+  const source=bridging?current.handoffFromFive:current;
+  // Keep the final physical 5수 world alive beneath the opening 2D runner.
+  // Only a presentation copy advances: the defeated parts are never revived.
+  const time=bridging?source.time+current.time*.68:source?.time;
+  const m=bridging?{...source,time,songPerformance:actFivePerformanceAt(time)}:source;
+  root.visible=!!m?.giantRaid&&!m.finishing&&g.status==='playing';if(!root.visible){runnerBridge.root.visible=false;for(const a of allies)if(a.parent===root)a.scale.setScalar(1);return;}
   const dt=owner===g?Math.max(0,Math.min(.05,m.time-last)):.016;if(owner!==g){seen.clear();owner=g;}last=m.time;
   scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
   for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
   guestParty.update(m);giant.update(m,dt);stagecraft.update(m);
+  runnerBridge.update({exit:gyuwonFiveToSixExit(m.time,m.clock?.duration||180),entryTime:bridging?current.time:null});
   const encorePart=m.enemies[5],echo=encorePart&&!encorePart.destroyed&&encorePart.active;
   encore.visible=!!echo;
   if(echo){encore.position.set(encorePart.x,encorePart.y,encorePart.z);
@@ -135,6 +146,9 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  // Moving DOM buttons made it almost impossible to select a dancing hand.
  project.set(e.homeX,e.homeY+3,e.homeZ).project(camera);return {left:Math.round(Math.min(r.width-65,Math.max(65,r.left-s.left+(project.x*.5+.5)*r.width+(e.index===3?95:0)))),top:Math.round(Math.max(r.height>500?185:115,r.top-s.top+(-project.y*.5+.5)*r.height-(e.index<2?10:0))),visible:project.z<1&&e.active&&!e.destroyed};});}
  function cameraFrame(m,aspect=1.6){return actFiveCameraDirection(m,aspect);}
+ function runnerBridgeCamera(m,aspect=1.6){const b=gyuwonRunnerBridgeAt(m?.time||0),portrait=aspect<1;
+  return {position:{x:0,y:9.8-b.camera*3.6,z:37-b.camera*(portrait?9:18)},
+   target:{x:0,y:5.5-b.camera*3.4,z:-10+b.camera*4},fov:51+b.camera*4};}
  async function prewarm(renderer,camera){await guestParty.ready;const visible=root.visible,previous=renderer.getRenderTarget(),target=new T.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
- return {root,update,projectTargets,cameraFrame,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
+ return {root,update,projectTargets,cameraFrame,runnerBridgeCamera,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();runnerBridge.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }
