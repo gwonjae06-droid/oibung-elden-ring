@@ -105,7 +105,7 @@ test('5수 턴제 보스에게 반복해서 맞아도 피격 연출은 유지되
 });
 test('6수 낙하 공격과 11수 피날레 공격도 1 HP에서 정상 진행된다',()=>{
  const runner=at(6),r=runner.gyuwon.years.musical;
- runner.player.hp=2;runner.player.invuln=0;r.jumpY=-5.4;r.jumpV=-2;
+ runner.player.hp=2;runner.player.invuln=0;r.platforms=[];r.jumpY=-5.4;r.jumpV=-2;
  advance(runner,.05);
  assert.equal(runner.player.hp,1);
  assert.equal(runner.status,'playing');
