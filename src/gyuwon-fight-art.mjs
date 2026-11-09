@@ -1,5 +1,6 @@
 import {gyuwonFightScene,gyuwonFightGroundScreen} from './gyuwon-fight-director.mjs';
 import {stagePerson,round,bar,label,burst,flower} from './gyuwon-2d-art.mjs';
+import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const sx=x=>640+x*33;
 function glow(c,x,y,r,color,alpha=.7){
@@ -99,7 +100,9 @@ function fightActor(c,f,i,m,scene,portrait){
   c.globalAlpha=.3;for(let j of [-1,1])stagePerson(c,x+j*165,feetY+7,{scale:1.35,t:t+j,pose:'guard',face:-j,color:'#7d85a5',gyuwon:false});
   c.globalAlpha=1;
  }
- stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:!!i,portrait,reach:a?Math.min(170,a.range*33/1.65):76});
+ stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:!!i,portrait,reach:a?Math.min(170,a.range*33/1.65):76,
+  lyric:i&&!a?m.lyricAction:null});
+ if(i)drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
  if(i&&scene.role==='king'){
   c.fillStyle='#f7d68c';c.beginPath();c.moveTo(x-30,feetY-204);c.lineTo(x-20,feetY-242);c.lineTo(x-4,feetY-219);c.lineTo(x+9,feetY-251);c.lineTo(x+22,feetY-220);c.lineTo(x+35,feetY-244);c.lineTo(x+30,feetY-202);c.closePath();c.fill();
  }else if(i&&scene.role==='clown'){
@@ -125,7 +128,9 @@ function fightActor(c,f,i,m,scene,portrait){
 }
 export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
  const t=m.time,scene=m.fightWorld||gyuwonFightScene(t);
- backdrop(c,m,scene);floor(c,m,scene);
+ backdrop(c,m,scene);
+ drawGyuwonLyricBackdrop(c,m);
+ floor(c,m,scene);
  for(const h of m.fightHazards||[]){
   const age=t-h.at,pre=clamp(age/Math.max(.01,h.wind)),active=age>=h.wind;
   const x=sx(h.x),y=gyuwonFightGroundScreen(t,h.x)+3,rx=h.radius*33;
@@ -135,10 +140,15 @@ export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
   c.restore();
   // Echoes actually stand and strike where their locked contact circle is.
   // No detached ghost attack or invisible damage at the player's location.
-  if(h.kind==='mirror-echo'||h.kind==='chorus-finale'){
+  if(h.kind.startsWith('echo-')||h.kind==='chorus-finale'||h.kind==='grand-ring'){
    c.save();c.globalAlpha=active ? .68 : (.2+.5*pre);
    const fy=gyuwonFightGroundScreen(t,h.x,580,45);
-   stagePerson(c,x,fy,{scale:1.52,t,pose:active?'strike':'wind',face:-1,color:'#b5a9da',gyuwon:false});
+   const echoPose=h.kind==='echo-kick-prepare'?'jump':
+    h.kind==='echo-gather'?'guard':h.kind==='echo-blade'?'wind':
+    active?'strike':'wind';
+   stagePerson(c,x,fy,{scale:h.kind==='echo-slam'?1.8:1.52,t,
+    pose:echoPose,face:-1,color:h.kind==='echo-blade'?'#bddcef':h.kind==='echo-slam'?'#d7a9b5':'#b5a9da',
+    gyuwon:false,lyric:m.lyricAction});
    if(h.kind==='chorus-finale')for(const side of [-1,1]){
     c.globalAlpha=.18+.25*pre;
     stagePerson(c,x+side*(90-35*pre),fy,{scale:1.13,t,pose:active?'strike':'wind',face:-side,color:'#d7b1a3',gyuwon:false});

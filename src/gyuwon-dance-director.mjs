@@ -1,4 +1,5 @@
 import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
+import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
 // Time anchors are production cues; the full master lyric/beat transcription needs listening QA.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -76,6 +77,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  sky.addColorStop(0,s.sky);sky.addColorStop(.85,s.horizon);
  c.fillStyle=sky;c.fillRect(0,0,1280,720);
  drawGyuwonDanceLyricBackdrop(c,s,m);
+ drawGyuwonLyricBackdrop(c,m);
  // Star ceiling, rising dawn, and distant architecture: visual changes are music-led.
  if(s.stars||s.quiet){
   for(let i=0;i<58;i++){const x=(i*197+36)%1280,y=30+(i*71)%350;
@@ -162,9 +164,15 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  const rivalColors={handoff:'#7b6889',invitation:'#594176',footsteps:'#865e86',
   stars:'#7ba6b7',ensemble:'#794267',grand:'#b881a6',encore:'#7f87b9',
   rain:'#5981a7',reunion:'#a57b93',sunrise:'#c68d79',bow:'#e1b48c'};
- stagePerson(c,315,530,{scale:1.70,t:t+.12,pose:guidePose,
+ // A literal left/right lyric moves the entire dancer's centre of mass,
+ // not only the feet. No gameplay hitbox exists for the show leader.
+ const stepCue=m.lyricAction,stepWeight=stepCue?Math.sin(Math.PI*stepCue.phase):0;
+ const gyuwonStepX=stepCue?.gesture==='stepleft'?-52*stepWeight:
+   stepCue?.gesture==='stepright'?52*stepWeight:0;
+ stagePerson(c,315+gyuwonStepX,530,{scale:1.70,t:t+.12,pose:guidePose,
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
-  theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null});
+  theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null,
+  lyric:tele?.active?null:m.lyricAction});
  stagePerson(c,670,530,{scale:1.68,t,pose:activePose,face:m.danceFacing||1,
   color:'#c8ddef',miss:m.danceError>0,theater:true,
   choreography:m.dancePose>0?{kind:m.dancePoseKind||'dance',lead:1,remaining:0}:null});
@@ -176,7 +184,8 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  for(let i=0;i<(chorus?4:2);i++){
   const x=438+i*142,y=510+(i%2)*10,variant=['#7297bc','#c4a071','#c4c4a7','#b17f9a'][i];
   stagePerson(c,x,y,{scale:chorus?.84:.66,t:t+i*.17,
-   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant,theater:true});
+   pose:s.quiet?'idle':tele?.active?nowAction:'dance',face:i%2?1:-1,color:variant,theater:true,
+   lyric:tele?.active?null:m.lyricAction});
   if(!chorus)continue;
   c.save();c.translate(x,y-88);
   if(i===0){ // sword-keeper's golden sash and tiny diagonal blade
@@ -220,6 +229,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   if(beatPulse>0){oval(c,670,542,37+beatPulse*34,9,'rgba(255,240,190,'+(.15+beatPulse*.6)+')');}
  }
  drawGyuwonDanceLyricForeground(c,s,m,tele);
+ drawGyuwonLyricGesture(c,m,{x:315,y:530,scale:1.2});
  if(response){
   for(let i=0;i<15;i++){const a=i*TAU/15+t*.22;
    oval(c,670+Math.cos(a)*115,432+Math.sin(a)*70,3+(m.combo%4),3,s.light);}

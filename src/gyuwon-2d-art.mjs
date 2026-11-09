@@ -10,9 +10,13 @@ export function flower(c,x,y,s=1,color='#fff8cf'){c.save();c.translate(x,y);c.sc
 export function jelly(c,x,y,kind='jelly',time=0){c.save();c.translate(x,y);c.rotate(Math.sin(time*3+x)*.18);if(kind==='heart'){c.beginPath();c.moveTo(0,14);c.bezierCurveTo(-32,-4,-10,-28,0,-12);c.bezierCurveTo(10,-28,32,-4,0,14);c.fillStyle='#ff676d';c.fill();c.strokeStyle='#a63340';c.lineWidth=3;c.stroke();}else{ellipse(c,0,0,kind==='gold'?12:9,kind==='gold'?12:15,kind==='gold'?'#ffdf5b':'#43c5ee',kind==='gold'?'#a57923':'#165d86',3);ellipse(c,-3,-5,3,5,'#c6f9ff',null);}c.restore();}
 // Original articulated 2D stage characters. The same action windup and contact
 // phase that drive gameplay place hands, feet, guard and hit reactions here.
-export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76,theater=false,choreography=null}={}){
+export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76,theater=false,choreography=null,lyric=null}={}){
  c.save();c.translate(x,y);c.scale(scale*face,scale);const outline=ink?'#111315':'#1d2333',coat=ink?'#f6f5e9':color,skin=ink?'#fffaf0':gyuwon?'#e6c0a0':'#edd0ac';
- const run=pose==='run',slide=pose==='slide',crouch=pose==='crouch',jump=pose==='jump',dance=pose==='dance'||pose==='turn'||pose==='quick';
+ const lyricGesture=lyric?.gesture||'',lyricPhase=Math.max(0,Math.min(1,lyric?.phase||0));
+ const lyricWeight=lyric?Math.sin(Math.PI*lyricPhase):0;
+ const run=pose==='run'||['run','walk'].includes(lyricGesture)&&pose==='idle',
+  slide=pose==='slide',crouch=pose==='crouch',jump=pose==='jump'||lyricGesture==='jump'&&pose==='idle',
+  dance=pose==='dance'||pose==='turn'||pose==='quick'||['dance','spin','stepleft','stepright','tap','clap','sway','stamp'].includes(lyricGesture)&&pose==='idle';
  const pulse=Math.sin(t*11),preparation=choreography?
   Math.max(0,Math.min(1,choreography.lead||0)):0;
  const turning=theater&&pose==='turn';
@@ -25,7 +29,8 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
  c.rotate(lean+(theater&&choreography?(turning?-.12+.21*preparation:
    Math.sin(t*1.8)*.035*preparation):0));
  const hipsY=-55+(crouch?10:0),shoulder=-96+(crouch?16:0),headY=-119+(crouch?20:0);
- const legSwing=run?Math.sin(t*13)*24:dance?
+ const stepSide=lyricGesture==='stepleft'?-1:lyricGesture==='stepright'?1:0;
+ const legSwing=stepSide?stepSide*(4+22*lyricWeight):run?Math.sin(t*13)*24:dance?
   (theater?(turning?3+preparation*8:Math.sin(t*8)*4+preparation*7):Math.sin(t*8)*10):0;
  for(const side of [-1,1]){const hip=side*10,kneeX=hip+(slide?side*30:legSwing*side*.7),kneeY=hipsY/2+(slide?4:-2),footX=side*16+legSwing*side,footY=-down+lift+(jump?side*6:0);
   line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],outline,17);line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],ink?'#e4e4d8':'#202a40',11);round(c,footX-7,footY-10,24,12,4,ink?'#fff':'#15202e',outline,2);
@@ -57,7 +62,29 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
   left=[[-20,shoulder+8],[-28-13*q,shoulder+24+(17*arm-24)*q],
     [-24-31*q,shoulder+38+(-10*arm-38)*q]];
  }
- for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
+ // Each source lyric commands a readable articulated gesture, not just
+ // a palette or post-processing change. Existing combat windup still wins.
+ if(lyricGesture&&!attacking&&!wind&&!guard){
+  const q=.3+.7*lyricWeight;
+  if(['clap','snap'].includes(lyricGesture)){
+   left=[[-20,shoulder+8],[-18,shoulder-3],[-4*q,shoulder-35]];
+   right=[[19,shoulder+7],[18,shoulder-3],[4*q,shoulder-35]];
+  }else if(['raise','open','cast','fly','jump'].includes(lyricGesture)){
+   left=[[-20,shoulder+8],[-34,shoulder-13],[-49*q,shoulder-62*q]];
+   right=[[19,shoulder+7],[34,shoulder-13],[49*q,shoulder-62*q]];
+  }else if(['reach','point','invite','offer','present'].includes(lyricGesture)){
+   right=[[19,shoulder+7],[37,shoulder-8],[66*q,shoulder-18*q]];
+  }else if(['ponder','listen','whisper','ask','search'].includes(lyricGesture)){
+   right=[[19,shoulder+7],[30,shoulder-4],[13,headY-6]];
+  }else if(['bow','fall','still','fade','lookback'].includes(lyricGesture)){
+   right=[[19,shoulder+7],[26,shoulder+31],[20,hipsY+8]];
+   left=[[-20,shoulder+8],[-30,shoulder+30],[-19,hipsY+8]];
+  }else if(['stepleft','stepright','run','walk','fight','stepstrike','tap','stomp'].includes(lyricGesture)){
+   right=[[19,shoulder+7],[29+12*q,shoulder+18],[44+14*q,shoulder-3]];
+   left=[[-20,shoulder+8],[-32-12*q,shoulder+22],[-44-14*q,shoulder+4]];
+  }
+ }
+  for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
  if(gyuwon&&!run&&!dance&&!slide){round(c,-38,hipsY-7,15,42,3,'#70414f',outline,3);line(c,[[-35,hipsY+2],[-25,hipsY+2]],'#c6a06a',2);}
  if(gyuwon)drawGyuwonPhoto(c,portrait,0,headY,24,{mirror:face<0});else{
  ellipse(c,0,headY,20,24,skin,outline,3);
