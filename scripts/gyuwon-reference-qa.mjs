@@ -56,7 +56,7 @@ try{
    await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.fighters[1].hp<100);
    // The visible attack button automatically selects super at full meter.
    await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.fighters[0].meter===12);
-   assert.equal(await page.locator('#gyuwon-battle').locator('.gy-musical-actions button').count(),2);
+   assert.equal(await page.locator('#gyuwon-battle').locator('.gy-musical-actions button').count(),3);
    await control('guard').dispatchEvent('pointerdown',{pointerId:9});
    assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.guardHeld),true);
    await control('guard').dispatchEvent('pointerup',{pointerId:9});
