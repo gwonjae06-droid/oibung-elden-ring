@@ -5,8 +5,17 @@ const emit=(g,type,data={})=>g.events.push({type,...data});
 export function damageArenaBoss(g,amount,poise=0,{developer=false,point=null,dot=false}={}){
  const b=g?.boss;
  if(g?.status!=='playing'||!Number.isFinite(amount)||amount<=0||!Number.isFinite(poise)||poise<0||!Number.isFinite(b?.hp)||b.hp<=0||['transition','moonCinematic','moonStorm'].includes(b.state))return 0;
- const damage=Math.min(b.hp,amount*(!developer&&b.state==='stagger'?1.25:1)),big=developer||damage>=150;
+ // Clown's two cinematic curtains must never be skipped by a huge
+ // weapon hit, poison tick or developer hit. Consume only HP up to the
+ // next act's threshold; the remaining overkill is intentionally discarded.
+ // Phase three has no gate and can be defeated normally.
+ const nextCurtain=g.clown&&b.phase===1?b.maxHp*CLOWN_BALLET_THRESHOLDS.second:
+  g.clown&&b.phase===2?b.maxHp*CLOWN_BALLET_THRESHOLDS.third:null;
+ const available=nextCurtain===null?b.hp:Math.max(0,b.hp-nextCurtain);
+ const damage=Math.min(b.hp,available,amount*(!developer&&b.state==='stagger'?1.25:1)),
+  big=developer||damage>=150;
  b.hp-=damage;
+ if(nextCurtain!==null&&damage===available)b.hp=nextCurtain;
  if(g.stats){g.stats.damage+=damage;if(!dot)g.stats.hits++;}
  if(!developer&&!dot)b.poise+=poise;
  const impact=point&&[point.x,point.y,point.z].every(Number.isFinite)
