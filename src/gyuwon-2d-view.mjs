@@ -204,7 +204,16 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     // Ground hazards always remain visible where their *actual* hitbox is.
     c.strokeStyle='#465653';c.lineWidth=4;
     c.beginPath();c.moveTo(x,ground);c.lineTo(x,ground-72);c.stroke();
-    if(v==='puddle'||v==='starfall'){
+    if(v==='mountain'){
+     // Physical collider is 1.8m wide and 1.3m tall. This mountain is
+     // painted at precisely that same footprint and visual height.
+     c.fillStyle='#9eabb4';c.beginPath();
+     c.moveTo(x-27,ground);c.lineTo(x,ground-68);c.lineTo(x+27,ground);c.closePath();c.fill();
+     c.fillStyle='#eef2f2';c.beginPath();
+     c.moveTo(x,ground-68);c.lineTo(x-9,ground-42);c.lineTo(x,ground-47);c.lineTo(x+9,ground-42);c.closePath();c.fill();
+     c.strokeStyle='#63717d';c.lineWidth=3;c.beginPath();
+     c.moveTo(x-27,ground);c.lineTo(x,ground-68);c.lineTo(x+27,ground);c.stroke();
+    }else if(v==='puddle'||v==='starfall'){
      c.fillStyle=v==='puddle'?'#a9d9ed':'#fff0b1';c.beginPath();c.ellipse(x,ground-27,28,32,0,0,TAU);c.fill();
      c.strokeStyle=v==='puddle'?'#537fa0':'#d1a44a';c.lineWidth=3;c.stroke();
     }else{
