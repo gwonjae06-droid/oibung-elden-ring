@@ -2,6 +2,7 @@ import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
 import {gyuwonMasterScene,gyuwonAlignDanceBeat} from './gyuwon-master-director.mjs';
+import {gyuwonDanceScene,gyuwonDanceAction} from './gyuwon-dance-director.mjs';
 import {gyuwonArmyScene} from './gyuwon-army-director.mjs';
 import {gyuwonRunnerScene,gyuwonRunnerAccent,gyuwonRunnerGap,gyuwonRunnerObstacleVariant,gyuwonRunnerDashReady} from './gyuwon-runner-director.mjs';
 export const REFERENCE_UNIT_TYPES=Object.freeze([
@@ -32,19 +33,24 @@ export function setupReferenceMinigame(g,m){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
-  m.dancePeriod=period;m.dancePatterns=[];let start=3.2,index=0;
-  while(start+period*8<GYUWON_SONGS[8].duration-4){
-   if(start>GYUWON_SONGS[8].duration*.57&&start<GYUWON_SONGS[8].duration*.68){start=GYUWON_SONGS[8].duration*.69;continue;}
-   const kind=['pose','turn','pose','quick'][index%4],count=kind==='quick'?1:index%3===1?4:3;
-   const prepared=start+period*(kind==='turn'?3:3.5);
-   const first=gyuwonAlignDanceBeat(start+period*(kind==='pose'?6:kind==='turn'?5:5.5));
-   const cue=Math.max(start,prepared+(first-(start+period*(kind==='pose'?6:kind==='turn'?5:5.5))));
-   m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,done:[],misses:[],facing:index%2?-1:1});
-   start=first+period*((count-1)*(kind==='pose'?2:1)+2.7);
-    if(index%5===4)start+=period*7;
-    index++;
+  m.dancePeriod=period;m.dancePatterns=[];let start=9.4,index=0;
+  while(start+period*8<174.5){
+   // Source-clocked figures with advance body/footstep preparation; no notes
+   // during the exposed quiet bridge or the last unskippable bow.
+   if(start>=92&&start<112){start=112.6;continue;}
+   const kind=['pose','turn','quick','pose','turn','pose'][index%6];
+   const count=kind==='quick'?2:index%3===1?4:3;
+   const first=gyuwonAlignDanceBeat(start+period*(kind==='turn'?5:6));
+   const cue=Math.max(start,first-Math.max(1.35,period*3.4));
+   if(first+(count-1)*(kind==='pose'?2:1)*period>=174.5)break;
+   m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,
+    done:[],misses:[],facing:index%2?-1:1});
+   start=first+period*((count-1)*(kind==='pose'?2:1)+(index%4===3?5:2.8));
+   index++;
   }
-  m.dancePose=0;m.danceFacing=1;m.danceFlash=0;m.danceLastCue=-1;m.danceCue='';m.danceError=0;m.note=null;
+  m.dancePose=0;m.dancePoseKind='dance';m.danceFacing=1;m.danceFlash=0;
+  m.danceLastCue=-1;m.danceCue='';m.danceError=0;m.danceEnergy=0;
+  m.danceRivalScore=0;m.danceScene=gyuwonDanceScene(0);m.note=null;
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
@@ -88,16 +94,24 @@ export function actReferenceMinigame(g,m,type,c){
   m.money-=spec.cost;m.unitCooldowns[n]=spec.cool;m.units.push({id:g.nextId++,team:1,type:n,x:-17,z:0,hp:spec.hp,maxHp:spec.hp,attack:spec.attack,range:spec.range,speed:spec.speed,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:n===2||n===4?'ranged':'melee',lane:m.deployLane||0});return true;
  }
  if(m.year===8){
-  const wanted={light:'pose',skill:'turn',roll:'quick'}[type];if(!wanted)return false;
+  // J = regular/quick step; L = turn. There is never a third dance button.
+  const wanted={light:'light',skill:'skill'}[type];if(!wanted)return false;
   let best=null,error=Infinity,slot=-1;
   for(const pattern of m.dancePatterns)for(let i=0;i<pattern.count;i++){
    if(pattern.done[i]||pattern.misses[i])continue;
    const delta=Math.abs(m.time-(pattern.first+i*pattern.spacing*m.dancePeriod));
    if(delta<error){best=pattern;error=delta;slot=i;}
   }
-  if(!best||best.kind!==wanted||error>.19){m.combo=0;m.danceError=.55;return false;}
-  best.done[slot]=true;m.dancePose=.35;m.danceFacing=best.kind==='pose'?best.facing:-m.danceFacing;m.danceFlash=.35;m.success++;
-  m.judgement=error<.075?'PERFECT':'GOOD';m.judgementUntil=m.time+.5;c.deal(g,error<.075?150:100,c.emit);return true;
+  if(!best||gyuwonDanceAction(best.kind)!==wanted||error>.24){
+   if(best&&error<.6){m.combo=0;m.danceError=.4;}
+   return false;
+  }
+  best.done[slot]=true;m.dancePose=.52;
+  m.dancePoseKind=best.kind==='turn'?'turn':best.kind==='quick'?'quick':'dance';
+  m.danceFacing=best.kind==='turn'?-m.danceFacing:best.facing;
+  m.danceFlash=.44;m.danceEnergy=Math.min(100,(m.danceEnergy||0)+(error<.075?13:8));
+  m.success++;m.judgement=error<.075?'PERFECT':'GOOD';
+  m.judgementUntil=m.time+.5;c.deal(g,error<.075?150:100,c.emit);return true;
  }
  if(m.year===9){
   const f=m.fighters[0];if(m.fightReset>0)return false;
@@ -202,6 +216,14 @@ function tickReferenceArmy(g,m,dt,c){
  m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
  m.rallyPulse=Math.max(0,(m.rallyPulse||0)-dt);
  m.armySiegeFlash=Math.max(0,(m.armySiegeFlash||0)-dt);
+ if(m.time>=174.5){
+  // Close the battle with a parade; capture its survivors for the new dance.
+  m.armyParade=true;m.enemySpawn=9999;
+  if(!m.armyFinale)m.armyFinale={
+   count:Math.max(3,Math.min(6,m.units.filter(u=>u.team===1&&u.hp>0).length||4)),
+   kinds:m.units.filter(u=>u.team===1&&u.hp>0).slice(0,6).map(u=>u.type)};
+  return;
+ }
  // Three different castles are fixed score events, not infinite respawns.
  if(m.enemyFort<2&&m.time>=56.5){
   m.enemyFort=2;m.enemyBaseHp=m.enemyBaseMaxHp=4050;m.enemySpawn=.7;m.armyConvoys=0;m.armyConvoyClock=4;
@@ -306,12 +328,24 @@ function tickReferenceArmy(g,m,dt,c){
  if(m.baseHp<=0){m.baseHp=350;c.take(g,70,c.emit);}
 }
 function tickReferenceDance(g,m,dt,c){
- m.dancePose=Math.max(0,m.dancePose-dt);m.danceFlash=Math.max(0,m.danceFlash-dt);m.danceError=Math.max(0,m.danceError-dt);
+ m.danceScene=gyuwonDanceScene(m.time);
+ m.dancePose=Math.max(0,m.dancePose-dt);m.danceFlash=Math.max(0,m.danceFlash-dt);
+ m.danceError=Math.max(0,m.danceError-dt);
+ m.danceEnergy=Math.max(0,(m.danceEnergy||0)-dt*.9);
  for(const p of m.dancePatterns){
-  if(m.time>=p.cue&&m.time<p.first&&m.danceLastCue!==p.id){m.danceLastCue=p.id;m.danceCue=p.kind==='pose'?'쿠—킨!':p.kind==='turn'?'댄! 댄!':'하잇!';c.emit('gyuwon-dance-cue',{kind:p.kind});}
-  for(let i=0;i<p.count;i++){const at=p.first+i*p.spacing*m.dancePeriod;if(!p.done[i]&&!p.misses[i]&&m.time>at+.2){p.misses[i]=true;m.combo=0;m.danceError=.6;c.take(g,14,c.emit);}}
+  if(m.time>=p.cue&&m.time<p.first&&m.danceLastCue!==p.id){
+   m.danceLastCue=p.id;m.danceCue=p.kind;
+   c.emit('gyuwon-dance-cue',{kind:p.kind});
+  }
+  for(let i=0;i<p.count;i++){
+   const at=p.first+i*p.spacing*m.dancePeriod;
+   if(!p.done[i]&&!p.misses[i]&&m.time>at+.24){
+    p.misses[i]=true;m.combo=0;m.danceRivalScore++;
+    m.danceError=.6;c.take(g,14,c.emit);
+   }
+  }
  }
- m.danceCurrent=m.dancePatterns.find(p=>m.time>=p.cue-m.dancePeriod&&m.time<=p.first+(p.count-1)*p.spacing*m.dancePeriod+1)||null;
+ m.danceCurrent=m.dancePatterns.find(p=>m.time>=p.cue&&m.time<=p.first+(p.count-1)*p.spacing*m.dancePeriod+.3)||null;
 }
 function tickReferenceFighter(g,m,dt,input,c){
  const [p,b]=m.fighters;
@@ -381,6 +415,7 @@ export function referenceKeyAction(m,code){
  if(m.year===5)return {KeyA:'target-prev',ArrowLeft:'target-prev',KeyD:'target-next',ArrowRight:'target-next',KeyQ:'light',KeyE:'skill',Space:'support',Digit1:'ultimate0',Digit2:'ultimate1',Digit3:'ultimate2',Digit4:'ultimate3'}[code]||null;
  if(m.year===6)return {ArrowUp:'jump',KeyW:'jump',ArrowDown:'slide',KeyS:'slide',Space:'jump',KeyJ:'jump',KeyL:'slide',KeyK:'dash',ShiftLeft:'dash',ShiftRight:'dash'}[code]||null;
  if(m.year===7)return {KeyT:'lane',Digit1:'summon0',Digit2:'summon1',Digit3:'summon2',Digit4:'summon3',Digit5:'summon4',Digit6:'summon5',KeyU:'upgrade',KeyK:'cannon'}[code]||null;
+ if(m.year===8)return {KeyJ:'light',KeyL:'skill'}[code]||null;
  if(m.year===9)return {KeyK:'kick',KeyI:'guard',KeyO:'super',Space:'jump',KeyW:'jump',ArrowUp:'jump'}[code]||null;
  if(m.year===10)return {Space:'bomb',KeyB:'bomb'}[code]||null;
  return null;
