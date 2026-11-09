@@ -39,6 +39,7 @@ import {createBloodTransformationAudio} from './blood-transformation-audio.mjs';
 import {createBossSfx} from './boss-sfx.mjs';
 import {poseBloodCamera} from './blood-transformation.mjs';
 import {bloodStormEnvelope} from './blood-apocalypse-sky.mjs';
+import {bloodSeraphSanctity} from './blood-seraph-sanctity.mjs';
 import {createBloodEpicCinematics} from './blood-epic-cinematics.mjs';
 
 export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{},diagnostics=false}={}){
@@ -50,6 +51,12 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
   scene.add(new THREE.HemisphereLight(0xfffbf1,0xbbb7b0,1.7));const sun=new THREE.DirectionalLight(0xfff3df,2.25);sun.position.set(19,38,16);sun.castShadow=!coarse;
    if(!coarse){sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,near:1,far:110});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.028;}
    scene.add(sun);
+  // A second, shadowless platinum-gold source catches the wing edges and
+  // cathedral vault only while the final archangel channels a real rite.
+  const sanctumLight=new THREE.PointLight(0xfff2d2,0,86,1.65);
+  sanctumLight.name='blood-seraph-platinum-consecration';
+  scene.add(sanctumLight);
+  const platinumSky=new THREE.Color(0xfff7e5);
   const chapel=buildBloodView(scene,{coarse,reduced});startup.own('Blood view',()=>chapel.dispose());
    const atmosphere=createBossAtmosphere(scene,{profile:'blood',coarse,reduced});startup.own('Blood silent atmosphere',()=>atmosphere.dispose());const player=buildPlayer(Object.keys(WEAPONS));scene.add(player.rig);
    const cinematic=createCinematicWorld(scene,renderer,{profile:'blood',coarse,reduced});startup.own('Blood cinematic PBR',()=>cinematic.dispose());
@@ -112,15 +119,27 @@ export function launchBloodBattle({weapon='sword',configure=()=>{},onClose=()=>{
    scene.background.setRGB(.94-reveal*.71,.94-reveal*.88,.92-reveal*.84);
    scene.fog.color.setRGB(.94-reveal*.73,.93-reveal*.88,.91-reveal*.84);
    scene.fog.near=54+reveal*59;scene.fog.far=123+reveal*520;
-   sun.intensity=2.25*(1+storm.flash*.6);
+   const blessing=bloodSeraphSanctity(g),
+    gold=Math.min(.76,blessing.brightness*.42);
+   scene.background.lerp(platinumSky,gold);
+   scene.fog.color.lerp(platinumSky,gold*.88);
+   // Increase actual environmental light for every large strike, rather
+   // than flashing a fullscreen 2D overlay that hides danger geometry.
+   sun.color.setRGB(1,1-gold*.055,1-gold*.16);
+   sun.intensity=2.25*(1+storm.flash*.6)+blessing.brightness*2.75;
+   sanctumLight.position.set(g.boss.x,16,g.boss.z);
+   sanctumLight.intensity=blessing.active?
+    blessing.brightness*(coarse?35:58):0;
+   renderer.toneMappingExposure=1.13+Math.min(.16,blessing.brightness*.085);
    chapel.root.rotation.x=chapel.root.rotation.z=0;impact.bossPose(chapel.root);const p=g.player,a=p.action;player.rig.position.set(p.x,0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:1;const walk=posePlayer(player,g.time*7,a?0:Math.hypot(input().x,input().z)*4.7);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:0;player.pivot.rotation.x=a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);fx.update(visualDt,g);
    quality.sample(realDt,ready&&!introGate.blocked&&mode==='playing'&&!document.hidden);const viewport=resizeBattleViewport(renderer,camera,canvas,quality.scale);w=viewport.width;h=viewport.height;
    if(mode!=='paused'){const dx=g.boss.x-p.x,dz=g.boss.z-p.z;if(lock)yaw+=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw))*Math.min(1,dt*5);const grand=g.boss.state==='pattern'&&(
    g.boss.phase===2&&['wave','eclipse','tide','requiem','cross','judgement','ritual','wingGenesis'].includes(g.blood.pattern)||
-   g.boss.phase===3&&['seraphCrown','seraphFinale','seraphWings','seraphSweep','seraphWingCross','seraphFrenzy'].includes(g.blood.pattern));const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
+   g.boss.phase===3&&['seraphSweep','seraphWingCross','seraphInwardPillars',
+   'seraphFrenzy','seraphHaloProcession','seraphBloodRosette','seraphFinale'].includes(g.blood.pattern));const fov=grand?62:KWON_CAMERA_REFERENCE.fov;if(Math.abs(camera.fov-fov)>.02){camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}const frame=matchedBossCamera('blood',{
   player:p,boss:g.boss,yaw,pitch,zoom,aspect:camera.aspect,locked:lock,
   headHeight:g.boss.phase===3?5.5:3+Math.max(0,g.blood.elevation||0)*.55,
-  extraDistance:grand?4:g.boss.phase===3?2.6:0 // Preserve contact and the 3P six-wing silhouette.
+  extraDistance:grand&&g.boss.phase===3?6.5:grand?4:g.boss.phase===3?3.4:0 // Preserve sightlines of gigantic but avoidable 3P attacks.
  });
  desired.set(frame.position.x,frame.position.y,frame.position.z);
  camera.position.lerp(desired,1-Math.exp(-6*dt));
