@@ -99,6 +99,7 @@ export function runnerGuideCatch(m,player,time){
  m.coyote=0;m.slideHeld=false;m.slide=0;m.slideVisual=0;
  m.fallRecovery=1.5;
  m.platforms.push({x:player.x-3,end:player.x+10,y:0,guide:true,created:time});
+ m.platforms.sort((a,b)=>a.x-b.x);
  return true;
 }
 export function runnerGuideWarning(m,playerX,time){
