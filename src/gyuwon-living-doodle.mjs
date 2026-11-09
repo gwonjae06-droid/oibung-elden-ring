@@ -43,20 +43,16 @@ void main(){
    sin(vUv.y*147.0+signFrame*1.6)+.4*sin(vUv.y*52.0-signFrame*2.1),
    cos(vUv.x*127.0-signFrame*1.8)+.3*sin(vUv.x*75.0+signFrame));
  vec2 at=clamp(vUv+lineWiggle*px*(.55*uStrength),px,vec2(1.0)-px);
- vec3 center=texture2D(tStage,at).rgb;
- float centerLight=brightness(center);
- float ex=abs(brightness(texture2D(tStage,at+vec2(px.x,0.0)).rgb)
-              -brightness(texture2D(tStage,at-vec2(px.x,0.0)).rgb));
- float ey=abs(brightness(texture2D(tStage,at+vec2(0.0,px.y)).rgb)
-              -brightness(texture2D(tStage,at-vec2(0.0,px.y)).rgb));
+ // Three texture lookups per output pixel (rather than seven), so the
+ // entire three-minute stage stays responsive on software WebGL and mobile.
+ // The A/B offset affects only contour sampling, never the actual fill pixels.
+ float centerLight=brightness(original);
+ float ex=abs(brightness(texture2D(tStage,at+vec2(px.x,0.0)).rgb)-centerLight);
+ float ey=abs(brightness(texture2D(tStage,at+vec2(0.0,px.y)).rgb)-centerLight);
  float contour=ex+ey;
- float boldEdge=smoothstep(.09,.27,contour);
- float pencilEdge=smoothstep(.035,.115,contour)*.43;
- float ink=min(1.0,boldEdge*.85+pencilEdge);
- // A thin, deliberately non-identical second stroke resembles two nearby
- // redraws, but never relocates the gameplay hitbox.
- float ghost=abs(brightness(texture2D(tStage,at+lineWiggle*px*.5).rgb)-centerLight);
- ink=max(ink,smoothstep(.055,.16,ghost)*.15);
+ float boldEdge=smoothstep(.062,.19,contour);
+ float pencilEdge=smoothstep(.018,.095,contour)*.43;
+ float ink=min(1.0,boldEdge*.88+pencilEdge);
 
  vec3 inkColor=vec3(.065,.061,.073);
  vec3 warmPaper=vec3(.963,.930,.864);
