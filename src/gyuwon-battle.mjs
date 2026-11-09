@@ -4,7 +4,7 @@ import {referenceKeyAction,usesReference2d} from './gyuwon-reference-rules.mjs';
 import {createGyuwon2dView} from './gyuwon-2d-view.mjs';
 import {createGyuwonTurnStage} from './gyuwon-turn-stage.mjs';
 import {createGyuwonLivingDoodle,isGyuwonLivingDoodleAct} from './gyuwon-living-doodle.mjs';
-import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
+import {gyuwonFiveToSixExit,gyuwonRunnerBridgeAt,GYUWON_RUNNER_ENTER_SECONDS} from './gyuwon-runner-director.mjs';
 import {createPlayerProjectileView} from './player-projectile-view.mjs';
 import {gyuwonMemoryFraming} from './gyuwon-horizon-camera.mjs';
 import {resizeBattleViewport,viewportRenderScale} from './battle-viewport.mjs';
@@ -152,9 +152,41 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    }
    if(wasReverie){clearInput();const frame=turnStage.cameraFrame(g.gyuwon.years.musical,camera.aspect);camera.position.set(frame.position.x,frame.position.y,frame.position.z);camera.lookAt(frame.target.x,frame.target.y,frame.target.z);}
    const referenceMini=g.gyuwon.years?.musical;
-   if(usesReference2d(referenceMini)){doodle.suspend();flatView.render(g);turnStage.root.visible=false;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);return;}
+   if(usesReference2d(referenceMini)){
+    doodle.suspend();
+    // Keep the actual 3D theater alive beneath the VI runner's painted gate.
+    const handoff=referenceMini.year===6&&referenceMini.handoffFromFive
+     &&referenceMini.time<GYUWON_RUNNER_ENTER_SECONDS;
+    if(handoff){
+     const bridge=gyuwonRunnerBridgeAt(referenceMini.time);
+     resizeBattleViewport(renderer,camera,canvas,quality.scale);
+     study.root.visible=false;musicalStage.root.visible=false;
+     turnStage.update(g);
+     const shot=turnStage.runnerBridgeCamera(referenceMini,camera.aspect);
+     if(mode!=='paused'){
+      const alpha=1-Math.exp(-Math.min(.05,visualDt)*3.5);
+      camera.position.lerp(new THREE.Vector3(shot.position.x,shot.position.y,shot.position.z),alpha);
+      camera.fov+=(shot.fov-camera.fov)*alpha;camera.updateProjectionMatrix();
+      camera.lookAt(shot.target.x,shot.target.y,shot.target.z);
+     }
+     player.rig.visible=true;
+     player.rig.position.set(-5+bridge.runner*5,0,3-23*bridge.runner);
+     player.rig.rotation.set(0,Math.PI,0);
+     posePlayer(player,referenceMini.time*7,bridge.runner>0?4.1:0);
+     renderer.render(scene,camera);
+    }else{turnStage.root.visible=false;player.rig.visible=false;}
+    flatView.render(g);
+    hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);
+    return;
+   }
    flatView.canvas.hidden=true;
-   study.update(g,impact.frozen?0:visualDt);musicalStage.update(g);musicalStage.root.visible=musicalStage.root.visible&&!referenceMini?.reference;turnStage.update(g);player.rig.visible=!(referenceMini?.reference&&referenceMini.year===5);study.root.visible=!(referenceMini?.giantRaid)&&(referenceMini?.year!==11||referenceMini.finishing||referenceMini.curtainCall?.actorIndex===4);impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:g.gyuwon.years?.musical?.slide>0?.48:1;const walk=posePlayer(player,(g.gyuwon.years?.musical?.time??g.time)*7,a?0:g.gyuwon.years?.musical?.kind==='runner'?7:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=g.gyuwon.years?.musical?.playerStrike?-1.2+Math.sin(Math.min(1,g.gyuwon.years.musical.playerStrike.age/.6)*Math.PI)*2.5:a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);
+   study.update(g,impact.frozen?0:visualDt);musicalStage.update(g);musicalStage.root.visible=musicalStage.root.visible&&!referenceMini?.reference;turnStage.update(g);const actFiveFarewell=referenceMini?.year===5?gyuwonFiveToSixExit(referenceMini.time,referenceMini.clock?.duration||180):0;player.rig.visible=!(referenceMini?.reference&&referenceMini.year===5)||actFiveFarewell>.20;study.root.visible=!(referenceMini?.giantRaid)&&(referenceMini?.year!==11||referenceMini.finishing||referenceMini.curtainCall?.actorIndex===4);impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:g.gyuwon.years?.musical?.slide>0?.48:1;const walk=posePlayer(player,(g.gyuwon.years?.musical?.time??g.time)*7,a?0:g.gyuwon.years?.musical?.kind==='runner'?7:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=g.gyuwon.years?.musical?.playerStrike?-1.2+Math.sin(Math.min(1,g.gyuwon.years.musical.playerStrike.age/.6)*Math.PI)*2.5:a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);
+ if(referenceMini?.year===5&&actFiveFarewell>.2){
+  const k=Math.min(1,(actFiveFarewell-.2)/.8);
+  player.rig.position.set(-10+5*k,0,13-10*k);
+  player.rig.rotation.y=Math.PI;
+  posePlayer(player,referenceMini.time*7,3.4);
+ }
  if(referenceMini?.year===11&&!referenceMini.finishing){
   const call=referenceMini.curtainCall,beat=call?.beat||0,response=call?.response||'stand';
   const wave=Math.sin(beat*Math.PI),side=call?.actorIndex%2?-1:1;
