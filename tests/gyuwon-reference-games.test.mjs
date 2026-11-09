@@ -153,7 +153,7 @@ test('timed lyric contact is seek-safe and excluded acts remain unaffected',()=>
  assert.deepEqual(gyuwonLyricActionsCrossed(9,111.75,111.95).map(a=>a.actionId),['roundEcho1']);
 });
 test('real media time selects matching 6, 8, and 9 gestures and affects fighter set pieces',()=>{
- const samples=[[6,25.5,'rainDance','spin'],[6,28.5,'mountainLeap','mountain'],
+ const samples=[[6,25.5,'rainDance','spin'],[6,28.5,'mountainLeap','jump'],
   [8,29.3,'leftStep','stepleft'],[8,31.5,'rightStep','stepright'],
   [9,34.0,'leftSwingRight','stepstrike'],[9,118.5,'roundEcho3','blade'],
   [11,40,'runAndFight','fight']];
