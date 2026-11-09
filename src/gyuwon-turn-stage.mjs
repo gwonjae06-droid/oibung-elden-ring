@@ -59,8 +59,8 @@ export function createGyuwonTurnStage(scene,{player,boss,coarse=false}={}){
      a.position.y=.2+Math.sin(Math.min(1,walk)*Math.PI*7)*.13*(1-walk);
      a.rotation.x=-.16*THREE.MathUtils.smoothstep(overture,3.75,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.8,5.65));
      const arm=a.getObjectByName('gyuwon-right-arm');
-     if(arm)arm.rotation.z=-.55*THREE.MathUtils.smoothstep(overture,3.1,4.4);
-    }else a.rotation.x=0;
+     if(arm)arm.rotation.z=-.55*THREE.MathUtils.smoothstep(overture,3.1,4.4)*(1-THREE.MathUtils.smoothstep(overture,4.9,5.7));
+    }else{a.rotation.x=0;const arm=a.getObjectByName('gyuwon-right-arm');if(arm)arm.rotation.z=0;}
    }
    a.rotation.y=Math.atan2(m.party[0].x-e.x,m.party[0].z-e.z);
    if(i>0&&i<3){const torso=a.getObjectByName('gyuwon-tailored-torso'),arm=a.getObjectByName('gyuwon-right-arm');const power=m.turnActor===e.id&&m.turn==='boss'?Math.min(1,m.turnElapsed/1.2):0;if(torso)torso.rotation.x=-.18+power*.24;if(arm)arm.rotation.x=-.4-power;}
