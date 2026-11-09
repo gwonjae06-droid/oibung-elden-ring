@@ -2,7 +2,7 @@
 // from the main menu: the full original final song must finish first.
 export const GYUWON_LIFE_SECONDS=147;
 export const GYUWON_LIFE_SHOTS=Object.freeze([
- {at:0,end:18,id:'realization',label:'돌아온 현실',line:'다양한 것들을 경험해보니 알 것 같아. 지금 내가 살아가는 삶이 목적이 없더라도 열심히 살아보자.'},
+ {at:0,end:18,id:'realization',label:'돌아온 현실',line:'다양한 것들을 경험해보니 알꺼같아. 지금 내가 살아가는 삶이 목적이 없더라도 열심히 살아보자'},
  {at:18,end:30,id:'youth',label:'청춘의 한낮',line:'있는 힘껏 놀고, 새로운 사람을 만나고, 마음껏 웃었다.'},
  {at:30,end:42,id:'study',label:'배움의 시간',line:'열심히 공부했다. 모르는 것이 생기면 다시 물었다.'},
  {at:42,end:53,id:'work',label:'처음 맡은 일',line:'열심히 일했다. 서툰 첫날에도 끝까지 해냈다.'},
