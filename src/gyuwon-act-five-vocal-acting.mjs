@@ -21,7 +21,7 @@ export function actFiveMouthAt(time){
  const index=Math.min(cue.beats.length-1,Math.floor(u*cue.beats.length));
  const local=u*cue.beats.length-index;
  const vowel=cue.beats[index];
- const envelope=smooth((time-cue.start)/.16)*(1-smooth((time-cue.end+.01)/-.22));
+ const envelope=smooth((time-cue.start)/.16)*smooth((cue.end-time)/.22);
  const pulse=Math.pow(Math.sin(Math.PI*local),.58);
  return {singing:true,openness:clamp(envelope*(.12+vowel*.82)*(.16+.84*pulse)),
   roundness:vowel,smile:clamp(.3+(.65-vowel)*.35),phrase:cues.indexOf(cue)};
