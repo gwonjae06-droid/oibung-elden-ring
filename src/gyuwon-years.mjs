@@ -157,6 +157,23 @@ function startNextYear(g,emit){
  emit('gyuwon-year',{year:e.year});
  if(!e.legacyAnnual&&isGyuwonMusicalYear(e.year))enterGyuwonMusical(g,emit);
 }
+// Debug-performance entry: jump directly from the opening encounter to the
+// first full-length song. No intermediate cutscene is skipped by the musical
+// system itself, and the boss HP matches the four completed annual milestones.
+export function jumpGyuwonToFifthYear(g,emit=()=>{}){
+ const e=g?.gyuwon?.years;
+ if(!e||e.legacyAnnual||e.year!==1||e.mode!=='combat'||g.status!=='playing')return false;
+ e.year=5;e.day=365;e.season=0;e.cast=null;e.castT=0;e.dodge=null;
+ e.grade=null;e.gradeT=0;e.subjectLabel=null;e.resultScene=null;
+ e.recover=0;e.wards=[];e.chat=[];e.mapClock=0;e.mapPending=false;
+ e.damageBank=0;e.calendarDamage=0;e.yearDamage=0;e.reverie=null;
+ e.yearStartHp=annualFloorForYear(g,4);
+ g.boss.hp=e.yearStartHp;g.boss.state='recovery';
+ g.gyuwon.hazards.length=0;g.projectiles.length=0;g.gyuwon.pattern=null;
+ g.player.action=null;
+ emit('gyuwon-year',{year:5,shortcut:true});
+ return enterGyuwonMusical(g,emit);
+}
 function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);
  e.cast=id;e.lastCast=id;e.castT=0;e.castCount++;e.from={x:b.x,z:b.z};e.dodge=null;
