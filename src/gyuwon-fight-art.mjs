@@ -1,6 +1,7 @@
 import {gyuwonFightScene,gyuwonFightGroundScreen} from './gyuwon-fight-director.mjs';
 import {stagePerson,round,bar,label,burst,flower} from './gyuwon-2d-art.mjs';
 import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
+import {drawGyuwonCinematic2dSet,drawGyuwonCinematicActorProp} from './gyuwon-cinematic-2d-props.mjs';
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const sx=x=>640+x*33;
 function glow(c,x,y,r,color,alpha=.7){
@@ -102,7 +103,8 @@ function fightActor(c,f,i,m,scene,portrait){
  }
  stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:!!i,portrait,reach:a?Math.min(170,a.range*33/1.65):76,
   lyric:i&&!a?m.lyricAction:null});
- if(i)drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
+ if(i){drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
+  drawGyuwonCinematicActorProp(c,m,{x,y:feetY,scale:1.65,face:f.facing});}
  if(i&&scene.role==='king'){
   c.fillStyle='#f7d68c';c.beginPath();c.moveTo(x-30,feetY-204);c.lineTo(x-20,feetY-242);c.lineTo(x-4,feetY-219);c.lineTo(x+9,feetY-251);c.lineTo(x+22,feetY-220);c.lineTo(x+35,feetY-244);c.lineTo(x+30,feetY-202);c.closePath();c.fill();
  }else if(i&&scene.role==='clown'){
@@ -130,6 +132,7 @@ export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
  const t=m.time,scene=m.fightWorld||gyuwonFightScene(t);
  backdrop(c,m,scene);
  drawGyuwonLyricBackdrop(c,m);
+ drawGyuwonCinematic2dSet(c,m);
  floor(c,m,scene);
  for(const h of m.fightHazards||[]){
   const age=t-h.at,pre=clamp(age/Math.max(.01,h.wind)),active=age>=h.wind;
