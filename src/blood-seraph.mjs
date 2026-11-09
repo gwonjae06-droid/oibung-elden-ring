@@ -290,7 +290,6 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
   const gazeTarget=wanted;
   headTurn+=Math.atan2(Math.sin(gazeTarget-headTurn),Math.cos(gazeTarget-headTurn))*
    (1-Math.exp(-d*.95));
-  visage.group.rotation.y=headTurn;
   const first=s.hazards?.length?Math.min(...s.hazards.map(h=>h.warn)):1.2;
   const charge=pattern?ease((s.t||0)/Math.max(.2,first)):0;
   // Never animate at guessed fixed times: use authoritative hazard warns,
@@ -348,6 +347,9 @@ export function createBloodSeraph(scene,{coarse=false,reduced=false}={}){
    m.scale.setScalar(pulse*Math.max(.03,haloBirth));
   });
   visage.update(g,c,d,{cast:charge});
+  // Face component writes its idle micro-pose; our tracking must be the
+  // final rotation applied after that animation on every rendered frame.
+  visage.group.rotation.y=headTurn;
   holyFaceRing.scale.setScalar(1+charge*.18+eyeCharge*.22+
    sanctity.choir*.19);
   const charging=pattern==='seraphSweep'&&(!activeRay||s.t<first);

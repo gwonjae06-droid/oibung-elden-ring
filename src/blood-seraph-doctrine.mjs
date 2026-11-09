@@ -33,7 +33,7 @@ export function spawnSeraphDoctrine(g,id,spawn){
   // map-wide hit. The physical danger travels at precisely the beam rate.
   spawn('lane',{x:b.x,z:b.z,yaw:aim-1.45,
    yawStart:aim-1.45,yawEnd:aim+1.45,seraphAngularSweep:true,
-   width:4.1,length:64,warn:1.9,life:3.25,
+   width:4.1,length:64,warn:2.1,life:3.25,
    damage:39,seraphCue:'sweep'});
  }
  if(id==='seraphWingCross')for(let i=0;i<4;i++){
@@ -41,7 +41,7 @@ export function spawnSeraphDoctrine(g,id,spawn){
   // appear in the world as a spinning disc using the same live hazard.
   const sign=i%2?-1:1,z=[-11,8,-3,13][i];
   spawn('lane',{x:-sign*37,z,yaw:Math.PI/2,width:5.65,length:14.8,
-   vx:sign*74/.88,vz:0,warn:1.85+i*1.32,life:.88,
+   vx:sign*74/.88,vz:0,warn:2.05+i*1.32,life:.88,
    damage:34,seraphCue:'wing-pass',pass:i});
  }
  if(id==='seraphInwardPillars'){
