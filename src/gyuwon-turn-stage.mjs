@@ -4,6 +4,7 @@ import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
 import {createActFiveStagecraft} from './gyuwon-act-five-stagecraft.mjs';
 import {ACT_FIVE_SCORE,scoreEase} from './gyuwon-act-five-score.mjs';
 import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
+import {actFiveCameraDirection} from './gyuwon-act-five-camera.mjs';
 export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const root=new T.Group();root.name='gyuwon-three-dimensional-giant-raid';root.visible=false;scene.add(root);
  const mats=new Set(),geos=new Set(),mat=o=>{const m=new T.MeshStandardMaterial(o);mats.add(m);return m;},geo=g=>(geos.add(g),g);
@@ -120,7 +121,7 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  // articulated hands and collision volumes continue following e.x/y/z.
  // Moving DOM buttons made it almost impossible to select a dancing hand.
  project.set(e.homeX,e.homeY+3,e.homeZ).project(camera);return {left:Math.round(Math.min(r.width-65,Math.max(65,r.left-s.left+(project.x*.5+.5)*r.width+(e.index===3?95:0)))),top:Math.round(Math.max(r.height>500?185:115,r.top-s.top+(-project.y*.5+.5)*r.height-(e.index<2?10:0))),visible:project.z<1&&e.active&&!e.destroyed};});}
- function cameraFrame(m,aspect=1.6){const portrait=aspect<1,position={x:0,y:21.5,z:portrait?85:53},target={x:0,y:10.8,z:-9};const motion=m.actorMotion;if(motion?.type==='ultimate'){const e=m.enemies[m.targetIndex],p=m.party.find(p=>p.id===motion.actorId),k=Math.sin(Math.min(1,motion.age/motion.duration)*Math.PI);position.x=p.homeX*.3*k;position.z-=9*k;position.y+=k*2;target.x=e.x*.3*k;target.y+=k*((e.y+4)*.45-10.8)*.4;}return {position,target};}
+ function cameraFrame(m,aspect=1.6){return actFiveCameraDirection(m,aspect);}
  async function prewarm(renderer,camera){await guestParty.ready;const visible=root.visible,previous=renderer.getRenderTarget(),target=new T.WebGLRenderTarget(16,16);root.visible=true;try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);renderer.setRenderTarget(target);renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);root.visible=visible;target.dispose();}}
  return {root,update,projectTargets,cameraFrame,prewarm,ensembleRoles:allies,stats:()=>({allies:4,enemies:5,dimension:3,giant:true,sourcePhases:guestParty.sourcePhases,phaseOneClown:guestParty.actors[1].isRebuiltRingmaster===true,bloodJoints:guestParty.actors[3].regalia.jointSkins.length}),dispose(){if(disposed)return;disposed=true;guestParty.dispose();stagecraft.dispose();giant.dispose();root.removeFromParent();for(const m of mats)m.dispose();for(const g of geos)g.dispose();}};
 }
