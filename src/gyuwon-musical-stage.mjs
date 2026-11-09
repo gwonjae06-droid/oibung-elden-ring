@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {gyuwonCurtainCallAt} from './gyuwon-curtain-call.mjs';
+import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
 
 // Instanced/cached primitive stagecraft. One rig for Gyuwon and one for the
 // player stay in the scene for every genre. Every moving prop here reads the
@@ -43,6 +44,18 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  });
  const stageRing=new THREE.Mesh(torus,materials[6]);stageRing.rotation.x=Math.PI/2;
  stageRing.position.y=2.3;stageRing.scale.setScalar(4);root.add(stageRing);
+ // The last 20 seconds of Act V expose a real walkway made from stage
+ // planks, while the proscenium opens toward Act VI's painted horizon.
+ const roadMaterial=new THREE.MeshStandardMaterial({color:0xd2a86a,emissive:0x795130,emissiveIntensity:.35,roughness:.63,side:THREE.DoubleSide});
+ const road=Array.from({length:20},(_,i)=>{
+  const plank=new THREE.Mesh(box,roadMaterial);
+  plank.position.set(0,.18,-16+i*1.7);plank.scale.set(4.8,.12,1.66);
+  plank.visible=false;root.add(plank);return plank;
+ });
+ const horizon=new THREE.Mesh(new THREE.TorusGeometry(1,.09,12,64),materials[6]);
+ horizon.position.set(0,6.2,-18);horizon.scale.set(8.8,5.9,1);horizon.visible=false;root.add(horizon);
+ const horizonLight=new THREE.Mesh(new THREE.PlaneGeometry(17,12),new THREE.MeshBasicMaterial({color:0xffe9b5,transparent:true,opacity:.42,depthWrite:false,side:THREE.DoubleSide}));
+ horizonLight.position.set(0,6.2,-19);horizonLight.visible=false;root.add(horizonLight);
  let disposed=false,ensemble=[];
  function setEnsemble(roles){ensemble=Array.isArray(roles)?roles:[];}
  function showAt(i,{x=0,y=1,z=0,sx=1,sy=1,sz=1,color=0,rotate=0,flat=false}={}){
@@ -57,11 +70,24 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
   root.visible=!!m&&g.status==='playing';
   if(!root.visible)return;
   const year=m.year,kind=m.kind,color=Math.max(0,year-5),t=m.time;
+  const exitPath=year===5&&!m.finishing?gyuwonFiveToSixExit(t,m.clock?.duration||180):0;
   const opening=year===5&&!m.finishing&&t<8;
-  for(let i=0;i<2;i++){const side=i===0?-1:1,fabric=openingCurtains[i];fabric.visible=opening;
-   const draw=THREE.MathUtils.smoothstep(t,2.15,5.7);fabric.position.x=side*(6+13*draw);fabric.scale.x=1.03-.38*draw;
+  for(let i=0;i<2;i++){const side=i===0?-1:1,fabric=openingCurtains[i];fabric.visible=opening||exitPath>0;
+   const draw=opening?THREE.MathUtils.smoothstep(t,2.15,5.7):exitPath;
+   fabric.position.x=side*(6+13*draw);fabric.scale.x=1.03-.38*draw;
    fabric.rotation.y=side*.2*draw;}
-  lintel.visible=edgeLamps[0].visible=edgeLamps[1].visible=opening;
+  lintel.visible=edgeLamps[0].visible=edgeLamps[1].visible=opening||exitPath>0;
+  horizon.visible=horizonLight.visible=exitPath>.001;
+  if(horizon.visible){
+   horizon.scale.set(8.8+exitPath*2,5.9+exitPath*1.6,1);
+   horizonLight.material.opacity=.08+exitPath*.46;
+  }
+  road.forEach((plank,i)=>{
+   // The floor opens from behind Gyuwon toward the knight.
+   const reveal=THREE.MathUtils.smoothstep(exitPath,Math.max(0,i*.028),.33+i*.028);
+   plank.visible=reveal>.001;plank.scale.x=Math.max(.001,4.8*reveal);
+   plank.position.y=.19+.05*Math.sin(t*1.2+i*.24)*exitPath;
+  });
   for(let i=0;i<cues.length;i++){const o=cues[i];o.visible=false;o.geometry=i%9===0?torus:i%3===0?box:ball;}
   // The four prior-boss meshes return as actors, not hostile AI.
   if(kind==='finale'){
@@ -208,7 +234,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  }
  function dispose(){
   if(disposed)return;disposed=true;root.removeFromParent();
-  for(const geo of [box,ball,torus,plane,soldier,curtainGeo])geo.dispose();oak.dispose();drape.dispose();
+  for(const geo of [box,ball,torus,plane,soldier,curtainGeo,horizon.geometry,horizonLight.geometry])geo.dispose();oak.dispose();drape.dispose();roadMaterial.dispose();horizonLight.material.dispose();
   for(const mat of materials)mat.dispose();
   soft.dispose();for(const s of spotlights)s.material.dispose();
  }
