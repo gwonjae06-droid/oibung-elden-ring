@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {createGyuwonMusicalScore} from '../src/gyuwon-musical-score.mjs';
 import {createGyuwonGame,stepGyuwon} from '../src/gyuwon-combat.mjs';
 import {GYUWON_SONGS} from '../src/gyuwon-song-data.mjs';
+import {scoreAudit} from '../scripts/gyuwon-source-score-audit.mjs';
 import {GYUWON_SUBTITLES,GYUWON_ORIGINAL_SUBTITLES,gyuwonSubtitleAt} from '../src/gyuwon-subtitles.mjs';
 function rig(){
  const sounds=[];let time=0;
@@ -100,5 +101,18 @@ test('manual master-caption corrections can replace temporary lyric slots withou
   const excerpt=GYUWON_ORIGINAL_SUBTITLES[key][0];
   const shown=gyuwonSubtitleAt(key,excerpt.start);
   assert.equal(shown.verified,false);
+ }
+});
+
+test('score audit separates original-excerpt cues from every track\'s unfinished full vocal alignment',()=>{
+ const rows=scoreAudit();
+ assert.equal(rows.length,8);
+ assert.deepEqual(rows.map(r=>String(r.key)),['5','6','7','8','9','10','11','ending']);
+ for(const r of rows){
+  assert.ok(r.excerptMappedCues>0,r.track);
+  assert.ok(r.excerptDerivedAccents>0,r.track);
+  assert.ok(r.excerptMappedSeconds>0&&r.excerptMappedSeconds<r.duration,r.track);
+  assert.ok(r.provisionalDisplayCues>0,r.track);
+  assert.equal(r.manualTranscriptionRequired,true,r.track);
  }
 });
