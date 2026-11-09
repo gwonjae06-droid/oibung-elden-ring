@@ -10,6 +10,7 @@ on:
       - 'tests/blood-seraph-phase3.test.mjs'
       - 'tests/blood-seraph-evolution.test.mjs'
       - 'tests/blood-seraph-new-rites.test.mjs'
+      - 'tests/blood-seraph-majesty.test.mjs'
       - 'tests/blood.test.mjs'
       - 'tests/blood-cinematic.test.mjs'
       - 'tests/boss-tracks.test.mjs'
@@ -34,8 +35,8 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
       - name: Check seraph simulation, rig and WebGL modules
         run: |
-          for f in src/blood-seraph-ascension.mjs src/blood-seraph-sculpt.mjs src/blood-cinematic-ui.mjs src/blood-transformation.mjs src/blood-seraph-doctrine.mjs src/blood-head.mjs src/blood-seraph.mjs src/blood-combat.mjs src/blood-view.mjs src/blood-data.mjs src/blood-spell-fx.mjs src/blood-pattern-director.mjs src/blood-battle.mjs src/boss-tracks.mjs src/boss-music.mjs scripts/blood-seraph-browser-smoke.mjs; do node --check "$f"; done
-          node --test tests/blood-seraph-evolution.test.mjs tests/blood-seraph-new-rites.test.mjs tests/blood-seraph-phase3.test.mjs tests/blood.test.mjs tests/blood-siphon.test.mjs tests/blood-cinematic.test.mjs tests/boss-tracks.test.mjs tests/boss-music.test.mjs tests/hard-story-balance.test.mjs
+          for f in src/blood-seraph-choir.mjs src/blood-seraph-sanctity.mjs src/blood-seraph-ascension.mjs src/blood-seraph-sculpt.mjs src/blood-cinematic-ui.mjs src/blood-transformation.mjs src/blood-seraph-doctrine.mjs src/blood-head.mjs src/blood-seraph.mjs src/blood-combat.mjs src/blood-view.mjs src/blood-data.mjs src/blood-spell-fx.mjs src/blood-pattern-director.mjs src/blood-battle.mjs src/boss-tracks.mjs src/boss-music.mjs scripts/blood-seraph-browser-smoke.mjs; do node --check "$f"; done
+          node --test tests/blood-seraph-majesty.test.mjs tests/blood-seraph-evolution.test.mjs tests/blood-seraph-new-rites.test.mjs tests/blood-seraph-phase3.test.mjs tests/blood.test.mjs tests/blood-siphon.test.mjs tests/blood-cinematic.test.mjs tests/boss-tracks.test.mjs tests/boss-music.test.mjs tests/hard-story-balance.test.mjs
       - name: Render real seraph formation, attacks and mobile camera
         env:
           EDGE_PATH: /usr/bin/google-chrome

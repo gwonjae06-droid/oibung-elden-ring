@@ -118,6 +118,11 @@ try{
  await page.waitForFunction(()=>window.__seraphSession?.()?.diagnostics()?.view?.seraph?.eyeRayVisible,
   {},{timeout:15000});
  await page.screenshot({path:'artifacts/blood-seraph/seraph-eye-attack.png'});
+ const divinity=await page.evaluate(()=>{
+  const s=window.__seraphSession();return s.diagnostics().view.seraph;
+ });
+ assert.ok(divinity.sanctity>=.5,'gigantic Seraph beams must light the arena in platinum-gold');
+ await page.screenshot({path:'artifacts/blood-seraph/seraph-platinum-judgement.png'});
  // Verify that a detached rotating wing reaches the stage while its
  // real telegraph marks the corresponding crossing lane BEFORE damage.
  const wingWarning=await page.evaluate(async()=>{
