@@ -54,7 +54,13 @@ try{
    await value(()=>{const m=window.__session().game.gyuwon.years.musical;const [p,b]=m.fighters;p.x=-1.2;b.x=1.2;p.stun=b.stun=0;p.action=b.action=null;p.meter=100;m.enemyThink=99;});
    await focus();await page.keyboard.press('j');
    await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.fighters[1].hp<100);
-   await page.waitForTimeout(550);await control('super').click();await page.waitForTimeout(680);
+   // The visible attack button automatically selects super at full meter.
+   await page.waitForFunction(()=>window.__session().game.gyuwon.years.musical.fighters[0].meter===12);
+   assert.equal(await page.locator('#gyuwon-battle').locator('.gy-musical-actions button').count(),2);
+   await control('guard').dispatchEvent('pointerdown',{pointerId:9});
+   assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.guardHeld),true);
+   await control('guard').dispatchEvent('pointerup',{pointerId:9});
+   assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.guardHeld),false);
    assert.equal(await value(()=>window.__session().game.gyuwon.years.musical.fighters[0].meter),12);
   }
   if(y===10){
