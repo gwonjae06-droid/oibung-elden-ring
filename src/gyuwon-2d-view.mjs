@@ -4,6 +4,7 @@ import {label,round,bar,flower,jelly,stagePerson,paperUnit,tank,burst} from './g
 import {drawArmoredRunner,drawGyuwonRunnerGuide} from './gyuwon-runner-art.mjs';
 import {gyuwonRunnerScene,gyuwonRunnerBridgeAt,gyuwonRunnerGuideAt,gyuwonRunnerAccent,gyuwonRunnerLyricStage} from './gyuwon-runner-director.mjs';
 import {drawGyuwonArmyWorld,gyuwonArmyLaneY} from './gyuwon-army-director.mjs';
+import {createGyuwonArmyDoodle} from './gyuwon-army-doodle.mjs';
 import {drawGyuwonDanceWorld} from './gyuwon-dance-director.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const TAU=Math.PI*2;
@@ -11,6 +12,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
  const canvas=doc.createElement('canvas');canvas.className='gy-reference-canvas';canvas.setAttribute('aria-label','최규원 2D 미니게임');canvas.tabIndex=0;canvas.hidden=true;canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:12;touch-action:none;background:#080c12';shell.appendChild(canvas);
  const portrait=doc.createElement('img');portrait.src=GYUWON_FACE_URL;portrait.decoding='async';
  const lastRunnerFrame=doc.createElement('canvas');const lastRunner2d=lastRunnerFrame.getContext('2d');
+ const armyDoodle=createGyuwonArmyDoodle(doc,{reducedMotion:!!doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches});
  const c=canvas.getContext('2d',{alpha:false}),state={g:null,width:1280,height:720,scale:1,left:0,top:0,active:false},report={mode:'canvas2d',drawMs:0,sprites:0,width:0,height:0};
  let pointer=null;
  const worldX=(x,w=1280)=>w/2+x*w/44;
@@ -328,6 +330,10 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    c.fillStyle='#d8ba8e';c.beginPath();c.moveTo(0,470);
    c.lineTo(280,390+18*(1-q));c.lineTo(500,475);c.closePath();c.fill();
   }
+  // World + soldiers share Act V's living pencil contour / paper wash.
+  // Drawing this before the header keeps UI numbers, bars and buttons sharp.
+  armyDoodle.draw(canvas,c,{time:m.time,left:state.left,top:state.top,
+   scale:state.scale,ratio:state.ratio||1,quiet:scene.quiet});
   standardHeader(g,m,{dark:!scene.quiet,color:scene.quiet?'#d7ddf8':'#126d83'});
   label(c,Math.floor(m.money)+' / '+m.moneyCap+' 원',1210,112,28,'#ffe29b','right',4);
   bar(c,1008,151,200,13,m.cannon,100,'#c9eaff');
@@ -451,11 +457,11 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   const started=performance.now(),rect=shell.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height)),ratio=Math.min(1.5,globalThis.devicePixelRatio||1);
   if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)){canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);}
   const vw=m.year===10?540:1280,vh=m.year===10?900:720,scale=Math.min(w/vw,h/vh),left=(w-vw*scale)/2,top=(h-vh*scale)/2;
-  Object.assign(state,{width:vw,height:vh,scale,left,top});c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#080d16';c.fillRect(0,0,w,h);c.translate(left,top);c.scale(scale,scale);c.save();c.beginPath();c.rect(0,0,vw,vh);c.clip();
+  Object.assign(state,{width:vw,height:vh,scale,left,top,ratio});c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#080d16';c.fillRect(0,0,w,h);c.translate(left,top);c.scale(scale,scale);c.save();c.beginPath();c.rect(0,0,vw,vh);c.clip();
   if(m.year===6)runner(g,m);else if(m.year===7)army(g,m);else if(m.year===8)dance(g,m);else if(m.year===9)fighter(g,m);else if(m.year===10)shooter(g,m);c.restore();
    // Preserve the final VI frame in an offscreen surface. The same painted
    // hill and banners dissolve into VII instead of a black genre cut.
-   if(m.year===6&&m.runnerScene?.key==='exit'&&lastRunner2d){
+   if(m.year===6&&m.runnerScene?.biome==='exit'&&lastRunner2d){
     if(lastRunnerFrame.width!==canvas.width||lastRunnerFrame.height!==canvas.height){
      lastRunnerFrame.width=canvas.width;lastRunnerFrame.height=canvas.height;
     }
@@ -466,7 +472,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
     c.globalAlpha=1-clamp(m.time/4.5,0,1);
     c.drawImage(lastRunnerFrame,0,0,canvas.width,canvas.height);c.restore();
    }
-  report.drawMs=performance.now()-started;report.width=w;report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
+  report.ink=m.year===7?armyDoodle.stats():null;report.drawMs=performance.now()-started;report.width=w;report.height=h;report.sprites=(m.units?.length||0)+(m.bullets?.length||0)+(m.enemyShots?.length||0)+(m.jellies?.length||0)+2;return true;
  }
- return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();portrait.removeAttribute('src');canvas.remove();}};
+ return {canvas,render,clearInput:release,stats:()=>({...report}),dispose(){release();portrait.removeAttribute('src');armyDoodle.dispose();canvas.remove();}};
 }
