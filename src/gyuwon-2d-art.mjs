@@ -10,17 +10,34 @@ export function flower(c,x,y,s=1,color='#fff8cf'){c.save();c.translate(x,y);c.sc
 export function jelly(c,x,y,kind='jelly',time=0){c.save();c.translate(x,y);c.rotate(Math.sin(time*3+x)*.18);if(kind==='heart'){c.beginPath();c.moveTo(0,14);c.bezierCurveTo(-32,-4,-10,-28,0,-12);c.bezierCurveTo(10,-28,32,-4,0,14);c.fillStyle='#ff676d';c.fill();c.strokeStyle='#a63340';c.lineWidth=3;c.stroke();}else{ellipse(c,0,0,kind==='gold'?12:9,kind==='gold'?12:15,kind==='gold'?'#ffdf5b':'#43c5ee',kind==='gold'?'#a57923':'#165d86',3);ellipse(c,-3,-5,3,5,'#c6f9ff',null);}c.restore();}
 // Original articulated 2D stage characters. The same action windup and contact
 // phase that drive gameplay place hands, feet, guard and hit reactions here.
-export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76}={}){
+export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon=false,portrait=null,color='#3b91b1',ink=false,miss=false,reach=76,theater=false,choreography=null}={}){
  c.save();c.translate(x,y);c.scale(scale*face,scale);const outline=ink?'#111315':'#1d2333',coat=ink?'#f6f5e9':color,skin=ink?'#fffaf0':gyuwon?'#e6c0a0':'#edd0ac';
  const run=pose==='run',slide=pose==='slide',crouch=pose==='crouch',jump=pose==='jump',dance=pose==='dance'||pose==='turn'||pose==='quick';
- const pulse=Math.sin(t*11),lift=run?Math.max(0,pulse)*10:dance?Math.abs(Math.sin(t*5))*5:0;
+ const pulse=Math.sin(t*11),preparation=choreography?
+  Math.max(0,Math.min(1,choreography.lead||0)):0;
+ const turning=theater&&pose==='turn';
+ const lift=run?Math.max(0,pulse)*10:dance?
+  (theater?1.2+3.3*preparation:Math.abs(Math.sin(t*5))*5):0;
  const down=slide?67:crouch?35:miss?12:0,lean=run?.23:slide?1.1:pose==='strike'?.16:pose==='wind'?-.16:0;
  ellipse(c,0,1,32,6,'#00000035',null);
- c.translate(0,down-lift);c.rotate(lean);
+ c.translate(0,down-lift);
+ // A small anticipatory weight shift precedes the turn; no pose teleport.
+ c.rotate(lean+(theater&&choreography?(turning?-.12+.21*preparation:
+   Math.sin(t*1.8)*.035*preparation):0));
  const hipsY=-55+(crouch?10:0),shoulder=-96+(crouch?16:0),headY=-119+(crouch?20:0);
- const legSwing=run?Math.sin(t*13)*24:dance?Math.sin(t*8)*10:0;
+ const legSwing=run?Math.sin(t*13)*24:dance?
+  (theater?(turning?3+preparation*8:Math.sin(t*8)*4+preparation*7):Math.sin(t*8)*10):0;
  for(const side of [-1,1]){const hip=side*10,kneeX=hip+(slide?side*30:legSwing*side*.7),kneeY=hipsY/2+(slide?4:-2),footX=side*16+legSwing*side,footY=-down+lift+(jump?side*6:0);
   line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],outline,17);line(c,[[hip,hipsY],[kneeX,kneeY],[footX,footY-7]],ink?'#e4e4d8':'#202a40',11);round(c,footX-7,footY-10,24,12,4,ink?'#fff':'#15202e',outline,2);
+ }
+ if(theater){
+  // Act VIII only: separate jacket tails lag behind the hip and the turn.
+  const drag=Math.sin(t*2.8)*6+(turning?preparation*15:preparation*5);
+  path(c,[[-22,hipsY-6],[-8,hipsY],[-13+drag,1],[-33+drag*.6,-4],
+    [-31,hipsY+1]],gyuwon?'#7a568e':'#687489',outline,2);
+  path(c,[[7,hipsY-6],[22,hipsY-6],[34+drag,1],[15+drag*.5,-5],
+    [9,hipsY+3]],gyuwon?'#ac83b7':'#a2b1c5',outline,2);
+  line(c,[[-22,hipsY],[0,hipsY+5],[23,hipsY]],'#e6ca9a',2);
  }
  path(c,[[-21,shoulder+3],[19,shoulder],[24,hipsY-3],[8,hipsY+6],[-26,hipsY+1]],coat,outline,3);
  path(c,[[-8,shoulder+3],[8,shoulder+3],[2,hipsY-7]],ink?'#fff':'#e9e8db',outline,1);
@@ -31,7 +48,15 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
  if(wind){right=[[19,shoulder+7],[5,shoulder-2],[-17,shoulder+11]];left=[[-20,shoulder+8],[-28,shoulder-8],[-3,shoulder-10]];}
  if(attacking){right=[[19,shoulder+7],[reach*.55,shoulder+5],[reach,shoulder+10]];left=[[-20,shoulder+8],[-23,shoulder+25],[-1,shoulder+25]];}
  if(guard){right=[[19,shoulder+7],[35,shoulder-1],[18,headY-1]];left=[[-20,shoulder+8],[5,shoulder-1],[13,headY-9]];}
- if(dance){const arm=pose==='turn'?-1:1;right=[[19,shoulder+7],[42,shoulder-4*arm],[51,shoulder-24*arm]];left=[[-20,shoulder+8],[-41,shoulder+arm*17],[-55,shoulder-arm*10]];}
+ if(dance){
+  const arm=pose==='turn'?-1:1;
+  const q=theater&&choreography?preparation:1;
+  // The conductor opens the leading arm during the actual windup.
+  right=[[19,shoulder+7],[31+11*q,shoulder+15-19*q*arm],
+    [30+21*q,shoulder+29-53*q*arm]];
+  left=[[-20,shoulder+8],[-28-13*q,shoulder+24+(17*arm-24)*q],
+    [-24-31*q,shoulder+38+(-10*arm-38)*q]];
+ }
  for(const arm of [left,right]){line(c,arm,outline,14);line(c,arm,coat,9);const [hx,hy]=arm[2];ellipse(c,hx,hy,7,7,skin,outline,2);}
  if(gyuwon&&!run&&!dance&&!slide){round(c,-38,hipsY-7,15,42,3,'#70414f',outline,3);line(c,[[-35,hipsY+2],[-25,hipsY+2]],'#c6a06a',2);}
  if(gyuwon)drawGyuwonPhoto(c,portrait,0,headY,24,{mirror:face<0});else{
@@ -41,6 +66,21 @@ export function stagePerson(c,x,y,{scale=1,face=1,t=0,pose='idle',phase=0,gyuwon
  c.beginPath();c.arc(2,headY+11,5,0,Math.PI);c.strokeStyle=outline;c.lineWidth=1.8;c.stroke();
  }
  if(!ink){path(c,[[-17,shoulder],[-7,shoulder+5],[20,shoulder+2],[41+Math.sin(t*7)*7,shoulder+14],[18,shoulder+9],[-15,shoulder+7]],gyuwon?'#9b79c8':'#d4ae64',outline,1.5);}
+ if(theater){
+  // Tailored theatrical waistcoat, gold piping, gloves and lapel highlights.
+  line(c,[[-20,shoulder+6],[-10,hipsY-4],[0,hipsY]],
+   gyuwon?'#eecb95':'#c8dce9',2.4);
+  line(c,[[20,shoulder+5],[12,hipsY-4],[2,hipsY]],
+   gyuwon?'#eecb95':'#c8dce9',2.4);
+  ellipse(c,0,hipsY-6,4,4,'#f5e4b3',null);
+  if(gyuwon){
+   // The familiar face remains, but his eight-act topcoat and collar change.
+   path(c,[[-18,headY+27],[-6,headY+19],[0,headY+35]],
+    '#e9d0aa',outline,1);
+   path(c,[[0,headY+35],[7,headY+19],[18,headY+27]],
+    '#e9d0aa',outline,1);
+  }
+ }
  c.restore();
 }
 // Six stagebook silhouettes, four derived from the previously fought bosses.
