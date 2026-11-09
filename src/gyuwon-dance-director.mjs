@@ -1,4 +1,5 @@
 import {drawArmoredRunner} from './gyuwon-runner-art.mjs';
+import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
 // Time anchors are production cues; the full master lyric/beat transcription needs listening QA.
@@ -118,6 +119,14 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
    c.lineTo(x+side*(i+1)*18,0);c.fill();}
  }
  c.globalAlpha=1;
+ // A subtle venue-wide light pulse on the actual song BPM; prompts and
+ // judgments still share the same score clock and remain visible above it.
+ const beatTime=t*(GYUWON_BEATS[8].bpm/60),pulse=Math.pow(Math.max(0,Math.cos(beatTime*Math.PI*2)),6);
+ if(pulse>.06){
+  c.save();c.globalAlpha=pulse*.13;c.fillStyle=s.light;c.fillRect(0,0,1280,480);
+  c.strokeStyle=s.light;c.lineWidth=4;c.beginPath();
+  c.ellipse(640,500,200+pulse*80,23+pulse*9,0,0,TAU);c.stroke();c.restore();
+ }
  // Stage beams have no telegraph privilege: the actual cue below owns the timing.
  for(let i=0;i<5;i++){
   const x=240+i*190+Math.sin(t*.45+i)*21;
