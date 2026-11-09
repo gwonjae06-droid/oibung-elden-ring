@@ -3,6 +3,7 @@ import {createGyuwonBossParty} from './gyuwon-party-portraits.mjs';
 import {createGiantGyuwon} from './gyuwon-giant-actor.mjs';
 import {createActFiveStagecraft} from './gyuwon-act-five-stagecraft.mjs';
 import {ACT_FIVE_SCORE,scoreEase} from './gyuwon-act-five-score.mjs';
+import {gyuwonFiveToSixExit} from './gyuwon-runner-director.mjs';
 export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
  const root=new T.Group();root.name='gyuwon-three-dimensional-giant-raid';root.visible=false;scene.add(root);
  const mats=new Set(),geos=new Set(),mat=o=>{const m=new T.MeshStandardMaterial(o);mats.add(m);return m;},geo=g=>(geos.add(g),g);
@@ -56,6 +57,16 @@ export function createGyuwonTurnStage(scene,{boss,coarse=false}={}){
   scene.background.setHex(0x111d30);scene.fog.color.setHex(0x111d30);scene.fog.density=.0006;
   for(const a of allies){if(a.parent!==root)root.add(a);a.scale.setScalar(1.25);}
   guestParty.update(m);giant.update(m,dt);stagecraft.update(m);
+  // The previous four bosses remain behind as the armored protagonist takes
+  // the newly revealed road. This is a presentation-only farewell, not AI.
+  const goodbye=gyuwonFiveToSixExit(m.time,m.clock?.duration||180);
+  if(goodbye>.001&&!m.actorMotion){
+   allies.forEach((ally,i)=>{
+    ally.rotation.z=Math.sin(m.time*2.2+i*1.8)*.08*goodbye;
+    ally.rotation.x=-(i%2?.13:.09)*goodbye;
+   });
+   giant.root.rotation.x=.03*goodbye;
+  }else giant.root.rotation.x=0;
   for(let i=0;i<2;i++){const side=i?-1:1;curtains[i].position.x=-side*(16.5+T.MathUtils.smoothstep(m.time,.2,7)*22);curtains[i].rotation.y=side*.035*Math.sin(m.time*.7);}
   const curtainLift=T.MathUtils.smoothstep(m.time,ACT_FIVE_SCORE[11].start,ACT_FIVE_SCORE[11].end);canopy.position.y=40+curtainLift*7;curtains.forEach(o=>o.position.y=20+curtainLift*5);
   const a=m.raidAttack,compression=a&&a.part<2&&a.age>a.impactAt&&a.age<a.impactAt+.6?Math.sin((a.age-a.impactAt)/.6*Math.PI):0;
