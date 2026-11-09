@@ -67,6 +67,7 @@ test('three short exams and fourth-year reflection lead into the musical with 60
   assert.equal(e.year,year);
   assert.equal(e.mode,'combat');
   e.cast=null;e.signatureUsed=true;e.recover=0;
+  if(year===4)e.marksmanFinaleCompleted=true; // This fixture tests pacing after the verified 210-round finale.
   const floor=annualFloor(g);
   const accepted=damageGyuwon(g,100000);
   assert.ok(accepted>0,'year '+year+' must accept health damage');
