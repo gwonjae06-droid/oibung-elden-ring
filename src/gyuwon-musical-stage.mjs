@@ -118,6 +118,17 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
     for(let j=0;j<7;j++){const a=j*Math.PI*2/7+t*.28;showAt(42+j,{x:Math.sin(a)*14,y:1.5+Math.sin(t*1.7+j)*1.1,z:Math.cos(a)*9,sx:memory===2?2.1:.9,sy:memory===2?1.7:.9,sz:.9,color:(j+memory)%7});}
     for(let j=0;j<6;j++){const a=t*(memory===5?2.5:.6)+j*Math.PI/3;showAt(52+j,{x:Math.sin(a)*(6+memory),y:8+Math.cos(a*2)*2,z:-9+Math.cos(a)*2,sx:memory===4?1.4:.55,sy:.55,sz:.55,color:(memory+j+2)%7});}
    }
+   if(kind==='finale'){
+    for(let i=0;i<Math.min(12,m.finaleHazards?.length||0);i++){
+     const h=m.finaleHazards[i],q=Math.min(1,h.age/h.wind),after=h.age>h.wind;
+     const star=h.kind==='star',banner=h.kind==='banner';
+     showAt(60+i,{x:h.x,y:star?8.8*(1-q)+.6:banner?1.5:1.0,
+      z:h.z,sx:star?1.0+q*1.1:1.3,sy:star?1.0+q*1.1:2.5,sz:star?1.0+q*1.1:1.3,
+      color:star?9:banner?0:2,rotate:t*.2});
+     cues[60+i].geometry=star?ball:banner?soldier:torus;
+     if(after)cues[60+i].scale.multiplyScalar(Math.max(.06,1-(h.age-h.wind)/.9));
+    }
+   }
    if(kind==='finale')for(let i=0;i<5;i++){
     const a=t*.7+i*1.26;
     showAt(30+i,{x:Math.sin(a)*9,y:4+Math.sin(a)*1.4,z:Math.cos(a)*8,
