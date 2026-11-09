@@ -30,7 +30,7 @@ export function setupReferenceMinigame(g,m){
  if(m.year===5){
   setupGiantRaid(g,m,REFERENCE_PARTY);
  }else if(m.year===6){
-  g.player.x=-10;g.player.z=0;runnerInitMotion(m);m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;m.guideRescues=0;m.guideBridgesLeft=0;m.guideAction='';m.guideActionUntil=0;m.guideScene='overture';m.runnerLyric=null;
+  g.player.x=-10;g.player.z=0;runnerInitMotion(m);m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;m.starCharge=0;m.dashTime=0;m.dashCooldown=0;m.runnerScene=gyuwonRunnerScene(0);m.runnerBiome='theater';m.runnerSpeed=9;m.runnerGuided=true;m.guideRescues=0;m.guideBridgesLeft=0;m.guideAction='';m.guideActionUntil=0;m.guideScene='overture';m.runnerLyric=null;m.lyricObstacleKeys=new Set();m.runnerPreviousAudio=0;
  }else if(m.year===7){
   m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;m.deployLane=0;m.armyRallied=false;m.armyReunionDone=false;m.armyConvoys=0;m.armyConvoyClock=3;m.rallyPulse=0;m.armySiegeFlash=0;m.armyVerseRecruits=0;m.armyCaptainRecruits=0;
  }else if(m.year===8){
@@ -194,6 +194,26 @@ function tickReferenceRunner(g,m,dt,c){
   m.platforms.sort((a,b)=>a.x-b.x);
  }
  p.floorY=m.jumpY;
+ // Make the literal mountain/curtain lyrics affect REAL existing collision
+ // geometry, but never silently place a hazard during a seek or in a road gap.
+ const lyric=m.lyricAction,priorAudio=m.runnerPreviousAudio||0;
+ const regularFrame=m.time>=priorAudio&&m.time-priorAudio<.18;
+ if(lyric&&regularFrame&&m.time-lyric.start<.20&&
+    !m.lyricObstacleKeys.has(lyric.id)){
+  m.lyricObstacleKeys.add(lyric.id);
+  const kind=lyric.actionId==='mountainLeap'||lyric.actionId==='repeatLeap'?'high':
+   lyric.actionId==='curtainDrops'?'low':null;
+  if(kind&&!relief&&!opening){
+   const position=p.x+17.5;
+   if(m.platforms.some(a=>position>=a.x+1&&position<=a.end-1)){
+    m.obstacles.push({id:g.nextId++,x:position,kind,
+     variant:kind==='high'?'mountain':'curtain',width:1.8,hit:false,
+     section:scene.key,spawnTime:m.time,lyricId:lyric.id});
+    m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
+   }
+  }
+ }
+ m.runnerPreviousAudio=m.time;
  // Every obstacle is born offscreen right, with a real approach interval.
  if(!relief&&!opening){
   m.runnerSpawn-=dt;
