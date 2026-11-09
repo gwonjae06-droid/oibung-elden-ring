@@ -12,7 +12,7 @@ function atFive(t=8){
  const g=createGyuwonGame('sword',{yearMode:true,seed:5052});
  g.gyuwon.years.year=5;stepGyuwon(g,.008);
  const m=g.gyuwon.years.musical;
- m.transition=0;g.player.invuln=0;
+ g.boss.hp=6000;m.transition=0;g.player.invuln=0;
  m.clock={source:'media',time:t,duration:179.95,ended:false};
  stepGyuwon(g,.016);m.clock=null;
  return {g,m};
