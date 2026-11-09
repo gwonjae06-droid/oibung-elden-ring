@@ -2,6 +2,7 @@ import {drawArmoredRunner} from './gyuwon-runner-art.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {drawGyuwonDanceLyricBackdrop,drawGyuwonDanceLyricFloor,drawGyuwonDanceLyricForeground,gyuwonDanceLyricMoment} from './gyuwon-dance-spectacle.mjs';
 import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
+import {drawGyuwonCinematic2dSet,drawGyuwonCinematicActorProp} from './gyuwon-cinematic-2d-props.mjs';
 // Act VIII: two-action theatrical choreography, staged on the ORIGINAL media clock.
 // Time anchors are production cues; the full master lyric/beat transcription needs listening QA.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,Number.isFinite(v)?v:a));
@@ -80,6 +81,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
  c.fillStyle=sky;c.fillRect(0,0,1280,720);
  drawGyuwonDanceLyricBackdrop(c,s,m);
  drawGyuwonLyricBackdrop(c,m);
+ drawGyuwonCinematic2dSet(c,m);
  // Star ceiling, rising dawn, and distant architecture: visual changes are music-led.
  if(s.stars||s.quiet){
   for(let i=0;i<58;i++){const x=(i*197+36)%1280,y=30+(i*71)%350;
@@ -183,6 +185,7 @@ export function drawGyuwonDanceWorld(c,m,{stagePerson,paperUnit,portrait}){
   face:tele?.action==='skill'?-1:1,color:'#aa77c2',gyuwon:true,portrait,
   theater:true,choreography:tele?.active?{kind:tele.kind,lead:tele.lead,remaining:tele.remaining}:null,
   lyric:tele?.active?null:m.lyricAction});
+ drawGyuwonCinematicActorProp(c,m,{x:315+gyuwonStepX,y:530,scale:1.70});
  // The playable dancer is the same fully enclosed armored knight as Act VI.
  drawArmoredRunner(c,670,554,{scale:1.10,t,pose:m.dancePose>0?'run':'walk',weapon:m.playerWeapon||'sword',energy:m.danceEnergy||0});
  if(m.dancePose>0){c.save();c.strokeStyle=s.light;c.lineWidth=5;c.globalAlpha=.7;
