@@ -119,3 +119,43 @@ test('score audit separates original-excerpt cues from every track\'s unfinished
   assert.equal(r.manualTranscriptionRequired,true,r.track);
  }
 });
+
+
+test('years one through four have no music player, including exams, restarts and prelude states',async()=>{
+ const sounds=[];
+ const score=createGyuwonMusicalScore(src=>{
+  const a={src,paused:true,currentTime:0,duration:180,ended:false,load(){},
+   removeAttribute(){this.src='';},pause(){this.paused=true;},
+   play(){this.paused=false;return Promise.resolve();}};
+  sounds.push(a);return a;
+ });
+ const g=createGyuwonGame('sword',{yearMode:true});
+ for(const year of [1,2,3,4]){
+  g.gyuwon.years.year=year;g.gyuwon.years.musical=null;
+  for(const mode of ['combat','exam','result','reverie']){
+   g.gyuwon.years.mode=mode;
+   assert.equal(score.update(g,{enabled:true}),true);
+   assert.equal(score.mode,null);
+   assert.equal(score.retry(),false);
+  }
+ }
+ score.stop();score.update(g,{enabled:false});
+ assert.equal(sounds.length,0,'even the old swordbgm prelude must never be constructed');
+ // Year five is still song-owned and plays its unmodified musical master.
+ g.gyuwon.years.year=5;g.gyuwon.years.mode='musical';
+ g.gyuwon.years.musical={year:5,finishing:false};
+ score.update(g,{enabled:true});
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(score.mode,5);
+ assert.ok(sounds.length>=1);
+ assert.ok(sounds[0].src.endsWith('.mp3'));
+ assert.ok(sounds[0].src.includes('assets/music/'));
+ assert.equal(sounds[0].paused,false);
+ // Re-entering an early year stops and releases all old song objects.
+ g.gyuwon.years.year=4;g.gyuwon.years.mode='combat';g.gyuwon.years.musical=null;
+ score.update(g,{enabled:true});
+ assert.equal(score.mode,null);
+ assert.ok(sounds.every(a=>a.paused));
+ assert.equal(score.retry(),false);
+ score.dispose();
+});

@@ -173,3 +173,35 @@ test('exam arrival settles delayed damage before the score and inquiry heal',()=
    'the next year may not withdraw part of the success healing');
  }
 });
+
+
+test('live fourth year must complete all 30 marksman volleys before the reverie cutscene',()=>{
+ const g=createGyuwonGame('sword',{yearMode:true,seed:304}),e=g.gyuwon.years;
+ g.player.invuln=1e6;
+ e.year=4;e.mode='combat';e.cast=null;e.castT=0;e.recover=0;
+ e.yearStartHp=g.boss.maxHp;e.signatureUsed=true;
+ e.marksmanFinaleCompleted=false;
+ g.boss.hp=annualFloor(g);
+ stepGyuwon(g,.025);
+ assert.equal(e.year,4);
+ assert.equal(e.mode,'combat','HP threshold must not begin cutscene before the ultimate');
+ assert.equal(e.cast,'ultimateMarksman','ultimate must play even if earlier signature flag was already set');
+ assert.equal(e.marksmanFinaleCompleted,false);
+ const events=g.events.filter(ev=>ev.type==='gyuwon-reverie-start');
+ assert.equal(events.length,0);
+ let frames=0;
+ while(e.cast==='ultimateMarksman'&&frames++<1200){
+  stepGyuwon(g,.025);
+  assert.equal(e.year,4);
+  if(e.cast==='ultimateMarksman')assert.equal(e.mode,'combat','no cutscene before the ultimate ends');
+ }
+ assert.ok(frames<1200,'ultimate should complete in its authored 22.2 second window');
+ assert.equal(e.marksmanVolleys,30,'30 volleys of seven rifle rounds must all be scheduled');
+ assert.equal(e.marksmanFinaleCompleted,true);
+ if(e.mode==='combat'){
+  assert.equal(g.events.filter(ev=>ev.type==='gyuwon-reverie-start').length,0);
+  stepGyuwon(g,.025);
+ }
+ assert.equal(e.mode,'reverie','only after the full ultimate may the cutscene begin');
+ assert.equal(g.events.filter(ev=>ev.type==='gyuwon-reverie-start').length,1);
+});

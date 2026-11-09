@@ -61,6 +61,8 @@ jobs:
           tests/gyuwon-no-triangle-vfx.test.mjs
           tests/gyuwon-apocalypse-upgrade.test.mjs
           tests/gyuwon-natural-years.test.mjs
+          tests/gyuwon-years.test.mjs
+          tests/gyuwon-song-clock.test.mjs
       - name: Verify two-phase clown encounter, original horror and ensemble
         run: |
           node --check src/clown-combat.mjs
