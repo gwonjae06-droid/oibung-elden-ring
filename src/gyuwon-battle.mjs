@@ -169,7 +169,11 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(wasReverie){clearInput();const frame=turnStage.cameraFrame(g.gyuwon.years.musical,camera.aspect);camera.position.set(frame.position.x,frame.position.y,frame.position.z);camera.lookAt(frame.target.x,frame.target.y,frame.target.z);}
    const referenceMini=g.gyuwon.years?.musical;
    if(usesReference2d(referenceMini)){
-    quality.sample(realDt,ready&&mode==='playing'&&!document.hidden);resizeBattleViewport(renderer,camera,canvas,quality.scale);
+    quality.sample(realDt,ready&&mode==='playing'&&!document.hidden);
+    // Canvas2D remains sharp and fully interactive at the native frame rate.
+    // The full-screen secondary WebGL ink/composite is the expensive stage: draw
+    // that one at a smaller adaptive backbuffer instead of paying twice at 1:1.
+    resizeBattleViewport(renderer,camera,canvas,Math.max(.58,quality.scale*.78));
     // Keep the actual 3D theater alive beneath the VI runner's painted gate.
     const handoff=referenceMini.year===6&&referenceMini.handoffFromFive
      &&referenceMini.time<GYUWON_RUNNER_ENTER_SECONDS;
