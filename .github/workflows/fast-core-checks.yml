@@ -68,6 +68,8 @@ jobs:
           node --test tests/clown-engine.test.mjs tests/clown-nightmare-overhaul.test.mjs tests/clown-act-two-revival.test.mjs
       - name: Verify arena damage phase gates and full clown pattern repertoire
         run: node --test tests/arena-damage.test.mjs tests/clown-patterns.test.mjs
+      - name: Verify Gyuwon Arena BGM and fourth-year mandatory marksman finale
+        run: node --test tests/boss-tracks.test.mjs tests/gyuwon-fourth-ultimate-gate.test.mjs tests/gyuwon-reverie.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs
 
