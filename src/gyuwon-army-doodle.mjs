@@ -9,6 +9,7 @@ export const gyuwonArmyDoodleFrame=(time=0,reducedMotion=false)=>
 export const gyuwonArmyDoodleSample=(time=0,reducedMotion=false)=>
  reducedMotion?Math.floor(Math.max(0,time)*4):Math.floor(Math.max(0,time)*8);
 const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
+const brightness=(pixels,i)=>.299*pixels[i]+.587*pixels[i+1]+.114*pixels[i+2];
 const grainHash=(x,y,seed=7)=>{
  let z=Math.imul((x|0)^seed,374761393)+Math.imul((y|0)+seed,668265263);
  z=Math.imul(z^(z>>>13),1274126177);return ((z^(z>>>16))>>>0)/4294967295;
@@ -61,8 +62,7 @@ export function createGyuwonArmyDoodle(doc,{reducedMotion=false}={}){
    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     const p=(y*W+x)*4,r=(y*W+Math.min(W-1,x+1))*4,
      d=(Math.min(H-1,y+1)*W+x)*4;
-    const lum=(i)=>.299*src[i]+.587*src[i+1]+.114*src[i+2];
-    const v=lum(p),edge=(Math.abs(v-lum(r))+Math.abs(v-lum(d)))/255;
+    const v=brightness(src,p),edge=(Math.abs(v-brightness(src,r))+Math.abs(v-brightness(src,d)))/255;
     const hatch=((x+y*2)%11===0)?1:0;
     const a=gyuwonArmyInkAlpha(edge,v/255,hatch);
     dst[p]=19;dst[p+1]=17;dst[p+2]=22;dst[p+3]=a;
