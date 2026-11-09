@@ -326,3 +326,9 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 
 /* Wall photographs may crop to fill; independent emblems never crop. */
 #journey .j-wall-backdrop,#journey .j-relief-layer,.journey-transition .j-wall-backdrop,.journey-transition .j-relief-layer{pointer-events:none}
+
+/* The group portrait is a post-ending unlock, never an initial menu asset. */
+#journey .j-completed-cast{position:absolute;inset:0;pointer-events:none;background-size:cover;background-position:center 42%;background-repeat:no-repeat;filter:saturate(.88) contrast(1.08);animation:gy-family-portrait 2.2s ease-out both}
+#journey:has(.j-completed-cast) .j-copy{position:relative;z-index:2;text-shadow:0 2px 9px #000}
+@keyframes gy-family-portrait{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){#journey .j-completed-cast{animation:none}}
