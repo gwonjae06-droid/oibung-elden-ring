@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {actFiveChoreographyAt} from './gyuwon-act-five-choreography.mjs';
 // Shares Gyuwon's sculpted likeness and photo material with the existing boss.
 // The sleeves, elbows, palms and three-joint digits are connected 3D meshes.
 export function createGiantGyuwon(parent,source,{coarse=false}={}){
@@ -30,9 +31,14 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
    const digit=new T.Group();digit.position.set(i===4?side*2.1:(i-1.5)*1.05,0,i===4?.1:1.65);digit.rotation.y=i===4?side*.95:(i-1.5)*-.06;hand.add(digit);
    const joints=[];let p=digit;for(let j=0;j<3;j++){const joint=new T.Group();joint.position.z=j===0?0:1.0-j*.09;p.add(joint);const bone=add(joint,digitGeo,skin,'giant-articulated-finger');bone.rotation.x=Math.PI/2;bone.position.z=.38;bone.scale.set(i===4?1.15:1,.9-j*.06,1);joints.push(joint);p=joint;}digits.push(joints);
   }
-  const shoulder=new T.Vector3(side*6.8,21,-25),target=new T.Vector3(side*13,2.7,-3),hinge=new T.Vector3();
-  return {side,index,sleeve,elbow,forearm,hand,digits,shoulder,target,hinge};
+  const shoulder=new T.Vector3(side*6.8,21,-25),target=new T.Vector3(side*13,2.7,-3),
+   hinge=new T.Vector3(),desiredHinge=new T.Vector3();
+  return {side,index,sleeve,elbow,forearm,hand,digits,shoulder,target,hinge,desiredHinge,hingeReady:false};
  });
+ // A tiny physical conductor's baton keeps the final verse visually active.
+ // It never becomes a projectile or a damaging hitbox.
+ const baton=add(arms[1].hand,cylinder,gold,'giant-musical-conductor-baton');
+ baton.position.set(1.55,.2,4.4);baton.rotation.x=Math.PI/2;baton.scale.set(.09,4.7,.09);baton.visible=false;
  const mask=new T.Group();mask.name='giant-breakable-theater-mask';root.add(mask);
  const shellGeo=geo(new T.SphereGeometry(5.9,coarse?24:48,coarse?18:32,0,Math.PI*2,0,Math.PI));
  const maskMat=mat({color:0xd7bb7c,roughness:.33,metalness:.64,side:T.DoubleSide});
@@ -42,29 +48,87 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const direction=new T.Vector3(),mid=new T.Vector3(),up=new T.Vector3(0,1,0),costumeColor=new T.Color(0x725080);let disposed=false;
  function link(mesh,a,b,r1,r2){direction.subVectors(b,a);mesh.position.copy(mid.copy(a).add(b).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(up,direction.clone().normalize());mesh.scale.set(r1,direction.length(),r2);}
  function update(m,dt){
-  const beat=m.time*2*Math.PI*(m.bpm||136)/60,breath=Math.sin(m.time*1.45)*.15,bow=m.finishProgress||0;
-  const blend=1-Math.exp(-dt*10),p=m.songPerformance||{gesture:'idle',weight:0,progress:0},w=p.weight,dance=p.gesture==='dance'?w:0,laugh=p.gesture==='laugh'?w*Math.sin(p.progress*Math.PI):0;
-  const focus=m.party.find(p=>p.id===(m.raidAttack?.victim||m.turnActor));
-  torso.position.y=T.MathUtils.lerp(torso.position.y,15.5+breath-Math.sin(bow*Math.PI)*1.4-laugh*2+Math.abs(Math.sin(beat*.5))*dance*.25,blend);
-  torso.rotation.x=T.MathUtils.lerp(torso.rotation.x,Math.sin(m.time*.8)*.012+bow*.07+laugh*.18+(p.gesture==='greet'?Math.sin(p.progress*Math.PI)*w*.1:p.gesture==='run'?.07*w:0),blend);torso.rotation.z=T.MathUtils.lerp(torso.rotation.z,Math.sin(beat*.5)*dance*.055+laugh*.18+(p.gesture==='run'?Math.sin(beat)*.025*w:0),blend);
-  head.rotation.x=T.MathUtils.lerp(head.rotation.x,(p.gesture==='self'||p.gesture==='heart'?.16:p.gesture==='sky'||p.gesture==='flight'?-.13:0)*w,blend);
-  head.rotation.y=T.MathUtils.lerp(head.rotation.y,Math.atan2(focus?.x||0,40)*.3+Math.sin(m.time*.35)*.015+(p.gesture==='choose'?Math.sin(m.time*1.7)*.16*w:0),blend);head.rotation.z=T.MathUtils.lerp(head.rotation.z,Math.sin(beat*.5)*.015-laugh*.12,blend);
-  velvet.color.setHex(0x30445d).lerp(costumeColor,p.gesture==='costume'?w:0);
+  if(disposed)return;
+  const step=Math.max(0,Math.min(.05,dt));
+  const beat=m.time*2*Math.PI*(m.bpm||136)/60,bow=m.finishProgress||0;
+  const pose=actFiveChoreographyAt(m.time,m.songPerformance,{
+   hitUntil:m.hitTargetUntil||0,raidAttack:m.raidAttack,bpm:m.bpm||136
+  });
+  const gesture=pose.gesture,weight=pose.weight;
+  const bodyEase=1-Math.exp(-step*7.7),faceEase=1-Math.exp(-step*9.5);
+  const aim=m.party?.find(a=>a.id===(m.raidAttack?.victim||m.turnActor));
+  const focusX=aim?.x||0;
+  const attackWind=pose.anticipation;
+  const body=pose.torso,face=pose.head;
+  // The entire giant performs the lyric rather than rotating a face texture
+  // on a rigid statue. Small secondary breathing survives instrumental gaps.
+  torso.position.y=T.MathUtils.lerp(torso.position.y,
+   15.5+pose.bounce-Math.sin(bow*Math.PI)*1.7,bodyEase);
+  torso.rotation.x=T.MathUtils.lerp(torso.rotation.x,
+   body[0]+bow*.12,bodyEase);
+  torso.rotation.y=T.MathUtils.lerp(torso.rotation.y,
+   body[1]+Math.atan2(focusX,50)*.11,bodyEase);
+  torso.rotation.z=T.MathUtils.lerp(torso.rotation.z,body[2],bodyEase);
+  head.rotation.x=T.MathUtils.lerp(head.rotation.x,face[0],faceEase);
+  head.rotation.y=T.MathUtils.lerp(head.rotation.y,
+   face[1]+Math.atan2(focusX,40)*.22,faceEase);
+  head.rotation.z=T.MathUtils.lerp(head.rotation.z,face[2],faceEase);
+  velvet.color.setHex(0x30445d).lerp(costumeColor,
+   gesture==='costume'?weight:gesture==='king'||gesture==='crowns'?.2*weight:0);
   torso.updateWorldMatrix(true,false);
-  tails.forEach((o,i)=>{o.rotation.x=Math.sin(m.time*1.35+i)*.045+bow*.12;o.rotation.z=Math.sin(m.time*.8+i)*.025;});
+  // Coat tails lag the chest; they should not behave as detached panels.
+  tails.forEach((o,i)=>{
+   const sign=i===0?-1:1;
+   o.rotation.x=T.MathUtils.lerp(o.rotation.x,
+    Math.sin(m.time*1.35+i)*.035+bow*.12+body[0]*.30,
+    1-Math.exp(-step*4.3));
+   o.rotation.z=T.MathUtils.lerp(o.rotation.z,
+    Math.sin(m.time*.8+i)*.032+sign*body[2]*.52,
+    1-Math.exp(-step*4.3));
+  });
+  baton.visible=(pose.style==='conduct'||pose.style==='fanfare')&&weight>.2&&!m.finishing
+    &&!m.enemies[1]?.destroyed;
+  baton.rotation.z=Math.sin(m.time*5)*.14*weight;
   for(const arm of arms){
    arm.shoulder.set(arm.side*.64,.63,0).applyMatrix4(torso.matrixWorld);
-   const e=m.enemies[arm.index];const withdrawn=e.destroyed?1:0;
-   arm.target.set(e.x+arm.side*withdrawn*7,e.y+withdrawn*2,e.z-withdrawn*12);
-   arm.hand.position.lerp(arm.target,1-Math.exp(-Math.max(.001,dt)*25));
-   // A coherent pole keeps elbow bend outside the face and the attack path.
-   arm.hinge.copy(arm.shoulder).lerp(arm.hand.position,.49);arm.hinge.x+=arm.side*6;arm.hinge.y+=2;
-   link(arm.sleeve,arm.shoulder,arm.hinge,1.8,1.5);link(arm.forearm,arm.hinge,arm.hand.position,1.35,1.1);arm.elbow.position.copy(arm.hinge);arm.elbow.scale.set(1.8,1.8,1.6);
-   const attack=m.raidAttack?.part===arm.index?m.raidAttack:null;const curl=attack&&attack.age<attack.wind?Math.sin(attack.age/attack.wind*Math.PI)*.65:e.broken>0?0:.05+Math.sin(beat*.5+arm.index)*.025;
-   arm.digits.forEach((joints,i)=>joints.forEach((j,k)=>j.rotation.x=-(curl*(1-k*.16)+withdrawn*.25)*(i===4?.65:1)));
-   arm.hand.rotation.z=arm.side*(withdrawn*.3+Math.sin(m.time*.8)*.025);arm.hand.rotation.x=e.broken>0?.12:0;
+   // Rendering follows the *simulation-controlled* target, including actual
+   // enemy windup/travel/recovery. Decorative gestures never reassign hits.
+   const enemy=m.enemies[arm.index],withdrawn=enemy.destroyed?1:0;
+   arm.target.set(enemy.x+arm.side*withdrawn*7,
+     enemy.y+withdrawn*2,enemy.z-withdrawn*12);
+   const handEase=1-Math.exp(-step*(m.raidAttack?.part===arm.index?36:25));
+   arm.hand.position.lerp(arm.target,handEase);
+   arm.desiredHinge.copy(arm.shoulder).lerp(arm.hand.position,.49);
+   arm.desiredHinge.x+=arm.side*(6+Math.abs(body[2])*3);
+   arm.desiredHinge.y+=2+Math.max(0,pose.bounce)*.4+attackWind*1.25;
+   if(!arm.hingeReady){arm.hinge.copy(arm.desiredHinge);arm.hingeReady=true;}
+   else arm.hinge.lerp(arm.desiredHinge,1-Math.exp(-step*18));
+   link(arm.sleeve,arm.shoulder,arm.hinge,1.8,1.5);
+   link(arm.forearm,arm.hinge,arm.hand.position,1.35,1.1);
+   arm.elbow.position.copy(arm.hinge);arm.elbow.scale.set(1.8,1.8,1.6);
+   const p=pose.palms[arm.index],attack=m.raidAttack?.part===arm.index?m.raidAttack:null;
+   const wind=attack&&attack.age<attack.wind?Math.sin(attack.age/attack.wind*Math.PI)*.6:0;
+   const curl=enemy.broken>0?.02:Math.max(p.curl*weight,wind);
+   arm.digits.forEach((joints,i)=>joints.forEach((j,k)=>{
+    // Pointing keeps the index extended; fists, grasping and applause
+    // articulate all 15 joints instead of moving an undifferentiated palm.
+    const effective=p.point&&i===1?.06:curl;
+    const target=-(effective*(1-k*.13)+withdrawn*.19)*(i===4?.64:1);
+    j.rotation.x=T.MathUtils.lerp(j.rotation.x,target,1-Math.exp(-step*15));
+   }));
+   const roll=arm.side*(withdrawn*.28+Math.sin(beat*.5+arm.index)*.02)+p.roll*weight;
+   const pitch=enemy.broken>0?.12:p.pitch*weight-attackWind*.16;
+   arm.hand.rotation.z=T.MathUtils.lerp(arm.hand.rotation.z,roll,faceEase);
+   arm.hand.rotation.x=T.MathUtils.lerp(arm.hand.rotation.x,pitch,faceEase);
+   arm.hand.rotation.y=T.MathUtils.lerp(arm.hand.rotation.y,
+    arm.side*(gesture==='choose'?.10:gesture==='doors'?.16:0)*weight,faceEase);
   }
-  const e=m.enemies[3];mask.visible=e.active&&!e.destroyed;mask.position.set(e.x,e.y,e.z+2.8);mask.rotation.z=Math.sin(m.time*.9)*.035;cracks.forEach((c,i)=>c.visible=e.hp/e.maxHp<1-(i+1)/8);
+  const e=m.enemies[3];
+  mask.visible=e.active&&!e.destroyed;
+  mask.position.set(e.x,e.y,e.z+2.8);
+  mask.rotation.z=T.MathUtils.lerp(mask.rotation.z,
+   Math.sin(m.time*.9)*.025+pose.flinch*.11,faceEase);
+  cracks.forEach((c,i)=>c.visible=e.hp/e.maxHp<1-(i+1)/8);
  }
  return {root,head,arms,mask,update,dispose(){if(disposed)return;disposed=true;root.removeFromParent();for(const g of ownG)g.dispose();for(const m of ownM)m.dispose();}};
 }
