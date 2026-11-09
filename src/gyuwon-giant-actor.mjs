@@ -23,6 +23,8 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const retired=[];torso.traverse(o=>{if(/^gyuwon-year-\d+-rig-gear$/.test(o.name)||/accumulated-nightmare|shoulder-rig/.test(o.name))retired.push(o);});
  for(const o of retired)o.removeFromParent();
  const head=torso.getObjectByName('gyuwon-head');
+ // Raise the photographed face slightly within the original animated rig.
+ if(head)head.position.y+=.12;
  const wings=createActFiveWings(waist,{coarse});
  const photoMouth=createActFivePhotoMouth(head,{coarse});
  const sphere=geo(new T.SphereGeometry(1,coarse?20:36,coarse?14:26)),cylinder=geo(new T.CylinderGeometry(1,1,1,coarse?14:24)),digitGeo=geo(new T.CapsuleGeometry(.19,.65,4,10));
