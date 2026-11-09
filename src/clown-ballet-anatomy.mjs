@@ -57,7 +57,7 @@ function makeLoft(THREE,profile,{coarse=false,materialAt=()=>0}={}){
   const start=indices.length;
   for(let j=0;j<radial;j++){
    const a=k*(radial+1)+j,b=a+radial+1;
-   indices.push(a,b,a+1,b,b+1,a+1);
+   indices.push(a,a+1,b,b,a+1,b+1);
   }
   groups.push([start,radial*6,materialAt((k+.5)/rows)]);
  }
@@ -100,7 +100,7 @@ export function createBalletMuscleLimbGeometry(THREE,{kind='forearm',coarse=fals
  }
  for(let k=0;k<rows;k++)for(let j=0;j<radial;j++){
   const a=k*(radial+1)+j,b=a+radial+1;
-  indices.push(a,b,a+1,b,b+1,a+1);
+  indices.push(a,a+1,b,b,a+1,b+1);
  }
  const geo=new THREE.BufferGeometry();
  geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
