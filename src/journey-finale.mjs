@@ -48,8 +48,9 @@ export function playJourneyFinale(doc,win){
  const music=new Audio(new URL('../assets/music/gyuwoncoda.mp3',import.meta.url).href);music.preload='auto';
  let done=false,raf=0,last=null,t=0,resolve,viewWidth=0,viewHeight=0;const finished=new Promise(r=>resolve=r);
  const ease=v=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
- function end(ok){if(done)return;done=true;win.cancelAnimationFrame(raf);music.pause();music.removeAttribute('src');music.load();renderer.dispose();disposeScene(scene);d.close();d.remove();resolve(ok);}
- function frame(now){if(done)return;const dt=last===null?0:Math.min(.05,(now-last)/1000);last=now;
+ function visibility(){last=null;}doc.addEventListener('visibilitychange',visibility);
+ function end(ok){if(done)return;done=true;doc.removeEventListener('visibilitychange',visibility);win.cancelAnimationFrame(raf);music.pause();music.removeAttribute('src');music.load();renderer.dispose();disposeScene(scene);d.close();d.remove();resolve(ok);}
+ function frame(now){if(done)return;try{const dt=last===null?0:Math.max(0,(now-last)/1000);last=now;
   if(!doc.hidden)t+=dt;
   if(doc.hidden)music.pause();else if(t>3&&music.paused&&!music.ended&&t<19){try{music.muted=win.localStorage?.getItem('oibung-muted')==='1';}catch{music.muted=true;}music.volume=.18*audioChannelGain('music');try{music.play()?.catch(()=>{});}catch{}}
   d.style.setProperty('--last-seal',ease((t-.8)/1.2));
@@ -59,7 +60,7 @@ export function playJourneyFinale(doc,win){
   const w=win.innerWidth,h=win.innerHeight;if(viewWidth!==w||viewHeight!==h){viewWidth=w;viewHeight=h;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
   flash.style.opacity=String(ease((t-12)/1.8));title.style.opacity=String(ease((t-13.5)/1));credits.style.opacity=String(ease((t-15.5)/1));
   renderer.render(scene,camera);if(t>=19){end(true);return;}raf=win.requestAnimationFrame(frame);
- }
+ }catch(error){console.error('Journey finale failed',error);end(false);}}
  try{raf=win.requestAnimationFrame(frame);}catch{end(false);}
  return {finished,watchdogMilliseconds:120000,dispose:()=>end(false)};
 }

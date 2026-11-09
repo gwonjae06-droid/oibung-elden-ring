@@ -3,7 +3,7 @@ const root=process.cwd(),port=8147;
 const server=http.createServer((req,res)=>{try{let f=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!f.startsWith(root+path.sep))throw Error();if(fs.statSync(f).isDirectory())f=path.join(f,'index.html');const size=fs.statSync(f).size,mime={'.mjs':'text/javascript','.js':'text/javascript','.html':'text/html','.css':'text/css','.mp3':'audio/mpeg','.png':'image/png','.jpg':'image/jpeg'};res.setHeader('Content-Type',mime[path.extname(f)]||'application/octet-stream');res.setHeader('Cache-Control','no-store');res.setHeader('Accept-Ranges','bytes');const range=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);let a=0,b=size-1;if(range){a=+range[1];b=range[2]?Math.min(+range[2],b):b;res.writeHead(206,{'Content-Range':`bytes ${a}-${b}/${size}`,'Content-Length':b-a+1});}else res.setHeader('Content-Length',size);fs.createReadStream(f,{start:a,end:b}).pipe(res);}catch{res.writeHead(404).end();}}).listen(port,'127.0.0.1');
 fs.mkdirSync('qa-output/musical',{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.EDGE_PATH||(process.platform==='win32'?'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe':chromium.executablePath()),headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required','--enable-unsafe-swiftshader']});
-const errors=[];
+const errors=[];console.log('Starting musical WebGL QA');
 try{
  const page=await browser.newPage({viewport:{width:1280,height:800}});page.on('pageerror',e=>errors.push(e.stack));
  await page.route('https://cdn.jsdelivr.net/npm/three@0.180.0/build/**',r=>r.fulfill({path:path.resolve('node_modules/three/build',new URL(r.request().url()).pathname.split('/').at(-1)),contentType:'text/javascript'}));
@@ -27,7 +27,7 @@ try{
  const results=[];
  for(let y=5;y<=11;y++){
   await page.waitForFunction(y=>window.__session().game.gyuwon.years.year===y&&window.__session().game.gyuwon.years.musical.time>3,y,{timeout:15000});
-  await page.screenshot({path:`qa-output/musical/act-${y}.png`});
+  await page.screenshot({path:`qa-output/musical/act-${y}.png`,timeout:30000});console.log('Verified act',y);
   results.push(await page.evaluate(()=>{const s=window.__session();return {year:s.game.gyuwon.years.year,hp:s.game.boss.hp,clock:s.game.gyuwon.years.musical.clock,graphics:s.diagnostics()};}));
   await page.evaluate(y=>{const a=window.__media.find(a=>a.src.endsWith(`/gyuwon${y}.mp3`)&&!a.paused);if(!a)throw Error('missing playing master '+y);a.currentTime=a.duration-.12;},y);
   await page.waitForFunction(y=>y===11?window.__session().game.gyuwon.years.mode==='curtain':window.__session().game.gyuwon.years.year===y+1,y,{timeout:15000});
@@ -42,7 +42,7 @@ try{
  await page.evaluate(async()=>{window.__battle.close();window.__finale=(await import('./src/journey-finale.mjs')).playJourneyFinale(document,window);});
  await page.waitForTimeout(1800);await page.screenshot({path:'qa-output/musical/finale-seals.png'});
  await page.waitForTimeout(6500);await page.screenshot({path:'qa-output/musical/finale-corridor.png'});
- await page.evaluate(()=>window.__finale.finished);assert.equal(await page.locator('.od-final').count(),0);
+ assert.equal(await page.evaluate(()=>window.__finale.finished),true);console.log('Verified finale');assert.equal(await page.locator('.od-final').count(),0);
  // The actual touch layout shares the same controls and bilingual captions.
  await page.setViewportSize({width:844,height:390});
  await page.evaluate(async()=>{window.__battle=(await import('./src/gyuwon-battle.mjs')).launchGyuwonBattle({configure(g){g.gyuwon.years.year=8;g.boss.hp=3900;g.player.invuln=1e6;}});});
