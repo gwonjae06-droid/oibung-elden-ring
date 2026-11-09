@@ -84,7 +84,7 @@ export function createActFiveStagecraft(parent,head,{coarse=false}={}){
   if(heart.visible){const pulse=1+.12*Math.sin(m.time*6.5);heart.scale.setScalar(w*pulse);heart.rotation.y=Math.sin(m.time*.7)*.15;heartRing.rotation.z=m.time*.22;}
   compass.visible=['roads','adventure','run','choose'].includes(g)&&w>.01;
   if(compass.visible){compass.scale.setScalar(.7+.3*w);compass.rotation.y=Math.sin(m.time*.35)*.22;compassNeedle.rotation.z=-m.time*.7;}
-  story.visible=['dream','roles','costume','crowns','choose'].includes(g)&&w>.01;
+  story.visible=['dream','roles','costume','crowns','choose','friends','beginning'].includes(g)&&w>.01;
   if(story.visible){pages.forEach((page,i)=>{const a=m.time*.54+i*Math.PI*2/7,r=5.8+Math.sin(i)*.9;
    page.position.set(Math.cos(a)*r,Math.sin(a)*2.2,Math.sin(a)*r*.23);
    page.rotation.y=a+Math.PI/2;page.rotation.z=Math.sin(a)*.24;});story.scale.setScalar(w);}
