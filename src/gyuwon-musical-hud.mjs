@@ -31,7 +31,7 @@ const css=`
 .gy-dedication{position:absolute;left:6%;right:6%;top:39%;text-align:center;font:500 clamp(20px,3.2vw,47px)/1.6 Georgia,"Malgun Gothic",serif;letter-spacing:.07em;color:#fff0d3;text-shadow:0 2px 13px #000,0 0 40px #f6c97a66;pointer-events:none}
 .gy-musical-layer.finale .gy-musical-actions,.gy-musical-layer.finale .gy-musical-top,.gy-musical-layer.finale .gy-turn-queue,.gy-musical-layer.finale .gy-turn-party,.gy-musical-layer.finale .gy-turn-enemies,.gy-musical-layer.finale .gy-turn-points{display:none!important}
 .gy-musical-layer.finale .gy-musical-dialogue{top:auto!important;bottom:4%!important;max-width:90vw}
-.gy-musical-layer.curtain .gy-dedication{display:block}
+.gy-dedication[hidden],.gy-curtain-credits[hidden],.gy-curtain-cast[hidden]{display:none!important}
 @media(max-height:500px){.gy-curtain-credits{inset:16% 8% 24%}.gy-curtain-credits>div{gap:12px}.gy-curtain-credits p{font-size:14px}.gy-curtain-cast{top:19%;font-size:12px}.gy-dedication{top:37%;font-size:20px}}
 `;
 export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
