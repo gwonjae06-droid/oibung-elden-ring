@@ -8,9 +8,9 @@ export function createGyuwonMusicalScore(makeAudio=url=>new Audio(url),now=()=>p
  function release(a){a.onended=a.onerror=null;a.pause();a.removeAttribute?.('src');a.load?.();}
  function get(id){
   if(cache.has(id))return cache.get(id);
-  const file=id==='prelude'?'swordbgm.mp3':GYUWON_SONGS[id].file;
+  const file=GYUWON_SONGS[id].file;
   const a=makeAudio(new URL('../assets/music/'+file,import.meta.url).href);
-  a.preload='auto';a.loop=id==='prelude';cache.set(id,a);return a;
+  a.preload='auto';a.loop=false;cache.set(id,a);return a;
  }
  function clear(){for(const a of cache.values())release(a);cache.clear();current=null;key=null;}
  function select(g,id){
@@ -37,10 +37,15 @@ export function createGyuwonMusicalScore(makeAudio=url=>new Audio(url),now=()=>p
   if(disposed)return false;
   if(owner!==g){clear();owner=g;}
   enabled=active;
-  const m=g?.gyuwon?.years?.musical,id=m?gyuwonSongKey(m):'prelude';
+  const years=g?.gyuwon?.years,m=years?.musical;
+  // Years 1–4 are deliberately silent. Never construct or preload the old
+  // swordbgm prelude, including during exams, restarts, pauses or cutscenes.
+  // Returning to the early years also releases any old active musical track.
+  if(!m||years?.year<5){if(current||key!==null)clear();return true;}
+  const id=gyuwonSongKey(m);
   if(key!==id)select(g,id);
   const e=current,a=e.audio;
-  a.muted=muted;a.volume=(id==='prelude'?.24:.7)*audioChannelGain('music');
+  a.muted=muted;a.volume=.7*audioChannelGain('music');
   if(!active){a.pause();e.lastProgress=e.lastTick=now();return true;}
   if(e.failed)return false;
   if(Number.isFinite(a.duration)&&a.duration>0)e.clock.duration=a.duration;
