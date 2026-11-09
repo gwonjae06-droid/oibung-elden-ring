@@ -92,7 +92,7 @@ test('original aligned 6수 phrases visibly change weather and scenery without t
  const lyricCases=[
   [13,'footsteps'],[22.5,'sunlight'],[25.5,'shower'],
   [29,'mountains'],[43.2,'questions'],[64,'curtains'],
-  [67,'sea'],[100,'star'],[110.5,'tomorrow'],[118,'dream']
+  [67,'sea'],[100,'star'],[108.5,'tomorrow'],[118,'dream']
  ];
  for(const [time,kind]of lyricCases){
   const cue=gyuwonRunnerLyricStage(time);
