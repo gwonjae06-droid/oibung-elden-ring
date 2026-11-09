@@ -9,6 +9,10 @@ import {GYUWON_LYRIC_SCENARIOS} from '../src/gyuwon-lyric-action-scenarios.mjs';
 import {gyuwonLyricActorMotion} from '../src/gyuwon-lyric-actor-motion.mjs';
 import {gyuwonLyricStagePose} from '../src/gyuwon-lyric-3d-art.mjs';
 import {gyuwonLyricMouthAt} from '../src/gyuwon-lyric-photo-mouth.mjs';
+import * as THREE from 'three';
+import {GYUWON_CINEMATIC_SCORE,gyuwonCinematicCoverage,gyuwonCinematicMotionAt} from '../src/gyuwon-cinematic-motion-score.mjs';
+import {createGyuwonCinematicProps} from '../src/gyuwon-cinematic-3d-props.mjs';
+import {gyuwonCinematic2dPropTypes} from '../src/gyuwon-cinematic-2d-props.mjs';
 const advance=(g,s,input={})=>{for(let i=0;i<Math.ceil(s*120);i++)stepGyuwon(g,1/120,input);};
 function at(year){const g=createGyuwonGame('sword',{yearMode:true,seed:843}),e=g.gyuwon.years;e.year=year;stepGyuwon(g,.008);const m=e.musical;m.transition=0;g.player.invuln=0;g.player.x=m.entry.tx;g.player.z=m.entry.tz;g.boss.x=m.entry.btx;g.boss.z=m.entry.btz;g.boss.hp=({5:6000,6:5300,7:4600,8:3900,9:3200,10:2500,11:1800})[year];return {g,m};}
 test('only the supplied 2D genres select Canvas2D, while act five and finale remain 3D',()=>{for(let y=5;y<=11;y++){const {g,m}=at(y);assert.equal(usesReference2d(m),y>=6&&y<=10);assert.equal(damageGyuwon(g,99999),0);}});
@@ -188,4 +192,66 @@ test('last song and original ending mouth react only to actual lyric words',()=>
  assert.equal(gyuwonLyricMouthAt('ending',30).openness,0);
  assert.ok(gyuwonLyricMouthAt('ending',138.1).cue?.startsWith('ending-'));
  assert.equal(gyuwonLyricMouthAt(7,40).openness,0);
+});
+
+test('every original lyric gets deterministic cinematic anticipation, accent and exit pose',()=>{
+ const coverage=gyuwonCinematicCoverage();
+ assert.deepEqual(coverage,{'5':32,'6':27,'8':24,'9':31,'11':30,'ending':26});
+ let seen=0;
+ for(const [key,rows] of Object.entries(GYUWON_CINEMATIC_SCORE)){
+  for(const row of rows){
+   assert.ok(row.motion.focus);
+   assert.ok(row.accent>row.anticipation);
+   assert.ok(row.recovery>row.accent);
+   for(const time of [row.start,row.start+(row.end-row.start)*.24,
+       row.start+(row.end-row.start)*.55,row.end-1e-5]){
+    const sampled=gyuwonCinematicMotionAt(key,time);
+    assert.equal(sampled.cue.id,row.id);
+    for(const [k,v] of Object.entries(sampled.pose))
+     if(k!=='focus')assert.ok(Number.isFinite(v),row.id+' '+k);
+   }
+   seen++;
+  }
+ }
+ assert.equal(seen,170);
+ assert.equal(gyuwonCinematicMotionAt(7,28),null);
+ assert.equal(gyuwonCinematicMotionAt(10,28),null);
+});
+test('left and right dancer steps, raised knight sword and final stop have different physical blocking',()=>{
+ const left=gyuwonCinematicMotionAt(8,29.8).pose;
+ const right=gyuwonCinematicMotionAt(8,32.2).pose;
+ assert.ok(left.leftStep<0);
+ assert.ok(right.rightStep>0);
+ assert.notEqual(left.bank,right.bank);
+ const knight=gyuwonCinematicMotionAt(5,31.8).pose;
+ const kingdom=gyuwonCinematicMotionAt(5,28.5).pose;
+ assert.ok(knight.rightArm<kingdom.rightArm);
+ const echo=gyuwonCinematicMotionAt(9,119.0).pose;
+ assert.ok(echo.rightArm<-.2);
+ const stop=gyuwonCinematicMotionAt('ending',116.6).pose;
+ assert.ok(Math.abs(stop.leftStep)<.0001);
+ assert.ok(Math.abs(stop.rightStep)<.0001);
+});
+test('all cinematic 3D hero props are pooled, seekable and disposed without changing gameplay',()=>{
+ const scene=new THREE.Group(),hero=createGyuwonCinematicProps(scene,{coarse:true});
+ assert.ok(hero.stats().groups>=14);
+ const actor={year:5,time:27.9,finishing:false};
+ hero.update(actor);
+ assert.equal(hero.stats().active,'crown');
+ actor.time=30.9;hero.update(actor);
+ assert.equal(hero.stats().active,'sword');
+ actor.time=41;hero.update(actor);
+ assert.equal(hero.stats().active,'curtain');
+ actor.year=11;actor.time=28.8;hero.update(actor);
+ assert.equal(hero.stats().active,'rain');
+ actor.finishing=true;actor.time=143;hero.update(actor);
+ assert.equal(hero.stats().active,'home');
+ actor.finishing=false;actor.year=7;hero.update(actor);
+ assert.equal(hero.root.visible,false);
+ hero.dispose();assert.equal(scene.children.length,0);
+});
+test('cinematic 2D props remain visual-only and source types cover distinct physical motifs',()=>{
+ const types=gyuwonCinematic2dPropTypes();
+ for(const name of ['doors','trumpet','sword','crown','mirror','home','city','rain',
+  'sea','stars','wings','curtain','ensemble','stage'])assert.ok(types.includes(name));
 });
