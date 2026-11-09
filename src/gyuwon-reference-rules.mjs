@@ -71,9 +71,10 @@ export function actReferenceMinigame(g,m,type,c){
  if(type==='heal')return c.heal(g,c.emit);
  if(m.year===5)return actGiantRaid(g,m,type,c);
  if(m.year===6){
-  if(['light','roll','jump'].includes(type)&&m.jumpCount<2){m.jumpV=m.jumpCount?8:9.2;m.jumpCount++;m.slide=0;m.slideHeld=false;return true;}
-  if(type==='skill'||type==='slide'){m.slide=.95;m.slideHeld=true;return true;}
-  if(type==='slide-end'){m.slide=0;m.slideHeld=false;return true;}
+  // The same physics state owns actual inputs and the visible knight pose.
+  if(['light','roll','jump'].includes(type))return runnerPressJump(m);
+  if(type==='skill'||type==='slide')return runnerPressSlide(m);
+  if(type==='slide-end')return runnerReleaseSlide(m);
   if(type==='dash'&&gyuwonRunnerDashReady(m)){m.starCharge-=55;m.dashCooldown=2.7;m.dashTime=.62;m.bonus=Math.max(m.bonus,.62);return true;}
   return false;
  }
