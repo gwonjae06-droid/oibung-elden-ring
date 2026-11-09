@@ -123,7 +123,7 @@ function tickReferenceRunner(g,m,dt,c){
  for(const platform of m.platforms){platform.x-=speed*dt;platform.end-=speed*dt;}
  m.platforms=m.platforms.filter(a=>a.end>-35);
  let last=m.platforms.at(-1);
- if(!last){m.platforms.push({x:p.x-5,end:p.x+16,y:0});last=m.platforms[0];}
+ if(!last){m.platforms.push({x:p.x+4,end:p.x+23,y:0});last=m.platforms[0];} // The fall must still register before a rescue platform appears.
  if(last.end<37){
   const gap=gyuwonRunnerGap(scene,m.pickups);
   m.platforms.push({x:last.end+gap,end:last.end+gap+21+(m.pickups%3)*2,y:0});
