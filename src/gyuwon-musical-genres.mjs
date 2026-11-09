@@ -131,7 +131,16 @@ function rhythmPress(g,m,type,emit){
 }
 export function actGyuwonMusical(g,type,emit=()=>{}){
  const m=g?.gyuwon?.years?.musical;
- if(!m||g.status!=='playing'||m.finishing||m.songEnded||m.transition>0||m.clock?.source==='error')return false;
+ if(!m||g.status!=='playing'||m.finishing||m.songEnded)return false;
+ // The semicolon shortcut is available in acts 5-11 even during the
+ // introductory pose or a stalled audio stream, but NEVER in the curtain.
+ if(type==='skip-act'){
+  if(g.gyuwon.years.mode!=='musical'||m.skipRequested)return false;
+  m.skipRequested=true;
+  emit('gyuwon-musical-skip',{year:m.year});
+  return true;
+ }
+ if(m.transition>0||m.clock?.source==='error')return false;
  if(m.reference)return actReferenceMinigame(g,m,type,{deal,take,heal,emit});
  if(m.kind==='turn')return turnChoice(g,m,type,emit);
  if(m.kind==='rhythm')return rhythmPress(g,m,type,emit);
@@ -388,6 +397,17 @@ export function tickGyuwonMusical(g,dt,{emit=()=>{},input={},advance=()=>{}}={})
  const e=g?.gyuwon?.years,m=e?.musical;
  if(!m||g.status!=='playing')return;
  const realDt=clamp(dt,0,1/30),song=GYUWON_SONGS[gyuwonSongKey(m)];
+ if(m.skipRequested&&!m.finishing&&e.mode==='musical'){
+  // Reuse the authored song target, never subtract HP twice. Advancing the
+  // year will switch and restart the BGM on the next audio update.
+  m.skipRequested=false;m.songEnded=true;
+  g.boss.hp=song.target;
+  emit('gyuwon-song-ended',{year:e.year,target:song.target,skipped:true});
+  clearAct(g,m);
+  if(e.year===11)beginCurtain(g,m,emit);
+  else advance();
+  return;
+ }
  // Finite audio position is authoritative. Buffering freezes gameplay too.
  // Media time is authoritative even when visual frames lag; audio errors freeze the act.
  const priorSongTime=m.time;
