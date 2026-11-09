@@ -44,3 +44,16 @@ test('long fighting song comprises three timed rounds, shooter owns a final carr
  const final=s.m.shooterTargets.filter(e=>e.phase===7);assert.equal(final.length,1);
  reachSong(s.g,s.m,152);assert.equal(s.m.shooterTargets.filter(e=>e.phase===7).length,1);
 });
+
+test('11수 original-score finale has visible delayed memory strikes and independent dodge',()=>{
+ const {g,m}=at(11);m.finaleNext=0;
+ reachSong(g,m,82);assert.ok(m.finaleHazards.length>0);
+ const h=m.finaleHazards[0];
+ assert.ok(h.wind>=1.25&&h.wind<=1.9);
+ assert.equal(h.hit,false);
+ m.clock=null;g.player.x=h.x;g.player.z=h.z;g.player.invuln=0;
+ const hp=g.player.hp;advance(g,2);
+ assert.equal(h.hit,true);assert.ok(g.player.hp<hp);
+ assert.ok(actGyuwon(g,'roll'),'stage dodge is always available');
+ assert.ok(m.guard>0);
+});
