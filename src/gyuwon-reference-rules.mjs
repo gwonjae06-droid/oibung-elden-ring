@@ -38,7 +38,7 @@ export function setupReferenceMinigame(g,m){
   m.dancePeriod=period;m.dancePatterns=[];let start=5.2,index=0;
   while(start+period*8<174.5){
    // Source-clocked figures with advance body/footstep preparation; no notes
-   // during the exposed quiet bridge or the last unskippable bow.
+   // including its intimate bridge; only the last unskippable bow is exempt.
 
    const kind=['pose','quick','turn','pose','quick','turn','pose','quick'][index%8];
    const count=kind==='quick'?3:index%3===1?4:3;
