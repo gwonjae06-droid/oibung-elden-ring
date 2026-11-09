@@ -7,6 +7,7 @@ import {GYUWON_LYRIC_ACTIONS,GYUWON_LYRIC_ACTION_YEARS,GYUWON_LYRIC_ACTION_COUNT
 import {GYUWON_ALIGNED_CAPTIONS} from '../src/gyuwon-aligned-captions.mjs';
 import {gyuwonLyricActorMotion} from '../src/gyuwon-lyric-actor-motion.mjs';
 import {gyuwonLyricStagePose} from '../src/gyuwon-lyric-3d-art.mjs';
+import {gyuwonLyricMouthAt} from '../src/gyuwon-lyric-photo-mouth.mjs';
 const advance=(g,s,input={})=>{for(let i=0;i<Math.ceil(s*120);i++)stepGyuwon(g,1/120,input);};
 function at(year){const g=createGyuwonGame('sword',{yearMode:true,seed:843}),e=g.gyuwon.years;e.year=year;stepGyuwon(g,.008);const m=e.musical;m.transition=0;g.player.invuln=0;g.player.x=m.entry.tx;g.player.z=m.entry.tz;g.boss.x=m.entry.btx;g.boss.z=m.entry.btz;g.boss.hp=({5:6000,6:5300,7:4600,8:3900,9:3200,10:2500,11:1800})[year];return {g,m};}
 test('only the supplied 2D genres select Canvas2D, while act five and finale remain 3D',()=>{for(let y=5;y<=11;y++){const {g,m}=at(y);assert.equal(usesReference2d(m),y>=6&&y<=10);assert.equal(damageGyuwon(g,99999),0);}});
@@ -174,4 +175,14 @@ test('eleventh-year and ending anatomical gestures do not need animation timers'
  assert.equal(e?.actionId,'stopRunning');
  assert.ok(motion);assert.equal(motion.step,0);
  assert.ok(gyuwonLyricStagePose('ending',173)?.instrumental);
+});
+
+test('last song and original ending mouth react only to actual lyric words',()=>{
+ const singing=gyuwonLyricMouthAt(11,40.1);
+ assert.ok(singing.openness>=0&&singing.openness<=1);
+ assert.ok(singing.cue?.startsWith('11-'));
+ assert.equal(gyuwonLyricMouthAt(11,10).openness,0);
+ assert.equal(gyuwonLyricMouthAt('ending',30).openness,0);
+ assert.ok(gyuwonLyricMouthAt('ending',138.1).cue?.startsWith('ending-'));
+ assert.equal(gyuwonLyricMouthAt(7,40).openness,0);
 });
