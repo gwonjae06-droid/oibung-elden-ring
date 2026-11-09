@@ -201,13 +201,13 @@ function tickReferenceRunner(g,m,dt,c){
  if(lyric&&regularFrame&&m.time-lyric.start<.20&&
     !m.lyricObstacleKeys.has(lyric.id)){
   m.lyricObstacleKeys.add(lyric.id);
-  const kind=lyric.actionId==='mountainLeap'||lyric.actionId==='repeatLeap'?'high':
-   lyric.actionId==='curtainDrops'?'low':null;
+  const event=lyric.attackEvents.find(e=>e.type==='runner-obstacle');
+  const kind=event?.kind;
   if(kind&&!relief&&!opening){
    const position=p.x+17.5;
    if(m.platforms.some(a=>position>=a.x+1&&position<=a.end-1)){
     m.obstacles.push({id:g.nextId++,x:position,kind,
-     variant:kind==='high'?'mountain':'curtain',width:1.8,hit:false,
+     variant:event.variant,width:1.8,hit:false,
      section:scene.key,spawnTime:m.time,lyricId:lyric.id});
     m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
    }
