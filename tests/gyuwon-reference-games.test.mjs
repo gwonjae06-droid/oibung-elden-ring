@@ -242,6 +242,15 @@ test('all cinematic 3D hero props are pooled, seekable and disposed without chan
  assert.equal(hero.stats().active,'crown');
  actor.time=30.9;hero.update(actor);
  assert.equal(hero.stats().active,'sword');
+ actor.time=20.4;hero.update(actor);
+ assert.equal(hero.stats().active,'sea');
+ const ocean=hero.root.getObjectByName('cinematic-sea');
+ const wave=ocean.children.find(x=>x.geometry?.type==='PlaneGeometry');
+ assert.ok(wave);
+ const before=wave.geometry.attributes.position.getZ(17);
+ actor.time=21.4;hero.update(actor);
+ assert.notEqual(wave.geometry.attributes.position.getZ(17),before,
+  'wave crests must move from original music time');
  actor.time=41;hero.update(actor);
  assert.equal(hero.stats().active,'curtain');
  actor.year=11;actor.time=28.8;hero.update(actor);
