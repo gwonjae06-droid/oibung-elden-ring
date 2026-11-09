@@ -3,6 +3,7 @@
 // Caption timestamps are automatically aligned and require listening QA.
 // Every action is evaluated from audio.currentTime, never wall-clock frames.
 import {GYUWON_ALIGNED_CAPTIONS} from './gyuwon-aligned-captions.mjs';
+import {GYUWON_LYRIC_SCENARIOS} from './gyuwon-lyric-action-scenarios.mjs';
 const specs={
  5:`
 greet:spotlight:bow|welcome:doors:open|whereBegin:world:ponder|thousandDoors:doors:cast|millionRoads:roads:sweep|blueGoldSea:sea:wave|dreamWorld:world:cast|kingTomorrow:crown:king|savingKnight:sword:knight|banishSorrow:fog:clear|adventureCall:road:point|raiseCurtain:curtain:raise|trumpetFanfare:trumpet:conduct|becomeAnyone:masks:spin|moreStage:stage:present|danceWorld:dancers:dance|runFree:road:run|discoverSelf:mirror:ponder|wideBright:sun:open|dreamFlight:wings:fly|takeMyHand:hand:reach|manySelves:clones:open|heroDancerStar:stars:spin|notDecided:mirror:shrug|everyCrown:crown:cast|fallAndLaugh:floor:fall|stageReprise:stage:slap|danceReprise:dancers:dance|runReprise:roads:run|mirrorReprise:mirror:ponder|friends:spotlight:whisper|onlyBeginning:doors:raise
@@ -50,6 +51,10 @@ const segment=(key,rows)=>{
  if(tokens.length!==rows.length)throw Error('Lyric action count mismatch for '+key+': '+tokens.length+' of '+rows.length);
  return Object.freeze(rows.map((caption,index)=>{
   const [verb,visual,gesture]=tokens[index].split(':');
+  const authored=GYUWON_LYRIC_SCENARIOS[key]?.[index];
+  if(!authored||Math.abs(authored.start-caption.start)>.03||
+      Math.abs(authored.end-caption.end)>.03)
+    throw Error('Authored 170-line scenario drift at '+key+':'+index);
   if(!verb||!visual||!gesture)throw Error('Incomplete authored cue '+key+':'+index);
   const strike=key==='9'?contact9[verb]:null,obstacle=key==='6'?contact6[verb]:null;
   const attackEvents=strike?[Object.freeze({type:'fighter-strike',at:caption.start,
@@ -58,6 +63,7 @@ const segment=(key,rows)=>{
      kind:obstacle[1],wind:1.2,damage:20})]:[];
   return Object.freeze({id:key+'-'+String(index+1).padStart(2,'0')+'-'+verb,
    year:key,index,start:caption.start,end:caption.end,en:caption.en,ko:caption.ko,
+   summary:authored.summary,stagingRule:authored.instruction,
    actionId:verb,actors:Object.freeze(key==='8'?['gyuwon','dancers']:key==='6'?['gyuwon','knight']:key==='9'?['gyuwon','player']:['gyuwon']),
    visual,gesture,worldEvents:Object.freeze([visual]),attackEvents:Object.freeze(attackEvents)});
  }));
