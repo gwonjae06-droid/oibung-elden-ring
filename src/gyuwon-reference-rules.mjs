@@ -145,6 +145,7 @@ function tickReferenceRunner(g,m,dt,c){
   m.energy=Math.max(0,m.energy-12);m.jumpY=2.8;m.jumpV=0;m.jumpCount=0;
   m.grounded=false;m.fallRecovery=1.4;
   m.platforms.push({x:p.x-3,end:p.x+12,y:0});
+  m.platforms.sort((a,b)=>a.x-b.x);
  }
  p.floorY=m.jumpY;
  // Every obstacle is born offscreen right, with a real approach interval.
