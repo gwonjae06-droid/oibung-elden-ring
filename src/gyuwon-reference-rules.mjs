@@ -57,7 +57,7 @@ export function setupReferenceMinigame(g,m){
  }else if(m.year===9){
   g.player.x=-7;g.boss.x=7;g.player.z=g.boss.z=0;
   m.fighters=[{x:-7,y:0,vy:0,hp:100,maxHp:100,meter:20,facing:1,action:null,stun:0,guard:false,crouch:false,combo:0},{x:7,y:0,vy:0,hp:100,maxHp:100,meter:0,facing:-1,action:null,stun:0,guard:false,crouch:false,combo:0}];
-  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';
+  m.fightRound=1;m.fightReset=0;m.enemyThink=1.35;m.hitSparks=[];m.roundWins=[0,0];m.fightHitstop=0;m.roundWait=false;m.fightWorld=gyuwonFightScene(0);m.fightHazards=[];m.fightCueKeys=new Set();m.encoreOrbs=[];m.encoreCollected=0;m.encoreNext=0;m.fightJumpLatch=false;m.fightParryWindow=0;m.fightParryFlash=0;m.fightPriorScene='handoff';m.fightLastLyricActionId=null;
  }else if(m.year===10){
   g.player.x=0;g.player.z=13;m.weaponMode='spread';m.bombs=3;m.power=1;m.shotCooldown=0;m.bullets=[];m.enemyShots=[];m.shooterTargets=[{id:g.nextId++,x:-6,z:-12,hp:180,maxHp:180,phase:0,wind:1.6,aim:0,kind:'carrier'},{id:g.nextId++,x:6,z:-12,hp:180,maxHp:180,phase:1,wind:2.25,aim:0,kind:'carrier'}];m.shooterSpawn=4;m.powerItems=[];m.chain=0;m.chainTime=0;m.scroll=0;m.bombEffect=0;m.autoFire=true;m.finalCarrierSpawned=false;m.victoryFlight=false;
  }
@@ -452,7 +452,26 @@ function tickReferenceFighter(g,m,dt,input,c){
  }
  m.fightParryWindow=Math.max(0,m.fightParryWindow-dt);
  m.fightParryFlash=Math.max(0,m.fightParryFlash-dt);
- p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
+ // A sung phrase changes actual boss positioning / motion once. It is not
+ // an artificial playback timer; seeking past an event cannot replay attacks.
+ const verse=m.lyricAction;
+ if(verse&&verse.id!==m.fightLastLyricActionId){
+  m.fightLastLyricActionId=verse.id;
+  if(t-verse.start<.25){
+   if(verse.actionId==='leftSwingRight'){
+    b.x=clamp(b.x-1.2,-16,16);
+    if(!b.action&&b.stun<=0)fighterAttack(b,'kick');
+   }else if(['runAndFly','smileAndFly'].includes(verse.actionId)){
+    b.vy=Math.max(b.vy,9.5);
+    b.x=clamp(b.x+Math.sign(p.x-b.x)*1.4,-16,16);
+   }else if(['roundEcho1','roundEcho2','roundEcho3','roundEcho4','roundEcho5'].includes(verse.actionId)){
+    // Echo attack hitboxes are scheduled separately in the same authored
+    // scene score; lyric entrance here only arranges the physical cast.
+    b.facing=b.x<p.x?1:-1;
+   }else if(verse.actionId==='danceOrFight'){b.x=clamp(b.x-.75,-16,16);}
+  }
+ }
+  p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
  if((input.z||0)>.48&&!m.fightJumpLatch&&p.y<=0&&p.stun<=0&&!m.fightReset){p.vy=10;m.fightJumpLatch=true;}
  if((input.z||0)<.2)m.fightJumpLatch=false;
  if(!p.action&&p.stun<=0)p.x=clamp(p.x+(input.x||0)*(p.crouch?3:7)*dt,-16,16);
@@ -483,6 +502,7 @@ function tickReferenceFighter(g,m,dt,input,c){
   const age=t-h.at;
   if(age<h.wind||age>h.wind+.28||h.hit)continue;
   h.hit=true;
+  if(h.damage<=0)continue; // Short echo phrases show preparation without instant damage.
   if(Math.abs(p.x-h.x)<=h.radius&&p.y+(p.floorY||0)<1.6){
    if(p.guard){m.fightParryFlash=.28;p.meter=Math.min(100,p.meter+12);}
    else c.take(g,h.damage,c.emit);
