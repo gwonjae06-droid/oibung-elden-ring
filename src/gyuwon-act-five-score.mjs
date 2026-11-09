@@ -1,5 +1,6 @@
 import {GYUWON_ALIGNED_CAPTIONS} from './gyuwon-aligned-captions.mjs';
 import {actFiveChoreographyAt} from './gyuwon-act-five-choreography.mjs';
+import {actFiveInstrumentalAt} from './gyuwon-act-five-vocal-acting.mjs';
 const cues=GYUWON_ALIGNED_CAPTIONS[5];
 const score=[
  ['greet','invitation'],['welcome','invitation'],['choose','doors'],
@@ -17,8 +18,8 @@ const clamp=x=>Math.max(0,Math.min(1,x));
 export const scoreEase=x=>{x=clamp(x);return x*x*(3-2*x);};
 export function actFivePerformanceAt(time){
  const cue=ACT_FIVE_SCORE.findLast(c=>time>=c.start&&time<c.end+.55);
- if(!cue)return {time,index:-1,gesture:time>135?'conduct':'idle',pattern:time>135?['wave','waltz','stars','fan'][Math.floor((time-135)/7.5)%4]:'invitation',weight:time>135?1:0,progress:0};
- return {...cue,time,weight:scoreEase((time-cue.start)/.3)*(1-scoreEase((time-cue.end)/.55)),progress:clamp((time-cue.start)/(cue.end-cue.start))};
+ if(!cue)return actFiveInstrumentalAt(time);
+ return {...cue,time,weight:scoreEase((time-cue.start)/.3)*(1-scoreEase((time-cue.end)/.55)),progress:clamp((time-cue.start)/(cue.end-cue.start)),instrumental:false,vocal:true};
 }
 // A pattern stays attached to its complete windup/contact/recovery even if a
 // sung phrase ends while the actor is moving. There are no instant lyric hits.
