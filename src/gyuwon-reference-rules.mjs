@@ -39,9 +39,9 @@ export function setupReferenceMinigame(g,m){
   m.enemies=Array.from({length:5},(_,i)=>({id:'enemy'+i,index:i,name:i===0?'최규원':i<3?'답안의 기사':'별빛 수호기',team:-1,x:[0,-9,8,-14,14][i],z:[-11,-7,-8,-12,-13][i],hp:i===0?320:150,maxHp:i===0?320:150,toughness:60,maxToughness:60,weakness:i%4,speed:84+i*5,av:10000/(84+i*5),broken:0,reform:0}));
   nextTurn(m);
  }else if(m.year===6){
-  g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;
+  g.player.x=-10;g.player.z=0;m.jumpY=0;m.jumpV=0;m.jumpCount=0;m.slide=0;m.energy=100;m.jellies=[];m.runnerSpawn=1.8;m.jellySpawn=.15;m.platforms=[{x:-35,end:28,y:0}];m.runnerRecoverClock=14;m.runnerBiome='meadow';m.runnerDistance=0;m.pickups=0;m.bonus=0;m.fallRecovery=0;
  }else if(m.year===7){
-  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;
+  m.money=180;m.moneyCap=500;m.workerLevel=1;m.unitCooldowns=[0,0,0,0,0,0];m.baseHp=1000;m.baseMaxHp=1000;m.enemyBaseHp=3000;m.enemyBaseMaxHp=3000;m.cannon=65;m.cannonShot=null;m.armyWave=1;m.enemySpawn=2;m.units=[];m.baseReform=0;m.enemyFort=1;m.armyTruce=false;
  }else if(m.year===8){
   const chart=GYUWON_BEATS[8],period=60/chart.bpm;
   m.dancePeriod=period;m.dancePatterns=[];let start=3.2,index=0;
@@ -138,7 +138,15 @@ export function actReferenceMinigame(g,m,type,c){
  return false;
 }
 function tickReferenceTurn(g,m,dt,c){
- for(const e of m.enemies){e.broken=Math.max(0,e.broken-dt);if(e.hp<=0){e.reform-=dt;if(e.reform<=0){e.hp=e.maxHp;e.toughness=e.maxToughness;e.av+=50;}}}
+ // Never resurrect a defeated enemy at the same location on a short timer.
+ const p=m.actProgress||0;
+ if(!m.actorMotion&&m.wave<3&&p>=(m.wave===1?.38:.76)){
+  m.wave++;m.targetIndex=0;m.skillPoints=Math.min(m.maxSkillPoints,m.skillPoints+1);
+  for(const e of m.enemies){e.maxHp=Math.round((e.index===0?330:135)*(m.wave===2?1.2:1.6));e.hp=e.maxHp;
+   e.x=[0,-10,9,-15,15][e.index]+(m.wave===2?-1.6:1.6);e.toughness=e.maxToughness=65+15*(m.wave-1);e.broken=0;e.reform=0;e.av+=30;}
+  nextTurn(m);
+ }
+ for(const e of m.enemies)e.broken=Math.max(0,e.broken-dt);
  if(m.actorMotion){
   const a=m.actorMotion,p=m.party.find(p=>p.id===a.actorId),t=m.enemies.find(t=>t.id===a.targetId);a.age+=dt;
   const advance=smooth(a.age/.55)*(1-smooth((a.age-.86)/.5));
@@ -155,17 +163,20 @@ function tickReferenceTurn(g,m,dt,c){
  g.boss.x=m.enemies[0].x;g.boss.z=m.enemies[0].z;
 }
 function tickReferenceRunner(g,m,dt,c){
- const p=g.player,speed=m.bonus>0?17:13;
+ const p=g.player,progress=m.actProgress||0,relief=progress>.57&&progress<.69;
+ m.runnerBiome=progress<.33?'meadow':progress<.55?'rain':progress<.75?'quiet':'sunrise';
+ const speed=m.bonus>0?17:relief?11:13;
  m.bonus=Math.max(0,m.bonus-dt);m.runnerDistance+=speed*dt;m.energy=Math.max(0,m.energy-dt*1.35);m.slide=m.slideHeld?.95:Math.max(0,m.slide-dt);
  for(const platform of m.platforms){platform.x-=speed*dt;platform.end-=speed*dt;}
  m.platforms=m.platforms.filter(a=>a.end>-35);
- let last=m.platforms.at(-1);if(last&&last.end<37){const gap=m.pickups%3===1?5.2:3.6;m.platforms.push({x:last.end+gap,end:last.end+gap+18+(m.pickups%3)*3,y:0});}
+ let last=m.platforms.at(-1);if(last&&last.end<37){const gap=relief?0:m.pickups%3===1?5.2:3.6;m.platforms.push({x:last.end+gap,end:last.end+gap+18+(m.pickups%3)*3,y:0});}
  const grounded=m.platforms.some(a=>p.x>=a.x&&p.x<=a.end);
  m.jumpY+=m.jumpV*dt;m.jumpV-=24*dt;
  if(grounded&&m.jumpY<=0&&m.jumpV<=0){m.jumpY=0;m.jumpV=0;m.jumpCount=0;}
  if(m.jumpY<-5){c.take(g,25,c.emit);m.energy=Math.max(0,m.energy-12);m.jumpY=2.8;m.jumpV=0;m.jumpCount=0;m.platforms.push({x:p.x-3,end:p.x+10,y:0});}
  p.floorY=m.jumpY;
- m.runnerSpawn-=dt;if(m.runnerSpawn<=0){m.runnerSpawn=1.65+(m.pickups%4)*.2;m.obstacles.push({id:g.nextId++,x:24,kind:m.nextId%2?'low':'high',width:1.3,hit:false});m.nextId=(m.nextId||0)+1;}
+ if(!relief){m.runnerSpawn-=dt;if(m.runnerSpawn<=0){m.runnerSpawn=progress>.77?1.55:2.1+(m.pickups%4)*.2;m.obstacles.push({id:g.nextId++,x:24,kind:m.nextId%2?'low':'high',width:1.3,hit:false});m.nextId=(m.nextId||0)+1;}}else m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
+ m.runnerRecoverClock-=dt;if(m.runnerRecoverClock<=0){m.runnerRecoverClock=14;m.jellies.push({id:g.nextId++,x:22,y:1.1,kind:'heart'});}
  for(const o of m.obstacles){o.x-=speed*dt;const bottom=m.jumpY,top=bottom+(m.slide>0?.72:2.1),lo=o.kind==='low'?1.5:0,hi=o.kind==='low'?3.6:1.2;
   if(!o.hit&&Math.abs(o.x-p.x)<1.02&&top>lo&&bottom<hi){o.hit=true;m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);}
  }
@@ -177,10 +188,14 @@ function tickReferenceRunner(g,m,dt,c){
 }
 function tickReferenceArmy(g,m,dt,c){
  m.money=Math.min(m.moneyCap,m.money+dt*(22+m.workerLevel*7));m.cannon=Math.min(100,m.cannon+dt*4.8);m.unitCooldowns=m.unitCooldowns.map(t=>Math.max(0,t-dt));
- m.enemySpawn-=dt;if(m.enemySpawn<=0&&m.units.length<48){const type=(m.armyWave++%6),s=REFERENCE_UNIT_TYPES[type];m.enemySpawn=1.9+(type%3)*.28;m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*.72,maxHp:s.hp*.72,attack:s.attack*.65,range:s.range,speed:s.speed*.85,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:type===2||type===4?'ranged':'melee'});}
+ const p=m.actProgress||0;
+ m.armyTruce=p>=.59&&p<.70;
+ if(m.armyTruce){m.enemySpawn=Math.max(m.enemySpawn,.8);return;}
+ if((m.enemyFort<2&&p>=.39)||(m.enemyFort<3&&p>=.77)){m.enemyFort++;m.enemyBaseHp=m.enemyBaseMaxHp=Math.round(3000*(1+.35*(m.enemyFort-1)));m.enemySpawn=.6;}
+ m.enemySpawn-=dt;if(m.enemySpawn<=0&&m.units.length<48&&m.enemyBaseHp>0){const type=(m.armyWave++%6),s=REFERENCE_UNIT_TYPES[type];m.enemySpawn=1.9+(type%3)*.28;m.units.push({id:g.nextId++,team:-1,type,x:17,z:0,hp:s.hp*.72,maxHp:s.hp*.72,attack:s.attack*.65,range:s.range,speed:s.speed*.85,cool:0,wind:0,hit:false,attackAge:0,knock:0,role:type===2||type===4?'ranged':'melee'});}
  for(const u of m.units){if(u.hp<=0)continue;u.cool=Math.max(0,u.cool-dt);u.x+=u.knock*dt;u.knock*=Math.exp(-dt*8);
   let target=null,best=Infinity;for(const v of m.units){const d=Math.abs(u.x-v.x);if(v.hp>0&&v.team!==u.team&&d<best){target=v;best=d;}}
-  const baseX=u.team>0?18:-18,baseRange=Math.abs(baseX-u.x)<=u.range;
+  const baseX=u.team>0?18:-18,baseRange=Math.abs(baseX-u.x)<=u.range&&(u.team>0?m.enemyBaseHp>0:m.baseHp>0);
   if(u.wind>0){u.attackAge+=dt;u.wind=Math.max(0,u.wind-dt);
    if(u.wind<=0&&!u.hit){u.hit=true;if(target&&best<u.range+.4){target.hp-=u.attack;target.knock=u.team*2.6;if(u.team>0)c.deal(g,u.attack*.4,c.emit);}else if(baseRange){if(u.team>0){m.enemyBaseHp=Math.max(0,m.enemyBaseHp-u.attack);c.deal(g,u.attack,c.emit);}else{m.baseHp=Math.max(0,m.baseHp-u.attack);c.take(g,12,c.emit);}}u.cool=u.role==='ranged'?1.3:.9;}
   }else if((target&&best<u.range)||baseRange){if(u.cool===0){u.wind=.55;u.attackAge=0;u.hit=false;}}
@@ -190,7 +205,7 @@ function tickReferenceArmy(g,m,dt,c){
  if(m.cannonShot){const a=m.cannonShot;a.age+=dt;a.x=-18+Math.max(0,a.age-.65)*55;
   if(a.age>=.65)for(const u of m.units)if(u.team<0&&u.x<=a.x&&!a.hitIds.includes(u.id)){a.hitIds.push(u.id);u.hp-=130;u.knock=7;c.deal(g,80,c.emit);}if(a.age>1.7)m.cannonShot=null;
  }
- if(m.enemyBaseHp<=0){m.baseReform+=dt;if(m.baseReform>2.5){m.enemyBaseHp=m.enemyBaseMaxHp;m.baseReform=0;c.deal(g,1500,c.emit);}}
+ if(m.enemyBaseHp<=0){m.enemyBaseHp=0;m.baseReform+=dt;}else m.baseReform=0;
  if(m.baseHp<=0){m.baseHp=350;c.take(g,70,c.emit);}
 }
 function tickReferenceDance(g,m,dt,c){
