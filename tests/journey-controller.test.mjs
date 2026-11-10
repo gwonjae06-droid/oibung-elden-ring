@@ -97,71 +97,20 @@ test('a failing boss cinematic is disabled and next boss still launches after fl
 });
 test('closing during the victory animation still preserves the defeated boss but never the active run',async()=>{const f=rig();await f.click('new');await f.click('begin');f.game().status='won';await f.api.dispose();const saved=JSON.parse(f.data.get(SAVE_KEY));assert.deepEqual(saved.defeated,['kwon']);assert.equal(saved.flames,1);assert.equal(saved.run,null);f.release();});
 
-test('five title taps award exactly two persistent flames instead of opening boss travel',async()=>{
+test('repeated title taps and retired gate actions cannot mint flames or bypass boss locks',async()=>{
  const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- for(let i=0;i<4;i++){await f.click('secret-tap');assert.equal(saved().flames,0,'partial taps do not pay');}
- await f.click('secret-tap');
- assert.equal(saved().flames,2);assert.equal(saved().earnedFlames,2);
- assert.match(f.dialog.html,/정화의 불꽃 \+2개 · 보유 2개/);
- assert.doesNotMatch(f.dialog.html,/봉인 밖의 문|바로 이동|육체 강탈부터/);
- assert.deepEqual(saved().defeated,[]);assert.deepEqual(saved().memories,[]);assert.equal(saved().clears,0);
- for(let i=0;i<5;i++)await f.click('secret-tap');
- assert.equal(saved().flames,4,'each complete set of five taps grants two more');
- assert.equal(saved().earnedFlames,4);
- await f.click('secret-enter',{boss:'blood'});
- await f.click('secret-phase',{boss:'dice',phase:'2'});
- assert.equal(saved().run,null,'retired secret navigation actions cannot launch combat');
- await f.api.dispose();f.release();
- const reload=rig({savedProfile:saved()});
- assert.match(reload.dialog.html,/정화의 불꽃 4개/);
- assert.doesNotMatch(reload.dialog.html,/봉인 밖의 문/);
- await reload.api.dispose();reload.release();
-});
-test('four quick main-title taps reveal five boss destinations without unlocking normal travel',async()=>{
- const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- for(let i=0;i<3;i++){await f.click('secret-tap');assert.doesNotMatch(f.dialog.html,/data-j="gate-boss"/);}
- await f.click('secret-tap');
- assert.equal((f.dialog.html.match(/data-j="gate-boss"/g)||[]).length,5);
- assert.equal(saved().flames,0);
- assert.deepEqual(saved().defeated,[]);
+ for(let i=0;i<20;i++)await f.click('secret-tap');
+ assert.equal(saved().flames,0);assert.equal(saved().earnedFlames,0);
+ assert.doesNotMatch(f.dialog.html,/data-j="secret-tap"|data-j="gate-boss"/);
  await f.click('gate-boss',{stage:'4'});
- assert.match(f.dialog.html,/무두의 사유 최규원부터 도전/);
- assert.match(f.dialog.html,/data-j="boss-target"[^>]*data-stage="4"[^>]*aria-pressed="true"/);
- assert.doesNotMatch(f.dialog.html,/data-j="boss-target"[^>]*disabled/);
- await f.click('begin');
- assert.equal(f.game().boss.maxHp,7000);
- assert.equal(saved().flames,0);
- f.game().status='won';await f.poll();
- assert.match(f.dialog.html,/같은 보스 재도전/);
- assert.equal(saved().flames,0);
- assert.deepEqual(saved().defeated,[]);
- assert.deepEqual(saved().memories,[]);
- assert.deepEqual(saved().records,[]);
- assert.equal(saved().clears,0);
- await f.click('sandbox-retry');
- assert.equal(f.game().status,'playing');
- assert.equal(f.game().boss.maxHp,7000);
- await f.click('home');
- assert.doesNotMatch(f.dialog.html,/data-j="gate-boss"/);
+ await f.click('secret-enter',{boss:'blood'});
+ assert.equal(saved().run,null);assert.deepEqual(saved().defeated,[]);
  await f.click('new');
  assert.match(f.dialog.html,/data-j="boss-target"[^>]*data-stage="4"[^>]*disabled/);
+ await f.click('boss-target',{stage:'4'});await f.click('begin');
+ assert.equal(f.game().boss.maxHp,4822);
  await f.api.dispose();f.release();
 });
-test('a hidden boss visit can choose any weapon but gives no permanent credit on defeat',async()=>{
- const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- for(let i=0;i<4;i++)await f.click('secret-tap');
- await f.click('gate-boss',{stage:'2'});
- await f.click('weapon',{weapon:'bow'});
- await f.click('begin');
- assert.equal(f.lastLaunch().weapon,'bow');
- assert.equal(f.game().boss.maxHp,5711);
- f.game().status='lost';await f.poll();
- assert.match(f.dialog.html,/같은 보스 재도전/);
- assert.deepEqual(saved().defeated,[]);
- assert.equal(saved().flames,0);
- await f.api.dispose();f.release();
-});
-
 test('old hidden ODEN key path no longer opens a boss selector or mints flames',async()=>{
  const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
  for(const code of ['KeyO','KeyD','KeyE','KeyN'])f.key(code,{key:code.at(-1).toLowerCase()});
@@ -270,32 +219,12 @@ test('refund confirmation can be cancelled and never carries across weapon tabs'
  assert.equal(saved().forge.sword['blade-wave'],1);
  await f.api.dispose();f.release();
 });
-test('developer semicolon Easter egg only works in forge and persists two flames per real keypress',async()=>{
- const f=rig();
- const saved=()=>JSON.parse(f.data.get(SAVE_KEY));
- assert.equal(saved().flames,0);
- assert.equal(f.key('Semicolon').prevented,undefined,'home key must have no effect');
- assert.equal(saved().flames,0);
- await f.click('forge');
- assert.doesNotMatch(f.dialog.html,/개발자용 이스터에그|data-forge-dev-easter-egg|<kbd>;<\/kbd>/,'developer shortcut must remain undisclosed');
- assert.equal(f.key('Semicolon').prevented,true);
- assert.equal(saved().flames,2);
- assert.equal(saved().earnedFlames,2);
- assert.doesNotMatch(f.dialog.html,/개발자용 이스터에그|j-forge-dev-result/,'using secret must not reveal developer announcement');
- f.key('Semicolon',{repeat:true});
- f.key('Semicolon',{shiftKey:true,key:':'});
- f.key('Semicolon',{ctrlKey:true});
- f.key('Semicolon',{target:{closest:()=>({tagName:'INPUT'})}});
- f.key('KeyA',{key:'a'});
- assert.equal(saved().flames,2,'repeat/modifier/editable keys must not mint currency');
- f.key('Semicolon');
- assert.equal(saved().flames,4,'a distinct press grants another two');
- await f.click('home');
- f.key('Semicolon');
- assert.equal(saved().flames,4,'currency is unchanged outside forge');
+test('semicolon stays inert on home, in forge, and after returning home',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(const action of [null,'forge','home']){
+  if(action)await f.click(action);
+  for(let i=0;i<10;i++)assert.equal(f.key('Semicolon').prevented,undefined);
+  assert.equal(saved().flames,0);assert.equal(saved().earnedFlames,0);
+ }
  await f.api.dispose();f.release();
- const second=rig({savedProfile:saved()});
- await second.click('forge');
- assert.match(second.dialog.html,/정화의 불꽃 4개/);
- await second.api.dispose();second.release();
 });

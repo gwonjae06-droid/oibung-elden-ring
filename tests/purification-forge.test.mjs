@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {EVOLUTIONS,evolutionCount} from '../src/weapon-evolution.mjs';
 import {freshProfile,newRun,finishAttempt,advanceJourney,configureJourney,loadProfile,saveProfile,SAVE_KEY} from '../src/journey-state.mjs';
-import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,forgedEvolutions,sanitizeForge,grantForgeDeveloperFlames,isForgeDeveloperShortcut,MAX_FLAMES,consumeRevivalFlame} from '../src/purification-forge.mjs';
+import {forgeTier,flameBalance,investedFlames,buyForgeTier,refundForgeWeapon,forgedEvolutions,sanitizeForge,consumeRevivalFlame} from '../src/purification-forge.mjs';
 import {forgeScreen,flameRewardScreen} from '../src/forge-view.mjs';
 import {createGame} from '../src/combat.mjs';
 import {createClownGame} from '../src/clown-combat.mjs';
@@ -139,28 +139,4 @@ test('rendered Korean forge offers each tier, refund and the victory flame',()=>
  assert.match(gained,/해금한 보스에게는 시련 시작 화면에서 자유롭게 이동할 수 있습니다/);
  assert.doesNotMatch(gained,/해금된 마지막 보스로 건너뛸/);
  assert.doesNotMatch(gained,/부활/);
-});
-
-test('semicolon developer Easter egg grants exactly two saved flames and honors the balance cap',()=>{
- const p=freshProfile();
- assert.equal(grantForgeDeveloperFlames(p),2);
- assert.equal(p.flames,2);assert.equal(p.earnedFlames,2);
- assert.equal(grantForgeDeveloperFlames(p),2);
- assert.equal(p.flames,4);
- p.flames=MAX_FLAMES-1;
- assert.equal(grantForgeDeveloperFlames(p),0,'partial grants would violate the explicit +2 promise');
- assert.equal(p.flames,MAX_FLAMES-1);
- assert.equal(grantForgeDeveloperFlames(null),0);
-});
-test('developer shortcut accepts only a non-repeating, unmodified semicolon key away from form fields',()=>{
- const event={code:'Semicolon',key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null}};
- assert.equal(isForgeDeveloperShortcut(event),true);
- assert.equal(isForgeDeveloperShortcut({...event,key:'ㅁ'}),true,'physical key should work across keyboard layouts');
- for(const field of ['repeat','ctrlKey','altKey','metaKey','shiftKey']){
-  assert.equal(isForgeDeveloperShortcut({...event,[field]:true}),false,field);
- }
- assert.equal(isForgeDeveloperShortcut({...event,code:'KeyA',key:'a'}),false);
- assert.equal(isForgeDeveloperShortcut({...event,target:{closest:()=>({tagName:'INPUT'})}}),false);
- const html=forgeScreen(freshProfile(),'sword',view);
- assert.doesNotMatch(html,/개발자용 이스터에그|data-forge-dev-easter-egg|<kbd>;<\/kbd>|j-forge-dev-result/,'hidden shortcut must not be advertised in forge markup');
 });

@@ -1,5 +1,4 @@
 import {createEncounterStore} from './encounter-state.mjs';
-import {installDevBossDamage} from './dev-boss-damage.mjs'; // TEMP DEV: remove before release.
 import {installHudLayout} from './hud-layout.mjs';
 // Each independently rendered arena owns its progression state.
 const sessions = new WeakMap();
@@ -37,11 +36,8 @@ export function bindBattleSession(root, read) {
       if(win?.Event)win.dispatchEvent(new win.Event('oibung:home'));
     }
   });
-  // TEMP DEV: remove this installation and disposeDev call before release.
-  const disposeDev = installDevBossDamage(root, () => sessions.get(root) === session ? session.read() : null);
   return () => {
     disposeHud();
-    disposeDev();
     store.clear();
     game = null;
     if (sessions.get(root) === session) sessions.delete(root);

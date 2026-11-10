@@ -72,7 +72,7 @@ test('five-to-six preserves the actual 3D performance and stage transition inste
  const g=createGyuwonGame('sword',{yearMode:true});jumpGyuwonToFifthYear(g);
  const before=g.gyuwon.years.musical;
  assert.ok(before.giantRaid);
- assert.equal(actGyuwon(g,'skip-act'),true);
+ before.clock={source:'media',time:180,duration:180,ended:true,afterEnd:1.2};
  stepGyuwon(g,1/60);
  const six=g.gyuwon.years.musical;
  assert.equal(six.year,6);assert.equal(six.handoffFromFive,before);

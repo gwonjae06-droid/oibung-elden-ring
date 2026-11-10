@@ -1,5 +1,4 @@
 import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-ending-photo-state.mjs';
-import {createBossSecret} from './boss-secret.mjs';
 import {ODEN_EVENT} from './oden-event-config.mjs';
 import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
 import {resetLegacyOdenSavesOnce} from './legacy-save-reset.mjs';
@@ -7,7 +6,7 @@ import {createEventInputMonitor,eventActionFromInput} from './oden-event-input-m
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {weaponStatChart} from './weapon-stat-chart.mjs?radar-v1-20261107';
-import {flameBalance,buyForgeTier,refundForgeWeapon,investedFlames,grantForgeDeveloperFlames,isForgeDeveloperShortcut} from './purification-forge.mjs';
+import {flameBalance,buyForgeTier,refundForgeWeapon,investedFlames} from './purification-forge.mjs';
 import {forgeScreen,flameRewardScreen,flameCounter} from './forge-view.mjs';
 import {playRewardPull} from './reward-pull.mjs';
 import {CHAPTER_MEMORIES} from './chapter-story.mjs';
@@ -37,7 +36,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  let eventMode=event.enabled&&event.active;
  let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
  let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false,eventError='';
- let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null,bossGateOpen=false,sandboxMode=false,gateTaps=0,gateLast=-Infinity;const secret=createBossSecret();
+ let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null;
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -85,7 +84,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(active&&!event.registered)return false;
   monitor.flush();event.setActive(active);eventMode=!!active;profile.run=null;monitor.reset();
   storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
-  profile=loadProfile(storage);selectedStage=0;pendingReward=null;bossGateOpen=false;secret.reset();
+  profile=loadProfile(storage);selectedStage=0;pendingReward=null;
   return true;
  }
  function eventBanner(){
@@ -113,7 +112,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
     +(s?.stage===4&&!s?.code&&eventMode&&pref('oibung.gyuwon.ending-watched','0')==='1'?button('event-claim-retry','엔딩 인증번호 재요청','class="j-primary"'):'')
     +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
        button('event-normal','일반 게임 기록으로 전환'));
-  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전하며 개발자 지름길은 이벤트에서 차단됩니다.</p>'
+  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전합니다.</p>'
     +(s?registered:register)+error+back()+warning()+'</div>');
  }
  function reportEventStage(stage){
@@ -128,20 +127,20 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function bossChooser(){
   const latest=latestUnlockedStage(profile);
   const cards=BOSSES.map((id,i)=>button('boss-target',
-   '<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b><small>'+(sandboxMode?'도전 가능':i<=latest?'해금됨 · 자유 이동':'잠김 · 앞의 보스 토벌 필요')+'</small>',
-   'data-stage="'+i+'" class="j-boss-target '+(i===selectedStage?'selected':'')+'" aria-pressed="'+(i===selectedStage)+'" '+( !sandboxMode&&i>latest?'disabled':'')
+   '<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b><small>'+(i<=latest?'해금됨 · 자유 이동':'잠김 · 앞의 보스 토벌 필요')+'</small>',
+   'data-stage="'+i+'" class="j-boss-target '+(i===selectedStage?'selected':'')+'" aria-pressed="'+(i===selectedStage)+'" '+( i>latest?'disabled':'')
   )).join('');
-  return '<section class="j-boss-chooser" aria-label="도전할 보스 선택"><div class="j-boss-chooser-head"><h2>도전할 보스</h2><p>'+(sandboxMode?'원하는 상대를 선택하세요.':'해금한 보스는 비용 없이 언제든 다시 선택할 수 있습니다.')+'</p></div>'+
+  return '<section class="j-boss-chooser" aria-label="도전할 보스 선택"><div class="j-boss-chooser-head"><h2>도전할 보스</h2><p>'+('해금한 보스는 비용 없이 언제든 다시 선택할 수 있습니다.')+'</p></div>'+
    '<div class="j-boss-targets" role="group" aria-label="출발할 보스">'+cards+'</div>'+
-   '<p class="j-boss-note">'+BOSS_NAMES[selectedStage]+'부터 도전합니다. '+(sandboxMode?'선택한 보스와 단독으로 대결합니다.':'선택 지점 이후의 보스는 순서대로 이어집니다.')+'</p></section>';
+   '<p class="j-boss-note">'+BOSS_NAMES[selectedStage]+'부터 도전합니다. '+('선택 지점 이후의 보스는 순서대로 이어집니다.')+'</p></section>';
  }
- function home(resetSelection=true,bonus=0,keepTitleTaps=false){if(!keepTitleTaps){secret.reset();bossGateOpen=false;gateTaps=0;gateLast=-Infinity;}sandboxMode=false;screen='home';profile.run=null;if(resetSelection)selectedStage=0;persist();
-  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p>${bossGateOpen?'<section class="j-boss-chooser j-hidden-boss-gate" aria-label="보스 선택"><div class="j-boss-chooser-head"><h2>보스 선택</h2></div><div class="j-boss-targets">'+BOSSES.map((id,i)=>button('gate-boss','<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b>','data-stage="'+i+'" class="j-boss-target"')).join('')+'</div></section>':''}<div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${eventBanner()}${route()}${warning()}</div>`);
+ function home(resetSelection=true){screen='home';profile.run=null;if(resetSelection)selectedStage=0;persist();
+  show(`<div class="j-copy"><h1 class="j-title" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p><p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p><div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${eventBanner()}${route()}${warning()}</div>`);
  }
  function select(preserve=false){
-  if(!sandboxMode&&!canTravelTo(profile,selectedStage))selectedStage=0;
+  if(!canTravelTo(profile,selectedStage))selectedStage=0;
   screen='select';
-  show(`<div class="j-panel j-select"><div class="j-select-heading"><h1>${TRIAL_NAME}</h1><p>${sandboxMode?'보스와 무기를 선택해 출정하세요.':'해금된 보스를 선택하고 무기를 정해 출정하세요. 보스 해금과 대장간 각인은 영구 유지됩니다.'}</p></div><div class="j-select-layout"><div class="j-select-left">${bossChooser()}<section class="j-select-weapons"><h2 class="j-select-subtitle">무기 선택</h2><div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div></section></div><div class="j-select-right">${weaponStatChart(weapon,{profile})}</div></div><div class="j-select-actions"><span class="j-selected-route" role="status">${BOSS_NAMES[selectedStage]} · ${WEAPONS[weapon]}</span>${button('begin','선택한 보스로 출정','class="j-primary j-begin"')}</div>${back()}${warning()}</div>`,{preserve});
+  show(`<div class="j-panel j-select"><div class="j-select-heading"><h1>${TRIAL_NAME}</h1><p>해금된 보스를 선택하고 무기를 정해 출정하세요. 보스 해금과 대장간 각인은 영구 유지됩니다.</p></div><div class="j-select-layout"><div class="j-select-left">${bossChooser()}<section class="j-select-weapons"><h2 class="j-select-subtitle">무기 선택</h2><div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div></section></div><div class="j-select-right">${weaponStatChart(weapon,{profile})}</div></div><div class="j-select-actions"><span class="j-selected-route" role="status">${BOSS_NAMES[selectedStage]} · ${WEAPONS[weapon]}</span>${button('begin','선택한 보스로 출정','class="j-primary j-begin"')}</div>${back()}${warning()}</div>`,{preserve});
  }
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
  function forge(preserve=false){
@@ -273,18 +272,6 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    busy=true;try{await event.finish();eventError='';}catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
   }
 
-  if(action==='secret-tap'&&screen==='home'&&!eventMode){
-   const now=performance.now(),award=secret.tap(now);
-   gateTaps=now-gateLast<=1000?gateTaps+1:1;gateLast=now;
-   if(award){home(false,grantForgeDeveloperFlames(profile));return;}
-   if(gateTaps===4){bossGateOpen=true;home(false,0,true);}
-   return;
-  }
-  if(action==='gate-boss'&&screen==='home'&&bossGateOpen&&!eventMode){
-   const stage=Number(b.dataset.stage);
-   if(Number.isInteger(stage)&&stage>=0&&stage<BOSSES.length){sandboxMode=true;selectedStage=stage;bossGateOpen=false;select();}
-   return;
-  }
   if(action==='home'){await goHome();return;}
   if(action==='forge'&&screen==='home'){forgeWeapon=weapon;refundConfirmWeapon=null;forge();return;}
   if(action==='forge-weapon'&&screen==='forge'){
@@ -304,14 +291,14 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   }
   if(action==='boss-target'&&screen==='select'){
    const stage=Number(b.dataset.stage);
-   if(sandboxMode||canTravelTo(profile,stage)){selectedStage=stage;select(true);}
+   if(canTravelTo(profile,stage)){selectedStage=stage;select(true);}
    return;
   }
-  if(action==='new'&&screen==='home'){sandboxMode=false;selectedStage=0;select();return;}
+  if(action==='new'&&screen==='home'){selectedStage=0;select();return;}
   else if(action==='weapon'&&screen==='select'&&Object.hasOwn(WEAPONS,b.dataset.weapon)){weapon=b.dataset.weapon;select(true);}
   else if(action==='begin'&&screen==='select'){
    pendingReward=null;
-   profile.run=sandboxMode?newBossPracticeRun(weapon,selectedStage):newTravelRun(profile,weapon,selectedStage);
+   profile.run=newTravelRun(profile,weapon,selectedStage);
    if(!profile.run){selectedStage=0;select();return;}
    persist();await launch();
   }
@@ -349,13 +336,6 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
 
  const input=e=>{if(e.target.id==='j-muted'){put('oibung-muted',e.target.checked?'1':'0');syncMusic();}if(e.target.id==='j-volume'){volume=Number(e.target.value);put('oibung.menu.volume',String(volume));syncMusic();}if(e.target.dataset?.audioChannel){writeAudioVolume(e.target.dataset.audioChannel,e.target.value,storage);syncMusic();}};
  const cancel=e=>{e.preventDefault();if(!busy&&screen!=='home')goHome();};
- const forgeDeveloperKey=e=>{
-  if(disposed||busy||eventMode||screen!=='forge'||!dialog.open||!isForgeDeveloperShortcut(e))return;
-  e.preventDefault();
-  const amount=grantForgeDeveloperFlames(profile);
-  if(amount)persist();
-  forge();
- };
  const recordEventInput=e=>{
   if(!eventMode||screen!=='battle'||doc.hidden||!focused)return;
   const action=eventActionFromInput(e);
@@ -365,7 +345,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',cancel);dialog.addEventListener('keydown',e=>e.stopPropagation());
  win.addEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.addEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);
  win.addEventListener('keydown',recordEventInput,true);win.addEventListener('pointerdown',recordEventInput,true);
- win.addEventListener('keydown',forgeDeveloperKey,true);win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
+ win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
  const timer=win.setInterval(poll,150);if(dialog.open)dialog.close();home();
- return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);monitor.flush();win.removeEventListener('keydown',recordEventInput,true);win.removeEventListener('pointerdown',recordEventInput,true);win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
+ return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);monitor.flush();win.removeEventListener('keydown',recordEventInput,true);win.removeEventListener('pointerdown',recordEventInput,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
 }

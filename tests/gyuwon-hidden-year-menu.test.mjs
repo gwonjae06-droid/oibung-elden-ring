@@ -4,13 +4,13 @@ import {createGyuwonGame} from '../src/gyuwon-combat.mjs';
 import {GYUWON_PERFORMANCE_ROUTE,gyuwonDisplayYear} from '../src/gyuwon-musical-route.mjs';
 import {jumpGyuwonToSelectedYear} from '../src/gyuwon-years.mjs';
 import {annualFloorForYear} from '../src/gyuwon-annual-progress.mjs';
-import {GYUWON_YEAR_LABELS} from '../src/gyuwon-hidden-year-menu.mjs';
+const GYUWON_YEAR_LABELS=['현역','재수','3수','4수','5수','6수','7수','8수','9수'];
 
-test('the concealed chooser exposes only actual playable years',()=>{
+test('year test fixtures expose only actual playable years',()=>{
  assert.deepEqual(GYUWON_YEAR_LABELS,['현역','재수','3수','4수','5수','6수','7수','8수','9수']);
  assert.deepEqual(GYUWON_PERFORMANCE_ROUTE,[5,6,8,9,11]);
 });
-test('each pause-year choice enters an isolated year with the correct recording and health',()=>{
+test('each isolated year fixture enters an isolated year with the correct recording and health',()=>{
  for(let choice=1;choice<=9;choice++){
   const game=createGyuwonGame('sword',{yearMode:true,seed:800+choice});
   const events=[];

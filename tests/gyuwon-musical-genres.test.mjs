@@ -56,30 +56,17 @@ test('songs own exact HP targets and cannot be skipped by direct damage or DoT',
  advance(g,151);assert.equal(g.status,'won');assert.equal(g.boss.hp,0);
  assert.equal(g.events.filter(e=>e.type==='victory').length,1);
 });
-test('semicolon advance skips acts 5-11 exactly once, keeps HP targets, and never skips ending',()=>{
- const early=createGyuwonGame('sword',{yearMode:true});
- assert.equal(actGyuwon(early,'skip-act'),false);
- assert.equal(early.gyuwon.years.year,1);
- const g=at(5),e=g.gyuwon.years;
- const targets=Object.fromEntries(ROUTE.map(y=>[y,GYUWON_SONGS[y].target]));
+test('removed act skip cannot advance a performance or alter boss HP',()=>{
  for(const year of ROUTE){
-  assert.equal(e.year,year);
-  const m=e.musical;
-  m.transition=2.7; // Skip must work during the introductory theatrical pose.
+  const g=at(year),e=g.gyuwon.years,m=e.musical;
   m.clock={source:'media',time:0,duration:180,ended:false};
-  const oldHp=g.boss.hp;
-  assert.equal(actGyuwon(g,'skip-act'),true);
-  assert.equal(actGyuwon(g,'skip-act'),false,'repeating key must not queue two act skips');
-  assert.equal(g.boss.hp,oldHp,'damage should settle only on next game tick');
+  const hp=g.boss.hp;
+  assert.equal(actGyuwon(g,'skip-act'),false);
+  m.skipRequested=true; // Stale flags cannot bypass the song clock either.
   advance(g,.05);
-  assert.equal(g.boss.hp,targets[year]);
-  assert.equal(e.year,year===11?11:gyuwonNextPerformance(year));
-  assert.equal(e.mode,year===11?'curtain':'musical');
+  assert.equal(e.year,year);assert.equal(e.mode,'musical');
+  assert.equal(g.boss.hp,hp);
  }
- assert.equal(g.events.filter(event=>event.type==='gyuwon-musical-skip').length,5);
- assert.equal(g.events.filter(event=>event.type==='gyuwon-song-ended'&&event.skipped).length,5);
- assert.equal(actGyuwon(g,'skip-act'),false,'the unskippable final cutscene is protected');
- assert.equal(g.boss.hp,800);
 });
 test('a stalled media clock freezes every genre and song ended is idempotent',()=>{
  for(let year=5;year<=11;year++){

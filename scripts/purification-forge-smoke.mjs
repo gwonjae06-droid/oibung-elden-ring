@@ -35,15 +35,15 @@ try{
  assert.equal(await page.locator('#journey .j-forge-dev-result').count(),0);
  assert.doesNotMatch(await page.locator('#journey .j-forge').innerText(),/개발자용|이스터에그|; 키/);
  await page.keyboard.press('Semicolon');
- assert.equal((await read()).flames,7,'one semicolon in the forge grants exactly +2 flames');
+ assert.equal((await read()).flames,5,'removed developer shortcut cannot grant flames');
  assert.equal(await page.locator('#journey [data-forge-dev-easter-egg], #journey .j-forge-dev-result').count(),0,'secret use must not reveal developer banner or message');
- assert.match(await page.locator('#journey .j-forge-resources').innerText(),/7/,'flame counter must still update immediately');
- await page.screenshot({path:'artifacts/purification-forge/forge-developer-easter-egg.png'});
+ assert.match(await page.locator('#journey .j-forge-resources').innerText(),/5/,'flame counter must remain unchanged');
+ await page.screenshot({path:'artifacts/purification-forge/forge-shortcut-removed.png'});
  await page.locator('#journey [data-j="forge-buy"][data-evolution="blade-wave"]:not([disabled])').click();
  await page.locator('#journey [data-j="forge-buy"][data-evolution="blade-wave"]:not([disabled])').click();
  let saved=await read();
  assert.equal(saved.forge.sword['blade-wave'],2);
- assert.equal(saved.flames,5);
+ assert.equal(saved.flames,3);
  await page.reload({waitUntil:'domcontentloaded'});
  await page.locator('#journey [data-j="forge"]').waitFor({state:'visible',timeout:45000});
  await page.locator('#journey [data-j="forge"]').click();
@@ -58,12 +58,12 @@ try{
  await page.locator('#journey [data-j="forge-refund-confirm"]').click();
  saved=await read();
  assert.equal(saved.forge.sword['blade-wave'],0);
- assert.equal(saved.flames,7,'refund did not restore all spent points');
+ assert.equal(saved.flames,5,'refund did not restore all spent points');
  await page.locator('#journey [data-j="forge-weapon"][data-weapon="bow"]').click();
  await page.locator('#journey [data-j="forge-buy"][data-evolution="twin-arrow"]:not([disabled])').click();
  saved=await read();
  assert.equal(saved.forge.bow['twin-arrow'],1);
- assert.equal(saved.flames,6);
+ assert.equal(saved.flames,4);
  await page.setViewportSize({width:844,height:390});
  await page.screenshot({path:'artifacts/purification-forge/forge-mobile-landscape.png'});
  const css=await page.locator('#journey .j-forge').evaluate(el=>({

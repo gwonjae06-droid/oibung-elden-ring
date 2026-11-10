@@ -36,8 +36,8 @@ test('every playable boss dialog id really exists in its battle module',()=>{
   assert.ok(readFileSync(file,'utf8').includes(entry.dialogId),id+' module does not use dialog id '+entry.dialogId);
  }
 });
-test('music, screen effects, sound, boss foley, dev damage and the mobile gate no longer hard-code boss dialog ids',()=>{
- for(const file of ['boss-music.mjs','screen-fx.mjs','sound-variation.mjs','boss-sfx.mjs','dev-boss-damage.mjs','mobile-landscape.mjs']){
+test('music, screen effects, sound, boss foley and the mobile gate no longer hard-code boss dialog ids',()=>{
+ for(const file of ['boss-music.mjs','screen-fx.mjs','sound-variation.mjs','boss-sfx.mjs','mobile-landscape.mjs']){
   const text=readFileSync(new URL('../src/'+file,import.meta.url),'utf8');
   assert.doesNotMatch(text,/(clown|dice|blood)-battle/,file);
  }

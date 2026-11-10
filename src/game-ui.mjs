@@ -48,16 +48,7 @@ export function installGameUi(doc=globalThis.document,win=globalThis.window,{loa
   const observer=new win.MutationObserver(records=>{if(records.some(r=>{const el=r.target.nodeType===1?r.target:r.target.parentElement;return r.type==='attributes'&&r.attributeName==='style'?el?.id==='arena':!noisy.has(el?.closest?.('[id]')?.id);}))schedule();});
   local.add(()=>observer.disconnect());observer.observe(root===doc?doc.body:root,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['hidden','data-stage','style']});return entry;
  }
- function open(root,entry){
-  if(doc.body?.dataset?.journey){win.dispatchEvent(new win.CustomEvent('oibung:home'));return;}
-  if(!alive()||entry.scope.disposed||navigating||doc.querySelector('.boss-secret[open]'))return;
-  const resume=pauseForChooser(root),weapon=readWeapon(root,doc),d=doc.createElement('dialog');d.className='boss-secret';d.setAttribute('aria-label','보스 선택');d.innerHTML='<h2>보스 선택</h2>'+SECRET_BOSSES.map(b=>'<button data-boss="'+b.id+'">'+b.name+'</button>').join('')+'<p role="status"></p><button data-close>닫기</button>';doc.body.appendChild(d);
-  let selected=false,closed=false,cancelled=false,untrack=()=>{};const current=()=>alive()&&!entry.scope.disposed&&!cancelled;
-  const finish=()=>{if(closed)return;closed=true;if(!selected)cancelled=true;for(const b of d.querySelectorAll('button'))b.onclick=null;safe(()=>d.close());d.remove();untrack();if(!selected)safe(resume);};untrack=entry.scope.add(finish);
-  d.querySelector('[data-close]').onclick=finish;d.addEventListener('cancel',e=>{e.preventDefault();if(!navigating)finish();});d.addEventListener('keydown',e=>e.stopPropagation());
-  for(const b of d.querySelectorAll('[data-boss]')){b.disabled=Boolean(doc.getElementById('start')?.disabled);b.onclick=async()=>{if(!current()||closed||navigating)return;navigating=true;for(const x of d.querySelectorAll('button'))x.disabled=true;text(d.querySelector('p'),'불러오는 중…');let view=null,ended=false;try{view=await enterBoss(b.dataset.boss,weapon,doc,loadClown,loadDice,{isCurrent:current,onClose:()=>{ended=true;battles.delete(view);}});if(!current()){safe(()=>view?.close?.());return;}if(!ended&&view)battles.add(view);selected=true;finish();const battle=doc.getElementById('dice-battle')||doc.getElementById('clown-battle');(battle?.firstElementChild?.shadowRoot||doc).getElementById('world')?.focus();}catch(error){if(current()&&!closed){console.error(error);text(d.querySelector('p'),'전투를 불러오지 못했습니다.');for(const x of d.querySelectorAll('button'))x.disabled=false;}}finally{navigating=false;}};}
-  try{d.showModal();d.querySelector('[data-boss]')?.focus();}catch(error){finish();console.error(error);}
- }
+ function open(){if(alive())win.dispatchEvent(new win.CustomEvent('oibung:home'));}
  function showLine(entry,arena,boss){if(!alive()||entry.scope.disposed||!arena.isConnected)return;const p=doc.createElement('p');p.className='game-intro';p.textContent=INTRO_LINES[boss];arena.appendChild(p);let untrack=()=>{};const id=win.setTimeout(()=>{p.remove();untrack();},3500);untrack=entry.scope.add(()=>{win.clearTimeout(id);p.remove();});}
  function startIntro(entry,root,arena,boss){
   const resume=pauseForChooser(root),pauseScreen=root.getElementById('pause-screen'),old=pauseScreen?.style.visibility;let done=false,view=null,untrack=()=>{};
