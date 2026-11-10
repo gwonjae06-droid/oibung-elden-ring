@@ -205,7 +205,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function nextReady(){screen='ready';const r=profile.run,place=BOSS_REGISTRY[BOSSES[r.stage]].place||'다음 시련';show(`<div class="j-panel"><p class="j-kicker">${place} · THE NEXT OATH</p><h1>${BOSS_NAMES[r.stage]}</h1><p>정화의 불꽃은 보관되었습니다. 대장간에서 영구 각인한 ${WEAPONS[r.weapon]}의 무기 진화는 다음 전투에도 유지됩니다.</p>${button('next','다음 도전','class="j-primary"')}${warning()}</div>`);}
  async function launch(){
   if(busy||!profile.run)return;busy=true;screen='loading';show(`<div class="j-panel"><h1>${BOSS_NAMES[profile.run.stage]}</h1><p role="status">전장을 준비합니다…</p></div>`);
-  try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>configureJourney(g,r,profile);
+  try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>{configureJourney(g,r,profile);if(eventMode)g.odenPrizeEvent=true;};
    if(entry.kind==='arena'){readBattleSession(doc).start(r.weapon,configure);root=doc;}
    else{const m=await loadBattle(entry.id);if(disposed)return;const onClose=()=>{if(!suppressClose&&!disposed){accountInterrupted();view=null;game=null;home();}};view=entry.launch(m,{weapon:r.weapon,configure,onClose,startPhase:r.secret?r.secretPhase||1:1,eventMode,endingStorage:eventMode?storage:null});if(!view)throw Error('Battle unavailable');root=doc.getElementById(entry.dialogId).firstElementChild.shadowRoot;}
    game=readBattleSession(root)?.game;if(!game)throw Error('Battle session unavailable');
@@ -251,8 +251,13 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(action==='event'&&screen==='home'){eventError='';eventPage();return;}
   if(action==='event-join'&&screen==='event'){
    const nickname=dialog.querySelector('#j-event-name')?.value||'';
-   busy=true;try{await event.join(nickname);setEventMode(true);eventError='';}
-   catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+   let joined=false;busy=true;
+   try{await event.join(nickname);setEventMode(true);eventError='';joined=true;}
+   catch(error){eventError=error.message;}
+   finally{busy=false;}
+   // Successful signup should lead directly to the fresh event home.
+   if(joined)home();else eventPage();
+   return;
   }
   if(action==='event-refresh'&&screen==='event'){
    busy=true;try{await event.refresh();eventError='';}
