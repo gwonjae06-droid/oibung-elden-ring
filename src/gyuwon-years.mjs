@@ -1,4 +1,4 @@
-import {gyuwonNextPerformance} from './gyuwon-musical-route.mjs';
+import {gyuwonNextPerformance,GYUWON_PERFORMANCE_ROUTE} from './gyuwon-musical-route.mjs';
 import {beginGyuwonReverie,tickGyuwonReverie} from './gyuwon-reverie.mjs';
 import {ARSENAL_PATTERNS,ARSENAL_ROSTERS,spawnArsenal,tickArsenal} from './gyuwon-arsenal.mjs';
 import {augmentAnnualCast,tickAnnualMechanics,tickMarksmanBarrage,MARKSMAN_VOLLEYS} from './gyuwon-nightmare-mechanics.mjs';
@@ -174,6 +174,28 @@ export function jumpGyuwonToFifthYear(g,emit=()=>{}){
  g.player.action=null;
  emit('gyuwon-year',{year:5,shortcut:true});
  return enterGyuwonMusical(g,emit);
+}
+// This entry is called only on a fresh encounter state. In particular, a direct
+// entry into the last song starts above the 800HP ending threshold.
+export function jumpGyuwonToSelectedYear(g,displayYear,emit=()=>{}){
+ const e=g?.gyuwon?.years;
+ const target=Number.isInteger(displayYear)&&displayYear>=1&&displayYear<=9?
+  displayYear<=4?displayYear:GYUWON_PERFORMANCE_ROUTE[displayYear-5]:null;
+ if(!e||e.legacyAnnual||e.year!==1||e.mode!=='combat'||e.musical||g.status!=='playing'||!target)return false;
+ if(displayYear===1)return true;
+ if(displayYear===5)return jumpGyuwonToFifthYear(g,emit);
+ e.year=target;e.day=365;e.season=0;e.cast=null;e.castT=0;e.dodge=null;
+ e.grade=null;e.gradeT=0;e.subjectLabel=null;e.resultScene=null;
+ e.recover=0;e.wards=[];e.chat=[];e.mapClock=0;e.mapPending=false;
+ e.damageBank=0;e.calendarDamage=0;e.yearDamage=0;e.reverie=null;
+ e.yearStartHp=annualFloorForYear(g,target===11?10:target-1);
+ g.boss.hp=e.yearStartHp;g.boss.state='recovery';
+ g.gyuwon.hazards.length=0;g.projectiles.length=0;g.gyuwon.pattern=null;
+ g.player.action=null;
+ emit('gyuwon-year',{year:target,shortcut:true});
+ if(target>=5)return enterGyuwonMusical(g,emit);
+ e.bannerUntil=g.time+2.65;
+ return true;
 }
 function beginCast(g,id,emit){
  const e=g.gyuwon.years,b=g.boss,p=g.player,a=playerAim(g);

@@ -16,7 +16,8 @@ import {createBossHitTraitView} from './boss-hit-trait-view.mjs';
 import * as THREE from 'three';
 import {KWON_CAMERA_REFERENCE,matchedBossCamera} from './boss-camera-framing.mjs';
 import {createGyuwonGame,actGyuwon,stepGyuwon} from './gyuwon-combat.mjs';
-import {jumpGyuwonToFifthYear} from './gyuwon-years.mjs';
+import {jumpGyuwonToFifthYear,jumpGyuwonToSelectedYear} from './gyuwon-years.mjs';
+import {createGyuwonHiddenYearMenu} from './gyuwon-hidden-year-menu.mjs';
 import {GYUWON_RULES as R} from './gyuwon-data.mjs';
 import {createGyuwonUi} from './gyuwon-ui.mjs';
 import {createGyuwonMusicalStage} from './gyuwon-musical-stage.mjs';
@@ -110,7 +111,26 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(type==='heal'&&accepted)recoverySfx.event({type:'heal-start'});
   }
   hud.onMusicalAction(request);
-  const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{reverieView.pause();foley.clear();musicalScore.stop();bellAudio.pause();recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{sound();canvas.focus();if(!lock)freeLook.capture();}});
+  let secretStages=null;
+  const pause=createBattlePause({isPlaying:()=>ready&&!closed&&mode==='playing',isPaused:()=>!closed&&mode==='paused',setPaused:value=>setMode(value?'paused':'playing'),clearInput,onPause:()=>{secretStages?.reset();reverieView.pause();foley.clear();musicalScore.stop();bellAudio.pause();recoverySfx.clear();damageFeedback.clear();audio.setEnabled(false);skillAudio.setEnabled(false);weaponSfx.clear();fx.clear();$('resume').focus();},onResume:()=>{secretStages?.reset();sound();canvas.focus();if(!lock)freeLook.capture();}});
+  // The existing pause caption is the only entrance; no visible cheat hint.
+  secretStages=createGyuwonHiddenYearMenu(document,shell,{
+   isPaused:()=>!closed&&mode==='paused',
+   onChoose:selectYear
+  });
+  startup.own('Gyuwon concealed year selector',()=>secretStages.dispose());
+  function selectYear(displayYear){
+   if(closed||!ready||mode!=='paused'||introGate.blocked)return;
+   const next=createGyuwonGame(weapon,{yearMode:true});
+   configure(next);
+   if(!jumpGyuwonToSelectedYear(next,displayYear,(type,data={})=>next.events.push({type,...data})))return;
+   clearInput();musicalScore.stop();reverieView.pause();foley.clear();
+   playerProjectiles.clear();traitView.clear();study.clear();
+   recoverySfx.clear();damageFeedback.clear();impact.reset();bellAudio.pause();
+   fx.clear();weaponSfx.clear();lifeFilm.reset();
+   g=next;freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;finalPhoto=null;
+   pause.resume();
+  }
   function reset(){musicalScore.stop();introGate.arm();playerProjectiles.clear();traitView.clear();study.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();g=createGyuwonGame(weapon,{yearMode:true});configure(g);freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;finalPhoto=null;lifeFilm.reset();fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();introGate.begin();}
   const close=createBattleCleanup(()=>[
    ['Gyuwon life epilogue',()=>lifeFilm.dispose()],
