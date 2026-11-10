@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {GYUWON_LIFE_SECONDS,GYUWON_LIFE_SHOTS,gyuwonLifeFrame} from '../src/gyuwon-life-epilogue.mjs';
+import {GYUWON_LIFE_SCENE,gyuwonLifeCameraAt} from '../src/gyuwon-life-stage-3d.mjs';
 import {referenceKeyAction} from '../src/gyuwon-reference-rules.mjs';
 
 test('the full family epilogue follows 800 HP without jumps or overlapping scenes',()=>{
@@ -36,4 +37,34 @@ test('displayed 7 has two inputs, displayed 8 adds Space, runner cannot dash',()
  assert.equal(referenceKeyAction(fighter,'KeyJ'),'light');
  assert.equal(referenceKeyAction(fighter,'KeyK'),'guard');
  assert.equal(referenceKeyAction(fighter,'Space'),'jump');
+});
+
+test('every earlier life vignette is a physical Three.js set with a moving perspective camera',()=>{
+ const names=['realization','youth','study','work','parttime','love','wedding','family','child','answer','phone'];
+ for(const id of names){
+  const s=GYUWON_LIFE_SHOTS.find(x=>x.id===id);
+  const f=gyuwonLifeFrame((s.at+s.end)/2);
+  assert.ok(GYUWON_LIFE_SCENE[id]&&GYUWON_LIFE_SCENE[id]!=='portal');
+  assert.equal(f.sceneKey,GYUWON_LIFE_SCENE[id]);
+  const start=gyuwonLifeCameraAt(id,0),end=gyuwonLifeCameraAt(id,1);
+  assert.notDeepEqual(start.position,end.position,'3D camera must dolly in '+id);
+  assert.ok(start.fov>0&&start.fov<90);
+  assert.ok(end.position.every(Number.isFinite));
+ }
+});
+test('phone zoom resolves to the ORIGINAL home mural split, then ending title, then unlock',()=>{
+ const before=gyuwonLifeFrame(146.95);
+ const splitStart=gyuwonLifeFrame(147),splitMiddle=gyuwonLifeFrame(151.1);
+ const splitEnd=gyuwonLifeFrame(154),title=gyuwonLifeFrame(156);
+ assert.equal(before.shot,'phone');
+ assert.equal(splitStart.shot,'portal');
+ assert.equal(splitStart.sceneKey,'portal');
+ assert.equal(splitStart.split,0);
+ assert.ok(splitMiddle.split>0&&splitMiddle.split<1);
+ assert.equal(splitEnd.shot,'title');
+ assert.equal(splitEnd.split,1);
+ assert.ok(title.titleOpacity>.5);
+ assert.equal(title.complete,false);
+ assert.equal(gyuwonLifeFrame(163.9).complete,false);
+ assert.equal(gyuwonLifeFrame(164).complete,true);
 });
