@@ -21,7 +21,7 @@ test('creating a dice player does not overwrite the active progression encounter
 test('attack windup emits its volley once and preserves an interrupting action',()=>{
   const game=createGame('cards');
   act(game,'light');
-  tickPlayerAction(game,.24,WEAPONS.cards);
+  tickPlayerAction(game,.29,WEAPONS.cards);
   tickPlayerAction(game,.02,WEAPONS.cards);
   assert.equal(game.projectiles.length,3);
   assert.equal(game.events.filter(e=>e.type==='swing').length,1);

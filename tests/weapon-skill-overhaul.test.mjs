@@ -54,13 +54,13 @@ test('bow backstep fires exactly two regular-strength arrows while moving backwa
  near(backed,.21);assert.equal(g.projectiles.length,2);
  for(const q of g.projectiles){assert.equal(q.damage,WEAPONS.bow.damage);assert.equal(q.piercing,false);}
 });
-test('bow fire arrow applies additional damage over time approximately equal to its landed hit',()=>{
+test('bow fire arrow adds 75% of its landed hit as damage over time',()=>{
  const g=prepare('bow','piercing-arrow');let dot=0;
  g.applyBonusDamage=(n)=>{dot+=n;return n;};
  rewardPlayerHit(g,42,{basic:true},{canStun:true});
  assert.equal(g.weaponBurnStacks.length,1);
  for(let i=0;i<160;i++)tickWeaponBurn(g,.02);
- near(dot,42);
+ near(dot,31.5);
 });
 test('card sigil charges once per accepted basic volley, bursts on third hit and causes a short stun',()=>{
  const g=prepare('cards','wide-deck');let bonus=0,stun=0;
@@ -74,7 +74,7 @@ test('card sigil charges once per accepted basic volley, bursts on third hit and
 });
 test('card lifesteal applies only to accepted hits, never overheals',()=>{
  const g=prepare('cards','blood-deck');g.player.hp=40;
- rewardPlayerHit(g,100,{basic:true});near(g.player.hp,48);
+ rewardPlayerHit(g,100,{basic:true});near(g.player.hp,46);
  g.player.hp=g.player.maxHp-1;rewardPlayerHit(g,100,{basic:true});
  near(g.player.hp,g.player.maxHp);
 });

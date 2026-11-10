@@ -25,8 +25,8 @@ test('evolved waves travel and damage through the actual original combat collisi
 test('card lifesteal only rewards accepted damage; flaming arrows remain single non-piercing projectiles',()=>{
  const g=rig('cards',['blood-deck']);g.player.hp=50;
  rewardPlayerHit(g,0,{basic:true});assert.equal(g.player.hp,50);
- rewardPlayerHit(g,100,{basic:true});assert.equal(g.player.hp,58);
- const bow=rig('bow',['piercing-arrow']);actPlayer(bow,'light');tickPlayerAction(bow,.47,WEAPONS.bow);
+ rewardPlayerHit(g,100,{basic:true});assert.equal(g.player.hp,56);
+ const bow=rig('bow',['piercing-arrow']);actPlayer(bow,'light');tickPlayerAction(bow,WEAPONS.bow.wind+.02,WEAPONS.bow);
  assert.equal(bow.projectiles.length,1);
  assert.equal(bow.projectiles[0].fireRank,1);
  assert.equal(bow.projectiles[0].piercing,false);

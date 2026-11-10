@@ -1,8 +1,8 @@
 // Shared, renewable magazines for every live boss encounter.
 // Normal journey is authoritative; standalone and hidden fights use the same rules.
 export const RANGED_MAGAZINES=Object.freeze({
- bow:Object.freeze({capacity:8,shotCost:1,reloadDuration:1.4}),
- cards:Object.freeze({capacity:12,shotCost:3,reloadDuration:1.2})
+ bow:Object.freeze({capacity:7,shotCost:1,reloadDuration:1.65}),
+ cards:Object.freeze({capacity:9,shotCost:3,reloadDuration:1.5})
 });
 
 export function createRangedMagazine(weapon){
@@ -24,7 +24,7 @@ export function spendRangedAmmo(game,count=game?.player?.ranged?.shotCost??0){
  if(!canFireRanged(game,count))return false;
  magazine.loaded-=count;
  // Reload only once the full magazine is depleted. The current attack's
- // recovery must finish before its full 1.2/1.4-second reload begins.
+ // recovery must finish before the magazine's timed reload begins.
  if(magazine.loaded<magazine.shotCost)magazine.pending=true;
  return true;
 }
