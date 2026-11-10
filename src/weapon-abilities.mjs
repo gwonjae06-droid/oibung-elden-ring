@@ -6,6 +6,7 @@ export const HAMMER_GUARD_TIME=1.2;
 export const HAMMER_GUARD_FACTOR=.5;
 export const HAMMER_THROW_POISE=1.3;
 export const BOW_BACKSHOT_ARROWS=2;
+export const BOW_BURN_DAMAGE_FACTOR=.75;
 
 export function equippedPath(game){
  const paths={sword:['blade-wave','charged-blade'],hammer:['earth-wave','blood-hammer'],bow:['twin-arrow','piercing-arrow'],cards:['wide-deck','blood-deck']};
@@ -42,10 +43,10 @@ export function applyWeaponHitEffects(game,damage,action,{stun}={}){
   // an instant double-hit. Each arrow has a bounded independent burn pool.
   const stacks=game.weaponBurnStacks??=[];
   const duration=evolutionCount(game,'piercing-arrow')>=2?3.2:2.8;
-  stacks.push({left:duration,duration,total:damage});
+  stacks.push({left:duration,duration,total:damage*BOW_BURN_DAMAGE_FACTOR});
   if(stacks.length>8)stacks.shift();
   game.weaponBurnStacks=stacks;
-  game.events.push({type:'bow-burn-applied',amount:damage});
+  game.events.push({type:'bow-burn-applied',amount:damage*BOW_BURN_DAMAGE_FACTOR});
  }
 }
 export function tickWeaponBurn(game,dt){
