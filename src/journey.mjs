@@ -1,5 +1,7 @@
 import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-ending-photo-state.mjs';
 import {createBossSecret} from './boss-secret.mjs';
+import {ODEN_EVENT} from './oden-event-config.mjs';
+import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {weaponStatChart} from './weapon-stat-chart.mjs?radar-v1-20261107';
@@ -25,7 +27,11 @@ const TRANSITION_LIMIT_MS=20000;
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
- let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
+ let rawStorage;try{rawStorage=win.localStorage;}catch{}
+ const event=createOdenEventClient({storage:rawStorage,fetcher:win.fetch?.bind(win)||globalThis.fetch});
+ let eventMode=event.enabled&&event.active;
+ let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
+ let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false,eventError='';
  let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null,bossGateOpen=false,sandboxMode=false,gateTaps=0,gateLast=-Infinity;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
@@ -68,6 +74,44 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   target?.focus?.({preventScroll:true});
   if(Number.isFinite(scroll))dialog.scrollTop=scroll;
  }
+
+ const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function setEventMode(active){
+  if(active&&!event.registered)return false;
+  event.setActive(active);eventMode=!!active;profile.run=null;
+  storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
+  profile=loadProfile(storage);selectedStage=0;pendingReward=null;bossGateOpen=false;secret.reset();
+  return true;
+ }
+ function eventBanner(){
+  if(!event.enabled)return '';
+  const s=event.session,mode=eventMode?' · 이벤트 진행 중':'';
+  return '<div class="j-event-banner" role="status"><strong>오든링 엔딩 이벤트'+mode+'</strong>'
+    +(s?.code?'<p>엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b> · 화면을 캡처해 보내세요.</p>':
+     s?'<p>'+escapeHTML(s.nickname)+' · 서버 진행 '+Math.max(0,(s.stage??-1)+1)+'/5</p>':'<p>참가자 등록 후 새로운 기록으로 도전하세요.</p>')
+    +button('event','이벤트 기록 확인','class="j-event-link"')+'</div>';
+ }
+ function eventPage(){
+  if(!event.enabled){home();return;}
+  screen='event';const s=event.session;
+  const error=eventError?'<p role="alert" class="j-status">'+escapeHTML(eventError)+'</p>':'';
+  const register='<label class="j-setting">이벤트 닉네임 (2~18자) <input id="j-event-name" maxlength="18" autocomplete="nickname" placeholder="친구가 알아볼 이름"></label>'
+    +button('event-join','참가 등록 · 새 기록으로 시작','class="j-primary"');
+  const registered='<p>참가자 <b>'+escapeHTML(s?.nickname||'')+'</b> · 서버 기록 '
+    +Math.max(0,(s?.stage??-1)+1)+'/5</p>'
+    +(s?.code?'<p class="j-status" role="status">엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b><br>바뀐 메인화면과 함께 캡처해 친구에게 제출하세요.</p>':'<p>보스별 완료 기록을 서버에 남긴 뒤 최종 3D 엔딩까지 완료해야 인증번호가 발급됩니다.</p>')
+    +'<p>심사: '+escapeHTML(s?.status||'playing')+'</p>'
+    +button('event-refresh','서버 기록 새로고침')
+    +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
+       button('event-normal','일반 게임 기록으로 전환'));
+  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전하며 개발자 지름길은 이벤트에서 차단됩니다.</p>'
+    +(s?registered:register)+error+back()+warning()+'</div>');
+ }
+ function reportEventStage(stage){
+  if(!eventMode||!event.registered||!Number.isInteger(stage))return;
+  void event.stage(stage).then(()=>{eventError='';}).catch(error=>{eventError=error.message;console.warn('Event record rejected',error);});
+ }
+
  const button=(action,label,extra='')=>`<button data-j="${action}" ${extra}>${label}</button>`;
  const back=()=>button('home','← 메인으로','class="j-back"');
  function route(){return `<div class="j-route">${BOSS_NAMES.map((n,i)=>`<span class="${profile.run&&(i<profile.run.stage||i===profile.run.stage&&profile.run.pending)?'done':''}">${n}</span>`).join('')}</div>`;}
