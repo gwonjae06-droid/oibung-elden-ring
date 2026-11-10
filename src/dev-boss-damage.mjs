@@ -11,7 +11,7 @@ export function installDevBossDamage(root,read){
   const host=root.host;
   if(host){if(!host.closest?.('dialog')?.open)return false;}
   else if(doc.querySelector?.(battleDialogSelector()))return false;
-  const state=read();return !!state?.active&&state.game===g&&g?.status==='playing';
+  const state=read();return !!state?.active&&state.game===g&&g?.status==='playing'&&!g.odenPrizeEvent;
  }
  function onKey(event){
   if(disposed||event.code!=='Semicolon'||event.shiftKey||event.repeat||event.isComposing||event.ctrlKey||event.altKey||event.metaKey)return;
