@@ -81,7 +81,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   const audio=createAudio(makeAudio),skillAudio=createSkillAudio(makeAudio),weaponSfx=createPlayerWeaponSfx(),fx=createPlayerPolish(scene,{mobile:coarse,reduced}),recoverySfx=createRecoverySfx(),damageFeedback=createPlayerHitFeedback(shell),impact=createCombatImpact({shell,root,boss:'gyuwon',reduced});startup.own('Gyuwon heal sfx',()=>recoverySfx.dispose());startup.own('Gyuwon damage flash',()=>damageFeedback.dispose());startup.own('Gyuwon impacts',()=>impact.dispose());startup.own('Gyuwon effects',()=>fx.dispose());startup.own('Gyuwon weapon sounds',()=>weaponSfx.dispose());startup.own('Gyuwon sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);});
   let g=createGyuwonGame(weapon,{yearMode:true}),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=KWON_CAMERA_REFERENCE.pitch,lock=true,zoom=0,dragPointer=null,stickPointer=null,w=0,h=0;
   let finalPhoto=null;
-  const lifeFilm=createGyuwonLifeEpilogue(document,shell,{onComplete:()=>{
+  const lifeFilm=createGyuwonLifeEpilogue(document,shell,{source:study.root,coarse,onComplete:()=>{
    try{window.localStorage.setItem('oibung.gyuwon.ending-watched','1');if(finalPhoto)window.localStorage.setItem('oibung.gyuwon.ensemble-photo',finalPhoto);}catch(error){console.warn('Ending photo save unavailable',error);}
    close();
   }});startup.own('Gyuwon life epilogue',()=>lifeFilm.dispose());
@@ -169,7 +169,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(reverie&&reverieActive){if(reverieClockAt!==null)reverie.clock=(reverie.clock??reverie.time)+Math.max(0,(now-reverieClockAt)/1000);reverieClockAt=now;}else reverieClockAt=null;
    musicalScore.update(g,{enabled:ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace&&!reverie,muted:muted()});
    if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,{...(g.gyuwon.years?.musical?musicalInput():input()),lock,cameraYaw:yaw});if(g.status!=='playing'){
-     if(g.status==='won'&&g.gyuwon.years?.musical?.finishing){setMode('epilogue');lifeFilm.start();}
+     if(g.status==='won'&&g.gyuwon.years?.musical?.finishing){musicalScore.stop();foley.clear();fx.clear();setMode('epilogue');lifeFilm.start();}
      else setMode('ending');
     }}
    if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?(g.gyuwon.years?.musical?1.5:8):1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'최규원 토벌':'마지막 문제 앞에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'정답이 없는 밤에도, 그는 처음으로 문제집을 덮었다.':'';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}
@@ -178,7 +178,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     if(e.type==='gyuwon-exam-bell'&&!muted()){bellAudio.pause();bellAudio.currentTime=0;bellAudio.play()?.catch(()=>{});}
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
-   if(mode==='epilogue'){lifeFilm.update(visualDt);return;}
+   if(mode==='epilogue'){lifeFilm.update(visualDt);if(lifeFilm.active){resizeBattleViewport(renderer,camera,canvas,Math.max(.72,quality.scale*.90));lifeFilm.render(renderer,canvas);}return;}
    routeTransition.update(g);
    const wasReverie=reverieView.active,inReverie=g.gyuwon.years?.mode==='reverie';
    if(inReverie&&!wasReverie){musicalScore.stop();foley.clear();clearInput();freeLook.release();fx.clear();playerProjectiles.clear();study.update(g,0);}
