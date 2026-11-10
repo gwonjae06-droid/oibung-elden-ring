@@ -56,7 +56,8 @@
 <script type="module">
 import {resetLegacyOdenSavesOnce} from './src/legacy-save-reset.mjs?v=event-new-start-20261110';
 // Run before loading the battle or profile: legacy saves and ending art are discarded.
-resetLegacyOdenSavesOnce(window.localStorage);
+let legacySaveStorage=null;try{legacySaveStorage=window.localStorage;}catch{}
+resetLegacyOdenSavesOnce(legacySaveStorage);
 import {installMobileLandscape} from './src/mobile-landscape.mjs';
 const mobileLandscape=installMobileLandscape();
 window.addEventListener('pagehide',event=>{if(!event.persisted)mobileLandscape?.dispose();});
