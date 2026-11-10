@@ -52,19 +52,20 @@ test('every earlier life vignette is a physical Three.js set with a moving persp
   assert.ok(end.position.every(Number.isFinite));
  }
 });
-test('phone zoom resolves to the ORIGINAL home mural split, then ending title, then unlock',()=>{
+test('phone zoom resolves to the original mural opening, corridor walk and credits before unlock',()=>{
  const before=gyuwonLifeFrame(146.95);
  const splitStart=gyuwonLifeFrame(147),splitMiddle=gyuwonLifeFrame(151.1);
- const splitEnd=gyuwonLifeFrame(154),title=gyuwonLifeFrame(156);
+ const splitEnd=gyuwonLifeFrame(157.2),title=gyuwonLifeFrame(178);
  assert.equal(before.shot,'phone');
  assert.equal(splitStart.shot,'portal');
  assert.equal(splitStart.sceneKey,'portal');
  assert.equal(splitStart.split,0);
  assert.ok(splitMiddle.split>0&&splitMiddle.split<1);
- assert.equal(splitEnd.shot,'title');
+ assert.equal(splitEnd.shot,'corridor');
  assert.equal(splitEnd.split,1);
  assert.ok(title.titleOpacity>.5);
  assert.equal(title.complete,false);
  assert.equal(gyuwonLifeFrame(163.9).complete,false);
- assert.equal(gyuwonLifeFrame(164).complete,true);
+ assert.equal(gyuwonLifeFrame(164).complete,false);
+ assert.equal(gyuwonLifeFrame(181).complete,true);
 });

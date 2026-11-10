@@ -82,7 +82,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   const audio=createAudio(makeAudio),skillAudio=createSkillAudio(makeAudio),weaponSfx=createPlayerWeaponSfx(),fx=createPlayerPolish(scene,{mobile:coarse,reduced}),recoverySfx=createRecoverySfx(),damageFeedback=createPlayerHitFeedback(shell),impact=createCombatImpact({shell,root,boss:'gyuwon',reduced});startup.own('Gyuwon heal sfx',()=>recoverySfx.dispose());startup.own('Gyuwon damage flash',()=>damageFeedback.dispose());startup.own('Gyuwon impacts',()=>impact.dispose());startup.own('Gyuwon effects',()=>fx.dispose());startup.own('Gyuwon weapon sounds',()=>weaponSfx.dispose());startup.own('Gyuwon sounds',()=>{audio.setEnabled(false);skillAudio.setEnabled(false);});
   let g=createGyuwonGame(weapon,{yearMode:true}),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=KWON_CAMERA_REFERENCE.pitch,lock=true,zoom=0,dragPointer=null,stickPointer=null,w=0,h=0;
   let finalPhoto=null;
-  const lifeFilm=createGyuwonLifeEpilogue(document,shell,{source:study.root,coarse,onComplete:()=>{
+  const lifeFilm=createGyuwonLifeEpilogue(document,shell,{source:study.root,coarse,onError:()=>close(),onComplete:()=>{
    try{window.localStorage.setItem('oibung.gyuwon.ending-watched','1');if(finalPhoto)window.localStorage.setItem('oibung.gyuwon.ensemble-photo',finalPhoto);}catch(error){console.warn('Ending photo save unavailable',error);}
    close();
   }});startup.own('Gyuwon life epilogue',()=>lifeFilm.dispose());
@@ -179,7 +179,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     if(e.type==='gyuwon-exam-bell'&&!muted()){bellAudio.pause();bellAudio.currentTime=0;bellAudio.play()?.catch(()=>{});}
     if(e.type==='gyuwon-exam-grade'&&!muted()){audio.play(e.result==='great'?'phase':e.result==='normal'?'healed':'hit-boss',{minGap:.1});}
     if(!muted()){if(e.type==='skill-cast')skillAudio.play('skill-'+e.flavor);else if(e.type==='skill-heal'){}else{const cue={ 'boss-hit':'hit-boss','gyuwon-calendar-hit':'hit-boss',hurt:'hit-player',death:'death',victory:'victory',phase:'phase','gyuwon-warning':'tele-slam','gyuwon-impact':'boss-slam',space:'tele-whirl','memory-stage':'tele-thrust'}[e.type];if(cue)audio.play(cue,{amount:e.amount,minGap:.12});}}}g.events.length=0;impact.update(visualDt);
-   if(mode==='epilogue'){lifeFilm.update(visualDt);if(lifeFilm.active){resizeBattleViewport(renderer,camera,canvas,Math.max(.72,quality.scale*.90));lifeFilm.render(renderer,canvas);}return;}
+   if(mode==='epilogue'){lifeFilm.update(!document.hidden&&mode!=='paused'?realDt:0);if(lifeFilm.active){resizeBattleViewport(renderer,camera,canvas,Math.max(.72,quality.scale*.90));lifeFilm.render(renderer,canvas);}return;}
    routeTransition.update(g);
    const wasReverie=reverieView.active,inReverie=g.gyuwon.years?.mode==='reverie';
    if(inReverie&&!wasReverie){musicalScore.stop();foley.clear();clearInput();freeLook.release();fx.clear();playerProjectiles.clear();study.update(g,0);}

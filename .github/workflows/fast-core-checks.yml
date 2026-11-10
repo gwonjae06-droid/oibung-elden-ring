@@ -66,6 +66,7 @@ jobs:
           tests/gyuwon-musical-route.test.mjs
           tests/gyuwon-hidden-year-menu.test.mjs
           tests/gyuwon-life-ending.test.mjs
+          tests/gyuwon-life-remake.test.mjs
           tests/gyuwon-curtain-call.test.mjs
           tests/gyuwon-living-doodle.test.mjs
           tests/gyuwon-act-five-literal.test.mjs
