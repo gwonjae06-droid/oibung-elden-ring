@@ -40,7 +40,7 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: Check critical gameplay module syntax
         run: |
-          for f in src/combat.mjs src/arena.mjs src/kwon-lunar-sculpture.mjs src/kwon-moon-cataclysm-view.mjs src/kwon-moon-cataclysm.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs src/gyuwon-years.mjs src/gyuwon-hidden-year-menu.mjs src/gyuwon-life-epilogue.mjs src/gyuwon-life-stage-3d.mjs src/gyuwon-ensemble-photo.mjs src/legacy-save-reset.mjs src/dev-boss-damage.mjs src/oden-event-client.mjs src/oden-event-config.mjs src/oden-event-input-monitor.mjs src/journey.mjs supabase/functions/oden-event/index.js supabase/functions/oden-event/risk.js; do
+          for f in src/combat.mjs src/arena.mjs src/kwon-lunar-sculpture.mjs src/kwon-moon-cataclysm-view.mjs src/kwon-moon-cataclysm.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs src/gyuwon-years.mjs src/gyuwon-life-epilogue.mjs src/gyuwon-life-stage-3d.mjs src/gyuwon-ensemble-photo.mjs src/legacy-save-reset.mjs src/oden-event-client.mjs src/oden-event-config.mjs src/oden-event-input-monitor.mjs src/journey.mjs supabase/functions/oden-event/index.js supabase/functions/oden-event/risk.js; do
             node --check "$f"
           done
       - name: Verify event claim sequence and isolated profiles
