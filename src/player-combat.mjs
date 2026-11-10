@@ -9,6 +9,9 @@ import {createRangedMagazine,canFireRanged,spendRangedAmmo} from './ranged-reloa
 import {WEAPON_ACTIVE_COOLDOWN,applyWeaponHitEffects,attackStoredDamage,equippedPath,
  launchHammer,moveReturningHammer,BOW_BACKSHOT_ARROWS} from './weapon-abilities.mjs';
 
+// Keep the wave tied to its original swing without circular game-state references.
+const swordSwingWaves=new WeakMap();
+
 export function createPlayerState({x=0,z=13,yaw=Math.PI,weapon='sword'}={}){
  const stats=weaponStats(weapon);
  return {weapon,x,z,yaw,hp:stats.maxHp,maxHp:stats.maxHp,stamina:100,regen:0,
@@ -57,11 +60,19 @@ export function tickPlayerAction(game,dt,weapon,{roll=()=>{},backstep=()=>{},mel
      spawnPlayerProjectiles(game,action,{...weapon,damage:weapon.damage*(rank>=2?.9:.6)},{basicLifetime:1.3});
      const q=game.projectiles.at(-1);
      q.kind='wave';q.speed=24;q.y=1.2+(game.player.floorY||0);
+     swordSwingWaves.set(action,q);
     }
    }
   }
+  const wave=swordSwingWaves.get(action);
+  // A wave may have connected on the previous simulation step, even if the
+  // arena has already removed it from the projectile array.
+  if(wave&&(wave.hit||wave.bossHit))action.hit=true;
   if(!weapon.projectile&&!action.hit&&action.t>=action.wind&&action.t<=action.wind+action.active)
    melee(action);
+  // Melee has priority on the release step. Retire only this swing's wave
+  // before any arena can process its collision, including later active frames.
+  if(wave&&action.hit){wave.hit=true;wave.bossHit=true;wave.life=0;}
  }
  if(action.t>=action.total&&game.player.action===action)game.player.action=null;
 }

@@ -84,3 +84,41 @@ test('all four arenas provide a boss-aware handler for sigil and burn extra hits
  }
  assert.equal(WEAPON_ACTIVE_COOLDOWN['twin-arrow'],10);
 });
+
+test('sword melee consumes only its own wave, including a later active-frame contact',()=>{
+ for(const delayed of [false,true]){
+  const g=prepare('sword','blade-wave');act(g,'light');
+  let contacts=0;
+  tickPlayerAction(g,.18,WEAPONS.sword,{melee:a=>{if(!delayed){contacts++;a.hit=true;}}});
+  const wave=g.projectiles[0];
+  if(delayed)tickPlayerAction(g,.01,WEAPONS.sword,{melee:a=>{contacts++;a.hit=true;}});
+  assert.equal(contacts,1);
+  assert.equal(wave.life,0);
+  assert.equal(wave.hit,true);
+  assert.equal(wave.bossHit,true);
+ }
+});
+test('sword wave contact prevents a second melee hit even after projectile cleanup',()=>{
+ for(const flag of ['hit','bossHit']){
+  const g=prepare('sword','blade-wave');act(g,'light');
+  tickPlayerAction(g,.18,WEAPONS.sword);
+  const wave=g.projectiles[0];wave[flag]=true;g.projectiles.length=0;
+  let contacts=0;
+  tickPlayerAction(g,.01,WEAPONS.sword,{melee:()=>contacts++});
+  assert.equal(contacts,0);
+  assert.equal(g.player.action.hit,true);
+ }
+});
+test('a missed sword swing leaves its ranged wave alive and the next swing is independent',()=>{
+ const g=prepare('sword','blade-wave');act(g,'light');
+ tickPlayerAction(g,.18,WEAPONS.sword);
+ const first=g.projectiles[0];
+ assert.ok(first.life>0);
+ first.hit=true;
+ tickPlayerAction(g,1,WEAPONS.sword);
+ act(g,'light');
+ let contacts=0;
+ tickPlayerAction(g,.18,WEAPONS.sword,{melee:a=>{contacts++;a.hit=true;}});
+ assert.equal(contacts,1);
+ assert.equal(g.projectiles[1].life,0);
+});
