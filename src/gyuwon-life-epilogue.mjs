@@ -50,7 +50,7 @@ export function createGyuwonLifeEpilogue(doc,shell,{source=null,coarse=false,onC
  const layer=doc.createElement('div');layer.className='gy-life-film';layer.hidden=true;layer.setAttribute('aria-live','off');
  layer.innerHTML='<div class="gy-life-vignette"></div><div class="gy-life-bars"></div><div class="gy-life-shade"></div><div class="gy-life-label"></div><div class="gy-life-caption"></div><div class="gy-ending-gate" hidden><div class="gy-ending-reveal"><strong>오든링 엔딩</strong><i></i><span>ODEN RING · THE END</span></div><div class="gy-ending-half left">'+renderJourneyArt('ending-split-left')+'</div><div class="gy-ending-half right">'+renderJourneyArt('ending-split-right')+'</div><div class="gy-ending-dust"></div><div class="gy-ending-seam"></div></div>';
  shell.appendChild(layer);
- const label=layer.querySelector('.gy-life-label'),caption=layer.querySelector('.gy-life-caption'),shade=layer.querySelector('.gy-life-shade'),gate=layer.querySelector('.gy-ending-gate');
+ const label=layer.querySelector('.gy-life-label'),caption=layer.querySelector('.gy-life-caption'),shade=layer.querySelector('.gy-life-shade'),gate=layer.querySelector('.gy-ending-gate'),halfLeft=layer.querySelector('.gy-ending-half.left'),halfRight=layer.querySelector('.gy-ending-half.right');
  const stage=source?createGyuwonLifeStage3d({doc,source,coarse}):null;
  let time=0,active=false,ended=false,priorShot='',frame=gyuwonLifeFrame(0);
  function start(){time=0;active=true;ended=false;priorShot='';layer.hidden=false;shell.dataset.lifeCinema='on';update(0);}
@@ -68,6 +68,8 @@ export function createGyuwonLifeEpilogue(doc,shell,{source=null,coarse=false,onC
   }else{
    shade.style.opacity='0';
    gate.style.setProperty('--split',String(frame.split));
+   halfLeft.style.transform='translateX('+(-47*frame.split)+'%)';
+   halfRight.style.transform='translateX('+(47*frame.split)+'%)';
    gate.style.setProperty('--ending-opacity',String(frame.titleOpacity));
   }
   if(frame.complete){ended=true;active=false;onComplete();return true;}
