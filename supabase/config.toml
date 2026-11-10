@@ -1,0 +1,5 @@
+[functions.oden-event]
+# Custom participant tokens are checked inside the function.
+# verify_jwt=false is safe ONLY with the custom token checks and private RLS table.
+verify_jwt = false
+entrypoint = "./functions/oden-event/index.js"
