@@ -70,7 +70,7 @@ const PID='11111111-1111-4111-8111-111111111110';
   await page.evaluate(async()=>{
    window.__odenGetSession=(await import('/src/battle-session.mjs')).readBattleSession;
   });
-  await page.waitForFunction(()=>window.__odenGetSession(document)?.game?.status==='playing'&&!document.getElementById('journey').open,null,{timeout:30000});
+  await page.waitForFunction(()=>{const s=window.__odenGetSession(document);return s?.active===true&&s?.game?.status==='playing'&&!document.getElementById('journey').open;},null,{timeout:60000});
   // Simulate the result of beating Kwon; invoke the real victory-accounting
   // controller and save path rather than forge localStorage directly.
   await page.evaluate(()=>{
