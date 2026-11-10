@@ -1,5 +1,6 @@
 import {createGyuwonCurtainEnsemble} from './gyuwon-curtain-ensemble.mjs';
 import {createGyuwonLifeEpilogue} from './gyuwon-life-epilogue.mjs';
+import {captureGyuwonEnsemblePhoto} from './gyuwon-ensemble-photo.mjs';
 import {createGyuwonRouteTransition} from './gyuwon-route-transition.mjs';
 import {createGyuwonReverieView} from './gyuwon-reverie-view.mjs';
 import {createDanceCueAudio} from './gyuwon-dance-cues.mjs';
@@ -299,10 +300,8 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
  study.shake(camera);camera.lookAt(target);impact.camera(camera);}turnStage.projectTargets(g,camera,canvas,shell);$('reticle').hidden=true;hud.render(g,skillView(g),WEAPONS[g.weapon].name,lock);study.occlude(camera,g);traitView.update(g,camera);doodle.render(scene,camera,{active:!!g.gyuwon.years,time:referenceMini?.time??g.time});
    // The final frame is a real in-game ensemble still. Save it only at the end.
    if(!finalPhoto&&referenceMini?.year===11&&!referenceMini.finishing&&referenceMini.curtainCall?.mode==='credits'&&referenceMini.curtainCall.creditsProgress>.91){
-    try{const snapshot=document.createElement('canvas');snapshot.width=960;snapshot.height=540;
-     const ctx=snapshot.getContext('2d');ctx.drawImage(canvas,0,0,snapshot.width,snapshot.height);
-     const photo=snapshot.toDataURL('image/jpeg',.78);if(photo.length>6000)finalPhoto=photo;
-    }catch(error){console.warn('Ensemble photo capture unavailable',error);}
+    try{finalPhoto=captureGyuwonEnsemblePhoto(renderer,scene,camera,document)||finalPhoto;}
+    catch(error){console.warn('Ensemble photo capture unavailable',error);}
    }
    audit.sample(dt,{timestamp:now,active:ready&&!introGate.blocked&&mode==='playing'&&!document.hidden,phase:g.boss.phase,pattern:g.gyuwon.pattern,scale:viewportRenderScale(innerWidth,innerHeight,quality.scale)});
   }
