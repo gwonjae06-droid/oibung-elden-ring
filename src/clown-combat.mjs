@@ -105,7 +105,7 @@ export function hurt(g, damage, src) {
   p.invuln = 0.32;
   applyBossHitTrait(g,damage,{boss:'clown'});
   g.hitstop = Math.max(g.hitstop || 0, 0.07);
-  emit(g, 'player-hit', {amount: damage});
+  emit(g, 'player-hit', {amount: damage,source:typeof src==='string'?src:c.pattern});
   if (!p.hp) {
     g.status = 'lost';
     emit(g, 'death');

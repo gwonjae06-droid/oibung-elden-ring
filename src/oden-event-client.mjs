@@ -13,14 +13,19 @@ export function eventStageAllowed(current,next){
 }
 const cleanName=s=>String(s||'').normalize('NFC').trim();
 export function createOdenEventClient({storage=globalThis.localStorage,fetcher=globalThis.fetch,config=ODEN_EVENT}={}){
- let session=null,queue=Promise.resolve(),lastError='';
+ let session=null,queue=Promise.resolve(),lastError='',attemptFlight=null,nextAttemptRetry=0;
+ let pending=[];
+ const outboxKey=()=>key+':attempts:'+session?.id;
+ const persistAttempts=()=>{try{storage?.setItem(outboxKey(),JSON.stringify(pending));}catch{}};
+ const loadAttempts=()=>{try{const data=JSON.parse(storage?.getItem(outboxKey())||'[]');pending=Array.isArray(data)?data.slice(-50):[];}catch{pending=[];}};
  const key=EVENT_KEY+':'+config.eventId;
  try{const parsed=JSON.parse(storage?.getItem(key)||'null');if(parsed&&parsed.id&&parsed.token&&parsed.nickname)session=parsed;}catch{}
  const save=()=>{try{if(session)storage?.setItem(key,JSON.stringify(session));else storage?.removeItem(key);}catch{}};
+ if(session)loadAttempts();
  async function call(action,body={},token=session?.token){
   if(!config.enabled)throw Error('이벤트 인증 서버가 아직 열리지 않았습니다.');
   const response=await fetcher(config.projectUrl.replace(/\/$/,'')+'/functions/v1/oden-event',{
-   method:'POST',headers:{'Content-Type':'application/json','apikey':config.publishableKey,...(token?{'X-Oden-Token':token}:{})},
+   method:'POST',...(action==='attempt'?{keepalive:true,signal:globalThis.AbortSignal?.timeout?.(8000)}:{}),headers:{'Content-Type':'application/json','apikey':config.publishableKey,...(token?{'X-Oden-Token':token}:{})},
    body:JSON.stringify({action,eventId:config.eventId,...body})
   });
   const data=await response.json().catch(()=>({}));
@@ -35,7 +40,7 @@ export function createOdenEventClient({storage=globalThis.localStorage,fetcher=g
   const data=await call('register',{nickname},null);
   if(!data.id||!data.token)throw Error('참가 정보를 발급하지 못했습니다.');
   session={id:data.id,token:data.token,nickname:data.nickname||nickname,stage:-1,code:null,status:'playing'};
-  save();return session;
+  save();loadAttempts();return session;
  }
  async function refresh(){if(!session)return null;const data=await call('status');session={...session,...data,token:session.token};save();return session;}
  async function stage(stage){
@@ -54,6 +59,29 @@ export function createOdenEventClient({storage=globalThis.localStorage,fetcher=g
    const data=await call('telemetry',{report:summary});
    session={...session,...data,token:session.token};save();return session;
   });
+ }
+ // Cumulative snapshots replace older ones; failed delivery remains durable across reloads.
+ async function flushAttempts(force=false){
+  if(!session||!config.enabled||(!force&&Date.now()<nextAttemptRetry))return;
+  if(attemptFlight)return attemptFlight;
+  attemptFlight=(async()=>{
+   while(pending.length){
+    const report=pending[0];
+    try{await call('attempt',{report});}
+    catch(error){lastError=error.message;nextAttemptRetry=Date.now()+15000;return;}
+    nextAttemptRetry=0;
+    pending=pending.filter(item=>item.attempt_id!==report.attempt_id||item.revision>report.revision);
+    persistAttempts();
+   }
+  })();
+  try{await attemptFlight;}finally{attemptFlight=null;}
+ }
+ function recordAttempt(report){
+  if(!session||!config.enabled)return Promise.resolve();
+  const previous=pending.find(item=>item.attempt_id===report.attempt_id);
+  if(previous&&(previous.revision>=report.revision||previous.outcome!=='playing'&&report.outcome==='playing'))return flushAttempts();
+  pending=pending.filter(item=>item.attempt_id!==report.attempt_id);pending.push(report);
+  if(pending.length>50)pending.shift();persistAttempts();return flushAttempts();
  }
  async function appeal(note){
   if(!session)return null;
@@ -77,6 +105,7 @@ export function createOdenEventClient({storage=globalThis.localStorage,fetcher=g
   get error(){return lastError;},
   get active(){try{return !!session&&storage?.getItem(EVENT_MODE_KEY)===config.eventId;}catch{return false;}},
   setActive(active){try{if(active&&session)storage?.setItem(EVENT_MODE_KEY,config.eventId);else storage?.removeItem(EVENT_MODE_KEY);}catch{}},
-  join,refresh,stage,finish,report,appeal
+  get pendingAttempts(){return pending.length;},
+  join,refresh,stage,finish,report,appeal,recordAttempt,flushAttempts
  };
 }

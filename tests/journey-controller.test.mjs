@@ -3,23 +3,28 @@ import assert from 'node:assert/strict';
 import {installJourney} from '../src/journey.mjs';
 import {bindBattleSession} from '../src/battle-session.mjs';
 import {SAVE_KEY,freshProfile} from '../src/journey-state.mjs';
+import {ODEN_EVENT} from '../src/oden-event-config.mjs';
+import {EVENT_KEY,EVENT_MODE_KEY} from '../src/oden-event-client.mjs';
 import {BOSS_REGISTRY} from '../src/boss-registry.mjs';
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
-function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=false}={}){
+function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=false,registered=false}={}){
  const listeners=new Map(),windowListeners=new Map(),timers=[],data=new Map(),modals={},releases=[],states=[];
  if(savedProfile)data.set(SAVE_KEY,JSON.stringify(savedProfile));
- const root=()=>({addEventListener(){},removeEventListener(){},getElementById:id=>id==='result'?{hidden:false}:id==='battle-preparation'?{style:{},hidden:true}:{focus(){}}});
+ const analytics=[];let resultHidden=false;
+ if(registered){data.set('oibung.odenring.legacy-save-reset.2026-11-10','done');data.set(EVENT_KEY+':'+ODEN_EVENT.eventId,JSON.stringify({id:'qa-owner',nickname:'QA',token:'a'.repeat(64),stage:-1}));data.set(EVENT_MODE_KEY,ODEN_EVENT.eventId);}
+ const root=()=>({addEventListener(){},removeEventListener(){},getElementById:id=>id==='result'?{hidden:resultHidden}:id==='battle-preparation'?{style:{},hidden:true}:{focus(){}}});
  const dialog={...root(),open:true,html:'',set innerHTML(v){this.html=v;},querySelector:()=>({focus(){}}),showModal(){this.open=true;},close(){this.open=false;},addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)};
  let current,lastLaunch;
  const doc={...root(),hidden:false,getElementById:id=>id==='journey'?dialog:modals[id]||root().getElementById(id)};
  const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener:(type,fn)=>{const a=windowListeners.get(type)||[];a.push(fn);windowListeners.set(type,a);},removeEventListener:(type,fn)=>{windowListeners.set(type,(windowListeners.get(type)||[]).filter(f=>f!==fn));}};
- const makeGame=()=>({status:'playing',time:10,weapon:'sword',player:{maxHp:120,hp:120,potions:3},boss:{hp:100,maxHp:100}});
+ if(registered)win.fetch=async(_url,opts)=>{const body=JSON.parse(opts.body);if(body.action==='attempt')analytics.push(body.report);return {ok:true,json:async()=>({stage:body.stage})};};
+ const makeGame=()=>({events:[],stats:{damage:0,hits:0},status:'playing',time:10,weapon:'sword',player:{maxHp:120,hp:120,potions:3},boss:{hp:100,maxHp:100}});
  releases.push(bindBattleSession(doc,()=>({game:current,start(w,configure){current=makeGame();current.weapon=w;configure(current);},menu(){},pause(){}})));
  const loadBattle=async boss=>{if(failLoadOnce){failLoadOnce=false;throw Error('test load failure');}const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch,launchGyuwonBattle:launch};};
  let releaseClown;const scenes=[];const api=installJourney(doc,win,{loadBattle,playPull:()=>{scenes.push('pull');return {finished:Promise.resolve(true),dispose(){}};},playTransition:boss=>{if(failScene===boss)throw Error('cinematic exploded');scenes.push(boss);return {finished:boss==='clown'&&holdClown?new Promise(r=>releaseClown=r):Promise.resolve(true),dispose(){releaseClown?.(false);}};},makeMusic:()=>({unlock(){},update:on=>states.push(on),dispose(){}})});
  const click=(action,extra={})=>listeners.get('click')({target:{closest:()=>({dataset:{j:action,...extra}})}});
  const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},...overrides};for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
- return {api,dialog,data,states,scenes,finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
+ return {api,dialog,data,states,scenes,analytics,setResultHidden:v=>{resultHidden=v;},finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
 }
 test('controller grants five repeatable flames, replaces relic choices, and records a full clear',async()=>{
  const f=rig();await f.click('new');await f.click('begin');
@@ -226,5 +231,16 @@ test('semicolon stays inert on home, in forge, and after returning home',async()
   for(let i=0;i<10;i++)assert.equal(f.key('Semicolon').prevented,undefined);
   assert.equal(saved().flames,0);assert.equal(saved().earnedFlames,0);
  }
+ await f.api.dispose();f.release();
+});
+
+test('event analytics record each defeat once while the result screen is delayed, then a new attempt on retry',async()=>{
+ const f=rig({registered:true});await f.click('new');await f.click('begin');await flush();
+ f.setResultHidden(true);f.game().status='lost';
+ for(let i=0;i<5;i++)await f.poll();await flush();
+ assert.equal(new Set(f.analytics.map(r=>r.attempt_id)).size,1);
+ assert.equal(f.analytics.filter(r=>r.outcome==='lost').length,1);
+ f.setResultHidden(false);await f.poll();await f.click('restart');await flush();
+ assert.equal(new Set(f.analytics.map(r=>r.attempt_id)).size,2);
  await f.api.dispose();f.release();
 });

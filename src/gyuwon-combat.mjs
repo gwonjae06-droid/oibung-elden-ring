@@ -1,3 +1,4 @@
+import {noteSkillHit} from './skill-telemetry.mjs';
 import {annualFloorHeight,resolveAnnualWorldMotion} from './gyuwon-year-world-data.mjs';
 import {pushOutAnnualCover} from './gyuwon-nightmare-mechanics.mjs';
 import {acceptAnnualDamage,GYUWON_MUSICAL_TOTAL_HP} from './gyuwon-annual-progress.mjs';
@@ -123,8 +124,8 @@ function hit(g,amount,source,impact=null){
  const s=g.gyuwon;if(s.elevation>2&&!WEAPONS[g.weapon].projectile)return;
  const damage=damageGyuwon(g,amount*(g.boss.phase===2?(g.boss.state==='recovery'?1.6:s.elevation>2?.65:1):1),impact);
  if(damage>0)settlePlayerHit(g,damage,source,{canStun:g.boss.state!=='transition',stun:d=>{s.stun=Math.min(1.2,d);}});
- else if(s.years?.mode==='combat'&&s.lastHitReceipt?.calendarSeconds>0)
-  g.stats.hits++; // A confirmed physical hit, but not fake HP damage.
+ else if(s.years?.mode==='combat'&&s.lastHitReceipt?.calendarSeconds>0){
+  noteSkillHit(g,source);g.stats.hits++;} // A confirmed physical hit, but not fake HP damage.
 
 }
 function hazard(g,shape,opts={}){const h={id:g.nextId++,shape,x:g.boss.x,z:g.boss.z,r:2,warn:1,life:.35,age:0,damage:24,hit:false,...opts};g.gyuwon.hazards.push(h);return h;}
@@ -279,7 +280,7 @@ function hurt(g,h){
  h.hit=true;p.invuln=.65;
  p.action={kind:'hurt',t:0,total:.22};
  if(h.slow)g.gyuwon.slow=h.slow;
- emit(g,'hurt',{amount});
+ emit(g,'hurt',{amount,source:g.gyuwon.pattern||h.visual});
  if(p.hp<=0){g.status='lost';g.gyuwon.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function tickBoss(g,dt,input={}){

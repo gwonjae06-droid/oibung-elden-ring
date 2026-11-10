@@ -796,7 +796,7 @@ function hurtPlayer(g, damage,cut=true) {
   const before=p.hp;p.hp = Math.max(0, p.hp - amount);
   p.invuln = 0.32;
   p.action = {kind: 'hurt', t: 0, total: 0.22};
-  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount});
+  applyBossHitTrait(g,before-p.hp,{cut});emit(g, 'player-hit', {amount,source:g.boss.pattern});
   freeze(g, 0.07);
   if (!p.hp) {
     g.status = 'lost';

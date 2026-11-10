@@ -1,3 +1,4 @@
+import {storeAttempt} from './attempts.js';
 import {classifyEventRisk,nextEventRisk,riskLevel} from './risk.js';
 // Public endpoint with application-level bearer-token authentication.
 // Deploy with verify_jwt=false; database tables deny ALL browser roles.
@@ -19,12 +20,12 @@ function cors(origin){return {'Access-Control-Allow-Origin':origin&&ALLOWED_ORIG
  'Cache-Control':'no-store','Vary':'Origin'};}
 function response(data,status,origin){return new Response(JSON.stringify(data),{status,headers:{...cors(origin),'Content-Type':'application/json; charset=utf-8'}});}
 const fail=(message,status,origin)=>response({error:message},status,origin);
-async function db(method,params={},body=null){
+async function db(method,params={},body=null,table=TABLE,prefer='return=representation'){
  const key=secret();const base=Deno.env.get('SUPABASE_URL');
  if(!key||!base)throw Error('Event backend is not configured');
- const url=new URL(base.replace(/\/$/,'')+'/rest/v1/'+TABLE);
+ const url=new URL(base.replace(/\/$/,'')+'/rest/v1/'+table);
  for(const [k,v]of Object.entries(params))url.searchParams.set(k,v);
- const headers={apikey:key,Accept:'application/json',Prefer:'return=representation'};
+ const headers={apikey:key,Accept:'application/json',Prefer:prefer};
  if(key.startsWith('eyJ'))headers.Authorization='Bearer '+key;
  if(body!==null)headers['Content-Type']='application/json';
  const r=await fetch(url,{method,headers,...(body!==null?{body:JSON.stringify(body)}:{})});
@@ -45,8 +46,9 @@ Deno.serve(async request=>{
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});
  if(request.method!=='POST')return fail('POST만 허용합니다.',405,origin);
  try{
-  if(Number(request.headers.get('content-length')||'0')>2048)return fail('요청이 너무 깁니다.',413,origin);
-  const input=await request.json();
+  if(Number(request.headers.get('content-length')||'0')>16384)return fail('요청이 너무 깁니다.',413,origin);
+  const raw=await request.text();if(utf8.encode(raw).length>16384)return fail('요청이 너무 깁니다.',413,origin);
+  const input=JSON.parse(raw);
   if(input?.eventId!==EVENT_ID)return fail('다른 이벤트입니다.',400,origin);
   if(input.action==='register'){
    const nickname=String(input.nickname||'').normalize('NFC').trim();
@@ -68,6 +70,10 @@ Deno.serve(async request=>{
   const p=rows[0];
   if(!p)return fail('등록된 참가자 정보가 없습니다.',401,origin);
   if(input.action==='status')return response(safe(p),200,origin);
+  if(input.action==='attempt'){
+   const result=await storeAttempt(db,p,EVENT_ID,input.report);
+   return result.error?fail(result.error,result.status,origin):response(result,200,origin);
+  }
   if(input.action==='telemetry'){
    if(p.completed_at)return response(safe(p),200,origin);
    const report=input.report;

@@ -296,7 +296,7 @@ function hurt(g,h){
   if(h.shape==='ring')h.hit=true;
   return;}
  h.hit=true;const amount=Math.min(p.hp,playerIncomingDamage(g,h.damage));
- const before=p.hp;p.hp=Math.max(0,p.hp-amount);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount});
+ const before=p.hp;p.hp=Math.max(0,p.hp-amount);applyBossHitTrait(g,before-p.hp,{boss:'blood'});p.invuln=.65;if(h.slow)g.blood.slow=h.slow;emit(g,'hurt',{amount,source:g.blood.pattern||h.visual});
  if(p.hp<=0){g.status='lost';g.blood.hazards.length=0;g.projectiles.length=0;emit(g,'death');}
 }
 function beginRecovery(g,duration){

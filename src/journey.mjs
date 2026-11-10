@@ -1,3 +1,4 @@
+import {createSkillTelemetry} from './skill-telemetry.mjs';
 import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-ending-photo-state.mjs';
 import {ODEN_EVENT} from './oden-event-config.mjs';
 import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
@@ -37,6 +38,19 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
  let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false,eventError='';
  let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null;
+ let skill=null,skillGame=null,skillSentAt=-Infinity;const completedSkillGames=new WeakSet();
+ const skillDevice=win.matchMedia?.('(pointer: coarse)')?.matches?'touch':'keyboard-mouse';
+ function sendSkill(outcome='playing'){
+  if(!skill)return;
+  const report=skill.snapshot(outcome);void event.recordAttempt(report);skillSentAt=Date.now();
+  if(outcome!=='playing'){completedSkillGames.add(skillGame);skill.dispose();skill=null;skillGame=null;}
+ }
+ function beginSkill(g,boss){
+  if(skillGame===g||completedSkillGames.has(g))return;
+  if(skill)sendSkill(skillGame?.status==='won'?'won':skillGame?.status==='lost'?'lost':'interrupted');
+  if(!eventMode||!event.registered||profile.run?.secret||profile.run?.sandbox)return;
+  skill=createSkillTelemetry(g,{boss,device:skillDevice});skillGame=g;skillSentAt=-Infinity;
+ }
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -112,7 +126,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
     +(s?.stage===4&&!s?.code&&eventMode&&pref('oibung.gyuwon.ending-watched','0')==='1'?button('event-claim-retry','엔딩 인증번호 재요청','class="j-primary"'):'')
     +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
        button('event-normal','일반 게임 기록으로 전환'));
-  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전합니다.</p>'
+  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전합니다.</p><p>실력과 난이도 분석을 위해 도전 결과·피격·공격·회복 통계와 무기·강화·입력 방식을 관리자에게 전송합니다. 키 입력 내용이나 화면 좌표는 수집하지 않습니다.</p>'
     +(s?registered:register)+error+back()+warning()+'</div>');
  }
  function reportEventStage(stage){
@@ -174,8 +188,8 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   show(`<div class="j-panel j-records"><h1>기록실</h1><p>전체 클리어 ${profile.clears}회 · 선택 보스부터 시작한 기록은 별도로 표시합니다.</p>${rows.length?table+cards:`<p>여정 완수 기록은 아직 없습니다. ${BOSSES.length}명의 보스를 쓰러뜨리면 완수 기록이 남습니다.</p>`}${profile.memories?.length?profile.memories.map(entry=>{const m=CHAPTER_MEMORIES[entry.id];return `<details class="j-memory-record"><summary>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</summary><section><div class="j-memory-art" data-memory="${entry.id}" aria-hidden="true"></div><div><h2>${BOSS_NAMES[BOSSES.indexOf(entry.id)]} · ${m.title}</h2><p>${m.last}</p><p>${m.text}</p><p>서약 · ${m.oath} · 첫 토벌 ${entry.firstClear?new Date(entry.firstClear).toLocaleDateString('ko-KR'):'이전 기록'}</p></div></section></details>`;}).join(''):'<p>보스를 토벌하면 서약의 기억과 첫 토벌 날짜가 기록됩니다.</p>'}${back()}</div>`);
  }
  function settings(){screen='settings';show(`<div class="j-panel"><h1>설정</h1><label class="j-setting"><input type="checkbox" id="j-muted" ${pref('oibung-muted','0')==='1'?'checked':''}> 모든 소리 끄기</label><label class="j-setting">메인 테마 개별 음량 <input id="j-volume" type="range" min="0" max="1" step=".05" value="${volume}"></label>${audioSliders()}<details><summary>조작법</summary><p>WASD / 방향키 이동 · J / 좌클릭 공격 · L / 우클릭 스킬<br>Space 회피 · E 회복약 · Q 록온 · Esc 일시정지<br>모바일에서는 화면 조이스틱과 행동 버튼을 사용합니다.</p></details>${back()}${warning()}</div>`);}
- async function closeBattle(){suppressClose=true;try{await view?.close?.();view=null;if(root!==doc&&roots.has(root)){root.removeEventListener('click',roots.get(root),true);roots.delete(root);}readBattleSession(doc)?.menu?.();}finally{suppressClose=false;}game=null;root=doc;}
- function accountInterrupted(){monitor.flush();if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);const r=profile.run;if(!r.secret&&!r.sandbox)reportEventStage(r.stage);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
+ async function closeBattle(){if(skill)sendSkill(skillGame?.status==='won'?'won':skillGame?.status==='lost'?'lost':'interrupted');suppressClose=true;try{await view?.close?.();view=null;if(root!==doc&&roots.has(root)){root.removeEventListener('click',roots.get(root),true);roots.delete(root);}readBattleSession(doc)?.menu?.();}finally{suppressClose=false;}game=null;root=doc;}
+ function accountInterrupted(){monitor.flush();if(skill)sendSkill(game?.status==='won'?'won':game?.status==='lost'?'lost':'interrupted');if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);const r=profile.run;if(!r.secret&&!r.sandbox)reportEventStage(r.stage);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
  async function goHome(){if(busy)return;await poll(true);busy=true;try{if(game?.status==='playing')readBattleSession(root)?.pause?.();accountInterrupted();await closeBattle();home();}finally{busy=false;}}
  // Runs one cinematic. Any error or a run longer than the limit switches all cinematics off and the game simply carries on.
  async function play(make){
@@ -204,16 +218,21 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function nextReady(){screen='ready';const r=profile.run,place=BOSS_REGISTRY[BOSSES[r.stage]].place||'다음 시련';show(`<div class="j-panel"><p class="j-kicker">${place} · THE NEXT OATH</p><h1>${BOSS_NAMES[r.stage]}</h1><p>정화의 불꽃은 보관되었습니다. 대장간에서 영구 각인한 ${WEAPONS[r.weapon]}의 무기 진화는 다음 전투에도 유지됩니다.</p>${button('next','다음 도전','class="j-primary"')}${warning()}</div>`);}
  async function launch(){
   if(busy||!profile.run)return;busy=true;screen='loading';show(`<div class="j-panel"><h1>${BOSS_NAMES[profile.run.stage]}</h1><p role="status">전장을 준비합니다…</p></div>`);
-  try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>{configureJourney(g,r,profile);if(eventMode)g.odenPrizeEvent=true;};
+  try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>{configureJourney(g,r,profile);if(eventMode)g.odenPrizeEvent=true;beginSkill(g,entry.id);};
    if(entry.kind==='arena'){readBattleSession(doc).start(r.weapon,configure);root=doc;}
    else{const m=await loadBattle(entry.id);if(disposed)return;const onClose=()=>{if(!suppressClose&&!disposed){accountInterrupted();view=null;game=null;home();}};view=entry.launch(m,{weapon:r.weapon,configure,onClose,startPhase:r.secret?r.secretPhase||1:1,eventMode,endingStorage:eventMode?storage:null});if(!view)throw Error('Battle unavailable');root=doc.getElementById(entry.dialogId).firstElementChild.shadowRoot;}
    game=readBattleSession(root)?.game;if(!game)throw Error('Battle session unavailable');
+   beginSkill(game,entry.id);sendSkill();
    
    if(entry.kind==='arena'&&transitionsOn){const session=readBattleSession(root);session.pause?.();const pause=root.getElementById('pause-screen');const old=pause?.style?.visibility;if(pause?.style)pause.style.visibility='hidden';try{await scene(entry.id);}finally{if(pause?.style)pause.style.visibility=old;}if(disposed)return;session.resume?.();}screen='battle';dialog.close();readBattleSession(root)?.intro?.();syncMusic();watchRoot(root);root.getElementById('world')?.focus();
   }catch(error){console.error('Journey launch failed',error);await closeBattle();show(`<div class="j-panel"><h1>전장을 열지 못했습니다</h1><p>인터넷 연결과 WebGL 지원을 확인한 뒤 다시 시도해 주세요. 저장된 여정은 유지됩니다.</p>${button('continue','다시 시도')}${back()}</div>`);}finally{busy=false;}
  }
  function watchRoot(target){if(roots.has(target))return;const listener=e=>{const b=e.target.closest?.('button');if(!b||screen!=='battle')return;if(b.id==='retry'){e.preventDefault();e.stopImmediatePropagation();const r=profile.run;if(!r||busy)return;(async()=>{await poll(true);profile.run=r.sandbox?newBossPracticeRun(r.weapon,r.startStage):newTravelRun(profile,r.weapon,r.startStage||0)??newRun(r.weapon);await launch();})();return;}if(['quit','change'].includes(b.id)){e.preventDefault();e.stopImmediatePropagation();goHome();}};target.addEventListener('click',listener,true);roots.set(target,listener);}
- async function poll(force=false){if(disposed||screen!=='battle'||!game||busy)return;const arena=root.getElementById('arena');let prep=root.getElementById('battle-preparation');if(!prep&&arena?.appendChild&&doc.createElement){prep=doc.createElement('p');prep.id='battle-preparation';prep.setAttribute('role','status');prep.style.cssText='position:absolute;top:28%;left:0;width:100%;text-align:center;z-index:30;color:#fff0ba;font:600 22px serif;text-shadow:0 2px 10px #000;pointer-events:none';arena.appendChild(prep);}if(prep?.style){prep.hidden=game.player.action?.kind!=='charging';prep.textContent=game.player.action?.kind==='charging'?'차징 · '+Math.min(100,Math.round(game.player.action.t/.9*100))+'%':'';}const result=root.getElementById('result');if(game.status==='playing'||!result||(!force&&result.hidden)||seen.has(game))return;
+ async function poll(force=false){if(disposed)return;void event.flushAttempts();if(screen!=='battle'||!game||busy)return;
+  if(skillGame!==game)beginSkill(game,BOSSES[profile.run?.stage]);
+  skill?.sample();if(skill&&Date.now()-skillSentAt>=30000)sendSkill();
+  if(skill&&game.status!=='playing')sendSkill(game.status==='won'?'won':'lost');
+  const arena=root.getElementById('arena');let prep=root.getElementById('battle-preparation');if(!prep&&arena?.appendChild&&doc.createElement){prep=doc.createElement('p');prep.id='battle-preparation';prep.setAttribute('role','status');prep.style.cssText='position:absolute;top:28%;left:0;width:100%;text-align:center;z-index:30;color:#fff0ba;font:600 22px serif;text-shadow:0 2px 10px #000;pointer-events:none';arena.appendChild(prep);}if(prep?.style){prep.hidden=game.player.action?.kind!=='charging';prep.textContent=game.player.action?.kind==='charging'?'차징 · '+Math.min(100,Math.round(game.player.action.t/.9*100))+'%':'';}const result=root.getElementById('result');if(game.status==='playing'||!result||(!force&&result.hidden)||seen.has(game))return;
   monitor.flush();seen.add(game);const r=profile.run;if(!r)return;
   const name=BOSS_NAMES[r.stage],won=game.status==='won';if(won&&!r.secret&&!r.sandbox)reportEventStage(r.stage);
   const outcome=finishAttempt(profile,{won,time:game.time,damage:game.stats?.damage});persist();
@@ -335,6 +354,10 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  };
 
  const input=e=>{if(e.target.id==='j-muted'){put('oibung-muted',e.target.checked?'1':'0');syncMusic();}if(e.target.id==='j-volume'){volume=Number(e.target.value);put('oibung.menu.volume',String(volume));syncMusic();}if(e.target.dataset?.audioChannel){writeAudioVolume(e.target.dataset.audioChannel,e.target.value,storage);syncMusic();}};
+ const checkpointSkill=()=>{if(doc.hidden&&skill)sendSkill();};
+ const leaving=e=>{if(!e.persisted&&skill)sendSkill(game?.status==='won'?'won':game?.status==='lost'?'lost':'interrupted');};
+ const retrySkill=()=>{void event.flushAttempts(true);};
+ doc.addEventListener('visibilitychange',checkpointSkill);win.addEventListener('pagehide',leaving);win.addEventListener('online',retrySkill);
  const cancel=e=>{e.preventDefault();if(!busy&&screen!=='home')goHome();};
  const recordEventInput=e=>{
   if(!eventMode||screen!=='battle'||doc.hidden||!focused)return;
@@ -347,5 +370,5 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  win.addEventListener('keydown',recordEventInput,true);win.addEventListener('pointerdown',recordEventInput,true);
  win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
  const timer=win.setInterval(poll,150);if(dialog.open)dialog.close();home();
- return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);monitor.flush();win.removeEventListener('keydown',recordEventInput,true);win.removeEventListener('pointerdown',recordEventInput,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
+ return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();doc.removeEventListener('visibilitychange',checkpointSkill);win.removeEventListener('pagehide',leaving);win.removeEventListener('online',retrySkill);disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);monitor.flush();win.removeEventListener('keydown',recordEventInput,true);win.removeEventListener('pointerdown',recordEventInput,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
 }
