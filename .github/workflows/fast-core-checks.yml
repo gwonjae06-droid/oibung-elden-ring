@@ -40,7 +40,7 @@ jobs:
         run: npm install --no-save --no-audit --no-fund three@0.180.0
       - name: Check critical gameplay module syntax
         run: |
-          for f in src/combat.mjs src/arena.mjs src/kwon-lunar-sculpture.mjs src/kwon-moon-cataclysm-view.mjs src/kwon-moon-cataclysm.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs; do
+          for f in src/combat.mjs src/arena.mjs src/kwon-lunar-sculpture.mjs src/kwon-moon-cataclysm-view.mjs src/kwon-moon-cataclysm.mjs src/arena-damage.mjs src/kwon-third-phase.mjs src/kwon-third-phase-view.mjs src/boss-stance.mjs src/clown-battle.mjs src/blood-battle.mjs src/gyuwon-battle.mjs src/gyuwon-years.mjs src/gyuwon-hidden-year-menu.mjs; do
             node --check "$f"
           done
       - name: Verify Kwon counterattack windows and close-range pressure
@@ -64,6 +64,7 @@ jobs:
           tests/gyuwon-years.test.mjs
           tests/gyuwon-song-clock.test.mjs
           tests/gyuwon-musical-route.test.mjs
+          tests/gyuwon-hidden-year-menu.test.mjs
           tests/gyuwon-curtain-call.test.mjs
           tests/gyuwon-living-doodle.test.mjs
           tests/gyuwon-act-five-literal.test.mjs
