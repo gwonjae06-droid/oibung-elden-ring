@@ -1,8 +1,7 @@
+import {drawGyuwonPerformer} from './gyuwon-performance-art.mjs';
+import {gyuwonFightPoseAt} from './gyuwon-performance-poses.mjs';
 import {gyuwonFightScene,gyuwonFightGroundScreen} from './gyuwon-fight-director.mjs';
-import {stagePerson,round,bar,label,burst,flower} from './gyuwon-2d-art.mjs';
-import {drawGyuwonLyricBackdrop,drawGyuwonLyricGesture} from './gyuwon-lyric-2d-art.mjs';
-import {drawGyuwonCinematic2dSet,drawGyuwonCinematicActorProp} from './gyuwon-cinematic-2d-props.mjs';
-import {drawArmoredRunner} from './gyuwon-runner-art.mjs';
+import {round,bar,label} from './gyuwon-2d-art.mjs';
 const TAU=Math.PI*2,clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const sx=x=>640+x*33;
 function glow(c,x,y,r,color,alpha=.7){
@@ -26,7 +25,7 @@ function backdrop(c,m,scene){
    c.strokeStyle='#d9b47b';c.lineWidth=7;c.beginPath();c.moveTo(x,0);c.bezierCurveTo(x-side*60,195,x+side*75,415,x-side*45,535);c.stroke();
   }
   for(let i=0;i<7;i++){const x=135+i*170;c.fillStyle='#a67d62';round(c,x,175,31,355,4,'#8c6170','#d3ad81',3);round(c,x-12,155,56,28,4,'#dfb98a');}
-  c.strokeStyle='#f3d89c';c.lineWidth=3;c.beginPath();c.ellipse(638,95,245,58,0,0,TAU);c.stroke();
+
   for(let i=0;i<15;i++)glow(c,180+i*64,114+Math.sin(i*.65)*20,22,'#fff2bd',.5);
   glow(c,650,225,450,'#dbabc7',.28);
  }else if(roof){
@@ -93,86 +92,38 @@ function floor(c,m,scene){
  for(let i=0;i<3;i++){c.beginPath();c.moveTo(25,480+i*25);c.lineTo(125,488+i*25);c.moveTo(1144,488+i*25);c.lineTo(1255,480+i*25);c.stroke();}
 }
 function fightActor(c,f,i,m,scene,portrait){
- const x=sx(f.x),t=m.time,feetY=580-45*((f.floorY||0)+f.y);
+ const x=sx(f.x),feetY=gyuwonFightGroundScreen(m.time,f.x)-45*f.y;
+ const pose=gyuwonFightPoseAt(f,m.time,m.lyricAction);
+ drawGyuwonPerformer(c,x,feetY,{scale:1.52,face:f.facing,pose,gyuwon:i===1,portrait,
+  color:scene.role==='king'?'#a18b5c':scene.role==='clown'?'#98637c':'#655578',crouch:f.crouch,
+  costume:i===1?scene.role:null});
  const a=f.action;
- const pose=f.stun>0?'guard':a?(a.t<a.wind?'wind':a.t<a.wind+a.live?'strike':'idle'):f.guard?'guard':f.crouch?'crouch':f.y>0?'jump':'idle';
- const color=i?(scene.role==='king'?'#c7a66a':scene.role==='clown'?'#ba7c94':scene.role==='sky'?'#819fc9':'#9d7f8f'):'#638ba8';
- c.save();
- if(i&&scene.role==='reflection'&&m.fightRound===3){
-  c.globalAlpha=.3;for(let j of [-1,1])stagePerson(c,x+j*165,feetY+7,{scale:1.35,t:t+j,pose:'guard',face:-j,color:'#7d85a5',gyuwon:false});
-  c.globalAlpha=1;
+ if(a&&a.t>=a.wind&&a.t<a.wind+a.live&&a.kind!=='light'){
+  // Narrow strokes follow the actual punching hand or sweeping boot. They
+  // never depict a separate hitbox, ring, aura or off-body explosion.
+  const progress=clamp((a.t-a.wind)/a.live),contact=x+f.facing*a.range*24;
+  c.save();c.globalAlpha=(1-progress)*.55;c.lineWidth=a.kind==='super'?7:3;
+  c.strokeStyle=i?'#dac4a1':'#bdcdd7';c.lineCap='round';
+  for(let k=0;k<3;k++){c.beginPath();c.moveTo(contact-f.facing*(15+k*7),feetY-140+k*7);c.lineTo(contact-f.facing*(45+k*7),feetY-130+k*7);c.stroke();}
+  c.restore();
  }
- if(i){
-  stagePerson(c,x,feetY,{scale:1.65,t,pose,face:f.facing,color,gyuwon:true,portrait,reach:a?Math.min(170,a.range*33/1.65):76,lyric:!a?m.lyricAction:null});
-  drawGyuwonLyricGesture(c,m,{x,y:feetY,scale:1.3});
-  drawGyuwonCinematicActorProp(c,m,{x,y:feetY,scale:1.65,face:f.facing});
- }else drawArmoredRunner(c,x,feetY,{scale:1.22,t,pose:f.y>0?'jump':f.crouch?'slide':a?'run':'walk',weapon:m.playerWeapon||'sword',slideAmount:f.crouch?1:0});
- if(i&&scene.role==='king'){
-  c.fillStyle='#f7d68c';c.beginPath();c.moveTo(x-30,feetY-204);c.lineTo(x-20,feetY-242);c.lineTo(x-4,feetY-219);c.lineTo(x+9,feetY-251);c.lineTo(x+22,feetY-220);c.lineTo(x+35,feetY-244);c.lineTo(x+30,feetY-202);c.closePath();c.fill();
- }else if(i&&scene.role==='clown'){
-  c.fillStyle='#b6547e';c.beginPath();c.moveTo(x-28,feetY-204);c.quadraticCurveTo(x-38,feetY-262,x-80,feetY-257);c.quadraticCurveTo(x-45,feetY-221,x-2,feetY-207);c.fill();
-  glow(c,x-61,feetY-251,17,'#ffd69f',.72);
- }else if(i&&['sky','ensemble'].includes(scene.role)){
-  c.strokeStyle=scene.role==='sky'?'#d5ebfd':'#ffe3a4';c.lineWidth=6;
-  for(const side of [-1,1]){c.beginPath();c.moveTo(x+side*22,feetY-112);
-   c.quadraticCurveTo(x+side*105,feetY-180,x+side*(120+Math.sin(t*3)*15),feetY-216);c.stroke();}
- }
- if(a&&a.t<a.wind){
-  const readiness=a.t/Math.max(.01,a.wind),reach=Math.min(280,a.range*33);
-  c.globalAlpha=.4+.45*readiness;c.strokeStyle=i?'#ffd48e':'#b3e7fb';c.lineWidth=3+readiness*5;
-  c.beginPath();c.arc(x,feetY-90,reach*.32, -Math.PI/2,Math.PI/2);c.stroke();
-  c.beginPath();c.moveTo(x+f.facing*25,feetY-90);c.lineTo(x+f.facing*reach,feetY-90);c.stroke();
- }
- if(a&&a.t>=a.wind&&a.t<a.wind+a.live){
-  c.strokeStyle=i?'#f9d69d':'#add9f6';c.lineWidth=a.kind==='super'?23:8;
-  c.beginPath();c.ellipse(x+f.facing*a.range*15,feetY-95,a.range*17,37,0,0,TAU);c.stroke();
-  glow(c,x+f.facing*a.range*22,feetY-98,a.kind==='super'?180:92,i?'#ffe8b6':'#a5dafa',.5);
- }
- c.restore();
 }
 export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
  const t=m.time,scene=m.fightWorld||gyuwonFightScene(t);
  backdrop(c,m,scene);
- drawGyuwonLyricBackdrop(c,m);
- drawGyuwonCinematic2dSet(c,m);
+
  floor(c,m,scene);
- for(const h of m.fightHazards||[]){
-  const age=t-h.at,pre=clamp(age/Math.max(.01,h.wind)),active=age>=h.wind;
-  const x=sx(h.x),y=gyuwonFightGroundScreen(t,h.x)+3,rx=h.radius*33;
-  c.save();c.globalAlpha=active ? .65 : (.28+pre*.43);
-  c.fillStyle=active?'#f4d3b7':'#e7a86f';c.beginPath();c.ellipse(x,y,rx,13+pre*15,0,0,TAU);c.fill();
-  c.strokeStyle='#fff2c4';c.lineWidth=4+pre*4;c.beginPath();c.ellipse(x,y,rx,12+pre*15,0,0,TAU);c.stroke();
-  c.restore();
-  // Echoes actually stand and strike where their locked contact circle is.
-  // No detached ghost attack or invisible damage at the player's location.
-  if(h.kind.startsWith('echo-')||h.kind==='chorus-finale'||h.kind==='grand-ring'){
-   c.save();c.globalAlpha=active ? .68 : (.2+.5*pre);
-   const fy=gyuwonFightGroundScreen(t,h.x,580,45);
-   const echoPose=h.kind==='echo-kick-prepare'?'jump':
-    h.kind==='echo-gather'?'guard':h.kind==='echo-blade'?'wind':
-    active?'strike':'wind';
-   stagePerson(c,x,fy,{scale:h.kind==='echo-slam'?1.8:1.52,t,
-    pose:echoPose,face:-1,color:h.kind==='echo-blade'?'#bddcef':h.kind==='echo-slam'?'#d7a9b5':'#b5a9da',
-    gyuwon:false,lyric:m.lyricAction});
-   if(h.kind==='chorus-finale')for(const side of [-1,1]){
-    c.globalAlpha=.18+.25*pre;
-    stagePerson(c,x+side*(90-35*pre),fy,{scale:1.13,t,pose:active?'strike':'wind',face:-side,color:'#d7b1a3',gyuwon:false});
-   }
-   c.restore();
-  }
-  if(active)burst(c,x,y-52,45+(age-h.wind)*65,t,'#fff0c9');
- }
  for(const o of m.encoreOrbs||[]){
   if(o.collected)continue;const x=sx(o.x),y=gyuwonFightGroundScreen(t,o.x)-106+Math.sin(t*3)*12;
-  glow(c,x,y,82,'#fff1b5',.75);c.strokeStyle='#fff5d8';c.lineWidth=5;
-  c.beginPath();c.arc(x,y,24+Math.sin(t*4)*3,0,TAU);c.stroke();
-  flower(c,x,y,.8,'#ffefc7');
+  round(c,x-13,y-18,26,36,3,'#d2b781','#574b43',2);c.fillStyle='#f1e5c3';c.fillRect(x-8,y-12,16,2);
  }
  for(let i=0;i<2;i++)fightActor(c,m.fighters[i],i,m,scene,portrait);
  for(const spark of m.hitSparks||[]){
-  burst(c,sx(spark.x),580-spark.y*45,48*(1-spark.age/.4),t,spark.blocked?'#9fe6ec':'#ffeb9a');
+  const x=sx(spark.x),y=gyuwonFightGroundScreen(t,spark.x)-spark.y*45-75,q=1-spark.age/.22;
+  if(q<=0)continue;
+  c.save();c.globalAlpha=q;c.strokeStyle=spark.blocked?'#aebfca':'#e5c491';c.lineWidth=spark.blocked?2:3;
+  for(let k=0;k<5;k++){const a=-1.1+k*.55,d=(1-q)*23;c.beginPath();c.moveTo(x+Math.cos(a)*d,y+Math.sin(a)*d);c.lineTo(x+Math.cos(a)*(d+9*q),y+Math.sin(a)*(d+9*q));c.stroke();}c.restore();
  }
- if((m.fightParryFlash||0)>0)glow(c,sx(m.fighters[0].x),350,230,'#c3faff',m.fightParryFlash*2);
  const [p,b]=m.fighters;
  round(c,32,22,1216,103,20,'#16212cdb','#c6b28d',3);
  bar(c,128,40,427,23,p.hp,p.maxHp,'#e3b669','#634453');
@@ -186,14 +137,5 @@ export function drawGyuwonFightWorld(c,g,m,{portrait}={}){
  label(c,Math.round(m.score).toLocaleString(),640,684,22,'#fbe5ad','center',3);
  if(m.fightReset>0){glow(c,640,295,200,'#ffdfba',.5);
   label(c,p.hp<=0?'DOWN':'K.O.',640,305,88,'#fff1cf','center',8);
- }
- // Music handoff is a physical transformation: the dance marks pull apart to
- // form a fighting ring while the backing dancers recede behind the ropes.
- if(scene.kind==='handoff'){
-  const q=clamp(t/5.9);c.save();c.strokeStyle='#fbe0a8';c.lineWidth=5+q*8;c.globalAlpha=.3+q*.5;
-  c.beginPath();c.ellipse(640,531,300+q*270,25+q*20,0,0,TAU);c.stroke();c.restore();
- }
- if(scene.kind==='bow')for(let i=0;i<38;i++){
-  glow(c,(i*107)%1280,80+(i*73)%440,15,'#fff1c2',.38);
  }
 }

@@ -1,8 +1,10 @@
 // 11su and ending skeletal performance: original audio time -> cinematic
 // shot score -> real torso/neck/shoulders/elbows/knees. Read-only and seek-safe.
+import {gyuwonMonologueMotion} from './gyuwon-monologue.mjs';
 import {gyuwonCinematicMotionAt} from './gyuwon-cinematic-motion-score.mjs';
 export function gyuwonLyricActorMotion(lyric,time=0){
  if(!lyric)return null;
+ if(String(lyric.year)==='ending')return gyuwonMonologueMotion(lyric,time);
  const moment=gyuwonCinematicMotionAt(lyric.year,time);
  if(!moment)return null;
  const pose=moment.pose;

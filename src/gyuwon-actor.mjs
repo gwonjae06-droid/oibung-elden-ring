@@ -173,7 +173,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   const rider=mounted?rideFrame(mounted):null;
   root.position.set(rider?.x??b.x,g.status==='won'?death*death*1.5:rider?.y||0,rider?.z??b.z);
   root.rotation.set(rider?.pitch||0,p.facing,rider?.bank||0,'YXZ');
-  if(years?.musical?.finishing)root.position.y-=.72*Math.min(1,years.musical.curtain/8);
+  // The monologue remains planted on the floor rather than sinking below it.
   const roll=s.years?.dodge;
   if(roll)root.rotation.z=Math.sin(Math.PI*Math.min(1,roll.t/.72))*Math.sign(roll.toX-roll.fromX)*2.7;
   root.scale.setScalar(g.status==='won'?Math.max(.03,1-death/9):1);
@@ -204,6 +204,7 @@ export function createGyuwonActor(stage,{coarse=false}={}){
   wrists[1].rotation.set(p.rightWrist??0,0,0);
   if(years)handIk.update(years,weapon,mounted);
   yearRig.update(g);
+  root.traverse(o=>{if(/gyuwon-tailored-lapel|gyuwon-tie|gyuwon-jacket-button|gyuwon-jacket-seam/.test(o.name))o.visible=!years?.musical?.finishing;});
   book.rotation.x=p.book;
   book.visible=!years||years.mode==='combat'&&[2,3].includes(years.year);
    // Joint curls follow the same attack movement and relax after each cast.

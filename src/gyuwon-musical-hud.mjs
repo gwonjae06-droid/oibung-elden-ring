@@ -85,7 +85,7 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
    if(p.done[i]||p.misses[i])continue;const at=p.first+i*p.spacing*m.dancePeriod;
    if(at-m.time<1.3&&at>=m.time-.24)next={key:p.kind==='turn'?'L':'J',remaining:at-m.time};break;
   }if(next)break;}
-  nextKey.hidden=!next;if(next){nextKey.textContent='NEXT  '+next.key;nextKey.style.opacity=String(Math.max(.45,Math.min(1,1-next.remaining*.35)));}
+  nextKey.hidden=true;if(next){nextKey.textContent='NEXT  '+next.key;nextKey.style.opacity=String(Math.max(.45,Math.min(1,1-next.remaining*.35)));}
   const isTurn=m.year===5&&m.reference;queue.hidden=targets.hidden=party.hidden=points.hidden=!isTurn;
   if(isTurn){
    // New encore props keep a clickable target linked to their collider.
@@ -138,7 +138,7 @@ export function createGyuwonMusicalHud(doc,shell,{onAction=()=>{}}={}){
   const line=m.finishing?gyuwonDedicationAt(m.time):null;
   dedication.hidden=!line||line.opacity<=0;dedication.textContent=line?.line||'';
   dedication.style.opacity=String(line?.opacity||0);
-  if(line){const places=[[20,29],[70,30],[53,69],[28,52],[76,58],[49,34],[50,53]],pos=places[line.index%places.length];dedication.style.left=pos[0]+'%';dedication.style.right='auto';dedication.style.top=pos[1]+'%';dedication.style.transform='translate(-50%,-50%)';}
+  if(line){dedication.style.left='50%';dedication.style.right='auto';dedication.style.top='12%';dedication.style.transform='translate(-50%,-50%)';dedication.style.fontSize='clamp(13px,1.6vw,23px)';dedication.style.width='88%';}
   actions.hidden=curtainCall||m.finishing;
   top.hidden=curtainCall||m.finishing;
   const hasNote=!m.reference&&!!m.note&&!m.note.done&&m.kind==='rhythm';beat.hidden=!hasNote;if(hasNote){beat.style.transform='scale('+(1+Math.max(0,m.note.time/1.05))+')';beat.textContent=m.note.key==='roll'?'↯':m.note.key==='skill'?'♪':'♫';}

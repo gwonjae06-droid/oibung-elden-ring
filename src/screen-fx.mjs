@@ -26,7 +26,7 @@ export function installScreenFx(doc=globalThis.document,win=globalThis.window,{r
    }
    if(state.active&&healGain(state.prev,hp,max))state.heal=clock;
    state.prev=hp;state.active=true;states.set(vig,state);
-   const level=lowHealthLevel(hpRatio(hp,max)),heal=healFade(state.heal,clock);
+   const level=session?.game?.gyuwon?0:lowHealthLevel(hpRatio(hp,max)),heal=healFade(state.heal,clock);
    if(level>0||heal>0){vig.dataset.fx='';vig.style.setProperty('--lowhp',level.toFixed(3));vig.style.setProperty('--beat',(reduced?.45:heartbeat(clock/1000,level)).toFixed(3));vig.style.setProperty('--heal',heal.toFixed(3));}else clear(vig);
   }
   for(const vig of [...owned])if(!visited.has(vig)||vig.isConnected===false){clear(vig);const state=states.get(vig);if(state){state.active=false;state.heal=-1e9;}owned.delete(vig);}

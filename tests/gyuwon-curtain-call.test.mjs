@@ -40,7 +40,7 @@ test('800 HP transition displays seven dedication messages one by one',()=>{
  assert.deepEqual(GYUWON_END_DEDICATION,[
   '거미 배역 이권재','광대 배역 오슬우','주사위 배역 박성원',
   '혈왕 배역 배서준','수험생 최규원',
-  '이 게임을 최규원의 27수능에 바칩니다','규원아 수능 응원한다']);
+  '이 게임을 최규원의 27수능에 바칩니다','최규원의 앞날을 축복합니다']);
  assert.equal(gyuwonDedicationAt(1),null);
  for(let i=0;i<7;i++){
   const cue=gyuwonDedicationAt(8+i*10);

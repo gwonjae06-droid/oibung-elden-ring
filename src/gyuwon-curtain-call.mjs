@@ -43,7 +43,7 @@ export const GYUWON_END_DEDICATION=Object.freeze([
  '혈왕 배역 배서준',
  '수험생 최규원',
  '이 게임을 최규원의 27수능에 바칩니다',
- '규원아 수능 응원한다'
+ '최규원의 앞날을 축복합니다'
 ]);
 // One line at a time, fading on actual end-song audio time.
 export function gyuwonDedicationAt(time){

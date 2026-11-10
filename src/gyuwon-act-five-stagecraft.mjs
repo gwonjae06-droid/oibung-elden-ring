@@ -24,10 +24,10 @@ export function createActFiveStagecraft(parent,head,{coarse=false,hands=[]}={}){
  // Geometry is shared only by real raid targets/projectiles, never a star swarm.
  const starGeometry=geo(new T.ExtrudeGeometry(star,{depth:.16,bevelEnabled:false}));
  function update(m){const p=m.songPerformance||{},g=m.handPose?.action||p.gesture,w=p.weight||0;
-  crown.visible=(g==='king'||g==='crowns')&&w>.05;crown.scale.setScalar(Math.max(.001,w));
+  crown.visible=false;crown.scale.setScalar(Math.max(.001,w));
   door.visible=g==='doors'&&w>.05;hinge.rotation.y=-1.75*(p.progress||0)*w;
   path.visible=g==='roads'&&w>.05;sea.visible=g==='sea'&&w>.05;
-  horn.visible=g==='brass'&&w>.05;sword.visible=g==='knight'&&w>.05;
+  horn.visible=false;sword.visible=false;
  }
  return {root,update,starGeometry,stats:()=>({visibleProps:[crown,door,path,sea,horn,sword].filter(o=>o.visible).map(o=>o.name)}),dispose(){root.removeFromParent();crown.removeFromParent();horn.removeFromParent();sword.removeFromParent();for(const g of geos)g.dispose();for(const m of mats)m.dispose();}};
 }

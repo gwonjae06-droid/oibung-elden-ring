@@ -1,3 +1,4 @@
+import {createGyuwonMonologue} from './gyuwon-monologue.mjs';
 import {createGyuwonCurtainEnsemble} from './gyuwon-curtain-ensemble.mjs';
 import {createGyuwonLifeEpilogue} from './gyuwon-life-epilogue.mjs';
 import {captureGyuwonEnsemblePhoto} from './gyuwon-ensemble-photo.mjs';
@@ -61,6 +62,7 @@ export function launchGyuwonBattle({weapon='sword',configure=()=>{},onClose=()=>
    if(!coarse){sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-40,right:40,top:40,bottom:-40,near:1,far:110});sun.shadow.camera.updateProjectionMatrix();sun.shadow.normalBias=.028;}
    scene.add(sun);
   const study=buildGyuwonView(scene,{coarse,reduced});startup.own('Gyuwon view',()=>study.dispose());
+  const monologue=createGyuwonMonologue(scene,{coarse});startup.own('Gyuwon monologue',()=>monologue.dispose());
   const musicalStage=createGyuwonMusicalStage(scene,{coarse});startup.own('Gyuwon musical stage',()=>musicalStage.dispose());
 // Gyuwon already simulates ranged hits; the shared 3D projectile renderer
 // used by the other bosses was never attached to this battle scene.
@@ -134,7 +136,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   }
   function reset(){musicalScore.stop();introGate.arm();playerProjectiles.clear();traitView.clear();study.clear();recoverySfx.clear();damageFeedback.clear();impact.reset();g=createGyuwonGame(weapon,{yearMode:true});configure(g);freeLook.release();lock=true;yaw=0;pitch=KWON_CAMERA_REFERENCE.pitch;zoom=0;ending=0;finalPhoto=null;lifeFilm.reset();fx.clear();weaponSfx.clear();setMode('playing');sound();canvas.focus();introGate.begin();}
   const close=createBattleCleanup(()=>[
-   ['Gyuwon life epilogue',()=>lifeFilm.dispose()],
+   ['Gyuwon life epilogue',()=>lifeFilm.dispose()],['Gyuwon monologue',()=>monologue.dispose()],
    ['Gyuwon dancer cues',()=>danceCues.dispose()],
    ['Gyuwon reference graphics',()=>{curtainEnsemble.dispose();routeTransition.dispose();doodle.dispose();reverieView.dispose();flatView.dispose();turnStage.dispose();musicalStage.dispose();}],
    ['Gyuwon physical foley',()=>foley.dispose()],
@@ -222,7 +224,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     return;
    }
    shell.dataset.canvasInk='off';flatView.canvas.hidden=true;
-   study.update(g,impact.frozen?0:visualDt);musicalStage.update(g);musicalStage.root.visible=musicalStage.root.visible&&!referenceMini?.reference;turnStage.update(g);const actFiveFarewell=referenceMini?.year===5?gyuwonFiveToSixExit(referenceMini.time,referenceMini.clock?.duration||180):0;player.rig.visible=!(referenceMini?.reference&&referenceMini.year===5)||actFiveFarewell>.20;study.root.visible=!(referenceMini?.giantRaid)&&(referenceMini?.year!==11||referenceMini.finishing||referenceMini.curtainCall?.actorIndex===4);impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:g.gyuwon.years?.musical?.slide>0?.48:1;const walk=posePlayer(player,(g.gyuwon.years?.musical?.time??g.time)*7,a?0:g.gyuwon.years?.musical?.kind==='runner'?7:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=g.gyuwon.years?.musical?.playerStrike?-1.2+Math.sin(Math.min(1,g.gyuwon.years.musical.playerStrike.age/.6)*Math.PI)*2.5:a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);
+   study.update(g,impact.frozen?0:visualDt);musicalStage.update(g);monologue.update(g);musicalStage.root.visible=musicalStage.root.visible&&!referenceMini?.reference;turnStage.update(g);const actFiveFarewell=referenceMini?.year===5?gyuwonFiveToSixExit(referenceMini.time,referenceMini.clock?.duration||180):0;player.rig.visible=!(referenceMini?.reference&&referenceMini.year===5)||actFiveFarewell>.20;study.root.visible=!(referenceMini?.giantRaid)&&(referenceMini?.year!==11||referenceMini.finishing||referenceMini.curtainCall?.actorIndex===4);impact.bossPose(study.root);const p=g.player,a=p.action;player.rig.position.set(p.x,p.floorY||0,p.z);player.rig.rotation.y=a?.yaw??p.yaw;player.rig.scale.y=g.status==='lost'?.12:g.gyuwon.years?.musical?.slide>0?.48:1;const walk=posePlayer(player,(g.gyuwon.years?.musical?.time??g.time)*7,a?0:g.gyuwon.years?.musical?.kind==='runner'?7:Math.hypot(input().x,input().z)*5);player.body.position.y=1+walk.bob;swayCape(player,g.time,0);player.body.rotation.x=a?.kind==='roll'?a.t/a.total*Math.PI*2:a?.kind==='hurt'?-.3:0;player.pivot.rotation.x=g.gyuwon.years?.musical?.playerStrike?-1.2+Math.sin(Math.min(1,g.gyuwon.years.musical.playerStrike.age/.6)*Math.PI)*2.5:a&&['attack','skill'].includes(a.kind)?-1.5+Math.sin(Math.min(1,a.t/a.total)*Math.PI)*2.9:0;for(const[key,rig]of Object.entries(player.weaponRigs))rig.visible=key===g.weapon;player.rig.rotation.x=player.rig.rotation.z=0;impact.playerPose(player.rig);
  if(referenceMini?.year===5&&actFiveFarewell>.2){
   const k=Math.min(1,(actFiveFarewell-.2)/.8);
   player.rig.position.set(-10+5*k,0,13-10*k);
@@ -247,8 +249,9 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
     if(closing){
      // No cutscene skip or camera snap: from broad musical to small,
      // exhausted human, with the same rig still on the white stage.
-     desired.set(g.boss.x+5.8,3.4,g.boss.z+10.5);
-     target.set(g.boss.x,1.15,g.boss.z);
+     const thought=Math.sin(musical.time*.07);
+     desired.set(g.boss.x+3.8+thought*.7,3.25,g.boss.z+8.6);
+     target.set(g.boss.x,2.55,g.boss.z);
     }else if(musical.reference&&musical.year===5){
      const frame=turnStage.cameraFrame(musical,camera.aspect);desired.set(frame.position.x,frame.position.y,frame.position.z);target.set(frame.target.x,frame.target.y,frame.target.z);
      // The giant actor and four guests remain in the actual 3D shot as

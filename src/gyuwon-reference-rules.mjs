@@ -1,3 +1,4 @@
+import {runnerExtendCourse,runnerPlaceObstacle,runnerRewardHeight} from './gyuwon-runner-course.mjs';
 import {setupGiantRaid,actGiantRaid,tickGiantRaid} from './gyuwon-giant-raid.mjs';
 import {GYUWON_BEATS} from './gyuwon-beat-chart.mjs';
 import {GYUWON_SONGS} from './gyuwon-song-data.mjs';
@@ -42,7 +43,7 @@ export function setupReferenceMinigame(g,m){
 
    const kind=['pose','quick','turn','pose','quick','turn','pose','quick'][index%8];
    const count=kind==='quick'?3:index%3===1?4:3;
-   const first=gyuwonAlignDanceBeat(start+period*(kind==='turn'?5:6));
+   const first=chart.offset+Math.ceil((start+period*(kind==='turn'?5:6)-chart.offset)/period)*period;
    const cue=Math.max(start,first-Math.max(1.35,period*3.4));
    if(first+(count-1)*(kind==='pose'?2:1)*period>=174.5)break;
    m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,
@@ -64,7 +65,8 @@ export function setupReferenceMinigame(g,m){
 }
 const fighterSpecs={light:{wind:.2,live:.12,recovery:.25,range:3.1,damage:9,reachY:1.4},kick:{wind:.29,live:.15,recovery:.32,range:4.3,damage:14,reachY:.8},skill:{wind:.42,live:.19,recovery:.43,range:5.6,damage:22,reachY:1.5},super:{wind:.62,live:.27,recovery:.55,range:10,damage:35,reachY:2.5}};
 function fighterAttack(f,type){
- if(f.action||f.stun>0)return false;
+ if(f.stun>0)return false;
+ if(f.action){if(f.combo>0&&f.action.t>=f.action.wind+f.action.live)f.action=null;else return false;}
  if(type==='super'&&f.meter<100)return false;
  if(type==='super')f.meter-=100;
  f.action={kind:type,t:0,...fighterSpecs[type],hit:false};return true;
@@ -110,7 +112,7 @@ export function actReferenceMinigame(g,m,type,c){
   }
   const p=judgement.pattern;
   p.done[judgement.index]=true;
-  m.dancePose=.52;
+  m.dancePose=m.dancePeriod*1.15;
   m.dancePoseKind=p.kind==='turn'?'turn':p.kind==='quick'?'quick':'dance';
   m.danceFacing=p.kind==='turn'?-m.danceFacing:p.facing;
   m.danceFlash=.44;
@@ -126,6 +128,7 @@ export function actReferenceMinigame(g,m,type,c){
  }
  if(m.year===9){
   const f=m.fighters[0];
+  const attack=kind=>{const ok=fighterAttack(f,kind);if(ok){const beat=(m.time-GYUWON_BEATS[9].offset)*GYUWON_BEATS[9].bpm/60;const error=Math.abs(beat-Math.round(beat))*60/GYUWON_BEATS[9].bpm;f.action.onBeat=error<.11;if(f.action.onBeat){f.action.damage*=1.2;f.meter=Math.min(100,f.meter+7);}}return ok;};
   if(type==='guard'){m.guardHeld=true;m.fightParryWindow=.22;return true;}
   if(type==='guard-end'){m.guardHeld=false;return true;}
   if(m.fightReset>0){
@@ -136,11 +139,11 @@ export function actReferenceMinigame(g,m,type,c){
    c.deal(g,24,c.emit);return true;
   }
   if(type==='jump'||type==='roll'){if(f.y>0||f.stun>0)return false;f.vy=10;return true;}
-  if(type==='super')return fighterAttack(f,'super'); // older programmatic commands
-  if(type==='kick'||type==='skill')return fighterAttack(f,type);
+  if(type==='super')return attack('super'); // older programmatic commands
+  if(type==='kick'||type==='skill')return attack(type);
   if(type!=='light')return false;
   const combo=f.combo||0;
-  return fighterAttack(f,f.meter>=100?'super':combo>=4?'skill':combo>=2?'kick':'light');
+  return attack(f.meter>=100?'super':combo>=4?'skill':combo>=2?'kick':'light');
  }
  if(m.year===10){
   if(type==='roll'||type==='bomb'){if(!m.bombs)return false;m.bombs--;m.bombEffect=1.1;m.enemyShots=[];m.guard=1.2;for(const e of m.shooterTargets){e.hp-=90;c.deal(g,90,c.emit);}return true;}
@@ -173,15 +176,11 @@ function tickReferenceRunner(g,m,dt,c){
  let last=m.platforms.at(-1);
  if(!last){m.platforms.push({x:p.x+4,end:p.x+23,y:0});last=m.platforms[0];}
  if(last.end<37){
-  const gap=gyuwonRunnerGap(scene,m.pickups);
-  const bridge=runnerGuideBridge(m,last.end,gap,m.time);
-  const next={x:last.end+gap,end:last.end+gap+21+(m.pickups%3)*2,y:0};
-  // All road segments remain ordered left→right, including physical bridges.
-  if(bridge)m.platforms.push(bridge);
-  m.platforms.push(next);
+  runnerExtendCourse(m,last,scene);
  }
- const grounded=m.platforms.some(a=>p.x>=a.x&&p.x<=a.end);
- runnerStepMotion(m,grounded,dt);
+ const supports=m.platforms.filter(a=>p.x>=a.x&&p.x<=a.end&&(a.y||0)<=m.jumpY+.08);
+ const floorHeight=supports.length?Math.max(...supports.map(a=>a.y||0)):0;
+ runnerStepMotion(m,supports.length>0,dt,floorHeight);
  if(m.jumpY< -3&&runnerGuideCatch(m,p,m.time)){
   c.emit('gyuwon-runner-bridge-rescue',{year:6,biome:scene.biome});
  }
@@ -204,12 +203,7 @@ function tickReferenceRunner(g,m,dt,c){
   const kind=event?.kind;
   if(kind&&!relief&&!opening){
    const position=p.x+17.5;
-   if(m.platforms.some(a=>position>=a.x+1&&position<=a.end-1)){
-    m.obstacles.push({id:g.nextId++,x:position,kind,
-     variant:event.variant,width:1.8,hit:false,
-     section:scene.key,spawnTime:m.time,lyricId:lyric.id});
-    m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
-   }
+   if(runnerPlaceObstacle(g,m,{x:position,kind,variant:event.variant,lyricId:lyric.id}))m.runnerSpawn=Math.max(m.runnerSpawn,1.4);
   }
  }
  m.runnerPreviousAudio=m.time;
@@ -225,9 +219,8 @@ function tickReferenceRunner(g,m,dt,c){
    const pattern=scene.key==='rain'?['low','high','low','spire','high','low']:
     ['high','low','high','spire','low','high'];
    const challenge=pattern[index%pattern.length],kind=challenge==='low'?'low':'high';
-   m.obstacles.push({id:g.nextId++,x:24,kind,challenge,height:challenge==='spire'?2.33:1.30,
-    variant:gyuwonRunnerObstacleVariant(scene,index),width:challenge==='spire'?1.5:1.3,hit:false,
-    section:scene.key,spawnTime:m.time});
+   runnerPlaceObstacle(g,m,{x:24,kind,challenge,falling:index%5===3,
+    variant:gyuwonRunnerObstacleVariant(scene,index)});
    m.nextId=index+1;
   }
  }else m.runnerSpawn=Math.max(m.runnerSpawn,opening?1.9:1.4);
@@ -235,10 +228,11 @@ function tickReferenceRunner(g,m,dt,c){
  m.runnerRecoverClock-=dt;
  if(m.runnerRecoverClock<=0){
   m.runnerRecoverClock=14;
-  m.jellies.push({id:g.nextId++,x:22,y:1.1,kind:'heart'});
+  const y=runnerRewardHeight(m,22);if(y!==null)m.jellies.push({id:g.nextId++,x:22,y,kind:'heart'});
  }
  for(const o of m.obstacles){
   o.x-=speed*dt;
+  if(o.falling){const age=Math.max(0,m.time-o.spawnTime-.65);o.bottom=Math.max(0,4.2-9*age*age);}
   if(!o.hit&&runnerObstacleContact(m,p.x,o)){
    o.hit=true;m.combo=0;c.take(g,20,c.emit);m.energy=Math.max(0,m.energy-8);
   }else if(!o.hit&&!o.cleared&&o.x<p.x-(o.width||1.3)){
@@ -250,11 +244,13 @@ function tickReferenceRunner(g,m,dt,c){
  if(m.jellySpawn<=0){
   m.jellySpawn=scene.key==='quiet'?.45:.26;
   const i=m.pickups+(m.jellies.length||0);
-  m.jellies.push({id:g.nextId++,x:25,y:.7+Math.sin(i*.4)*.55+(i%9<3?1.8:0),
+  const y=runnerRewardHeight(m,25);
+  if(y!==null&&!m.jellies.some(j=>Math.abs(j.x-25)<1.3))m.jellies.push({id:g.nextId++,x:25,y,
    kind:i%17===0?'heart':i%7===0||accent.star&&i%4===0?'gold':'jelly'});
  }
  for(const j of m.jellies){
   j.x-=speed*dt;
+  const safeY=runnerRewardHeight(m,j.x);if(safeY!==null)j.y=safeY;
   if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slideVisual>.5?.4:1)))<1){
    j.collected=true;m.pickups++;
    m.energy=Math.min(100,m.energy+(j.kind==='heart'?18:.55));
@@ -487,7 +483,9 @@ function tickReferenceFighter(g,m,dt,input,c){
   f.y=Math.max(0,f.y+f.vy*dt);f.vy=f.y>0?f.vy-24*dt:0;
  }
  if(m.fightReset){
-  m.roundWait=true;
+  m.fightReset=Math.max(0,m.fightReset-dt);m.roundWait=m.fightReset>0;
+  if(!m.fightReset){for(const f of m.fighters){f.hp=f.maxHp;f.stun=0;f.action=null;f.combo=0;}m.encoreOrbs=[];m.enemyThink=1.2;}
+
   if(m.encoreNext<=t&&m.encoreCollected<6&&m.encoreOrbs.every(o=>o.collected)){
    const x=[-11,0,10,-5,5,0][m.encoreCollected];
    m.encoreOrbs=[{x,collected:false,created:t}];m.encoreNext=t+2.8;
@@ -495,36 +493,37 @@ function tickReferenceFighter(g,m,dt,input,c){
   g.player.x=p.x;g.player.floorY=(p.floorY||0)+p.y;g.boss.x=b.x;
   return;
  }
- // Start each music-specific attack once and only when its authored verse plays.
+ // The sung attacks belong to the visible opponent. Do not summon an
+ // unrelated copy or put a damaging graphic under the player's feet.
  for(let i=0;i<GYUWON_FIGHT_SET_PIECES.length;i++){
   const cue=GYUWON_FIGHT_SET_PIECES[i];
-  if(t<cue.at||m.fightCueKeys.has(i))continue;
-  m.fightCueKeys.add(i);
-  if(t-cue.at<1.35)m.fightHazards.push({...cue,x:clamp(p.x,-13,13),hit:false});
+  if(t<cue.at||m.fightCueKeys.has(i))continue;m.fightCueKeys.add(i);
+  if(t-cue.at<.25)m.fightVerseAttack={kind:/kick/.test(cue.kind)?'kick':/blade|slam|finale/.test(cue.kind)?'skill':'light',wind:Math.max(.5,cue.wind),damage:cue.damage,expires:t+4};
  }
- for(const h of m.fightHazards){
-  const age=t-h.at;
-  if(age<h.wind||age>h.wind+.28||h.hit)continue;
-  h.hit=true;
-  if(h.damage<=0)continue; // Short echo phrases show preparation without instant damage.
-  if(Math.abs(p.x-h.x)<=h.radius&&p.y+(p.floorY||0)<1.6){
-   if(p.guard){m.fightParryFlash=.28;p.meter=Math.min(100,p.meter+12);}
-   else c.take(g,h.damage,c.emit);
+ m.fightHazards.length=0;
+ const verseAttack=m.fightVerseAttack;
+ if(verseAttack&&t>verseAttack.expires)m.fightVerseAttack=null;
+ if(verseAttack&&t<=verseAttack.expires&&!b.action&&b.stun<=0&&Math.abs(b.x-p.x)<fighterSpecs[verseAttack.kind].range-.15){
+  if(fighterAttack(b,verseAttack.kind)){
+   const period=60/GYUWON_BEATS[9].bpm,origin=GYUWON_BEATS[9].offset;
+   b.action.wind=origin+Math.ceil((t+verseAttack.wind-origin)/period)*period-t;
+   b.action.damage=verseAttack.damage;b.action.lyric=true;m.fightVerseAttack=null;m.enemyThink=1.2;
   }
  }
- m.fightHazards=m.fightHazards.filter(h=>t-h.at<h.wind+.65);
+
  if(t>5.9){
   b.meter=Math.min(100,b.meter+dt*(m.fightRound===3?11:3));
   m.enemyThink-=dt;
   const d=Math.abs(b.x-p.x);
   if(!b.action&&b.stun<=0){
    if(d>3.1&&!m.fightLyricMotion)b.x=clamp(b.x+Math.sign(p.x-b.x)*(m.fightRound>=2?4.2:3.6)*dt,-16,16);
-   else if(m.enemyThink<=0){
+   else if(m.enemyThink<=0&&!m.fightVerseAttack){
     const n=m.turnCount++,kind=b.meter>=100&&m.fightRound===3?'super':
      m.fightRound===1?['light','kick','light','skill'][n%4]:
      m.fightRound===2?['kick','skill','light','kick'][n%4]:
      ['skill','kick','light','super'][n%4];
     fighterAttack(b,kind==='super'&&b.meter<100?'skill':kind);
+    if(b.action){const period=60/GYUWON_BEATS[9].bpm,origin=GYUWON_BEATS[9].offset;b.action.wind=origin+Math.ceil((t+Math.max(.48,b.action.wind)-origin)/period)*period-t;}
     m.enemyThink=scene.quiet?2.35:m.fightRound===3?1.35:1.55;
    }
   }
@@ -560,7 +559,7 @@ function tickReferenceFighter(g,m,dt,input,c){
  }
  m.hitSparks=m.hitSparks.filter(s=>(s.age+=dt)<.4);
  if((p.hp<=0||b.hp<=0)&&!m.fightReset){
-  m.roundWins[p.hp<=0?1:0]++;m.fightReset=1;m.roundWait=true;
+  m.roundWins[p.hp<=0?1:0]++;m.fightReset=2.4;m.roundWait=true;
   m.encoreNext=t+1.5;m.encoreOrbs=[];m.encoreCollected=0;p.action=null;b.action=null;
  }
  g.player.x=p.x;g.player.z=0;g.player.floorY=(p.floorY||0)+p.y;

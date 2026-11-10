@@ -67,7 +67,7 @@ export function createGyuwonMusicalStage(scene,{coarse=false}={}){
  function update(g){
   if(disposed)return;
   const m=g?.gyuwon?.years?.musical;
-  root.visible=!!m&&g.status==='playing';
+  root.visible=!!m&&g.status==='playing'&&!m.finishing;
   if(!root.visible)return;
   const year=m.year,kind=m.kind,color=Math.max(0,year-5),t=m.time;
   const exitPath=year===5&&!m.finishing?gyuwonFiveToSixExit(t,m.clock?.duration||180):0;

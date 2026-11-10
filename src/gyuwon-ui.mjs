@@ -28,7 +28,9 @@ export function createGyuwonUi({coarse=false,doc=globalThis.document}={}){
  musicStyle.textContent+='[data-reference2d="on"][data-canvas-ink="on"] #world{display:block!important}[data-canvas-ink="on"] .gy-reference-canvas{opacity:0!important}';
  shell.appendChild(musicStyle);
  musicStyle.textContent+=ACT_FIVE_INK_UI;
- musicStyle.textContent+='[data-dedication-stage="on"]{background:#000!important}[data-dedication-stage="on"] #world{opacity:0}';
+ // Gyuwon's long narrative acts never use the shared red low-health heartbeat.
+ musicStyle.textContent+='#vignette{--lowhp:0!important;--beat:0!important}';
+ musicStyle.textContent+='[data-dedication-stage="on"]{background:#000!important}[data-dedication-stage="on"] #world{opacity:1}';
  let disposed=false;const styles=loadBattleStyles(root,doc,['../style.css?v=ui-safe-layout-v2-20261107','../skills.css?v=ui-refine-20261107'].map(path=>new URL(path,import.meta.url))),ready=styles.ready.then(ok=>{if(!disposed)shell.style.visibility='';return ok;});doc.body.appendChild(d);
  function mode(value){$('menu').hidden=true;$('pause-screen').hidden=value!=='paused';$('result').hidden=value!=='result';for(const id of['player-hud','boss-hud','controls'])$(id).hidden=false;$('touch').hidden=!coarse||value!=='playing';$('pause').disabled=!['playing','paused'].includes(value);}
  function render(g,sv,weaponName,lock){const b=g.boss,s=g.gyuwon;renderSharedHud(root,g,sv,{weaponName,lockLabel:lock?'카메라 록온 · Q':'카메라 자유 · Q'});if(s.years){$('boss-hud').querySelector('h2').textContent=R.name;$('phase-label').textContent=gyuwonYearTitle(s.years.musical?gyuwonDisplayYear(s.years.year,s.years.musical):s.years.year)+(s.years.musical?' · '+s.years.musical.title:'');$('boss-action').textContent='';$('boss-action').removeAttribute('data-critical');$('notice').textContent='';$('notice').classList.remove('visible');yearsHud.update(g);musicalHud.update(g);

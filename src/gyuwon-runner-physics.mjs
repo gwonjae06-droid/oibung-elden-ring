@@ -40,7 +40,7 @@ export function runnerReleaseSlide(m){
  if(m.slideVisual>0)m.runnerPose='slide-end';
  return true;
 }
-export function runnerStepMotion(m,hasFloor,dt){
+export function runnerStepMotion(m,hasFloor,dt,floorHeight=0){
  const t=clamp(dt,0,.05);
  m.jumpBuffer=Math.max(0,(m.jumpBuffer||0)-t);
  m.landTime=Math.max(0,(m.landTime||0)-t);
@@ -50,10 +50,11 @@ export function runnerStepMotion(m,hasFloor,dt){
  // crouch weight eases up visually and in the collision box together.
  m.slideVisual=m.slideHeld?1:Math.max(0,(m.slideVisual||0)-t/.15);
  m.slide=m.slideHeld?.95:0;
- const touching=hasFloor&&m.jumpY<=.035&&m.jumpV<=0;
+ const nextY=m.jumpY+m.jumpV*t-.5*24*t*t;
+ const touching=hasFloor&&m.jumpV<=0&&m.jumpY>=floorHeight-.08&&nextY<=floorHeight+.035;
  if(touching){
   if(!m.grounded){m.landTime=.15;m.runnerPose='landing';}
-  m.grounded=true;m.jumpY=0;m.jumpV=0;m.jumpCount=0;
+  m.grounded=true;m.jumpY=floorHeight;m.jumpV=0;m.jumpCount=0;
   m.coyote=RUNNER_COYOTE_TIME;
   if(m.jumpBuffer>0)launch(m);
  }else{
@@ -77,7 +78,8 @@ export function runnerObstacleContact(m,playerX,o){
  const bottom=m.jumpY;
  const top=bottom+runnerBodyHeight(m);
  const low=o.kind==='low';
- const lo=low?1.50:0,hi=low?3.58:(o.height||1.30);
+ const base=o.floorY||0,drop=o.bottom||0;
+ const lo=base+(low?1.50:drop),hi=base+(low?3.58:drop+(o.height||1.30));
  return top>lo+.055&&bottom<hi-.055;
 }
 export function runnerGuideReset(m,scene){

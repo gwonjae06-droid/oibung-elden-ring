@@ -189,6 +189,7 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
   for(const a of m.platforms){
    const x=sx(a.x),w=(a.end-a.x)*1280/44;
    if(w<=0)continue;
+   c.save();c.translate(0,-52*(a.y||0));
    const side=a.guide?'#98806e':sky?'#dae0ee':rain?'#576979':quiet?'#5b5876':bridge?'#5c4f46':dawn?'#a98065':'#936a45';
    const top=a.guide?'#fff1b6':sky?'#fff8eb':rain?'#809eaf':quiet?'#9095b4':bridge?'#b99875':dawn?'#f1cb8d':'#8cc960';
    round(c,x,ground,w,190,5,side,'#334458',3);
@@ -203,9 +204,12 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    else if(sky){c.fillStyle='#ffffff60';for(let i=0;i<w/57;i++){c.beginPath();c.arc(x+i*57+23,ground+14,17,0,TAU);c.fill();}}
    else{c.save();c.beginPath();c.rect(x,ground+1,w,20);c.clip();
     for(let xx=x+10;xx<x+w;xx+=31)flower(c,xx,ground+8,.24,dawn?'#f4e4ba':'#e5edb0');c.restore();}
+   c.restore();
   }
   for(const o of m.obstacles){
    const x=sx(o.x),lo=o.kind==='low',v=o.variant||'',wobble=Math.sin(t*4+x)*3;
+   c.save();c.translate(0,-52*((o.floorY||0)+(o.bottom||0)));
+   if(o.falling){const height=(o.height||1.3)*52;round(c,x-(o.width||1.3)*1280/88,ground-height,(o.width||1.3)*1280/44,height,3,'#756b60','#3c4349',3);c.strokeStyle='#c0b39d';c.lineWidth=2;c.beginPath();c.moveTo(x-10,ground-height+6);c.lineTo(x+8,ground-14);c.stroke();c.restore();continue;}
    if(lo){
     // Draw only in the genuine overhead collision interval (1.5~3.6m).
     c.strokeStyle=rain?'#b7c9d9':bridge?'#bea789':'#6b6b51';c.lineWidth=10;
@@ -237,17 +241,6 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
      c.strokeStyle='#47564d';c.stroke();
     }
    }
-  }
-  // A glowing *object* attached to the actual dangerous collider, never a
-  // false rectangular safe-zone overlay. Plenty of notice before contact.
-  for(const o of m.obstacles){
-   if(o.hit||o.x<=g.player.x||o.x-g.player.x>21)continue;
-   const near=1-(o.x-g.player.x)/21,
-    x=sx(o.x),y=sy(o.kind==='low'?2.55:(o.height||1.3)*.55);
-   c.save();c.globalAlpha=.20+near*.65;c.strokeStyle='#ffe2a0';
-   c.lineWidth=2+near*2;c.beginPath();c.arc(x,y,21+6*Math.sin(t*7),0,TAU);c.stroke();
-   for(let i=0;i<4;i++){const a=i*TAU/4+t*.3;
-    c.beginPath();c.arc(x+Math.cos(a)*33,y+Math.sin(a)*33,3,0,TAU);c.stroke();}
    c.restore();
   }
   for(const j of m.jellies)jelly(c,sx(j.x),sy(j.y),j.kind,m.time);

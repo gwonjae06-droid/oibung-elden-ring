@@ -1,3 +1,4 @@
+import {createActFiveCostumes} from './gyuwon-act-five-costumes.mjs';
 import * as T from 'three';
 import {actFiveChoreographyAt} from './gyuwon-act-five-choreography.mjs';
 import {gyuwonCinematicMotionAt} from './gyuwon-cinematic-motion-score.mjs';
@@ -17,6 +18,7 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  const waist=new T.Group();waist.name='gyuwon-act-five-articulated-waist';waist.position.set(0,8,-25);root.add(waist);waist.add(torso);
  torso.traverse(o=>{
   if(/^gyuwon-year-\d+-rig-gear$/.test(o.name)||/accumulated-nightmare|shoulder-rig/.test(o.name))o.visible=false;
+  if(o.name==='gyuwon-tailored-lapel')o.position.z=.57;
   if(o.material&&/torso|jacket|lapel/.test(o.name))o.material=o.name.includes('lapel')?silk:velvet;
  });
  // Strip retired annual costumes from the borrowed likeness entirely. Their
@@ -28,6 +30,7 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  if(head)head.position.y+=.12;
  const wings=createActFiveWings(waist,{coarse});
  const photoMouth=createActFivePhotoMouth(head,{coarse});
+ const costumes=createActFiveCostumes(torso,head,{coarse});
  const sphere=geo(new T.SphereGeometry(1,coarse?20:36,coarse?14:26)),cylinder=geo(new T.CylinderGeometry(1,1,1,coarse?14:24)),digitGeo=geo(new T.CapsuleGeometry(.19,.65,4,10));
  const add=(p,g,m,name)=>{const o=new T.Mesh(g,m);o.name=name;o.castShadow=!coarse;o.receiveShadow=true;p.add(o);return o;};
  const tailGeo=geo(new T.PlaneGeometry(3,8,8,12)),tailPos=tailGeo.attributes.position;
@@ -86,13 +89,14 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
  hornRim.position.y=5;hornRim.rotation.x=Math.PI/2;
  const magicCard=add(arms[0].hand,geo(new T.BoxGeometry(2.7,3.3,.11)),silk,'giant-lyric-story-card');
  magicCard.position.set(-1.0,1.4,4.4);magicCard.rotation.x=.42;
+ const handAxis=new T.Vector3(0,0,1),handOrientation=new T.Quaternion(),gestureOrientation=new T.Quaternion(),handEuler=new T.Euler();
  const direction=new T.Vector3(),mid=new T.Vector3(),up=new T.Vector3(0,1,0),costumeColor=new T.Color(0x725080);let disposed=false;
  function link(mesh,a,b,r1,r2){direction.subVectors(b,a);mesh.position.copy(mid.copy(a).add(b).multiplyScalar(.5));mesh.quaternion.setFromUnitVectors(up,direction.clone().normalize());mesh.scale.set(r1,direction.length(),r2);}
  function update(m,dt){
   if(disposed)return;
   const step=Math.max(0,Math.min(.05,dt));
   const beat=m.time*2*Math.PI*(m.bpm||136)/60,bow=m.finishProgress||0;
-  photoMouth.update(m.time);
+  photoMouth.update(m.time);costumes.update(m);
   wings.update(m,step);
   const pose=actFiveChoreographyAt(m.time,m.songPerformance,{
    hitUntil:m.hitTargetUntil||0,raidAttack:m.raidAttack,bpm:m.bpm||136
@@ -164,7 +168,7 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
    // tubes. Contact attacks may reach farther, but singing uses stable bones.
    const reach=Math.max(1,arm.shoulder.distanceTo(arm.hand.position)/28.8);
    const solved=solveFixedLimb(arm.shoulder.toArray(),arm.hand.position.toArray(),{
-    upper:13*reach,lower:16*reach,pole:[arm.side*.8,-.45,.12],previous:arm.hingeReady?arm.hinge.toArray():null});
+    upper:13*reach,lower:16*reach,pole:[arm.side*(.8+Math.sin(m.time*.6+arm.index)*.12),-.45,.12+pose.shoulders[arm.index].twist],previous:arm.hingeReady?arm.hinge.toArray():null});
    arm.hinge.set(...solved.joint);arm.hingeReady=true;
    link(arm.sleeve,arm.shoulder,arm.hinge,1.8,1.5);
    link(arm.forearm,arm.hinge,arm.hand.position,1.35,1.1);
@@ -179,12 +183,13 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
     const target=-(effective*(1-k*.13))*(i===4?.64:1);
     j.rotation.x=T.MathUtils.lerp(j.rotation.x,target,1-Math.exp(-step*15));
    }));
-   const roll=arm.side*Math.sin(beat*.5+arm.index)*.015+p.roll*weight;
-   const pitch=enemy.broken>0?.12:p.pitch*weight-attackWind*.16;
-   arm.hand.rotation.z=T.MathUtils.lerp(arm.hand.rotation.z,roll,faceEase);
-   arm.hand.rotation.x=T.MathUtils.lerp(arm.hand.rotation.x,pitch,faceEase);
-   arm.hand.rotation.y=T.MathUtils.lerp(arm.hand.rotation.y,
-    (p.yaw||0)*weight+arm.side*(gesture==='choose'?.10:gesture==='doors'?.16:0)*weight+shoulder.twist,faceEase);
+   // Palm direction follows the forearm, with independent pronation and
+   // expressive wrist flexion. World +Z is no longer a permanent hand pose.
+   handOrientation.setFromUnitVectors(handAxis,direction.subVectors(arm.hand.position,arm.hinge).normalize());
+   const roll=p.roll+arm.side*Math.sin(beat*.5+arm.index)*.075;
+   handEuler.set(p.pitch*.65-attackWind*.12,p.yaw*.65+shoulder.twist,roll);
+   gestureOrientation.setFromEuler(handEuler);handOrientation.multiply(gestureOrientation);
+   arm.hand.quaternion.slerp(handOrientation,1-Math.exp(-step*8));
   }
   const e=m.enemies[3];
   mask.visible=e.active&&!e.destroyed;
@@ -193,5 +198,5 @@ export function createGiantGyuwon(parent,source,{coarse=false}={}){
    Math.sin(m.time*.9)*.025+pose.flinch*.11,faceEase);
   cracks.forEach((c,i)=>c.visible=e.hp/e.maxHp<1-(i+1)/8);
  }
- return {root,head,waist,torso,photoMouth,arms,mask,wings,update,stats:()=>({wings:wings.stats(),hands:arms.map(a=>a.hand.position.toArray()),elbows:arms.map(a=>a.hinge.toArray())}),dispose(){if(disposed)return;disposed=true;wings.dispose();photoMouth.dispose();root.removeFromParent();for(const g of ownG)g.dispose();for(const m of ownM)m.dispose();}};
+ return {root,head,waist,torso,photoMouth,arms,mask,wings,update,stats:()=>({wings:wings.stats(),hands:arms.map(a=>a.hand.position.toArray()),elbows:arms.map(a=>a.hinge.toArray())}),dispose(){if(disposed)return;disposed=true;costumes.dispose();wings.dispose();photoMouth.dispose();root.removeFromParent();for(const g of ownG)g.dispose();for(const m of ownM)m.dispose();}};
 }
