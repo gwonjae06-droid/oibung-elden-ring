@@ -89,6 +89,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   return '<div class="j-event-banner" role="status"><strong>오든링 엔딩 이벤트'+mode+'</strong>'
     +(s?.code?'<p>엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b> · 화면을 캡처해 보내세요.</p>':
      s?'<p>'+escapeHTML(s.nickname)+' · 서버 진행 '+Math.max(0,(s.stage??-1)+1)+'/5</p>':'<p>참가자 등록 후 새로운 기록으로 도전하세요.</p>')
+    +(eventError?'<p role="alert">'+escapeHTML(eventError)+'</p>':'')
     +button('event','이벤트 기록 확인','class="j-event-link"')+'</div>';
  }
  function eventPage(){
@@ -102,6 +103,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
     +(s?.code?'<p class="j-status" role="status">엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b><br>바뀐 메인화면과 함께 캡처해 친구에게 제출하세요.</p>':'<p>보스별 완료 기록을 서버에 남긴 뒤 최종 3D 엔딩까지 완료해야 인증번호가 발급됩니다.</p>')
     +'<p>심사: '+escapeHTML(s?.status||'playing')+'</p>'
     +button('event-refresh','서버 기록 새로고침')
+    +(s?.stage===4&&!s?.code&&eventMode&&pref('oibung.gyuwon.ending-watched','0')==='1'?button('event-claim-retry','엔딩 인증번호 재요청','class="j-primary"'):'')
     +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
        button('event-normal','일반 게임 기록으로 전환'));
   show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전하며 개발자 지름길은 이벤트에서 차단됩니다.</p>'
