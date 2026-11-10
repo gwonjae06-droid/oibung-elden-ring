@@ -79,7 +79,7 @@ test('bow must genuinely draw for 0.48 seconds before a basic arrow appears',()=
  assert.equal(r.loaded,7);
  tickPlayerAction(g,.02,WEAPONS.bow);
  assert.equal(g.projectiles.length,1);
- assert.equal(r.loaded,7);
+ assert.equal(r.loaded,6);
 });
 test('cancelling before the projectile release costs no ammo, cancelling after does',()=>{
  const g=journey(),r=g.player.ranged;
@@ -90,9 +90,9 @@ test('cancelling before the projectile release costs no ammo, cancelling after d
  tickPlayerAction(g,.6,WEAPONS.bow);
  assert.equal(actPlayer(g,'light'),true);
  tickPlayerAction(g,.49,WEAPONS.bow);
- assert.equal(r.loaded,7);
+ assert.equal(r.loaded,6);
  assert.equal(actPlayer(g,'roll'),true);
- assert.equal(r.loaded,7);
+ assert.equal(r.loaded,6);
 });
 test('backstep shooting spends two arrows and cannot bypass a nearly empty magazine',()=>{
  const g=journey(),r=g.player.ranged;
