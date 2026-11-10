@@ -2,6 +2,7 @@ import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-endin
 import {createBossSecret} from './boss-secret.mjs';
 import {ODEN_EVENT} from './oden-event-config.mjs';
 import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
+import {resetLegacyOdenSavesOnce} from './legacy-save-reset.mjs';
 import {createEventInputMonitor,eventActionFromInput} from './oden-event-input-monitor.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {weaponStats} from './weapon-stats.mjs';
@@ -30,6 +31,8 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let rawStorage;try{rawStorage=win.localStorage;}catch{}
  const event=createOdenEventClient({storage:rawStorage,fetcher:win.fetch?.bind(win)||globalThis.fetch});
+ // Do not erase anyone's progress until the organizer opens the validated event.
+ if(event.enabled)resetLegacyOdenSavesOnce(rawStorage);
  const monitor=createEventInputMonitor({send:summary=>event.report(summary).catch(error=>{eventError=error.message;})});
  let eventMode=event.enabled&&event.active;
  let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
