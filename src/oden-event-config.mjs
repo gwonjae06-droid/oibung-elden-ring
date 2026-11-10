@@ -3,6 +3,6 @@
 export const ODEN_EVENT=Object.freeze({
  enabled:false,
  eventId:'oden-ending-2026',
- projectUrl:'https://fljvwzkndydseevgnhjq.supabase.co',
- publishableKey:'sb_publishable_thXXoScpxbYcOGNHklfj_A_14d3UKix'
+ projectUrl:'https://pmkhffwuzwxokqupuxkn.supabase.co',
+ publishableKey:'sb_publishable_M22911VlD3DtmVSxKSQveQ_t4acgtrm'
 });
