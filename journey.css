@@ -332,3 +332,11 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey:has(.j-completed-cast) .j-copy{position:relative;z-index:2;text-shadow:0 2px 9px #000}
 @keyframes gy-family-portrait{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){#journey .j-completed-cast{animation:none}}
+
+/* Opt-in friends event — tucked into the existing dark-mural home. */
+#journey .j-event-banner{position:relative;display:grid;justify-items:start;gap:5px;margin:18px 0 20px;padding:12px 14px;max-width:440px;border:1px solid #d9bb784f;background:linear-gradient(110deg,#181c24e6,#231c1ad9);border-radius:9px;box-shadow:0 9px 28px #0006}
+#journey .j-event-banner strong{color:#eed4a4;font:600 14px 'Noto Serif KR',serif}
+#journey .j-event-banner p{margin:0;overflow-wrap:anywhere;color:#d7c9af;font:12px/1.7 system-ui,sans-serif}
+#journey .j-event-link{margin-top:6px;padding:7px 12px;border:1px solid #ae9769a0;border-radius:5px;background:#23262b;color:#f4dcab;font-size:12px}
+#journey .j-panel #j-event-name{display:block;margin:9px 0 12px;max-width:310px;width:100%;padding:12px;border:1px solid #877352;border-radius:6px;background:#11161c;color:#fff0d4;font:14px system-ui,sans-serif}
+#journey .j-panel .j-status b{letter-spacing:.05em;overflow-wrap:anywhere}

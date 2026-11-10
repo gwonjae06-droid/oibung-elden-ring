@@ -1,5 +1,7 @@
 import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-ending-photo-state.mjs';
 import {createBossSecret} from './boss-secret.mjs';
+import {ODEN_EVENT} from './oden-event-config.mjs';
+import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {weaponStatChart} from './weapon-stat-chart.mjs?radar-v1-20261107';
@@ -25,7 +27,11 @@ const TRANSITION_LIMIT_MS=20000;
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
- let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
+ let rawStorage;try{rawStorage=win.localStorage;}catch{}
+ const event=createOdenEventClient({storage:rawStorage,fetcher:win.fetch?.bind(win)||globalThis.fetch});
+ let eventMode=event.enabled&&event.active;
+ let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
+ let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false,eventError='';
  let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null,bossGateOpen=false,sandboxMode=false,gateTaps=0,gateLast=-Infinity;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
@@ -68,6 +74,46 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   target?.focus?.({preventScroll:true});
   if(Number.isFinite(scroll))dialog.scrollTop=scroll;
  }
+
+ const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function setEventMode(active){
+  if(active&&!event.registered)return false;
+  event.setActive(active);eventMode=!!active;profile.run=null;
+  storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
+  profile=loadProfile(storage);selectedStage=0;pendingReward=null;bossGateOpen=false;secret.reset();
+  return true;
+ }
+ function eventBanner(){
+  if(!event.enabled)return '';
+  const s=event.session,mode=eventMode?' · 이벤트 진행 중':'';
+  return '<div class="j-event-banner" role="status"><strong>오든링 엔딩 이벤트'+mode+'</strong>'
+    +(s?.code?'<p>엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b> · 화면을 캡처해 보내세요.</p>':
+     s?'<p>'+escapeHTML(s.nickname)+' · 서버 진행 '+Math.max(0,(s.stage??-1)+1)+'/5</p>':'<p>참가자 등록 후 새로운 기록으로 도전하세요.</p>')
+    +(eventError?'<p role="alert">'+escapeHTML(eventError)+'</p>':'')
+    +button('event','이벤트 기록 확인','class="j-event-link"')+'</div>';
+ }
+ function eventPage(){
+  if(!event.enabled){home();return;}
+  screen='event';const s=event.session;
+  const error=eventError?'<p role="alert" class="j-status">'+escapeHTML(eventError)+'</p>':'';
+  const register='<label class="j-setting">이벤트 닉네임 (2~18자) <input id="j-event-name" maxlength="18" autocomplete="nickname" placeholder="친구가 알아볼 이름"></label>'
+    +button('event-join','참가 등록 · 새 기록으로 시작','class="j-primary"');
+  const registered='<p>참가자 <b>'+escapeHTML(s?.nickname||'')+'</b> · 서버 기록 '
+    +Math.max(0,(s?.stage??-1)+1)+'/5</p>'
+    +(s?.code?'<p class="j-status" role="status">엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b><br>바뀐 메인화면과 함께 캡처해 친구에게 제출하세요.</p>':'<p>보스별 완료 기록을 서버에 남긴 뒤 최종 3D 엔딩까지 완료해야 인증번호가 발급됩니다.</p>')
+    +'<p>심사: '+escapeHTML(s?.status||'playing')+'</p>'
+    +button('event-refresh','서버 기록 새로고침')
+    +(s?.stage===4&&!s?.code&&eventMode&&pref('oibung.gyuwon.ending-watched','0')==='1'?button('event-claim-retry','엔딩 인증번호 재요청','class="j-primary"'):'')
+    +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
+       button('event-normal','일반 게임 기록으로 전환'));
+  show('<div class="j-panel"><p class="j-kicker">ODEN RING · EVENT</p><h1>마지막 엔딩 도전</h1><p>이벤트 기록은 기존 일반 여정과 분리됩니다. 참가자는 처음부터 도전하며 개발자 지름길은 이벤트에서 차단됩니다.</p>'
+    +(s?registered:register)+error+back()+warning()+'</div>');
+ }
+ function reportEventStage(stage){
+  if(!eventMode||!event.registered||!Number.isInteger(stage))return;
+  void event.stage(stage).then(()=>{eventError='';}).catch(error=>{eventError=error.message;console.warn('Event record rejected',error);});
+ }
+
  const button=(action,label,extra='')=>`<button data-j="${action}" ${extra}>${label}</button>`;
  const back=()=>button('home','← 메인으로','class="j-back"');
  function route(){return `<div class="j-route">${BOSS_NAMES.map((n,i)=>`<span class="${profile.run&&(i<profile.run.stage||i===profile.run.stage&&profile.run.pending)?'done':''}">${n}</span>`).join('')}</div>`;}
@@ -83,7 +129,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    '<p class="j-boss-note">'+BOSS_NAMES[selectedStage]+'부터 도전합니다. '+(sandboxMode?'선택한 보스와 단독으로 대결합니다.':'선택 지점 이후의 보스는 순서대로 이어집니다.')+'</p></section>';
  }
  function home(resetSelection=true,bonus=0,keepTitleTaps=false){if(!keepTitleTaps){secret.reset();bossGateOpen=false;gateTaps=0;gateLast=-Infinity;}sandboxMode=false;screen='home';profile.run=null;if(resetSelection)selectedStage=0;persist();
-  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p>${bossGateOpen?'<section class="j-boss-chooser j-hidden-boss-gate" aria-label="보스 선택"><div class="j-boss-chooser-head"><h2>보스 선택</h2></div><div class="j-boss-targets">'+BOSSES.map((id,i)=>button('gate-boss','<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b>','data-stage="'+i+'" class="j-boss-target"')).join('')+'</div></section>':''}<div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
+  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p>${bossGateOpen?'<section class="j-boss-chooser j-hidden-boss-gate" aria-label="보스 선택"><div class="j-boss-chooser-head"><h2>보스 선택</h2></div><div class="j-boss-targets">'+BOSSES.map((id,i)=>button('gate-boss','<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b>','data-stage="'+i+'" class="j-boss-target"')).join('')+'</div></section>':''}<div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${eventBanner()}${route()}${warning()}</div>`);
  }
  function select(preserve=false){
   if(!sandboxMode&&!canTravelTo(profile,selectedStage))selectedStage=0;
@@ -123,7 +169,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  }
  function settings(){screen='settings';show(`<div class="j-panel"><h1>설정</h1><label class="j-setting"><input type="checkbox" id="j-muted" ${pref('oibung-muted','0')==='1'?'checked':''}> 모든 소리 끄기</label><label class="j-setting">메인 테마 개별 음량 <input id="j-volume" type="range" min="0" max="1" step=".05" value="${volume}"></label>${audioSliders()}<details><summary>조작법</summary><p>WASD / 방향키 이동 · J / 좌클릭 공격 · L / 우클릭 스킬<br>Space 회피 · E 회복약 · Q 록온 · Esc 일시정지<br>모바일에서는 화면 조이스틱과 행동 버튼을 사용합니다.</p></details>${back()}${warning()}</div>`);}
  async function closeBattle(){suppressClose=true;try{await view?.close?.();view=null;if(root!==doc&&roots.has(root)){root.removeEventListener('click',roots.get(root),true);roots.delete(root);}readBattleSession(doc)?.menu?.();}finally{suppressClose=false;}game=null;root=doc;}
- function accountInterrupted(){if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
+ function accountInterrupted(){if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);const r=profile.run;if(!r.secret&&!r.sandbox)reportEventStage(r.stage);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
  async function goHome(){if(busy)return;await poll(true);busy=true;try{if(game?.status==='playing')readBattleSession(root)?.pause?.();accountInterrupted();await closeBattle();home();}finally{busy=false;}}
  // Runs one cinematic. Any error or a run longer than the limit switches all cinematics off and the game simply carries on.
  async function play(make){
@@ -154,7 +200,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(busy||!profile.run)return;busy=true;screen='loading';show(`<div class="j-panel"><h1>${BOSS_NAMES[profile.run.stage]}</h1><p role="status">전장을 준비합니다…</p></div>`);
   try{await closeBattle();if(disposed)return;const r=profile.run,entry=BOSS_REGISTRY[BOSSES[r.stage]],configure=g=>configureJourney(g,r,profile);
    if(entry.kind==='arena'){readBattleSession(doc).start(r.weapon,configure);root=doc;}
-   else{const m=await loadBattle(entry.id);if(disposed)return;const onClose=()=>{if(!suppressClose&&!disposed){accountInterrupted();view=null;game=null;home();}};view=entry.launch(m,{weapon:r.weapon,configure,onClose,startPhase:r.secret?r.secretPhase||1:1});if(!view)throw Error('Battle unavailable');root=doc.getElementById(entry.dialogId).firstElementChild.shadowRoot;}
+   else{const m=await loadBattle(entry.id);if(disposed)return;const onClose=()=>{if(!suppressClose&&!disposed){accountInterrupted();view=null;game=null;home();}};view=entry.launch(m,{weapon:r.weapon,configure,onClose,startPhase:r.secret?r.secretPhase||1:1,eventMode,endingStorage:eventMode?storage:null});if(!view)throw Error('Battle unavailable');root=doc.getElementById(entry.dialogId).firstElementChild.shadowRoot;}
    game=readBattleSession(root)?.game;if(!game)throw Error('Battle session unavailable');
    
    if(entry.kind==='arena'&&transitionsOn){const session=readBattleSession(root);session.pause?.();const pause=root.getElementById('pause-screen');const old=pause?.style?.visibility;if(pause?.style)pause.style.visibility='hidden';try{await scene(entry.id);}finally{if(pause?.style)pause.style.visibility=old;}if(disposed)return;session.resume?.();}screen='battle';dialog.close();readBattleSession(root)?.intro?.();syncMusic();watchRoot(root);root.getElementById('world')?.focus();
@@ -163,7 +209,8 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function watchRoot(target){if(roots.has(target))return;const listener=e=>{const b=e.target.closest?.('button');if(!b||screen!=='battle')return;if(b.id==='retry'){e.preventDefault();e.stopImmediatePropagation();const r=profile.run;if(!r||busy)return;(async()=>{await poll(true);profile.run=r.sandbox?newBossPracticeRun(r.weapon,r.startStage):newTravelRun(profile,r.weapon,r.startStage||0)??newRun(r.weapon);await launch();})();return;}if(['quit','change'].includes(b.id)){e.preventDefault();e.stopImmediatePropagation();goHome();}};target.addEventListener('click',listener,true);roots.set(target,listener);}
  async function poll(force=false){if(disposed||screen!=='battle'||!game||busy)return;const arena=root.getElementById('arena');let prep=root.getElementById('battle-preparation');if(!prep&&arena?.appendChild&&doc.createElement){prep=doc.createElement('p');prep.id='battle-preparation';prep.setAttribute('role','status');prep.style.cssText='position:absolute;top:28%;left:0;width:100%;text-align:center;z-index:30;color:#fff0ba;font:600 22px serif;text-shadow:0 2px 10px #000;pointer-events:none';arena.appendChild(prep);}if(prep?.style){prep.hidden=game.player.action?.kind!=='charging';prep.textContent=game.player.action?.kind==='charging'?'차징 · '+Math.min(100,Math.round(game.player.action.t/.9*100))+'%':'';}const result=root.getElementById('result');if(game.status==='playing'||!result||(!force&&result.hidden)||seen.has(game))return;
   seen.add(game);const r=profile.run;if(!r)return;
-  const name=BOSS_NAMES[r.stage],won=game.status==='won',outcome=finishAttempt(profile,{won,time:game.time,damage:game.stats?.damage});persist();
+  const name=BOSS_NAMES[r.stage],won=game.status==='won';if(won&&!r.secret&&!r.sandbox)reportEventStage(r.stage);
+  const outcome=finishAttempt(profile,{won,time:game.time,damage:game.stats?.damage});persist();
   if(r.sandbox){
    screen='sandbox-result';
    show('<div class="j-panel"><h1>'+name+' · '+(won?'격파':'재도전')+'</h1>'+button('sandbox-retry','같은 보스 재도전','class="j-primary"')+back()+'</div>');
@@ -193,14 +240,31 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  async function completeJourney(){busy=true;try{await scene('complete');if(disposed)return;screen='result';const record=profile.records.at(-1),selectedRoute=record.startStage>0,best=Math.min(...profile.records.filter(x=>x.weapon===record.weapon&&x.bossCount===record.bossCount&&(x.startStage||0)===(record.startStage||0)).map(x=>x.time));show(`<div class="j-panel"><div class="j-seal" aria-hidden="true">♜</div><h1>${selectedRoute?'마지막 시련을 넘어섰다':'다섯 지배자를 넘어섰다'}</h1><p>${selectedRoute?`${BOSS_NAMES[record.startStage]}부터 시작한 선택 보스 여정을 완수했습니다. 전체 연속 클리어와 별도로 기록됩니다.`:'긴턱의 그림자가 걷히고, 공연이 끝나고, 주사위가 멈추고 성당의 마지막 심장이 고요해졌습니다.'}<br>멈춰 있던 자습실의 초침이 다시 움직입니다.<br>당신의 이름이 시련의 기록에 새겨집니다.</p><div class="j-result"><div><b>${clock(record.time)}</b><span>누적 전투 시간</span></div><div><b>${record.deaths}회</b><span>패배</span></div><div><b>${WEAPONS[record.weapon]}</b><span>${TRIAL_NAME}</span></div></div><p>${record.time===best?'같은 출발점·무기의 최고 기록입니다.':'같은 출발점·무기의 최고 기록 '+clock(best)}</p>${button('records','기록실','class="j-primary"')}${back()}${warning()}</div>`);
 }finally{busy=false;}}
  async function click(e){const b=e.target.closest('[data-j]');if(!b||busy||disposed)return;const action=b.dataset.j;
-  if(action==='secret-tap'&&screen==='home'){
+
+  if(action==='event'&&screen==='home'){eventError='';eventPage();return;}
+  if(action==='event-join'&&screen==='event'){
+   const nickname=dialog.querySelector('#j-event-name')?.value||'';
+   busy=true;try{await event.join(nickname);setEventMode(true);eventError='';}
+   catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+  }
+  if(action==='event-refresh'&&screen==='event'){
+   busy=true;try{await event.refresh();eventError='';}
+   catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+  }
+  if(action==='event-activate'&&screen==='event'){setEventMode(true);home();return;}
+  if(action==='event-normal'&&screen==='event'){setEventMode(false);home();return;}
+  if(action==='event-claim-retry'&&screen==='event'){
+   busy=true;try{await event.finish();eventError='';}catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+  }
+
+  if(action==='secret-tap'&&screen==='home'&&!eventMode){
    const now=performance.now(),award=secret.tap(now);
    gateTaps=now-gateLast<=1000?gateTaps+1:1;gateLast=now;
    if(award){home(false,grantForgeDeveloperFlames(profile));return;}
    if(gateTaps===4){bossGateOpen=true;home(false,0,true);}
    return;
   }
-  if(action==='gate-boss'&&screen==='home'&&bossGateOpen){
+  if(action==='gate-boss'&&screen==='home'&&bossGateOpen&&!eventMode){
    const stage=Number(b.dataset.stage);
    if(Number.isInteger(stage)&&stage>=0&&stage<BOSSES.length){sandboxMode=true;selectedStage=stage;bossGateOpen=false;select();}
    return;
@@ -252,10 +316,25 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   else if(action==='records')records();
   else if(action==='settings')settings();
  }
+
+ const eventFinalEligible=()=>eventMode&&event.registered&&profile.run?.stage===BOSSES.length-1
+  &&!profile.run?.secret&&!profile.run?.sandbox;
+ const onEventFilmStart=()=>{if(eventFinalEligible())reportEventStage(BOSSES.length-1);};
+ const onEventFilmDone=()=>{
+  if(!eventFinalEligible())return;
+  void event.finish().then(()=>{
+   eventError='';
+   if(screen==='home')home(false);
+  }).catch(error=>{
+   eventError=error.message;
+   if(screen==='home')home(false);
+  });
+ };
+
  const input=e=>{if(e.target.id==='j-muted'){put('oibung-muted',e.target.checked?'1':'0');syncMusic();}if(e.target.id==='j-volume'){volume=Number(e.target.value);put('oibung.menu.volume',String(volume));syncMusic();}if(e.target.dataset?.audioChannel){writeAudioVolume(e.target.dataset.audioChannel,e.target.value,storage);syncMusic();}};
  const cancel=e=>{e.preventDefault();if(!busy&&screen!=='home')goHome();};
  const forgeDeveloperKey=e=>{
-  if(disposed||busy||screen!=='forge'||!dialog.open||!isForgeDeveloperShortcut(e))return;
+  if(disposed||busy||eventMode||screen!=='forge'||!dialog.open||!isForgeDeveloperShortcut(e))return;
   e.preventDefault();
   const amount=grantForgeDeveloperFlames(profile);
   if(amount)persist();
@@ -263,7 +342,8 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  };
  const requestHome=()=>goHome(),focus=()=>{focused=true;syncMusic();},blur=()=>{focused=false;syncMusic();};
  dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',cancel);dialog.addEventListener('keydown',e=>e.stopPropagation());
+ win.addEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.addEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);
  win.addEventListener('keydown',forgeDeveloperKey,true);win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
  const timer=win.setInterval(poll,150);if(dialog.open)dialog.close();home();
- return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
+ return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
 }
