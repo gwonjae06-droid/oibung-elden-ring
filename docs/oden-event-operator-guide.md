@@ -1,20 +1,22 @@
 # 오든링 엔딩 이벤트 — 관리자 설치 및 상품 지급 안내
 
-> **현재 상태: 서버 미활성화(안전 잠금).**
-> 2026-11-10 연결된 Supabase 프로젝트 `fljvwzkndydseevgnhjq`는
-> SQL 조회에서 `password authentication failed`가 발생했다.
-> 따라서 DB 테이블 생성과 라이브 Edge Function 배포를 **아직 실행하지 않았다**.
-> `src/oden-event-config.mjs`의 `enabled:false`를 그대로 유지해야 한다.
+> **현재 상태: 전용 프로젝트 설치 완료, 이벤트 공개 잠금 유지.**
+> 2026-11-10 새 Supabase 프로젝트 `odenring` (`pmkhffwuzwxokqupuxkn`)에
+> 이벤트 테이블과 `oden-event` Edge Function (`index.js`, `risk.js`)을 설치했다.
+> 게임 설정의 프로젝트 주소와 공개 키도 새 프로젝트로 교체했다.
+> 실제 게임의 전체 플레이 및 PC·모바일 입력 검증은 아직 완료하지 않았다.
+> 검증이 끝날 때까지 `src/oden-event-config.mjs`의 `enabled:false`를 유지한다.
 
-## 1. 시작 전에 해결할 문제
-1. [Supabase Dashboard](https://supabase.com/dashboard/project/fljvwzkndydseevgnhjq)에서
-   프로젝트 상태와 DB 접속/비밀번호를 점검한다. 연결 앱의 DB 인증도 갱신해야 한다.
-2. SQL Editor에서 `docs/oden-event-schema.sql`을 실행한다. 기존 다른 게임 테이블을 수정하지 않는다.
-3. `supabase/functions/oden-event/index.js`를 `oden-event`라는 별도 함수로 배포한다.
-   `supabase/config.toml`에서 `verify_jwt=false`인 이유는 함수가 자체 `X-Oden-Token`
-   참가자 인증을 수행하기 때문이다. 일반인에게 서비스 키를 절대 제공하지 않는다.
+## 1. 이벤트 공개 전 확인
+1. [Supabase Dashboard](https://supabase.com/dashboard/project/pmkhffwuzwxokqupuxkn)에서
+   전용 프로젝트를 확인한다. 이전 프로젝트의 데이터나 연결 설정은 변경하지 않았다.
+2. DB의 이벤트 테이블에는 RLS가 활성화되어 있고, anon/authenticated 직접 접근은 차단되어 있다.
+   공개 RLS 정책이 없는 것은 서버 함수만 기록을 관리하도록 한 의도된 설정이다.
+3. 인증 함수는 자체 `X-Oden-Token` 참가자 인증을 사용한다(`verify_jwt=false`).
+   서비스 키는 서버에만 두고 브라우저나 저장소에 공개하지 않는다.
 4. 참가 등록 → 이권재 → 오슬우 → 박성원 → 배서준 → 최규원 800HP 이후
-   3D 엔딩(164초) → 클레임 코드 발급까지 실제 테스트한다.
+   3D 엔딩(164초) → 클레임 코드 표시까지 실제 게임에서 테스트한다.
+   PC·모바일의 정상 입력, 의심 입력 관찰과 소명 UI도 확인한다.
 5. **모든 검증 통과 후에만** `src/oden-event-config.mjs`의 `enabled:true`를 배포한다.
    그 전에는 이벤트 UI가 나타나지 않는다.
 
@@ -30,7 +32,7 @@
   등록 때 안내한 카카오톡/디스코드 계정으로 제출한다.
 
 ## 3. 네가 상품 지급을 심사하는 법
-1. [Supabase Table Editor](https://supabase.com/dashboard/project/fljvwzkndydseevgnhjq/editor)에서
+1. [Supabase Table Editor](https://supabase.com/dashboard/project/pmkhffwuzwxokqupuxkn/editor)에서
    `public.oden_event_participants` 테이블을 연다.
 2. `claim_code` 열에서 친구가 보낸 번호를 정확하게 검색한다.
 3. `nickname`, `event_id`, `stage=4`, `completed_at`이 있는지 확인한다.
@@ -63,7 +65,7 @@
 - 엔딩을 봤는데 인증번호가 없으면 이벤트 화면의 **서버 기록 새로고침**
   및 (정상 엔딩 후만 노출되는) **인증번호 재요청**을 사용한다.
 - 재요청도 실패한다면 관리자에게 해당 친구의 참가 ID/인증사진을 전달하도록 한다.
-- DB 장애가 해결되기 전에는 상품 이벤트를 시작하지 않는다.
+- 인증 서버에 장애가 생기면 상품 이벤트의 신규 접수를 중단하고 정상화 여부를 확인한다.
 
 ## 6. 의심 플레이 자동 관찰 · 상품 인증 보류 (이벤트 모드 전용)
 - 브라우저에서 **실제 게임 중** 키/마우스/터치 행동의 **집계 수치만** 관찰한다.
@@ -90,8 +92,8 @@
   수 없다. 보고를 전혀 전송하지 않는 조작 클라이언트도 존재할 수 있다.
   **보고 누락만으로는 자동 차단하지 않는다.**
 - 일반 오든링은 영향을 받지 않도록 이벤트 모드 `enabled:false` 안전 잠금을 유지한다.
-  Supabase 연결 복구, SQL 컬럼 적용, Edge Function `index.js`와
-  `risk.js` 함께 배포, 정상·오탐·의심 입력 실제 기기 테스트 후에만 이벤트를 연다.
+  전용 프로젝트에 SQL 컬럼과 Edge Function `index.js`·`risk.js` 배포는 완료했다.
+  정상·오탐·의심 입력 실제 기기 테스트 후에만 이벤트를 연다.
 
 ### 권장 심사 순서
 1. `claim_code`와 참가자의 전달 계정 및 캡처를 대조한다.
@@ -101,3 +103,13 @@
 4. `appeal_note`가 있다면 접근성 입력 장치나 매크로 오탐 등을 고려한다.
 5. 납득할 만한 설명이 있으면 보류를 해제한다. 증명이 불충분한 경우에도
    지급 거절 전에 명확한 판단 근거를 남긴다.
+
+## 7. 2026-11-10 설치 검증 결과
+- 라이브 서버: 참가 등록, 토큰 없는 요청 거부, 보스 순서 건너뛰기 거부,
+  완료 전/155초 이전 인증 거부, 156초 대기 후 인증번호 발급,
+  반복 완료 요청의 동일 코드 유지와 상태 조회 성공을 확인했다.
+- 공개 키를 사용한 이벤트 테이블 직접 조회가 거부되는 것을 확인했다.
+- 이벤트 클라이언트·입력 관찰·수명주기 관련 자동 검사 13개가 통과했다.
+- 연결 설정 변경의 GitHub Fast core checks와 Pages 배포가 성공했다.
+- 설치 검증용 참가 기록은 점검 후 제거했다. 실제 플레이의 클리어 증명은 아니다.
+- 실제 전체 플레이, WebGL 화면, PC·모바일 입력의 오탐 및 소명 UI는 미검증이다.
