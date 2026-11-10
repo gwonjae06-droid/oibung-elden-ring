@@ -9,11 +9,11 @@ export const EVOLUTIONS={
  ],
  bow:[
   {id:'twin-arrow',name:'후퇴 사격',text:'스킬 사용 시 뒤로 도약하면서 일반 화살 2발을 발사합니다. 2각인은 스킬 재사용 시간을 단축합니다.'},
-  {id:'piercing-arrow',name:'화염의 시위',text:'일반 화살이 명중하면 초기 피해만큼의 화상 피해를 시간에 걸쳐 추가합니다(총 약 2배). 2각인은 화상 지속 시간을 늘립니다.'}
+  {id:'piercing-arrow',name:'화염의 시위',text:'일반 화살이 명중하면 초기 피해의 75%만큼 화상 피해를 시간에 걸쳐 추가합니다(총 약 1.75배). 2각인은 화상 지속 시간을 늘립니다.'}
  ],
  cards:[
   {id:'wide-deck',name:'삼중 낙인',text:'유효한 카드 일반 공격 적중마다 보스에 문양이 하나 쌓이고 3회째 폭발해 피해와 짧은 경직을 줍니다. 한 번의 3장 발사는 1회로 셉니다.'},
-  {id:'blood-deck',name:'생명 흡수',text:'카드 일반 공격이 실제로 준 피해의 일부를 흡혈합니다. 1각인 8%, 2각인 16%.'}
+  {id:'blood-deck',name:'생명 흡수',text:'카드 일반 공격이 실제로 준 피해의 일부를 흡혈합니다. 1각인 6%, 2각인 12%.'}
  ]
 };
 export const evolutionCount=(game,id)=>(game.evolutions||[]).filter(x=>x===id).length;
