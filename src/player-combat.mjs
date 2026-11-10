@@ -22,13 +22,14 @@ export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}
  const fireRank=game.weapon==='bow'&&action.basic?evolutionCount(game,'piercing-arrow'):0;
  const volleyScale=game.journeyBalance?.mode==='story'&&game.weapon==='cards'&&count>1
   ?Math.max(.78,1-.055*(count-1)):1;
+ const speed=game.weapon==='bow'?26:game.weapon==='cards'?20:24;
  for(let i=0;i<count;i++){
   game.projectiles.push({id:game.nextId++,x:game.player.x,z:game.player.z,y:1.2+(game.player.floorY||0),
    yaw:action.yaw+(i-(count-1)/2)*(count===2?.1:.075),
-   speed:game.weapon==='bow'?26:game.weapon==='cards'?20:24,
+   speed,
    // Ranged weapon range is real collision reach, not only a menu statistic.
    // Non-ranged sword waves keep their separate authored lifetime.
-   life:weapon.projectile?Math.min(basicLifetime,weapon.range/(game.weapon==='bow'?26:20)):basicLifetime,
+   life:weapon.projectile?Math.min(basicLifetime,weapon.range/speed):basicLifetime,
    damage:weapon.damage*action.mult*volleyScale,
    fireRank,poise:weapon.poise,kind:game.weapon,source:action,
    piercing:false,bossHit:false,hit:false,skill:false});
@@ -72,8 +73,11 @@ export function tickPlayerAction(game,dt,weapon,{roll=()=>{},backstep=()=>{},mel
 export function advancePlayerProjectile(projectile,dt,player=null){
  if(projectile.returningHammer)return moveReturningHammer(projectile,dt,player||{x:0,z:0});
  const old={x:projectile.x,y:projectile.y,z:projectile.z};
- projectile.x+=Math.sin(projectile.yaw)*projectile.speed*dt;
- projectile.z+=Math.cos(projectile.yaw)*projectile.speed*dt;
+ // Clamp the final integration step to the remaining flight lifetime:
+ // a low-FPS frame must not make an arrow travel beyond its listed range.
+ const travel=Math.max(0,Math.min(dt,projectile.life));
+ projectile.x+=Math.sin(projectile.yaw)*projectile.speed*travel;
+ projectile.z+=Math.cos(projectile.yaw)*projectile.speed*travel;
  projectile.life-=dt;
  return old;
 }
