@@ -1,3 +1,4 @@
+import {completeGyuwonEnding} from './gyuwon-ending-photo-state.mjs';
 import {createGyuwonMonologue} from './gyuwon-monologue.mjs';
 import {createGyuwonCurtainEnsemble} from './gyuwon-curtain-ensemble.mjs';
 import {createGyuwonLifeEpilogue} from './gyuwon-life-epilogue.mjs';
@@ -85,7 +86,8 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
   let g=createGyuwonGame(weapon,{yearMode:true}),mode='playing',closed=false,ready=false,ending=0,yaw=0,pitch=KWON_CAMERA_REFERENCE.pitch,lock=true,zoom=0,dragPointer=null,stickPointer=null,w=0,h=0;
   let finalPhoto=null;
   const lifeFilm=createGyuwonLifeEpilogue(document,shell,{source:study.root,coarse,onError:()=>close(),onComplete:()=>{
-   try{window.localStorage.setItem('oibung.gyuwon.ending-watched','1');if(finalPhoto)window.localStorage.setItem('oibung.gyuwon.ensemble-photo',finalPhoto);}catch(error){console.warn('Ending photo save unavailable',error);}
+   let storage;try{storage=window.localStorage;}catch{}
+   completeGyuwonEnding(storage,finalPhoto);
    close();
   }});startup.own('Gyuwon life epilogue',()=>lifeFilm.dispose());
   const keys=new Set(),stick={x:0,z:0},desired=new THREE.Vector3(),target=new THREE.Vector3();configure(g);camera.position.set(0,7,20);let reverieClockAt=null;
@@ -172,7 +174,9 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    if(reverie&&reverieActive){if(reverieClockAt!==null)reverie.clock=(reverie.clock??reverie.time)+Math.max(0,(now-reverieClockAt)/1000);reverieClockAt=now;}else reverieClockAt=null;
    musicalScore.update(g,{enabled:ready&&!introGate.blocked&&!document.hidden&&mode==='playing'&&!g.startGrace&&!reverie,muted:muted()});
    if(ready&&!introGate.blocked&&mode==='playing'&&!document.hidden&&!consumeBattleGrace(g,dt)){stepGyuwon(g,dt,{...(g.gyuwon.years?.musical?musicalInput():input()),lock,cameraYaw:yaw});if(g.status!=='playing'){
-     if(g.status==='won'&&g.gyuwon.years?.musical?.finishing){musicalScore.stop();foley.clear();fx.clear();setMode('epilogue');lifeFilm.start();}
+     if(g.status==='won'&&g.gyuwon.years?.musical?.finishing){
+      try{finalPhoto=curtainEnsemble.capturePortrait(renderer,document,g)||finalPhoto;}catch(error){console.warn('Ending cast portrait unavailable',error);}
+      musicalScore.stop();foley.clear();fx.clear();setMode('epilogue');lifeFilm.start();}
      else setMode('ending');
     }}
    if(mode==='ending'){ending+=visualDt;if(ending>=(g.status==='won'?(g.gyuwon.years?.musical?1.5:8):1)){$('result-kicker').textContent=g.status==='won'?'승리':'패배';$('result-title').textContent=g.status==='won'?'최규원 토벌':'마지막 문제 앞에 쓰러졌습니다';$('result-text').textContent=g.status==='won'?'정답이 없는 밤에도, 그는 처음으로 문제집을 덮었다.':'';$('result-stats').textContent=`적중 ${g.stats.hits}회 · 누적 피해 ${Math.round(g.stats.damage)} · ${g.time.toFixed(1)}초`;setMode('result');$('retry').focus();}}

@@ -1,3 +1,4 @@
+import {captureGyuwonEnsemblePhoto} from './gyuwon-ensemble-photo.mjs';
 import {createCurtainBrawl,curtainBrawlAt} from './gyuwon-curtain-brawl.mjs';
 import * as T from 'three';
 import {buildBoss,poseLegs,posePlayer,swayCape} from './models.mjs';
@@ -115,6 +116,22 @@ export function createGyuwonCurtainEnsemble(scene,{party,player,gyuwon,coarse=fa
   });
   if(ensemble)brawl.update(m,dt);else brawl.update({time:-1,clock:{duration:180}});
  }
+ function capturePortrait(renderer,doc,g){
+  // Pose the actual cast at a settled camera-facing curtain frame even if the
+  // score jumped over the old capture window. This changes presentation only.
+  const years=g.gyuwon.years,m=years.musical,duration=m?.clock?.duration||180,time=duration*(.55+.45*.97);
+  const posed={...g,status:'playing',gyuwon:{...g.gyuwon,years:{...years,year:11,musical:{...m,year:11,finishing:false,time,clock:{duration},curtainCall:gyuwonCurtainCallAt(time,duration)}}}};
+  update(posed,0);scene.updateMatrixWorld(true);
+  const portrait=new T.Scene();portrait.background=new T.Color(0x101b29);
+  const student=gyuwon.clone(true),retired=[];
+  student.traverse(o=>{if(/^gyuwon-year-|accumulated-nightmare|divine-portrait|final-halo|floating-page/.test(o.name))retired.push(o);});
+  retired.forEach(o=>o.removeFromParent());
+  portrait.add(root.clone(true),player.rig.clone(true),student);
+  portrait.add(new T.HemisphereLight(0xe9e5dc,0x333943,2.1));
+  const lamp=new T.DirectionalLight(0xffe6c7,2.4);lamp.position.set(5,12,15);portrait.add(lamp);
+  const camera=new T.PerspectiveCamera(42,16/9,.1,150);camera.position.set(0,7.2,24);camera.lookAt(0,2.4,-4);
+  return captureGyuwonEnsemblePhoto(renderer,portrait,camera,doc);
+ }
  function stats(){return {active:!!frame,mode:frame?.mode,actorIndex:frame?.actorIndex,phase:frame?.phase,bosses:frame?(frame.ensemble?5:frame.actorIndex+1):0,players:frame?4:0,facingCamera:!!frame&&dancers.every(p=>Math.cos(p.rig.rotation.y)>.98),source:'original-boss-rigs',brawl:brawl.stats(),seraph:seraph.stats().visible};}
- return {root,update,stats,async prewarm(renderer,camera){await Promise.all([party.ready,kwonSkin.ready]);const previous=root.visible;root.visible=true;const visibility=[seraphContainer,seraph.root,gentleman,giant.root].map(o=>[o,o.visible]);visibility.forEach(([o])=>o.visible=true);try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);}finally{root.visible=previous;visibility.forEach(([o,visible])=>o.visible=visible);}},dispose(){if(disposed)return;disposed=true;kwonSkin.dispose();stance.dispose();seraph.dispose();giant.dispose();brawl.dispose();backdrop.geometry.dispose();backdrop.material.dispose();halo.geometry.dispose();halo.material.dispose();root.removeFromParent();dancers.slice(1).forEach(p=>{p.skeletons.forEach(s=>s.dispose());p.rig.removeFromParent();});const geos=new Set(),mats=new Set();kwon.root.traverse(o=>{if(o.geometry)geos.add(o.geometry);[].concat(o.material||[]).forEach(m=>mats.add(m));});geos.forEach(g=>g.dispose());const textures=new Set();mats.forEach(m=>{Object.values(m).forEach(v=>{if(v?.isTexture)textures.add(v);});m.dispose();});textures.forEach(t=>t.dispose());ownGeo.forEach(g=>g.dispose());ownMat.forEach(m=>m.dispose());}};
+ return {root,update,stats,capturePortrait,async prewarm(renderer,camera){await Promise.all([party.ready,kwonSkin.ready]);const previous=root.visible;root.visible=true;const visibility=[seraphContainer,seraph.root,gentleman,giant.root].map(o=>[o,o.visible]);visibility.forEach(([o])=>o.visible=true);try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);}finally{root.visible=previous;visibility.forEach(([o,visible])=>o.visible=visible);}},dispose(){if(disposed)return;disposed=true;kwonSkin.dispose();stance.dispose();seraph.dispose();giant.dispose();brawl.dispose();backdrop.geometry.dispose();backdrop.material.dispose();halo.geometry.dispose();halo.material.dispose();root.removeFromParent();dancers.slice(1).forEach(p=>{p.skeletons.forEach(s=>s.dispose());p.rig.removeFromParent();});const geos=new Set(),mats=new Set();kwon.root.traverse(o=>{if(o.geometry)geos.add(o.geometry);[].concat(o.material||[]).forEach(m=>mats.add(m));});geos.forEach(g=>g.dispose());const textures=new Set();mats.forEach(m=>{Object.values(m).forEach(v=>{if(v?.isTexture)textures.add(v);});m.dispose();});textures.forEach(t=>t.dispose());ownGeo.forEach(g=>g.dispose());ownMat.forEach(m=>m.dispose());}};
 }
