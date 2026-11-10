@@ -251,8 +251,13 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(action==='event'&&screen==='home'){eventError='';eventPage();return;}
   if(action==='event-join'&&screen==='event'){
    const nickname=dialog.querySelector('#j-event-name')?.value||'';
-   busy=true;try{await event.join(nickname);setEventMode(true);eventError='';}
-   catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+   let joined=false;busy=true;
+   try{await event.join(nickname);setEventMode(true);eventError='';joined=true;}
+   catch(error){eventError=error.message;}
+   finally{busy=false;}
+   // Successful signup should lead directly to the fresh event home.
+   if(joined)home();else eventPage();
+   return;
   }
   if(action==='event-refresh'&&screen==='event'){
    busy=true;try{await event.refresh();eventError='';}
