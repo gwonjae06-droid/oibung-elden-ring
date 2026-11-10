@@ -2,6 +2,7 @@ import {readGyuwonEndingPhoto,GYUWON_ENDING_PHOTO_FALLBACK} from './gyuwon-endin
 import {createBossSecret} from './boss-secret.mjs';
 import {ODEN_EVENT} from './oden-event-config.mjs';
 import {createOdenEventClient,eventScopedStorage} from './oden-event-client.mjs';
+import {createEventInputMonitor,eventActionFromInput} from './oden-event-input-monitor.mjs';
 import {EVOLUTIONS} from './weapon-evolution.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {weaponStatChart} from './weapon-stat-chart.mjs?radar-v1-20261107';
@@ -29,6 +30,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let rawStorage;try{rawStorage=win.localStorage;}catch{}
  const event=createOdenEventClient({storage:rawStorage,fetcher:win.fetch?.bind(win)||globalThis.fetch});
+ const monitor=createEventInputMonitor({send:summary=>event.report(summary).catch(error=>{eventError=error.message;})});
  let eventMode=event.enabled&&event.active;
  let storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
  let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false,eventError='';
@@ -78,7 +80,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function setEventMode(active){
   if(active&&!event.registered)return false;
-  event.setActive(active);eventMode=!!active;profile.run=null;
+  monitor.flush();event.setActive(active);eventMode=!!active;profile.run=null;monitor.reset();
   storage=eventMode?eventScopedStorage(rawStorage,ODEN_EVENT.eventId,event.session.id):rawStorage;
   profile=loadProfile(storage);selectedStage=0;pendingReward=null;bossGateOpen=false;secret.reset();
   return true;
@@ -89,6 +91,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   return '<div class="j-event-banner" role="status"><strong>오든링 엔딩 이벤트'+mode+'</strong>'
     +(s?.code?'<p>엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b> · 화면을 캡처해 보내세요.</p>':
      s?'<p>'+escapeHTML(s.nickname)+' · 서버 진행 '+Math.max(0,(s.stage??-1)+1)+'/5</p>':'<p>참가자 등록 후 새로운 기록으로 도전하세요.</p>')
+    +(s?.claimHold?'<p role="status">입력 기록 확인이 필요하여 상품 인증이 일시 보류되었습니다. 게임은 계속할 수 있습니다.</p>':'')
     +(eventError?'<p role="alert">'+escapeHTML(eventError)+'</p>':'')
     +button('event','이벤트 기록 확인','class="j-event-link"')+'</div>';
  }
@@ -102,6 +105,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
     +Math.max(0,(s?.stage??-1)+1)+'/5</p>'
     +(s?.code?'<p class="j-status" role="status">엔딩 인증번호 <b>'+escapeHTML(s.code)+'</b><br>바뀐 메인화면과 함께 캡처해 친구에게 제출하세요.</p>':'<p>보스별 완료 기록을 서버에 남긴 뒤 최종 3D 엔딩까지 완료해야 인증번호가 발급됩니다.</p>')
     +'<p>심사: '+escapeHTML(s?.status||'playing')+'</p>'
+    +(s?.claimHold?'<p role="status">상품 지급 전 관리자 확인이 필요합니다. AI 사용이 확정됐다는 뜻은 아닙니다.</p>'+(s?.appealSent?'<p>소명 접수 완료</p>':'<label class="j-setting">상황 설명 (20~400자)<textarea id="j-event-appeal" maxlength="400" rows="3" placeholder="자동화 도구가 아닌 접근성 입력 장치 등을 사용했다면 설명해주세요."></textarea></label>'+button('event-appeal','관리자에게 소명 보내기')):'')
     +button('event-refresh','서버 기록 새로고침')
     +(s?.stage===4&&!s?.code&&eventMode&&pref('oibung.gyuwon.ending-watched','0')==='1'?button('event-claim-retry','엔딩 인증번호 재요청','class="j-primary"'):'')
     +(!eventMode?button('event-activate','이벤트 전용 기록으로 플레이','class="j-primary"'):
@@ -169,7 +173,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  }
  function settings(){screen='settings';show(`<div class="j-panel"><h1>설정</h1><label class="j-setting"><input type="checkbox" id="j-muted" ${pref('oibung-muted','0')==='1'?'checked':''}> 모든 소리 끄기</label><label class="j-setting">메인 테마 개별 음량 <input id="j-volume" type="range" min="0" max="1" step=".05" value="${volume}"></label>${audioSliders()}<details><summary>조작법</summary><p>WASD / 방향키 이동 · J / 좌클릭 공격 · L / 우클릭 스킬<br>Space 회피 · E 회복약 · Q 록온 · Esc 일시정지<br>모바일에서는 화면 조이스틱과 행동 버튼을 사용합니다.</p></details>${back()}${warning()}</div>`);}
  async function closeBattle(){suppressClose=true;try{await view?.close?.();view=null;if(root!==doc&&roots.has(root)){root.removeEventListener('click',roots.get(root),true);roots.delete(root);}readBattleSession(doc)?.menu?.();}finally{suppressClose=false;}game=null;root=doc;}
- function accountInterrupted(){if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);const r=profile.run;if(!r.secret&&!r.sandbox)reportEventStage(r.stage);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
+ function accountInterrupted(){monitor.flush();if(game?.status==='won'&&!seen.has(game)&&profile.run){seen.add(game);const r=profile.run;if(!r.secret&&!r.sandbox)reportEventStage(r.stage);finishAttempt(profile,{won:true,time:game.time,damage:game.stats?.damage});}persist();}
  async function goHome(){if(busy)return;await poll(true);busy=true;try{if(game?.status==='playing')readBattleSession(root)?.pause?.();accountInterrupted();await closeBattle();home();}finally{busy=false;}}
  // Runs one cinematic. Any error or a run longer than the limit switches all cinematics off and the game simply carries on.
  async function play(make){
@@ -208,7 +212,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  }
  function watchRoot(target){if(roots.has(target))return;const listener=e=>{const b=e.target.closest?.('button');if(!b||screen!=='battle')return;if(b.id==='retry'){e.preventDefault();e.stopImmediatePropagation();const r=profile.run;if(!r||busy)return;(async()=>{await poll(true);profile.run=r.sandbox?newBossPracticeRun(r.weapon,r.startStage):newTravelRun(profile,r.weapon,r.startStage||0)??newRun(r.weapon);await launch();})();return;}if(['quit','change'].includes(b.id)){e.preventDefault();e.stopImmediatePropagation();goHome();}};target.addEventListener('click',listener,true);roots.set(target,listener);}
  async function poll(force=false){if(disposed||screen!=='battle'||!game||busy)return;const arena=root.getElementById('arena');let prep=root.getElementById('battle-preparation');if(!prep&&arena?.appendChild&&doc.createElement){prep=doc.createElement('p');prep.id='battle-preparation';prep.setAttribute('role','status');prep.style.cssText='position:absolute;top:28%;left:0;width:100%;text-align:center;z-index:30;color:#fff0ba;font:600 22px serif;text-shadow:0 2px 10px #000;pointer-events:none';arena.appendChild(prep);}if(prep?.style){prep.hidden=game.player.action?.kind!=='charging';prep.textContent=game.player.action?.kind==='charging'?'차징 · '+Math.min(100,Math.round(game.player.action.t/.9*100))+'%':'';}const result=root.getElementById('result');if(game.status==='playing'||!result||(!force&&result.hidden)||seen.has(game))return;
-  seen.add(game);const r=profile.run;if(!r)return;
+  monitor.flush();seen.add(game);const r=profile.run;if(!r)return;
   const name=BOSS_NAMES[r.stage],won=game.status==='won';if(won&&!r.secret&&!r.sandbox)reportEventStage(r.stage);
   const outcome=finishAttempt(profile,{won,time:game.time,damage:game.stats?.damage});persist();
   if(r.sandbox){
@@ -253,6 +257,10 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   }
   if(action==='event-activate'&&screen==='event'){setEventMode(true);home();return;}
   if(action==='event-normal'&&screen==='event'){setEventMode(false);home();return;}
+  if(action==='event-appeal'&&screen==='event'){
+   const note=dialog.querySelector('#j-event-appeal')?.value||'';
+   busy=true;try{await event.appeal(note);eventError='';}catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
+  }
   if(action==='event-claim-retry'&&screen==='event'){
    busy=true;try{await event.finish();eventError='';}catch(error){eventError=error.message;}finally{busy=false;eventPage();}return;
   }
@@ -322,7 +330,7 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  const onEventFilmStart=()=>{if(eventFinalEligible())reportEventStage(BOSSES.length-1);};
  const onEventFilmDone=()=>{
   if(!eventFinalEligible())return;
-  void event.finish().then(()=>{
+  monitor.flush();void event.finish().then(()=>{
    eventError='';
    if(screen==='home')home(false);
   }).catch(error=>{
@@ -340,10 +348,16 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   if(amount)persist();
   forge();
  };
+ const recordEventInput=e=>{
+  if(!eventMode||screen!=='battle'||doc.hidden||!focused)return;
+  const action=eventActionFromInput(e);
+  if(action)monitor.record(action,{trusted:e.isTrusted!==false,repeat:e.repeat===true});
+ };
  const requestHome=()=>goHome(),focus=()=>{focused=true;syncMusic();},blur=()=>{focused=false;syncMusic();};
  dialog.addEventListener('click',click);dialog.addEventListener('input',input);dialog.addEventListener('cancel',cancel);dialog.addEventListener('keydown',e=>e.stopPropagation());
  win.addEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.addEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);
+ win.addEventListener('keydown',recordEventInput,true);win.addEventListener('pointerdown',recordEventInput,true);
  win.addEventListener('keydown',forgeDeveloperKey,true);win.addEventListener('pointerdown',unlock,true);win.addEventListener('keydown',unlock,true);win.addEventListener('focus',focus);win.addEventListener('blur',blur);win.addEventListener('oibung:home',requestHome);doc.addEventListener('visibilitychange',syncMusic);
  const timer=win.setInterval(poll,150);if(dialog.open)dialog.close();home();
- return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
+ return {get transitionsEnabled(){return transitionsOn;},async dispose(){accountInterrupted();disposed=true;transition?.dispose();win.clearInterval(timer);for(const [target,fn] of roots)target.removeEventListener('click',fn,true);roots.clear();win.removeEventListener('oibung:gyuwon-event-ending-start',onEventFilmStart);win.removeEventListener('oibung:gyuwon-event-ending-complete',onEventFilmDone);monitor.flush();win.removeEventListener('keydown',recordEventInput,true);win.removeEventListener('pointerdown',recordEventInput,true);win.removeEventListener('keydown',forgeDeveloperKey,true);win.removeEventListener('pointerdown',unlock,true);win.removeEventListener('keydown',unlock,true);win.removeEventListener('focus',focus);win.removeEventListener('blur',blur);win.removeEventListener('oibung:home',requestHome);doc.removeEventListener('visibilitychange',syncMusic);dialog.removeEventListener('click',click);dialog.removeEventListener('input',input);dialog.removeEventListener('cancel',cancel);await closeBattle();dialog.close();await music.dispose();}};
 }
