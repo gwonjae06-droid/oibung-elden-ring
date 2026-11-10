@@ -35,7 +35,7 @@ test('the real story remains the baseline and all five encounters have independe
  assert.equal(journey('cards').boss.maxHp,4822);
  assert.equal(journey('sword').player.ranged,null);
 });
-for(const [weapon,volleys,projectiles,reloadDuration] of [['bow',8,8,1.4],['cards',4,12,1.2]]){
+for(const [weapon,volleys,projectiles,reloadDuration] of [['bow',7,7,1.65],['cards',3,9,1.5]]){
  test(weapon+' spends its real magazine, auto-reloads, and never consumes permanent ammunition',()=>{
   const g=journey(weapon),r=g.player.ranged;
   for(let i=0;i<volleys;i++)shot(g);
@@ -70,13 +70,13 @@ for(const [weapon,volleys,projectiles,reloadDuration] of [['bow',8,8,1.4],['card
   assert.ok(g.player.ranged.remaining<before);
  });
 }
-test('bow must genuinely draw for 0.45 seconds before a basic arrow appears',()=>{
+test('bow must genuinely draw for 0.48 seconds before a basic arrow appears',()=>{
  const g=journey(),r=g.player.ranged;
- assert.equal(WEAPONS.bow.wind,.45);
+ assert.equal(WEAPONS.bow.wind,.48);
  assert.equal(actPlayer(g,'light'),true);
- tickPlayerAction(g,.44,WEAPONS.bow);
+ tickPlayerAction(g,.47,WEAPONS.bow);
  assert.equal(g.projectiles.length,0);
- assert.equal(r.loaded,8);
+ assert.equal(r.loaded,7);
  tickPlayerAction(g,.02,WEAPONS.bow);
  assert.equal(g.projectiles.length,1);
  assert.equal(r.loaded,7);
@@ -86,10 +86,10 @@ test('cancelling before the projectile release costs no ammo, cancelling after d
  assert.equal(actPlayer(g,'light'),true);
  tickPlayerAction(g,.15,WEAPONS.bow);
  assert.equal(actPlayer(g,'roll'),true);
- assert.equal(r.loaded,8);
+ assert.equal(r.loaded,7);
  tickPlayerAction(g,.6,WEAPONS.bow);
  assert.equal(actPlayer(g,'light'),true);
- tickPlayerAction(g,.46,WEAPONS.bow);
+ tickPlayerAction(g,.49,WEAPONS.bow);
  assert.equal(r.loaded,7);
  assert.equal(actPlayer(g,'roll'),true);
  assert.equal(r.loaded,7);
@@ -100,9 +100,9 @@ test('backstep shooting spends two arrows and cannot bypass a nearly empty magaz
  assert.equal(actPlayer(g,'skill'),true);
  tickPlayerAction(g,.25,WEAPONS.bow);
  assert.equal(g.projectiles.length,2);
- assert.equal(r.loaded,6);
+ assert.equal(r.loaded,5);
  tickPlayerAction(g,.40,WEAPONS.bow);
- for(let i=0;i<5;i++)shot(g);
+ for(let i=0;i<4;i++)shot(g);
  assert.equal(r.loaded,1);
  g.player.skill.cooldown=0;
  assert.equal(actPlayer(g,'skill'),false);
@@ -110,9 +110,9 @@ test('backstep shooting spends two arrows and cannot bypass a nearly empty magaz
 });
 test('reload label shows counts and a countdown rather than a fake infinite-ammo UI',()=>{
  const g=journey(),r=g.player.ranged;
- assert.equal(rangedMagazineLabel(r),'8 / 8');
+ assert.equal(rangedMagazineLabel(r),'7 / 7');
  r.loaded=0;r.pending=true;
  assert.equal(rangedMagazineLabel(r),'장전 대기');
  tickPlayerResources(g,.2);
- assert.match(rangedMagazineLabel(r),/^장전 1\.2초$/);
+ assert.match(rangedMagazineLabel(r),/^장전 1\.5초$/);
 });
