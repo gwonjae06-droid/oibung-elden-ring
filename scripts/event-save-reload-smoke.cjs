@@ -78,11 +78,20 @@ const PID='11111111-1111-4111-8111-111111111110';
    g.status='won';g.boss.hp=0;
    document.getElementById('result').hidden=false;
   });
+  await page.waitForTimeout(1700);
+  const diag=await page.evaluate(({id,pid})=>{
+   const game=window.__odenGetSession(document)?.game,dialog=document.getElementById('journey'),result=document.getElementById('result');
+   const k='oibung.event.'+id+'.'+pid+'.oibung.journey.v1';
+   const p=JSON.parse(localStorage.getItem(k)||'null');
+   return {gameStatus:game?.status,resultHidden:result?.hidden,screen:dialog?.dataset?.screen,dialogOpen:dialog?.open,
+    eventKeys:Object.keys(localStorage).filter(x=>x.startsWith('oibung.event.')),defeated:p?.defeated,flames:p?.flames,serverActions:undefined};
+  },{id:EVENT_ID,pid:PID});
+  console.log('Event victory processing diagnostic',JSON.stringify(diag));
   await page.waitForFunction(({id,pid})=>{
    const k='oibung.event.'+id+'.'+pid+'.oibung.journey.v1';
    const p=JSON.parse(localStorage.getItem(k)||'null');
    return p?.defeated?.includes('kwon')&&p?.flames>=1;
-  },{id:EVENT_ID,pid:PID},{timeout:20000});
+  },{id:EVENT_ID,pid:PID},{timeout:9000});
   const snapshot=await page.evaluate(({id,pid})=>({
    eventSave:localStorage.getItem('oibung.event.'+id+'.'+pid+'.oibung.journey.v1'),
    ordinarySave:localStorage.getItem('oibung.journey.v1'),
