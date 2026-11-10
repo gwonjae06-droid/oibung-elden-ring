@@ -22,12 +22,28 @@ create unique index if not exists oden_event_one_nickname
 create index if not exists oden_event_review_queue
  on public.oden_event_participants(event_id,review_status,completed_at desc);
 
+-- Upgrade-safe event-only review columns. Never store raw keys or cursor paths.
+alter table public.oden_event_participants
+ add column if not exists risk_score smallint not null default 0,
+ add column if not exists risk_flags jsonb not null default '[]'::jsonb,
+ add column if not exists risk_reports integer not null default 0,
+ add column if not exists last_telemetry_at timestamptz,
+ add column if not exists claim_hold boolean not null default false,
+ add column if not exists appeal_note text,
+ add column if not exists appeal_at timestamptz;
+create index if not exists oden_event_review_holds
+ on public.oden_event_participants(event_id,claim_hold,completed_at desc);
+-- A client cannot update any of the review/hold/appeal columns directly;
+-- all client traffic passes through the token-checked Edge Function.
+
 alter table public.oden_event_participants enable row level security;
 revoke all on public.oden_event_participants from public,anon,authenticated;
 grant select,insert,update on public.oden_event_participants to service_role;
 -- Intentionally NO anon/authenticated SELECT/INSERT/UPDATE policies.
 -- Never put the service-role/secret API key in the browser or GitHub.
 
+-- A held claim (claim_hold=true) must NOT be paid until a human reviews
+-- the evidence, clears the hold, and approves it. Risk is not proof of AI.
 -- After a verified photo and matching account, approve in Table Editor:
 -- review_status = 'approved'
 -- After actually delivering the prize, set paid_at to the current UTC timestamp.

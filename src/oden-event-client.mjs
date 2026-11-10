@@ -48,6 +48,20 @@ export function createOdenEventClient({storage=globalThis.localStorage,fetcher=g
    session={...session,stage:data.stage};save();return session;
   });
  }
+ async function report(summary){
+  if(!session)return null;
+  return enqueue(async()=>{
+   const data=await call('telemetry',{report:summary});
+   session={...session,...data,token:session.token};save();return session;
+  });
+ }
+ async function appeal(note){
+  if(!session)return null;
+  return enqueue(async()=>{
+   const data=await call('appeal',{note});
+   session={...session,...data,token:session.token};save();return session;
+  });
+ }
  async function finish(){
   if(!session)return null;
   return enqueue(async()=>{
@@ -63,6 +77,6 @@ export function createOdenEventClient({storage=globalThis.localStorage,fetcher=g
   get error(){return lastError;},
   get active(){try{return !!session&&storage?.getItem(EVENT_MODE_KEY)===config.eventId;}catch{return false;}},
   setActive(active){try{if(active&&session)storage?.setItem(EVENT_MODE_KEY,config.eventId);else storage?.removeItem(EVENT_MODE_KEY);}catch{}},
-  join,refresh,stage,finish
+  join,refresh,stage,finish,report,appeal
  };
 }

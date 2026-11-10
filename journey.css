@@ -340,3 +340,6 @@ body[data-motion='reduced'] #journey .j-light-shafts,body[data-motion='reduced']
 #journey .j-event-link{margin-top:6px;padding:7px 12px;border:1px solid #ae9769a0;border-radius:5px;background:#23262b;color:#f4dcab;font-size:12px}
 #journey .j-panel #j-event-name{display:block;margin:9px 0 12px;max-width:310px;width:100%;padding:12px;border:1px solid #877352;border-radius:6px;background:#11161c;color:#fff0d4;font:14px system-ui,sans-serif}
 #journey .j-panel .j-status b{letter-spacing:.05em;overflow-wrap:anywhere}
+
+/* Event appeal UI appears only after server-side claim-review hold. */
+#journey #j-event-appeal{display:block;width:min(100%,440px);min-height:92px;margin:9px 0 10px;padding:10px 12px;resize:vertical;border:1px solid #8f7854;border-radius:6px;background:#101821;color:#f5e8d0;font:14px/1.55 system-ui,sans-serif}

@@ -1,3 +1,4 @@
+import {classifyEventRisk,nextEventRisk,riskLevel} from './risk.js';
 // Public endpoint with application-level bearer-token authentication.
 // Deploy with verify_jwt=false; database tables deny ALL browser roles.
 // This logs orderly client reports. It does NOT prove unmodified gameplay.
@@ -31,12 +32,13 @@ async function db(method,params={},body=null){
  return await r.json();
 }
 async function participant(id,tokenHash){
- const rows=await db('GET',{select:'id,event_id,nickname,stage,last_progress_at,final_started_at,completed_at,claim_code,review_status,paid_at',
+ const rows=await db('GET',{select:'id,event_id,nickname,stage,last_progress_at,final_started_at,completed_at,claim_code,review_status,paid_at,risk_score,risk_flags,risk_reports,last_telemetry_at,claim_hold,appeal_at',
   id:'eq.'+id,event_id:'eq.'+EVENT_ID,token_hash:'eq.'+tokenHash,limit:'1'});
  return rows[0]||null;
 }
 function safe(p){return {id:p.id,nickname:p.nickname,stage:p.stage,completed_at:p.completed_at,
- code:p.claim_code||null,status:p.review_status,paid_at:p.paid_at};}
+ code:p.claim_code||null,status:p.review_status,paid_at:p.paid_at,
+ riskLevel:riskLevel(p.risk_score,p.claim_hold),claimHold:!!p.claim_hold,appealSent:!!p.appeal_at};}
 Deno.serve(async request=>{
  const origin=request.headers.get('Origin');
  if(origin&&!ALLOWED_ORIGINS.has(origin))return fail('허용되지 않은 사이트입니다.',403,origin);
@@ -61,11 +63,46 @@ Deno.serve(async request=>{
   const credential=request.headers.get('X-Oden-Token')||'';
   if(!/^[a-f0-9]{64}$/u.test(credential))return fail('참가자 인증이 필요합니다.',401,origin);
   const hashed=await hash(credential);
-  const rows=await db('GET',{select:'id,event_id,nickname,stage,last_progress_at,final_started_at,completed_at,claim_code,review_status,paid_at',
+  const rows=await db('GET',{select:'id,event_id,nickname,stage,last_progress_at,final_started_at,completed_at,claim_code,review_status,paid_at,risk_score,risk_flags,risk_reports,last_telemetry_at,claim_hold,appeal_at',
     event_id:'eq.'+EVENT_ID,token_hash:'eq.'+hashed,limit:'1'});
   const p=rows[0];
   if(!p)return fail('등록된 참가자 정보가 없습니다.',401,origin);
   if(input.action==='status')return response(safe(p),200,origin);
+  if(input.action==='telemetry'){
+   if(p.completed_at)return response(safe(p),200,origin);
+   const report=input.report;
+   if(!classifyEventRisk(report))return fail('입력 요약이 올바르지 않습니다.',400,origin);
+   const now=Date.now();
+   if(p.last_telemetry_at&&now-Date.parse(p.last_telemetry_at)<15000)
+    return fail('보안 요약 전송 간격이 너무 짧습니다.',429,origin);
+   const next=nextEventRisk(p.risk_score,report,p.risk_flags);
+   // An attacker can forge or omit this report. Only hold prize review;
+   // never permanently ban, change health/damage or infer player identity.
+   const time=new Date(now).toISOString();
+   const guard=p.last_telemetry_at?'eq.'+p.last_telemetry_at:'is.null';
+   const changed=await db('PATCH',{
+    id:'eq.'+p.id,last_telemetry_at:guard,completed_at:'is.null',
+    select:'id,nickname,stage,completed_at,claim_code,review_status,paid_at,risk_score,claim_hold,appeal_at'
+   },{
+    risk_score:next.score,risk_flags:next.flags,risk_reports:Math.min(100000,(Number(p.risk_reports)||0)+1),
+    last_telemetry_at:time,claim_hold:!!p.claim_hold||next.hold,updated_at:time
+   });
+   if(!changed.length)return fail('요약 처리 상태를 다시 확인하세요.',409,origin);
+   return response(safe(changed[0]),200,origin);
+  }
+  if(input.action==='appeal'){
+   if(!p.claim_hold)return fail('추가 확인 중인 기록만 소명을 제출할 수 있습니다.',409,origin);
+   if(p.appeal_at)return fail('이미 소명이 접수됐습니다.',409,origin);
+   const note=String(input.note||'').normalize('NFC').trim();
+   if(note.length<20||note.length>400||/[\u0000-\u001f]/u.test(note))
+    return fail('설명은 20~400자로 입력하세요.',400,origin);
+   const time=new Date().toISOString();
+   const changed=await db('PATCH',{id:'eq.'+p.id,claim_hold:'eq.true',appeal_at:'is.null',
+    select:'id,nickname,stage,completed_at,claim_code,review_status,paid_at,risk_score,claim_hold,appeal_at'
+   },{appeal_note:note,appeal_at:time,updated_at:time});
+   if(!changed.length)return fail('소명 접수 상태를 다시 확인하세요.',409,origin);
+   return response(safe(changed[0]),200,origin);
+  }
   if(input.action==='progress'){
    const stage=Number(input.stage);
    if(!Number.isInteger(stage)||stage<0||stage>4)return fail('보스 단계가 올바르지 않습니다.',400,origin);
@@ -86,7 +123,7 @@ Deno.serve(async request=>{
    if(Date.now()-Date.parse(p.final_started_at)<155000)return fail('마지막 엔딩이 아직 완료되지 않았습니다.',409,origin);
    const now=new Date().toISOString(),claim=code();
    const changed=await db('PATCH',{
-     id:'eq.'+p.id,stage:'eq.4',completed_at:'is.null',select:'id,nickname,stage,claim_code,completed_at,review_status,paid_at'
+     id:'eq.'+p.id,stage:'eq.4',completed_at:'is.null',select:'id,nickname,stage,claim_code,completed_at,review_status,paid_at,risk_score,claim_hold,appeal_at'
    },{claim_code:claim,completed_at:now,updated_at:now});
    if(!changed.length)return fail('이미 처리 중입니다. 기록을 다시 확인하세요.',409,origin);
    return response(safe(changed[0]),200,origin);
