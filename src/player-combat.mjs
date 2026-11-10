@@ -26,7 +26,10 @@ export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}
   game.projectiles.push({id:game.nextId++,x:game.player.x,z:game.player.z,y:1.2+(game.player.floorY||0),
    yaw:action.yaw+(i-(count-1)/2)*(count===2?.1:.075),
    speed:game.weapon==='bow'?26:game.weapon==='cards'?20:24,
-   life:basicLifetime,damage:weapon.damage*action.mult*volleyScale,
+   // Ranged weapon range is real collision reach, not only a menu statistic.
+   // Non-ranged sword waves keep their separate authored lifetime.
+   life:weapon.projectile?Math.min(basicLifetime,weapon.range/(game.weapon==='bow'?26:20)):basicLifetime,
+   damage:weapon.damage*action.mult*volleyScale,
    fireRank,poise:weapon.poise,kind:game.weapon,source:action,
    piercing:false,bossHit:false,hit:false,skill:false});
  }
@@ -80,7 +83,7 @@ export function rewardPlayerHit(game,damage,action,{canStun,stun}={}){
  if(!(damage>0))return;
  const rank=game.weapon==='cards'?evolutionCount(game,'blood-deck'):0;
  if(rank&&action?.basic){
-  const gain=Math.min(game.player.maxHp-game.player.hp,damage*(rank>=2?.16:.08));
+  const gain=Math.min(game.player.maxHp-game.player.hp,damage*(rank>=2?.12:.06));
   if(gain>0){game.player.hp+=gain;game.events.push({type:'skill-heal',flavor:'cards',amount:gain});}
  }
  applyWeaponHitEffects(game,damage,action,{canStun,stun});
