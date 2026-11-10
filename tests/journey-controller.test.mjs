@@ -117,6 +117,51 @@ test('five title taps award exactly two persistent flames instead of opening bos
  assert.doesNotMatch(reload.dialog.html,/봉인 밖의 문/);
  await reload.api.dispose();reload.release();
 });
+test('four quick main-title taps reveal five boss destinations without unlocking normal travel',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(let i=0;i<3;i++){await f.click('secret-tap');assert.doesNotMatch(f.dialog.html,/data-j="gate-boss"/);}
+ await f.click('secret-tap');
+ assert.equal((f.dialog.html.match(/data-j="gate-boss"/g)||[]).length,5);
+ assert.equal(saved().flames,0);
+ assert.deepEqual(saved().defeated,[]);
+ await f.click('gate-boss',{stage:'4'});
+ assert.match(f.dialog.html,/무두의 사유 최규원부터 도전/);
+ assert.match(f.dialog.html,/data-j="boss-target"[^>]*data-stage="4"[^>]*aria-pressed="true"/);
+ assert.doesNotMatch(f.dialog.html,/data-j="boss-target"[^>]*disabled/);
+ await f.click('begin');
+ assert.equal(f.game().boss.maxHp,7000);
+ assert.equal(saved().flames,0);
+ f.game().status='won';await f.poll();
+ assert.match(f.dialog.html,/같은 보스 재도전/);
+ assert.equal(saved().flames,0);
+ assert.deepEqual(saved().defeated,[]);
+ assert.deepEqual(saved().memories,[]);
+ assert.deepEqual(saved().records,[]);
+ assert.equal(saved().clears,0);
+ await f.click('sandbox-retry');
+ assert.equal(f.game().status,'playing');
+ assert.equal(f.game().boss.maxHp,7000);
+ await f.click('home');
+ assert.doesNotMatch(f.dialog.html,/data-j="gate-boss"/);
+ await f.click('new');
+ assert.match(f.dialog.html,/data-j="boss-target"[^>]*data-stage="4"[^>]*disabled/);
+ await f.api.dispose();f.release();
+});
+test('a hidden boss visit can choose any weapon but gives no permanent credit on defeat',async()=>{
+ const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
+ for(let i=0;i<4;i++)await f.click('secret-tap');
+ await f.click('gate-boss',{stage:'2'});
+ await f.click('weapon',{weapon:'bow'});
+ await f.click('begin');
+ assert.equal(f.lastLaunch().weapon,'bow');
+ assert.equal(f.game().boss.maxHp,5711);
+ f.game().status='lost';await f.poll();
+ assert.match(f.dialog.html,/같은 보스 재도전/);
+ assert.deepEqual(saved().defeated,[]);
+ assert.equal(saved().flames,0);
+ await f.api.dispose();f.release();
+});
+
 test('old hidden ODEN key path no longer opens a boss selector or mints flames',async()=>{
  const f=rig(),saved=()=>JSON.parse(f.data.get(SAVE_KEY));
  for(const code of ['KeyO','KeyD','KeyE','KeyN'])f.key(code,{key:code.at(-1).toLowerCase()});

@@ -8,7 +8,7 @@ import {playRewardPull} from './reward-pull.mjs';
 import {CHAPTER_MEMORIES} from './chapter-story.mjs';
 import {playJourneyTransition} from './journey-transition.mjs?art=home-mural-fit-v1-20261108';
 import {readBattleSession} from './battle-session.mjs';
-import {BOSSES,BOSS_NAMES,TRIAL_NAME,newRun,newTravelRun,latestUnlockedStage,canTravelTo,loadProfile,saveProfile,finishAttempt,advanceJourney,configureJourney} from './journey-state.mjs';
+import {BOSSES,BOSS_NAMES,TRIAL_NAME,newRun,newTravelRun,newBossPracticeRun,latestUnlockedStage,canTravelTo,loadProfile,saveProfile,finishAttempt,advanceJourney,configureJourney} from './journey-state.mjs';
 import {BOSS_REGISTRY} from './boss-registry.mjs';
 import {JOURNEY_ART} from './journey-art.mjs?art=home-mural-fit-v1-20261108';
 import {createMenuTheme} from './menu-theme.mjs';
@@ -25,7 +25,7 @@ const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 export function installJourney(doc=globalThis.document,win=globalThis.window,{loadBattle=id=>BOSS_REGISTRY[id].load(),makeMusic=createMenuTheme,playTransition=(boss,shell)=>playJourneyTransition(doc,win,boss,shell),playPull=panel=>playRewardPull(doc,win,panel)}={}){
  const dialog=doc.getElementById('journey');if(!dialog)return null;
  let storage;try{storage=win.localStorage;}catch{}let profile=loadProfile(storage),screen='home',weapon='sword',view=null,root=doc,game=null,busy=false,disposed=false,suppressClose=false,focused=true,saveFailed=false;
- let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null;const secret=createBossSecret();
+ let transition=null,memoryComplete=false,transitionsOn=true,forgeWeapon='sword',pendingReward=null,selectedStage=0,refundConfirmWeapon=null,bossGateOpen=false,sandboxMode=false,gateTaps=0,gateLast=-Infinity;const secret=createBossSecret();
  const music=makeMusic(win),seen=new WeakSet(),roots=new Map();
  const audioSliders=()=>AUDIO_CHANNELS.map(channel=>`<label class="j-setting">${AUDIO_LABELS[channel]} <input type="range" data-audio-channel="${channel}" min="0" max="1" step=".05" value="${readAudioVolume(channel,storage)}" aria-label="${AUDIO_LABELS[channel]}"></label>`).join('');
  const pref=(key,fallback)=>{try{return storage.getItem(key)??fallback;}catch{return fallback;}};
@@ -75,20 +75,20 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  function bossChooser(){
   const latest=latestUnlockedStage(profile);
   const cards=BOSSES.map((id,i)=>button('boss-target',
-   '<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b><small>'+(i<=latest?'해금됨 · 자유 이동':'잠김 · 앞의 보스 토벌 필요')+'</small>',
-   'data-stage="'+i+'" class="j-boss-target '+(i===selectedStage?'selected':'')+'" aria-pressed="'+(i===selectedStage)+'" '+(i>latest?'disabled':'')
+   '<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b><small>'+(sandboxMode?'도전 가능':i<=latest?'해금됨 · 자유 이동':'잠김 · 앞의 보스 토벌 필요')+'</small>',
+   'data-stage="'+i+'" class="j-boss-target '+(i===selectedStage?'selected':'')+'" aria-pressed="'+(i===selectedStage)+'" '+( !sandboxMode&&i>latest?'disabled':'')
   )).join('');
-  return '<section class="j-boss-chooser" aria-label="도전할 보스 선택"><div class="j-boss-chooser-head"><h2>도전할 보스</h2><p>해금한 보스는 비용 없이 언제든 다시 선택할 수 있습니다.</p></div>'+
+  return '<section class="j-boss-chooser" aria-label="도전할 보스 선택"><div class="j-boss-chooser-head"><h2>도전할 보스</h2><p>'+(sandboxMode?'원하는 상대를 선택하세요.':'해금한 보스는 비용 없이 언제든 다시 선택할 수 있습니다.')+'</p></div>'+
    '<div class="j-boss-targets" role="group" aria-label="출발할 보스">'+cards+'</div>'+
-   '<p class="j-boss-note">'+BOSS_NAMES[selectedStage]+'부터 도전합니다. 선택 지점 이후의 보스는 순서대로 이어집니다.</p></section>';
+   '<p class="j-boss-note">'+BOSS_NAMES[selectedStage]+'부터 도전합니다. '+(sandboxMode?'선택한 보스와 단독으로 대결합니다.':'선택 지점 이후의 보스는 순서대로 이어집니다.')+'</p></section>';
  }
- function home(resetSelection=true,bonus=0){secret.reset();screen='home';profile.run=null;if(resetSelection)selectedStage=0;persist();
-  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p><div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
+ function home(resetSelection=true,bonus=0,keepTitleTaps=false){if(!keepTitleTaps){secret.reset();bossGateOpen=false;gateTaps=0;gateLast=-Infinity;}sandboxMode=false;screen='home';profile.run=null;if(resetSelection)selectedStage=0;persist();
+  show(`<div class="j-copy"><h1 class="j-title" data-j="secret-tap" style="user-select:none">오든링</h1><p class="j-subtitle">두상의 서약</p>${bonus?`<p class="j-status" role="status">정화의 불꽃 +${bonus}개 · 보유 ${flameBalance(profile)}개</p>`:''}<p class="j-prose">소망을 이루기 위해, 무엇을 바칠 것인가.<br>얼굴 없는 회랑에서, 잃어버린 이름을 마주하십시오.</p>${bossGateOpen?'<section class="j-boss-chooser j-hidden-boss-gate" aria-label="보스 선택"><div class="j-boss-chooser-head"><h2>보스 선택</h2></div><div class="j-boss-targets">'+BOSSES.map((id,i)=>button('gate-boss','<span class="j-boss-number">0'+(i+1)+'</span><b>'+BOSS_NAMES[i]+'</b>','data-stage="'+i+'" class="j-boss-target"')).join('')+'</div></section>':''}<div class="j-menu">${button('new','시련 시작 · 보스 선택','class="j-primary"')}${button('forge','대장간 · 무기 진화','class="j-forge-entry"')}</div><div class="j-links">${button('records','기록실')}${button('settings','설정')}</div>${route()}${warning()}</div>`);
  }
  function select(preserve=false){
-  if(!canTravelTo(profile,selectedStage))selectedStage=0;
+  if(!sandboxMode&&!canTravelTo(profile,selectedStage))selectedStage=0;
   screen='select';
-  show(`<div class="j-panel j-select"><div class="j-select-heading"><h1>${TRIAL_NAME}</h1><p>해금된 보스를 선택하고 무기를 정해 출정하세요. 보스 해금과 대장간 각인은 영구 유지됩니다.</p></div><div class="j-select-layout"><div class="j-select-left">${bossChooser()}<section class="j-select-weapons"><h2 class="j-select-subtitle">무기 선택</h2><div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div></section></div><div class="j-select-right">${weaponStatChart(weapon,{profile})}</div></div><div class="j-select-actions"><span class="j-selected-route" role="status">${BOSS_NAMES[selectedStage]} · ${WEAPONS[weapon]}</span>${button('begin','선택한 보스로 출정','class="j-primary j-begin"')}</div>${back()}${warning()}</div>`,{preserve});
+  show(`<div class="j-panel j-select"><div class="j-select-heading"><h1>${TRIAL_NAME}</h1><p>${sandboxMode?'보스와 무기를 선택해 출정하세요.':'해금된 보스를 선택하고 무기를 정해 출정하세요. 보스 해금과 대장간 각인은 영구 유지됩니다.'}</p></div><div class="j-select-layout"><div class="j-select-left">${bossChooser()}<section class="j-select-weapons"><h2 class="j-select-subtitle">무기 선택</h2><div class="j-cards j-weapon">${Object.entries(WEAPONS).map(([id,name],i)=>button('weapon',`<strong>0${i+1}</strong><b>${name}</b><small>${DESCRIPTIONS[id]}</small>`,`data-weapon="${id}" class="${weapon===id?'selected':''}" aria-pressed="${weapon===id}"`)).join('')}</div></section></div><div class="j-select-right">${weaponStatChart(weapon,{profile})}</div></div><div class="j-select-actions"><span class="j-selected-route" role="status">${BOSS_NAMES[selectedStage]} · ${WEAPONS[weapon]}</span>${button('begin','선택한 보스로 출정','class="j-primary j-begin"')}</div>${back()}${warning()}</div>`,{preserve});
  }
  function memory(boss='kwon',complete=false){memoryComplete=complete;const m=CHAPTER_MEMORIES[boss];screen='memory';const nextBoss=BOSS_NAMES[(profile.run?.stage??0)+1];show(`<div class="j-panel j-memory"><p class="j-kicker">서약의 기억</p><div class="j-memory-art" data-memory="${boss}" aria-hidden="true"></div><h1>${m.title}</h1><p class="j-memory-last">${m.last}</p><p>${m.text}</p><p>${BOSS_NAMES[BOSSES.indexOf(boss)]}의 서약 · ${m.oath}</p>${button('memory-next','정화의 불꽃 확인','class="j-primary"')}${back()}</div>`);}
  function forge(preserve=false){
@@ -160,10 +160,15 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
    if(entry.kind==='arena'&&transitionsOn){const session=readBattleSession(root);session.pause?.();const pause=root.getElementById('pause-screen');const old=pause?.style?.visibility;if(pause?.style)pause.style.visibility='hidden';try{await scene(entry.id);}finally{if(pause?.style)pause.style.visibility=old;}if(disposed)return;session.resume?.();}screen='battle';dialog.close();readBattleSession(root)?.intro?.();syncMusic();watchRoot(root);root.getElementById('world')?.focus();
   }catch(error){console.error('Journey launch failed',error);await closeBattle();show(`<div class="j-panel"><h1>전장을 열지 못했습니다</h1><p>인터넷 연결과 WebGL 지원을 확인한 뒤 다시 시도해 주세요. 저장된 여정은 유지됩니다.</p>${button('continue','다시 시도')}${back()}</div>`);}finally{busy=false;}
  }
- function watchRoot(target){if(roots.has(target))return;const listener=e=>{const b=e.target.closest?.('button');if(!b||screen!=='battle')return;if(b.id==='retry'){e.preventDefault();e.stopImmediatePropagation();const r=profile.run;if(!r||busy)return;(async()=>{await poll(true);profile.run=newTravelRun(profile,r.weapon,r.startStage||0)??newRun(r.weapon);await launch();})();return;}if(['quit','change'].includes(b.id)){e.preventDefault();e.stopImmediatePropagation();goHome();}};target.addEventListener('click',listener,true);roots.set(target,listener);}
+ function watchRoot(target){if(roots.has(target))return;const listener=e=>{const b=e.target.closest?.('button');if(!b||screen!=='battle')return;if(b.id==='retry'){e.preventDefault();e.stopImmediatePropagation();const r=profile.run;if(!r||busy)return;(async()=>{await poll(true);profile.run=r.sandbox?newBossPracticeRun(r.weapon,r.startStage):newTravelRun(profile,r.weapon,r.startStage||0)??newRun(r.weapon);await launch();})();return;}if(['quit','change'].includes(b.id)){e.preventDefault();e.stopImmediatePropagation();goHome();}};target.addEventListener('click',listener,true);roots.set(target,listener);}
  async function poll(force=false){if(disposed||screen!=='battle'||!game||busy)return;const arena=root.getElementById('arena');let prep=root.getElementById('battle-preparation');if(!prep&&arena?.appendChild&&doc.createElement){prep=doc.createElement('p');prep.id='battle-preparation';prep.setAttribute('role','status');prep.style.cssText='position:absolute;top:28%;left:0;width:100%;text-align:center;z-index:30;color:#fff0ba;font:600 22px serif;text-shadow:0 2px 10px #000;pointer-events:none';arena.appendChild(prep);}if(prep?.style){prep.hidden=game.player.action?.kind!=='charging';prep.textContent=game.player.action?.kind==='charging'?'차징 · '+Math.min(100,Math.round(game.player.action.t/.9*100))+'%':'';}const result=root.getElementById('result');if(game.status==='playing'||!result||(!force&&result.hidden)||seen.has(game))return;
   seen.add(game);const r=profile.run;if(!r)return;
   const name=BOSS_NAMES[r.stage],won=game.status==='won',outcome=finishAttempt(profile,{won,time:game.time,damage:game.stats?.damage});persist();
+  if(r.sandbox){
+   screen='sandbox-result';
+   show('<div class="j-panel"><h1>'+name+' · '+(won?'격파':'재도전')+'</h1>'+button('sandbox-retry','같은 보스 재도전','class="j-primary"')+back()+'</div>');
+   return;
+  }
   if(r.secret){
    screen='secret-result';
    show('<div class="j-panel"><p class="j-kicker">BEYOND THE OATH</p><h1>'+name+' · '+(won?'격파':'재도전')+'</h1><p>숨겨진 전투는 여정의 기록에 남지 않습니다. '+(won?'정화의 불꽃 +1 · 현재 '+flameBalance(profile)+'개':'획득한 불꽃은 없습니다.')+'</p>'+button('secret-retry','같은 보스 재도전','class="j-primary"')+' '+button('secret-menu','메인으로')+back()+'</div>');
@@ -188,7 +193,18 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
  async function completeJourney(){busy=true;try{await scene('complete');if(disposed)return;screen='result';const record=profile.records.at(-1),selectedRoute=record.startStage>0,best=Math.min(...profile.records.filter(x=>x.weapon===record.weapon&&x.bossCount===record.bossCount&&(x.startStage||0)===(record.startStage||0)).map(x=>x.time));show(`<div class="j-panel"><div class="j-seal" aria-hidden="true">♜</div><h1>${selectedRoute?'마지막 시련을 넘어섰다':'다섯 지배자를 넘어섰다'}</h1><p>${selectedRoute?`${BOSS_NAMES[record.startStage]}부터 시작한 선택 보스 여정을 완수했습니다. 전체 연속 클리어와 별도로 기록됩니다.`:'긴턱의 그림자가 걷히고, 공연이 끝나고, 주사위가 멈추고 성당의 마지막 심장이 고요해졌습니다.'}<br>멈춰 있던 자습실의 초침이 다시 움직입니다.<br>당신의 이름이 시련의 기록에 새겨집니다.</p><div class="j-result"><div><b>${clock(record.time)}</b><span>누적 전투 시간</span></div><div><b>${record.deaths}회</b><span>패배</span></div><div><b>${WEAPONS[record.weapon]}</b><span>${TRIAL_NAME}</span></div></div><p>${record.time===best?'같은 출발점·무기의 최고 기록입니다.':'같은 출발점·무기의 최고 기록 '+clock(best)}</p>${button('records','기록실','class="j-primary"')}${back()}${warning()}</div>`);
 }finally{busy=false;}}
  async function click(e){const b=e.target.closest('[data-j]');if(!b||busy||disposed)return;const action=b.dataset.j;
-  if(action==='secret-tap'&&screen==='home'){if(secret.tap(performance.now()))home(false,grantForgeDeveloperFlames(profile));return;}
+  if(action==='secret-tap'&&screen==='home'){
+   const now=performance.now(),award=secret.tap(now);
+   gateTaps=now-gateLast<=1000?gateTaps+1:1;gateLast=now;
+   if(award){home(false,grantForgeDeveloperFlames(profile));return;}
+   if(gateTaps===4){bossGateOpen=true;home(false,0,true);}
+   return;
+  }
+  if(action==='gate-boss'&&screen==='home'&&bossGateOpen){
+   const stage=Number(b.dataset.stage);
+   if(Number.isInteger(stage)&&stage>=0&&stage<BOSSES.length){sandboxMode=true;selectedStage=stage;bossGateOpen=false;select();}
+   return;
+  }
   if(action==='home'){await goHome();return;}
   if(action==='forge'&&screen==='home'){forgeWeapon=weapon;refundConfirmWeapon=null;forge();return;}
   if(action==='forge-weapon'&&screen==='forge'){
@@ -208,18 +224,19 @@ export function installJourney(doc=globalThis.document,win=globalThis.window,{lo
   }
   if(action==='boss-target'&&screen==='select'){
    const stage=Number(b.dataset.stage);
-   if(canTravelTo(profile,stage)){selectedStage=stage;select(true);}
+   if(sandboxMode||canTravelTo(profile,stage)){selectedStage=stage;select(true);}
    return;
   }
-  if(action==='new'&&screen==='home'){selectedStage=0;select();return;}
+  if(action==='new'&&screen==='home'){sandboxMode=false;selectedStage=0;select();return;}
   else if(action==='weapon'&&screen==='select'&&Object.hasOwn(WEAPONS,b.dataset.weapon)){weapon=b.dataset.weapon;select(true);}
   else if(action==='begin'&&screen==='select'){
    pendingReward=null;
-   profile.run=newTravelRun(profile,weapon,selectedStage);
+   profile.run=sandboxMode?newBossPracticeRun(weapon,selectedStage):newTravelRun(profile,weapon,selectedStage);
    if(!profile.run){selectedStage=0;select();return;}
    persist();await launch();
   }
-  else if(action==='restart'&&screen==='result'&&profile.run){pendingReward=null;profile.run=newTravelRun(profile,profile.run.weapon,profile.run.startStage||0)??newRun(profile.run.weapon);await launch();}
+  else if(action==='restart'&&screen==='result'&&profile.run){pendingReward=null;profile.run=profile.run.sandbox?newBossPracticeRun(profile.run.weapon,profile.run.startStage):newTravelRun(profile,profile.run.weapon,profile.run.startStage||0)??newRun(profile.run.weapon);await launch();}
+  else if(action==='sandbox-retry'&&screen==='sandbox-result'&&profile.run?.sandbox){profile.run=newBossPracticeRun(profile.run.weapon,profile.run.startStage);await launch();}
   else if(action==='continue'){if(screen==='loading'&&profile.run)await launch();}
   else if(action==='memory-next'&&screen==='memory'){flameReward();}
   else if(action==='flame-next'&&screen==='flame'&&pendingReward){
