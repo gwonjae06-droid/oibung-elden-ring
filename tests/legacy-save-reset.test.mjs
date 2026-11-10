@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LEGACY_SAVE_RESET_MARKER,LEGACY_SAVE_KEYS,resetLegacyOdenSavesOnce} from '../src/legacy-save-reset.mjs';
+import {BOSSES,freshProfile,newRun,finishAttempt,loadProfile,saveProfile,latestUnlockedStage} from '../src/journey-state.mjs';
+import {eventScopedStorage} from '../src/oden-event-client.mjs';
 
 const storage=entries=>{const data=new Map(entries);return {
  getItem:key=>data.has(key)?data.get(key):null,
@@ -53,16 +55,77 @@ test('missing storage is safe and the reset intentionally targets only save fiel
  assert.equal(LEGACY_SAVE_KEYS.length,3);
 });
 
-test('reset stays dormant until event is explicitly enabled in game configuration',async()=>{
+test('live reset is enabled only at campaign startup and runs before loading profile',async()=>{
  const {readFileSync}=await import('node:fs');
  const {fileURLToPath}=await import('node:url');
  const {dirname,resolve}=await import('node:path');
  const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
  const journey=readFileSync(resolve(root,'src/journey.mjs'),'utf8');
  const config=readFileSync(resolve(root,'src/oden-event-config.mjs'),'utf8');
- assert.match(config,/enabled:\s*false/);
+ assert.match(config,/enabled:\s*true/);
  const gate=journey.indexOf('if(event.enabled)resetLegacyOdenSavesOnce(rawStorage);');
  const profile=journey.indexOf('let profile=loadProfile(storage)');
  assert.ok(gate>=0,'destructive reset must be feature gated');
  assert.ok(profile>gate,'reset must precede profile load after event activation');
+ const edge=readFileSync(resolve(root,'supabase/functions/oden-event/index.js'),'utf8');
+ assert.match(config,/eventId:'oden-ending-2026-live-1110'/);
+ assert.match(edge,/const EVENT_ID='oden-ending-2026-live-1110'/);
+});
+
+test('real boss win saved after first reset persists after 1, 2 and 3 further simulated browser visits',()=>{
+ const store=storage([
+  ['oibung.journey.v1',JSON.stringify({version:4,clears:1,defeated:[...BOSSES],records:[],memories:[],flames:50})],
+  ['oibung.gyuwon.ending-watched','1'],
+  ['oibung.gyuwon.ensemble-photo','old-picture']
+ ]);
+ assert.equal(resetLegacyOdenSavesOnce(store).changed,true);
+ assert.equal(store.getItem('oibung.gyuwon.ending-watched'),null);
+ const fresh=loadProfile(store);
+ assert.deepEqual(fresh.defeated,[]);
+ assert.equal(fresh.flames,0);
+ fresh.run=newRun('sword');
+ assert.equal(finishAttempt(fresh,{won:true,time:102,damage:50}),'flame');
+ assert.equal(saveProfile(store,fresh),true);
+ for(let visit=1;visit<=3;visit++){
+  const before=store.getItem('oibung.journey.v1');
+  assert.deepEqual(resetLegacyOdenSavesOnce(store),{ok:true,changed:false,reason:'already-applied'});
+  assert.equal(store.getItem('oibung.journey.v1'),before,'subsequent visits must not clear progress');
+  const loaded=loadProfile(store);
+  assert.deepEqual(loaded.defeated,[BOSSES[0]]);
+  assert.equal(loaded.flames,1);
+  assert.equal(loaded.earnedFlames,1);
+  assert.equal(latestUnlockedStage(loaded),1);
+ }
+ // A newly earned ending/photo also survives later starts.
+ store.setItem('oibung.gyuwon.ending-watched','1');
+ store.setItem('oibung.gyuwon.ensemble-photo','new-picture');
+ resetLegacyOdenSavesOnce(store);
+ assert.equal(store.getItem('oibung.gyuwon.ending-watched'),'1');
+ assert.equal(store.getItem('oibung.gyuwon.ensemble-photo'),'new-picture');
+});
+
+test('event-mode victory and general-mode victory both survive subsequent startup and remain separate',()=>{
+ const store=storage([
+  ['oibung.journey.v1','stale general profile'],
+  ['oibung.gyuwon.ending-watched','1']
+ ]);
+ resetLegacyOdenSavesOnce(store);
+ const eventStorage=eventScopedStorage(store,'oden-ending-2026-live-1110','friend-a');
+ const eventProfile=freshProfile();
+ eventProfile.run=newRun('sword');
+ assert.equal(finishAttempt(eventProfile,{won:true,time:78,damage:333}),'flame');
+ assert.equal(saveProfile(eventStorage,eventProfile),true);
+ const general=freshProfile();
+ general.run=newRun('sword');
+ assert.equal(finishAttempt(general,{won:true,time:90,damage:200}),'flame');
+ assert.equal(saveProfile(store,general),true);
+ // Both live in distinct keys. An old save reset must never run again.
+ for(let i=0;i<3;i++){
+  resetLegacyOdenSavesOnce(store);
+  assert.deepEqual(loadProfile(eventStorage).defeated,[BOSSES[0]]);
+  assert.deepEqual(loadProfile(store).defeated,[BOSSES[0]]);
+  assert.equal(loadProfile(eventStorage).flames,1);
+  assert.equal(loadProfile(store).flames,1);
+ }
+ assert.notEqual(store.getItem('oibung.journey.v1'),store.getItem('oibung.event.oden-ending-2026-live-1110.friend-a.oibung.journey.v1')?.replace('"damage":333','"damage":200'),'two saves are independently stored');
 });
