@@ -34,6 +34,12 @@ export function newTravelRun(profile,weapon='sword',stage=0){
  if(!canTravelTo(profile,stage)||!Object.hasOwn(EVOLUTIONS,weapon))return null;
  return {...newRun(weapon),stage,startStage:stage};
 }
+// Single-boss visit through the concealed title gateway. It is session-only,
+ // cannot unlock bosses or award progression rewards.
+export function newBossPracticeRun(weapon='sword',stage=0){
+ if(!Number.isInteger(stage)||stage<0||stage>=BOSSES.length||!Object.hasOwn(EVOLUTIONS,weapon))return null;
+ return {...newRun(weapon),stage,startStage:stage,sandbox:true};
+}
 export function loadProfile(storage){try{
  const p=JSON.parse(storage.getItem(SAVE_KEY));
  if(![1,2,3,4].includes(p?.version))return freshProfile();
@@ -63,7 +69,11 @@ export function saveProfile(storage,profile){try{
  }catch{return false;}}
 export function finishAttempt(profile,{won,time=0,damage=0}){
  const r=profile.run;
- if(!r||r.pending||r.secretSettled)return null;
+ if(!r||r.pending||r.secretSettled||r.sandboxSettled)return null;
+ if(r.sandbox){
+  r.sandboxSettled=true;
+  return won?'sandbox-won':'sandbox-lost';
+ }
  if(r.secret){
   r.secretSettled=true;
   if(won)awardPurificationFlame(profile);
