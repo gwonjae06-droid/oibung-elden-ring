@@ -79,6 +79,15 @@ jobs:
           node --test tests/clown-engine.test.mjs tests/clown-nightmare-overhaul.test.mjs tests/clown-act-two-revival.test.mjs
       - name: Verify arena damage phase gates and full clown pattern repertoire
         run: node --test tests/arena-damage.test.mjs tests/clown-patterns.test.mjs
+      - name: Verify ranged weapon nerfs, magazines, collisions and forge effects
+        run: >
+          node --test
+          tests/ranged-nerf-balance.test.mjs
+          tests/ranged-reload.test.mjs
+          tests/weapon-skill-overhaul.test.mjs
+          tests/weapon-evolution.test.mjs
+          tests/player-combat.test.mjs
+          tests/weapon-stat-chart.test.mjs
       - name: Check startup, Kwon third phase and weapon skills
         run: node --test tests/arena-startup-guard.test.mjs tests/kwon-third-phase.test.mjs tests/weapon-skill-overhaul.test.mjs
 
