@@ -52,3 +52,17 @@ test('missing storage is safe and the reset intentionally targets only save fiel
  assert.equal(resetLegacyOdenSavesOnce(undefined).ok,false);
  assert.equal(LEGACY_SAVE_KEYS.length,3);
 });
+
+test('reset stays dormant until event is explicitly enabled in game configuration',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const {fileURLToPath}=await import('node:url');
+ const {dirname,resolve}=await import('node:path');
+ const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+ const journey=readFileSync(resolve(root,'src/journey.mjs'),'utf8');
+ const config=readFileSync(resolve(root,'src/oden-event-config.mjs'),'utf8');
+ assert.match(config,/enabled:\s*false/);
+ const gate=journey.indexOf('if(event.enabled)resetLegacyOdenSavesOnce(rawStorage);');
+ const profile=journey.indexOf('let profile=loadProfile(storage)');
+ assert.ok(gate>=0,'destructive reset must be feature gated');
+ assert.ok(profile>gate,'reset must precede profile load after event activation');
+});
