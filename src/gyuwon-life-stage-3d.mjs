@@ -155,17 +155,17 @@ export function createGyuwonLifeStage3d({doc,source,coarse=false}={}){
    cyl(hip,clothing,0,-.48,0,.16,.95,.16);ball(hip,shoe,0,-1.02,.15,.19,.12,.31);hips.push(hip);
   }
   return {root,shoulders,elbows,hips,update(time,kind){
-   const walk=kind==='walk'||kind==='dance',swing=walk?.26:.035;
+   const walk=kind==='walk'||kind==='dance',swing=walk?0.26:0.035;
    shoulders.forEach((o,i)=>{o.rotation.x=-.08+Math.sin(time*(walk?4.7:1)+i*Math.PI)*swing;o.rotation.z=(i?1:-1)*.08;});
    elbows.forEach((o,i)=>{o.rotation.x=kind==='point'&&i===0?-.94:kind==='embrace'?-.8:-.12;});
-   hips.forEach((o,i)=>{o.rotation.x=Math.sin(time*4.7+i*Math.PI)*(walk?.29:.015);});
+   hips.forEach((o,i)=>{o.rotation.x=Math.sin(time*4.7+i*Math.PI)*(walk?0.29:0.015);});
    root.position.y=walk?Math.sin(time*9)*.03:Math.sin(time*1.6)*.008;
   }};
  }
  const partner=person('gyuwon-life-partner',0xb67f8b,0x3c302e);
  const child=person('gyuwon-life-child',0x7598ab,0x302e30,{scale:.57,small:true});
  const fill=new THREE.HemisphereLight(0xd8e4f0,0x2b3443,1.9);scene.add(fill);
- const sun=new THREE.DirectionalLight(0xffe0bd,2.4);sun.position.set(4,8,5);scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe0bd,2.4);sun.position.set(4,8,5);sun.castShadow=!coarse;sun.shadow.mapSize.set(coarse?256:1024,coarse?256:1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:.3,far:40});sun.shadow.normalBias=.025;sun.shadow.camera.updateProjectionMatrix();scene.add(sun);
  const rim=new THREE.PointLight(0xf9bb82,20,22,1.8);rim.position.set(-3,3,-2);scene.add(rim);
  const particlesGeo=geo(new THREE.BufferGeometry()),positions=[];
  for(let i=0;i<(coarse?70:150);i++){const k=i*1.91;positions.push(Math.sin(k)*8,1+(i%13)*.51,Math.cos(k*1.37)*4);}
@@ -210,6 +210,8 @@ export function createGyuwonLifeStage3d({doc,source,coarse=false}={}){
   rim.intensity=frame.shot==='wedding'?35:frame.shot==='realization'?25:13;
   motes.visible=['realization','youth','love','wedding'].includes(frame.shot);
   motes.rotation.y=t*.012;
+  river.position.y=-.02+Math.sin(t*1.3)*.018;
+  sun.position.x=4+Math.sin(t*.15)*.5;
  }
  function render(renderer){
   if(disposed||!lastFrame||current==='portal')return;
