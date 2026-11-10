@@ -2,7 +2,7 @@ import {classifyEventRisk,nextEventRisk,riskLevel} from './risk.js';
 // Public endpoint with application-level bearer-token authentication.
 // Deploy with verify_jwt=false; database tables deny ALL browser roles.
 // This logs orderly client reports. It does NOT prove unmodified gameplay.
-const EVENT_ID='oden-ending-2026';
+const EVENT_ID='oden-ending-2026-live-1110';
 const ALLOWED_ORIGINS=new Set(['https://gwonjae06-droid.github.io','http://127.0.0.1:8000','http://localhost:8000']);
 const TABLE='oden_event_participants';
 const utf8=new TextEncoder();
