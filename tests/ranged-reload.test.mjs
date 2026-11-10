@@ -113,6 +113,6 @@ test('reload label shows counts and a countdown rather than a fake infinite-ammo
  assert.equal(rangedMagazineLabel(r),'7 / 7');
  r.loaded=0;r.pending=true;
  assert.equal(rangedMagazineLabel(r),'장전 대기');
- tickPlayerResources(g,.2);
- assert.match(rangedMagazineLabel(r),/^장전 1\.5초$/);
+ tickPlayerResources(g,.25);
+ assert.match(rangedMagazineLabel(r),/^장전 1\.4초$/);
 });
