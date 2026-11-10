@@ -1,0 +1,41 @@
+name: Event launch — save survives reload
+on:
+  pull_request:
+    paths:
+      - 'src/oden-event-config.mjs'
+      - 'src/legacy-save-reset.mjs'
+      - 'src/oden-event-client.mjs'
+      - 'src/journey.mjs'
+      - 'tests/legacy-save-reset.test.mjs'
+      - 'scripts/event-save-reload-smoke.cjs'
+      - '.github/workflows/event-launch-reload.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/oden-event-config.mjs'
+      - 'src/legacy-save-reset.mjs'
+      - 'src/oden-event-client.mjs'
+      - 'src/journey.mjs'
+      - 'tests/legacy-save-reset.test.mjs'
+      - 'scripts/event-save-reload-smoke.cjs'
+      - '.github/workflows/event-launch-reload.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repeat-visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chrome smoke dependencies
+        run: npm install --no-save --no-audit --no-fund three@0.180.0 playwright-core@1.55.0
+      - name: Verify one-time reset and real boss victory persistence
+        run: node --test tests/legacy-save-reset.test.mjs tests/oden-event.test.mjs tests/oden-event-anti-automation.test.mjs
+      - name: Load actual Oden Ring, defeat first boss in event mode, reload twice
+        run: node scripts/event-save-reload-smoke.cjs
