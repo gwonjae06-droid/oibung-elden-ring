@@ -1,7 +1,7 @@
 import {drawGyuwonPhoto} from './gyuwon-photo-face.mjs';
 // Connected screen-space bones for the same armored protagonist in both games.
 // No rhythm rings, attack circles or particles substitute for joint movement.
-export function drawGyuwonPerformer(c,x,y,{pose={},scale=1,face=1,gyuwon=false,portrait=null,color='#566b7b',crouch=false,costume=null}={}){
+export function drawGyuwonPerformer(c,x,y,{pose={},scale=1,face=1,gyuwon=false,portrait=null,color='#566b7b',crouch=false,costume=null,weapon=null}={}){
  const p=pose,turn=p.turn||0,width=Math.max(.25,Math.abs(Math.cos(turn))),spinFace=Math.cos(turn)<0?-1:1;
  c.save();c.translate(x+(p.shift||0)*face,y-(p.height||0)*45);c.scale(scale*face*spinFace*width,scale);c.rotate(p.bank||0);
  c.lineCap='round';c.lineJoin='round';
@@ -30,11 +30,24 @@ export function drawGyuwonPerformer(c,x,y,{pose={},scale=1,face=1,gyuwon=false,p
   const angle=side<0?p.leftArm||0:p.rightArm||0,bend=side<0?p.leftElbow||0:p.rightElbow||0;
   const origin=[side*25,shoulder+8],elbow=[side*(33+Math.abs(angle)*14),shoulder+32+angle*25],hand=[side*(30+Math.abs(angle)*18),shoulder+62+angle*52+bend*24];
   if(side>0&&p.strike&&p.attackKind!=='kick'){
-   const reach=(p.range||3)*23,extend=p.strike;elbow[0]+=(reach*.48-elbow[0])*extend;elbow[1]+=(shoulder+10-elbow[1])*extend;
+   const reach=(p.range||3)*33/scale-(weapon?32:0)-(p.shift||0)/scale,extend=p.strike;elbow[0]+=(reach*.48-elbow[0])*extend;elbow[1]+=(shoulder+10-elbow[1])*extend;
    hand[0]+=(reach-hand[0])*extend;hand[1]+=(shoulder+10-hand[1])*extend;
   }
   line([origin,elbow,hand],'#172431',20);line([origin,elbow,hand],coat,14);oval(...origin,13,12,coat);oval(...elbow,8,8,gyuwon?color:'#9cacb2');
   oval(...hand,8,9,gyuwon?'#d6b096':'#778c99');
+  if(side>0&&weapon){
+   c.save();c.translate(...hand);c.rotate(-.35*(p.wind||0)+.12);
+   if(weapon==='hammer'){
+    line([[0,0],[27,0]],'#775b42',5);shape([[24,-13],[38,-13],[38,13],[24,13]],metal);
+   }else if(weapon==='bow'){
+    c.strokeStyle='#b29668';c.lineWidth=4;c.beginPath();c.moveTo(8,-22);c.quadraticCurveTo(30,0,8,22);c.stroke();line([[8,-22],[8,22]],'#d5d7cb',1);line([[0,0],[31,0]],'#aab5b9',2);
+   }else if(weapon==='cards'){
+    for(let k=0;k<3;k++)shape([[6+k*4,-11+k*3],[24+k*4,-8+k*3],[22+k*4,12+k*3],[4+k*4,9+k*3]],'#c8ad7a');
+   }else{
+    line([[-5,0],[7,0]],'#795941',5);line([[6,-8],[6,8]],'#bba16a',4);shape([[8,-3],[29,-3],[38,0],[29,3],[8,3]],metal);
+   }
+   c.restore();
+  }
   for(let i=0;i<3;i++)line([[hand[0]-4+i*4,hand[1]+1],[hand[0]-4+i*4,hand[1]+6]],gyuwon?'#98735d':'#334958',1.3);
  }
  c.save();c.translate(0,head);c.rotate((p.headYaw||0)*.3+(p.headPitch||0)*.18);

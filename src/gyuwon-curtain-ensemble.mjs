@@ -1,6 +1,7 @@
+import {createCurtainBrawl,curtainBrawlAt} from './gyuwon-curtain-brawl.mjs';
 import * as T from 'three';
 import {buildBoss,poseLegs,posePlayer,swayCape} from './models.mjs';
-import {createGame,swordPose,SWORD} from './combat.mjs';
+import {createGame,swordPose,SWORD,patternConfig} from './combat.mjs';
 import {createCurtainKwonSkin} from './gyuwon-curtain-kwon-skin.mjs';
 import {createBossStance} from './boss-stance.mjs';
 import {createClownGame} from './clown-combat.mjs';
@@ -48,28 +49,42 @@ export function createGyuwonCurtainEnsemble(scene,{party,player,gyuwon,coarse=fa
  // Own only the newly built gentleman parts; the photo die shares resources
  // with the original guest actor and is disposed by that actor exactly once.
  const ownGeo=new Set(),ownMat=new Set();for(const node of [torso,...hands.map(h=>h.group),...arms.flat()])node.traverse(o=>{if(o.geometry)ownGeo.add(o.geometry);[].concat(o.material||[]).forEach(m=>ownMat.add(m));});
- const encoreFx=Array.from({length:5},(_,i)=>{const geo=new T.TorusGeometry(.9,.07,6,40),mat=new T.MeshBasicMaterial({color:[0xb5e5ff,0xffca94,0xffdb7d,0xf38eac,0xf9e6b4][i],transparent:true,opacity:0,depthWrite:false});const ring=new T.Mesh(geo,mat);ring.visible=false;root.add(ring);return ring;});
+ const brawl=createCurtainBrawl(root,{roles,dancers,party,gentleman,seraphContainer,coarse,
+  applyKwon(a,score){
+   const b=kg.boss;b.phase=3;b.pattern='sweep';b.x=b.z=b.yaw=0;b.from=null;b.queue=[];
+   const cfg=patternConfig(b),age=score.age;
+   if(score.event.attacker===0){b.state=age<1.6?'idle':age<2.65?'windup':age<3.23?'active':'recovery';b.t=b.state==='windup'?a.wind*cfg.wind:b.state==='active'?(age-2.65)/.58*cfg.active:(age-3.23);b.recovery=1.7;}
+   else{b.state='idle';b.t=0;}
+   stance.update(b);const p=swordPose(b);kwon.swordGroup.position.set(p.x,p.y,p.z);kwon.swordGroup.rotation.set(p.pitch,p.yaw,0);
+  },
+  applyBlood(a,score,dt){
+   bg.boss.phase=2;bg.boss.state='idle';bg.time=bg.blood.t=mTime;
+   const pose={body:{lean:-a.wind*.15+a.strike*.2},arms:[{raise:a.wind*.9+a.guard*.8,open:.7},{raise:a.wind+a.strike*.7+a.guard*.8,open:.8}]};
+   party.actors[3].regalia.update(bg,bg.blood,dt,.4,pose);
+  }
+ });
+ let mTime=0;
  let disposed=false,frame=null;
  function update(g,dt=0){
   const m=g.gyuwon?.years?.musical,active=m?.year===11&&!m.finishing;
-  root.visible=!!active;if(!active){if(frame){dancers.slice(1).forEach(p=>p.rig.visible=false);roles.slice(0,4).forEach(r=>r.visible=false);}encoreFx.forEach(r=>r.visible=false);frame=null;return;}
+  root.visible=!!active;if(!active){if(frame){dancers.slice(1).forEach(p=>p.rig.visible=false);roles.slice(0,4).forEach(r=>r.visible=false);}brawl.update({time:-1,clock:{duration:180}});frame=null;return;}
   frame=m.curtainCall||gyuwonCurtainCallAt(m.time,m.clock?.duration);const t=m.time,d=curtainDanceAt(t),ensemble=frame.ensemble;
-  const chaos=frame.mode==='credits'&&frame.creditsProgress<.82,beat=t*(142/60);
+  const chaos=frame.mode==='credits'&&frame.creditsProgress<.90,beat=t*(142/60);mTime=t;const brawlFrame=curtainBrawlAt(t,m.clock?.duration||180);
   roles.slice(1,4).forEach(r=>{if(r.parent!==root)root.add(r);});
   roles.forEach((role,i)=>{
    const introduced=ensemble||i<=frame.actorIndex,focus=!ensemble&&i===frame.actorIndex;
    const exit=focus?ease((frame.local-.85)/.15):1,reunion=ensemble?1:frame.actorIndex===4?ease((frame.local-.85)/.15):0;
    const waiting=[-12,-7,7,12,11][i],slot=T.MathUtils.lerp(waiting,-11+i*5.5,reunion);
    role.visible=introduced;role.position.set(focus?slot*exit:slot,.15+(ensemble?d.lift:0),focus?-5-3*exit:-8);
-   role.rotation.set(0,d.turn,ensemble?(chaos?d.sway+Math.sin(beat*2+i)*.09:d.sway):Math.sin(t*2+i)*.025);
-   if(chaos){role.position.x+=Math.sin(beat*.75+i*1.8)*.43;role.position.z+=Math.cos(beat*.7+i*1.4)*.48;}
-   const phase=focus?frame.phase:GYUWON_CURTAIN_CAST[i].scenes.at(-1).phase;
+   role.rotation.set(0,d.turn,ensemble?d.sway:Math.sin(t*2+i)*.025);
+
+   const phase=ensemble?(i===2?1:i===3?2:i===1?2:3):focus?frame.phase:GYUWON_CURTAIN_CAST[i].scenes.at(-1).phase;
    if(i===0){const b=kg.boss;b.phase=phase;b.state=focus&&phase>1&&frame.beat<.6?'transition':'idle';b.t=b.state==='transition'?frame.beat/.6*5.2:t;b.x=b.z=b.yaw=0;
     poseLegs(kwon.legs,t*5,ensemble?2.4:.5);stance.update(b);
     const p=swordPose(b);if(phase===3&&kwon.swordGroup.parent!==kwon.root)kwon.root.add(kwon.swordGroup);else if(phase!==3&&kwon.swordGroup.parent!==kwon.model)kwon.model.add(kwon.swordGroup);
     kwon.swordGroup.position.set(p.x,p.y,p.z);kwon.swordGroup.rotation.set(p.pitch,p.yaw,ensemble?d.sway:0);
     const scale=p.length/SWORD.length;kwon.swordGroup.scale.set(1+(scale-1)*.58,1+(scale-1)*.58,scale);
-   }else if(i===1){cg.time=t;cg.boss.phase=phase;cg.boss.x=cg.boss.z=cg.boss.yaw=0;cg.boss.state='clown';cg.clown.time=t;cg.clown.state='idle';cg.clown.curtainDance={arm:d.arm,step:d.step};party.actors[1].update(cg,dt);
+   }else if(i===1){cg.time=t;cg.boss.phase=phase;cg.boss.x=cg.boss.z=cg.boss.yaw=0;cg.boss.state='clown';cg.clown.time=t;cg.clown.state='idle';cg.clown.curtainAttack=chaos?brawlFrame.actors[1]:null;cg.clown.curtainDance={arm:d.arm,step:d.step};party.actors[1].update(cg,dt);
    }else if(i===2){
     party.actors[2].root.visible=phase===1;party.actors[2].root.rotation.set(.08*Math.sin(t),-Math.PI/2+Math.sin(t)*.12,d.sway);party.actors[2].root.position.y=2.15+d.lift;
     gentleman.visible=introduced&&phase>=2;gentleman.position.copy(role.position);gentleman.rotation.set(phase===3?-.13:0,d.turn,d.sway);diceHead.rotation.set(.06*Math.sin(t*2),-Math.PI/2+Math.sin(t)*.12,phase===3?d.step*.15:0);
@@ -98,13 +113,8 @@ export function createGyuwonCurtainEnsemble(scene,{party,player,gyuwon,coarse=fa
    for(const [k,s] of [['L',-1],['R',1]]){p.arms[k].rotation.set(-q.arm*.55-(chaos&&k==='R'?Math.sin(beat*3+i)*.7:0),0,s*q.arm*.6);p.elbows[k].rotation.x=-q.elbow;p.legs[k].rotation.x+=q.kick*(s===1?1:-1);}
    Object.entries(p.weaponRigs).forEach(([type,rig])=>{rig.visible=ensemble&&type===['sword','hammer','bow','cards'][i];});swayCape(p,t,2);
   });
-  encoreFx.forEach((ring,i)=>{const beatPhase=((beat+i*.36)%1+1)%1;
-   ring.visible=chaos&&beatPhase<.7;
-   if(ring.visible){ring.position.set(-11+i*5.5+Math.sin(beat+i)*.4,2.5+Math.cos(beat+i)*.55,-4.1);
-    ring.scale.setScalar(.5+beatPhase*3.5);ring.rotation.set(.2+beatPhase,beatPhase*2,i*.35);
-    ring.material.opacity=.52*(1-beatPhase);}
-  });
+  if(ensemble)brawl.update(m,dt);else brawl.update({time:-1,clock:{duration:180}});
  }
- function stats(){return {active:!!frame,mode:frame?.mode,actorIndex:frame?.actorIndex,phase:frame?.phase,bosses:frame?(frame.ensemble?5:frame.actorIndex+1):0,players:frame?4:0,facingCamera:!!frame&&dancers.every(p=>Math.cos(p.rig.rotation.y)>.98),source:'original-boss-rigs',seraph:seraph.stats().visible};}
- return {root,update,stats,async prewarm(renderer,camera){await Promise.all([party.ready,kwonSkin.ready]);const previous=root.visible;root.visible=true;const visibility=[seraphContainer,seraph.root,gentleman,giant.root].map(o=>[o,o.visible]);visibility.forEach(([o])=>o.visible=true);try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);}finally{root.visible=previous;visibility.forEach(([o,visible])=>o.visible=visible);}},dispose(){if(disposed)return;disposed=true;kwonSkin.dispose();stance.dispose();seraph.dispose();giant.dispose();encoreFx.forEach(r=>{r.geometry.dispose();r.material.dispose();});backdrop.geometry.dispose();backdrop.material.dispose();halo.geometry.dispose();halo.material.dispose();root.removeFromParent();dancers.slice(1).forEach(p=>{p.skeletons.forEach(s=>s.dispose());p.rig.removeFromParent();});const geos=new Set(),mats=new Set();kwon.root.traverse(o=>{if(o.geometry)geos.add(o.geometry);[].concat(o.material||[]).forEach(m=>mats.add(m));});geos.forEach(g=>g.dispose());const textures=new Set();mats.forEach(m=>{Object.values(m).forEach(v=>{if(v?.isTexture)textures.add(v);});m.dispose();});textures.forEach(t=>t.dispose());ownGeo.forEach(g=>g.dispose());ownMat.forEach(m=>m.dispose());}};
+ function stats(){return {active:!!frame,mode:frame?.mode,actorIndex:frame?.actorIndex,phase:frame?.phase,bosses:frame?(frame.ensemble?5:frame.actorIndex+1):0,players:frame?4:0,facingCamera:!!frame&&dancers.every(p=>Math.cos(p.rig.rotation.y)>.98),source:'original-boss-rigs',brawl:brawl.stats(),seraph:seraph.stats().visible};}
+ return {root,update,stats,async prewarm(renderer,camera){await Promise.all([party.ready,kwonSkin.ready]);const previous=root.visible;root.visible=true;const visibility=[seraphContainer,seraph.root,gentleman,giant.root].map(o=>[o,o.visible]);visibility.forEach(([o])=>o.visible=true);try{if(renderer.compileAsync)await renderer.compileAsync(scene,camera);else renderer.compile(scene,camera);}finally{root.visible=previous;visibility.forEach(([o,visible])=>o.visible=visible);}},dispose(){if(disposed)return;disposed=true;kwonSkin.dispose();stance.dispose();seraph.dispose();giant.dispose();brawl.dispose();backdrop.geometry.dispose();backdrop.material.dispose();halo.geometry.dispose();halo.material.dispose();root.removeFromParent();dancers.slice(1).forEach(p=>{p.skeletons.forEach(s=>s.dispose());p.rig.removeFromParent();});const geos=new Set(),mats=new Set();kwon.root.traverse(o=>{if(o.geometry)geos.add(o.geometry);[].concat(o.material||[]).forEach(m=>mats.add(m));});geos.forEach(g=>g.dispose());const textures=new Set();mats.forEach(m=>{Object.values(m).forEach(v=>{if(v?.isTexture)textures.add(v);});m.dispose();});textures.forEach(t=>t.dispose());ownGeo.forEach(g=>g.dispose());ownMat.forEach(m=>m.dispose());}};
 }

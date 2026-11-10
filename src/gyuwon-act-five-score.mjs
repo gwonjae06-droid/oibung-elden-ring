@@ -31,12 +31,14 @@ export function actFiveAttackProfile(time,part){
 }
 // Preserve a clear silhouette for the three connected, literal sung actions.
 // An already launched strike completes; its next windup cannot overlap them.
-export const actFiveLiteralFocusAt=(time,lookAhead=0)=>time<82.89&&time+lookAhead>=67.34;
+export const actFiveLiteralFocusAt=(time,lookAhead=0)=>
+ ACT_FIVE_SCORE.some(c=>['hand','together','flight','king','brass','self'].includes(c.gesture)&&time<c.end+.25&&time+lookAhead>=c.start-.3);
 export function actFiveAttackPoint(attack,from,to,age,side=1){
  const q=scoreEase((age-attack.wind)/(attack.impactAt-attack.wind)),back=scoreEase((age-attack.impactAt-.2)/.85),pre=scoreEase(age/attack.wind),arc=Math.sin(q*Math.PI);
  const lift=attack.kind==='strike'?8:attack.kind==='reach'?2:5;
  const sweep=['sweep','waltz','chase'].includes(attack.kind)?side*arc*(attack.kind==='chase'?3:6):0;
- return {x:from.x+(to.x-from.x)*q+sweep,y:(from.y+Math.sin(pre*Math.PI)*lift)*(1-q)+to.y*q+(attack.kind==='stars'?arc*7:0),z:from.z+(to.z-from.z)*q,back};
+ const follow=Math.sin(Math.PI*clamp((age-attack.impactAt)/.30,0,1))*.65*(1-back),len=Math.max(1,Math.hypot(to.x-from.x,to.z-from.z));
+ return {x:from.x+(to.x-from.x)*q+sweep+(to.x-from.x)/len*follow,y:(from.y+Math.sin(pre*Math.PI)*lift)*(1-q)+to.y*q+(attack.kind==='stars'?arc*7:0),z:from.z+(to.z-from.z)*q+(to.z-from.z)/len*follow,back};
 }
 // The actual five boss part colliders take the blocking positions before the
 // renderer moves a single pixel; a hand never acts in one place and hits

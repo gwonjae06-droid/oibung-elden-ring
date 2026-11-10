@@ -241,7 +241,7 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
    const musical=g.gyuwon.years?.musical;
    if(musical){
     const genre=musical.kind,closing=musical.finishing;
-    const fov=closing?40:musical.year===5?turnStage.cameraFrame(musical,camera.aspect).fov:genre==='army'?58:genre==='shooter'?61:genre==='finale'?45:52;
+    const fov=closing?40:musical.year===5?turnStage.cameraFrame(musical,camera.aspect).fov:genre==='army'?58:genre==='shooter'?61:genre==='finale'?(musical.curtainCall?.mode==='credits'&&musical.curtainCall.creditsProgress<.90?42:45):52;
     if(Math.abs(camera.fov-fov)>.02){
      camera.fov+=(fov-camera.fov)*(1-Math.exp(-dt*3.2));
      camera.updateProjectionMatrix();
@@ -271,7 +271,8 @@ startup.own('Gyuwon player projectiles',()=>playerProjectiles.dispose());
      desired.set(1,7.6,30);
      target.set(1,1,0);
     }else if(genre==='finale'){
-     desired.set(Math.sin(musical.time*.12)*.45,6.7,camera.aspect<1?51:24);
+     const brawl=musical.curtainCall?.mode==='credits'&&musical.curtainCall.creditsProgress<.90;
+     desired.set(brawl?-1.5:Math.sin(musical.time*.12)*.45,brawl?7.8:6.7,camera.aspect<1?51:brawl?21.5:24);
      target.set(0,2.7,-4);
     }else if(genre==='rhythm'){
      desired.set(0,8.5,29);

@@ -192,8 +192,8 @@ export function createGyuwon2dView(doc,shell,{onPointer=()=>{},focus=()=>{}}={})
    c.save();c.translate(0,-52*(a.y||0));
    const side=a.guide?'#98806e':sky?'#dae0ee':rain?'#576979':quiet?'#5b5876':bridge?'#5c4f46':dawn?'#a98065':'#936a45';
    const top=a.guide?'#fff1b6':sky?'#fff8eb':rain?'#809eaf':quiet?'#9095b4':bridge?'#b99875':dawn?'#f1cb8d':'#8cc960';
-   round(c,x,ground,w,190,5,side,'#334458',3);
-   round(c,x,ground,w,23,5,top,sky?'#aebfd3':'#4b594b',3);
+   round(c,x,ground,w,a.bonus?16:190,5,side,'#334458',3);
+   round(c,x,ground,w,a.bonus?12:23,5,top,sky?'#aebfd3':'#4b594b',3);
    if(a.guide){
     c.strokeStyle='#fff5c8';c.lineWidth=3;
     c.beginPath();c.moveTo(x+5,ground-9);c.lineTo(x+w-5,ground-9);c.stroke();

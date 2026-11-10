@@ -41,14 +41,16 @@ export function setupReferenceMinigame(g,m){
    // Source-clocked figures with advance body/footstep preparation; no notes
    // including its intimate bridge; only the last unskippable bow is exempt.
 
-   const kind=['pose','quick','turn','pose','quick','turn','pose','quick'][index%8];
+   const figures=start<30?['pose','pose','turn','turn']:start<90?['pose','turn','pose','quick']:['pose','quick','turn','quick'];
+   const kind=figures[index%figures.length];
    const count=kind==='quick'?3:index%3===1?4:3;
-   const first=chart.offset+Math.ceil((start+period*(kind==='turn'?5:6)-chart.offset)/period)*period;
+   const subdivision=start>112&&index%3===2?.5:1;
+   const first=chart.offset+Math.ceil((start+period*(kind==='turn'?5:6)-chart.offset)/(period*subdivision))*(period*subdivision)+(subdivision===.5?period*.5:0);
    const cue=Math.max(start,first-Math.max(1.35,period*3.4));
    if(first+(count-1)*(kind==='pose'?2:1)*period>=174.5)break;
-   m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:1,
+   m.dancePatterns.push({id:index,kind,cue,first,count,spacing:kind==='pose'?2:kind==='quick'&&start>112?.5:1,
     done:[],misses:[],facing:index%2?-1:1});
-   start=first+period*((count-1)*(kind==='pose'?2:1)+(index%4===3?2.4:1.5));
+   start=first+period*((count-1)*(kind==='pose'?2:kind==='quick'&&start>112?.5:1)+2.0);
    index++;
   }
   m.dancePose=0;m.dancePoseKind='dance';m.danceFacing=1;m.danceFlash=0;
@@ -250,7 +252,7 @@ function tickReferenceRunner(g,m,dt,c){
  }
  for(const j of m.jellies){
   j.x-=speed*dt;
-  const safeY=runnerRewardHeight(m,j.x);if(safeY!==null)j.y=safeY;
+  const safeY=runnerRewardHeight(m,j.x);if(safeY!==null&&!j.bonusRoute)j.y=safeY;
   if(Math.hypot(j.x-p.x,j.y-(m.jumpY+(m.slideVisual>.5?.4:1)))<1){
    j.collected=true;m.pickups++;
    m.energy=Math.min(100,m.energy+(j.kind==='heart'?18:.55));
@@ -435,7 +437,7 @@ function tickReferenceFighter(g,m,dt,input,c){
  const nextRound=m.fightRound===1&&t>=41?2:m.fightRound===2&&t>=108?3:m.fightRound;
  if(nextRound!==m.fightRound){
   m.fightRound=nextRound;m.fightReset=0;m.roundWait=false;m.encoreOrbs=[];m.encoreCollected=0;
-  for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=f.maxHp;f.x=i?7:-7;f.y=0;f.vy=0;f.action=null;f.stun=0;f.combo=0;}
+  for(let i=0;i<2;i++){const f=m.fighters[i];f.hp=f.maxHp;f.action=null;f.stun=0;f.combo=0;}
   m.enemyThink=1.35;m.fightLyricMotion=null;
  }
  if(scene.kind!==m.fightPriorScene){
@@ -471,13 +473,14 @@ function tickReferenceFighter(g,m,dt,input,c){
   b.x=move.from+(move.to-move.from)*s;
   if(q>=1)m.fightLyricMotion=null;
  }
-  p.crouch=(input.z||0)<-.4;p.guard=!!input.guard||!!m.guardHeld;
+  p.crouch=(input.z||0)<-.4;p.guard=(!!input.guard||!!m.guardHeld)&&!p.action;
  if((input.z||0)>.48&&!m.fightJumpLatch&&p.y<=0&&p.stun<=0&&!m.fightReset){p.vy=10;m.fightJumpLatch=true;}
  if((input.z||0)<.2)m.fightJumpLatch=false;
  if(!p.action&&p.stun<=0)p.x=clamp(p.x+(input.x||0)*(p.crouch?3:7)*dt,-16,16);
  p.facing=p.x<b.x?1:-1;b.facing=-p.facing;
  p.floorY=gyuwonFightGround(t,p.x);b.floorY=gyuwonFightGround(t,b.x);
  for(const f of m.fighters){
+  f.x=clamp(f.x+(f.knockV||0)*dt,-16,16);f.knockV=(f.knockV||0)*Math.exp(-dt*10);
   f.stun=Math.max(0,f.stun-dt);f.comboTimer=Math.max(0,(f.comboTimer||0)-dt);
   if(f.comboTimer===0)f.combo=0;
   f.y=Math.max(0,f.y+f.vy*dt);f.vy=f.y>0?f.vy-24*dt:0;
@@ -524,7 +527,7 @@ function tickReferenceFighter(g,m,dt,input,c){
      ['skill','kick','light','super'][n%4];
     fighterAttack(b,kind==='super'&&b.meter<100?'skill':kind);
     if(b.action){const period=60/GYUWON_BEATS[9].bpm,origin=GYUWON_BEATS[9].offset;b.action.wind=origin+Math.ceil((t+Math.max(.48,b.action.wind)-origin)/period)*period-t;}
-    m.enemyThink=scene.quiet?2.35:m.fightRound===3?1.35:1.55;
+    m.enemyThink=(scene.quiet?2.35:m.fightRound===3?1.35:1.55)+(kind==='skill'||kind==='super'?.35:0);
    }
   }
   b.guard=!!p.action&&p.action.t<p.action.wind+p.action.live&&m.turnCount%4===0;
@@ -535,7 +538,7 @@ function tickReferenceFighter(g,m,dt,input,c){
  for(let i=0;i<2;i++){
   const f=m.fighters[i],enemy=m.fighters[1-i],a=f.action;if(!a)continue;
   a.t+=dt;
-  if(!a.hit&&a.t>=a.wind&&a.t<a.wind+a.live){
+  if(!a.hit&&a.t>=a.wind+a.live*.45&&a.t<a.wind+a.live){
    a.hit=true;
    const reach=Math.abs(enemy.x-f.x),
     height=Math.abs(((enemy.floorY||0)+enemy.y)-((f.floorY||0)+f.y)),
@@ -545,8 +548,9 @@ function tickReferenceFighter(g,m,dt,input,c){
     const blocked=enemy.guard&&enemy.y<.1&&(a.kind!=='kick'||enemy.crouch);
     const damage=a.damage*(parry?0:blocked?.13:1);
     enemy.hp=Math.max(0,enemy.hp-damage);
-    enemy.stun=parry?.7:blocked?.1:.22;
-    enemy.x=clamp(enemy.x+f.facing*(blocked?.18:.6),-16,16);
+    enemy.stun=parry?0:blocked?.1:.22;
+    enemy.knockV=f.facing*(parry?0:blocked?1.3:4.2);
+    if(parry){f.stun=.7;f.action=null;}
     f.meter=Math.min(100,f.meter+12);f.combo++;f.comboTimer=1.35;
     enemy.combo=0;enemy.comboTimer=0;
     m.hitSparks.push({x:(f.x+enemy.x)/2,y:1+(enemy.floorY||0)+enemy.y,age:0,blocked:blocked||parry});

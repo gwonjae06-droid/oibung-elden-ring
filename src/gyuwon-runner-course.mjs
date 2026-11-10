@@ -1,6 +1,6 @@
 // Course geometry, obstacle footprints and collectible paths share world units.
 export function runnerRewardHeight(m,x){
- const roads=m.platforms||[],under=roads.filter(p=>x>=p.x&&x<=p.end),floor=Math.max(0,...under.map(p=>p.y||0));
+ const roads=m.platforms||[],under=roads.filter(p=>!p.bonus&&x>=p.x&&x<=p.end),floor=Math.max(0,...under.map(p=>p.y||0));
  const near=(m.obstacles||[]).filter(o=>!o.hit&&Math.abs(o.x-x)<7).sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x))[0];
  if(near){
   const base=near.floorY||0,dx=Math.abs(near.x-x);
@@ -16,6 +16,7 @@ export function runnerRewardHeight(m,x){
 }
 export function runnerPlaceObstacle(g,m,{kind='high',challenge=kind,variant='plank',falling=false,x=24,lyricId=null}={}){
  if(falling)kind='high';
+ if(m.platforms.some(p=>p.bonus&&x>p.x-2&&x<p.end+2))return false;
  const road=m.platforms.find(p=>x>=p.x+5&&x<=p.end-4);
  if(!road||m.obstacles.some(o=>!o.hit&&Math.abs(o.x-x)<Math.max(11,m.runnerSpeed*1.1)))return false;
  const height=challenge==='spire'?2.1:1.3;
@@ -32,5 +33,9 @@ export function runnerExtendCourse(m,last,scene){
  const top=scene.relief?0:hard?[0,.65,1.15,.35][index%4]:[0,.35,0][index%3];
  if(hard&&index%2===0)m.platforms.push({x:last.end+gap*.42,end:last.end+gap*.42+2.4,y:Math.max(last.y||0,top)+.65,stepping:true});
  const next={x:last.end+gap,end:last.end+gap+(hard?17:22)+(index%3)*2,y:top};
+ if(hard&&index%3===1){
+  const balcony={x:next.x+4,end:next.x+10,y:top+1.35,bonus:true};m.platforms.push(balcony);
+  for(let i=0;i<4;i++)m.jellies.push({id:'balcony-'+index+'-'+i,x:balcony.x+.7+i*1.4,y:balcony.y+.9,kind:i===3?'gold':'jelly',bonusRoute:true});
+ }
  m.platforms.push(next);return next;
 }

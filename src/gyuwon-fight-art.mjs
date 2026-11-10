@@ -96,7 +96,7 @@ function fightActor(c,f,i,m,scene,portrait){
  const pose=gyuwonFightPoseAt(f,m.time,m.lyricAction);
  drawGyuwonPerformer(c,x,feetY,{scale:1.52,face:f.facing,pose,gyuwon:i===1,portrait,
   color:scene.role==='king'?'#a18b5c':scene.role==='clown'?'#98637c':'#655578',crouch:f.crouch,
-  costume:i===1?scene.role:null});
+  costume:i===1?scene.role:null,weapon:i===0?m.playerWeapon||'sword':null});
  const a=f.action;
  if(a&&a.t>=a.wind&&a.t<a.wind+a.live&&a.kind!=='light'){
   // Narrow strokes follow the actual punching hand or sweeping boot. They

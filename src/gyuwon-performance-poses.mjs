@@ -4,7 +4,7 @@ const clamp=x=>Math.max(0,Math.min(1,x));
 const smooth=x=>{x=clamp(x);return x*x*(3-2*x);};
 export function gyuwonDancePoseAt(time,at,kind='pose',period=60/GYUWON_BEATS[8].bpm){
  const beat=(time-GYUWON_BEATS[8].offset)/period;
- const age=(time-at)/period,prepare=smooth((age+1)/.8),release=1-smooth(age/.9);
+ const age=(time-at)/(kind==='quick'?period*.5:period),prepare=smooth((age+1)/.8),release=1-smooth(age/.9);
  const accent=prepare*release,side=Math.floor(beat/2)%2?-1:1;
  const contact=Math.sin(Math.PI*clamp(age+1));
  return {shift:Math.sin(beat*Math.PI)*3+side*accent*10,
