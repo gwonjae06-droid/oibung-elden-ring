@@ -1,0 +1,64 @@
+name: Oden Ring boss montage
+on:
+  push:
+    branches: ['capture/boss-montage']
+    paths: ['scripts/capture-oden.cjs', 'scripts/oden-montage/**']
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        boss: [kwon, clown, dice, blood]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install original renderer and local capture browser
+        run: |
+          npm install --no-save --no-audit --no-fund three@0.180.0 playwright@1.55.0
+          npx playwright install chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+      - name: Render battle footage and mix original sound
+        env:
+          ODEN_ROOT: ${{ github.workspace }}
+        run: node scripts/capture-oden.cjs ${{ matrix.boss }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capture-${{ matrix.boss }}
+          path: |
+            artifacts/oden-montage/${{ matrix.boss }}.mp4
+            artifacts/oden-montage/${{ matrix.boss }}-*.jpg
+            artifacts/oden-montage/${{ matrix.boss }}-*.json
+          if-no-files-found: warn
+          retention-days: 7
+  assemble:
+    needs: capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: capture-*
+          merge-multiple: true
+          path: takes
+      - name: Assemble and verify montage
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          cd takes
+          printf "file '%s.mp4'\n" kwon clown dice blood > inputs.txt
+          ffmpeg -hide_banner -loglevel error -f concat -safe 1 -i inputs.txt -c copy -movflags +faststart ../Oden_Ring_Boss_Montage.mp4
+          ffprobe -hide_banner -v error -show_entries stream=codec_name,width,height -show_entries format=duration,size ../Oden_Ring_Boss_Montage.mp4
+          ffmpeg -hide_banner -v error -i ../Oden_Ring_Boss_Montage.mp4 -f null -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Oden_Ring_Boss_Montage
+          path: Oden_Ring_Boss_Montage.mp4
+          retention-days: 14
