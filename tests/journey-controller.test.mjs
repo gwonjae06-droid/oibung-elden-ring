@@ -10,10 +10,10 @@ const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=false,registered=false}={}){
  const listeners=new Map(),windowListeners=new Map(),timers=[],data=new Map(),modals={},releases=[],states=[];
  if(savedProfile)data.set(SAVE_KEY,JSON.stringify(savedProfile));
- const analytics=[];let resultHidden=false;
+ const analytics=[];let resultHidden=false,codeInputValue='';
  if(registered){data.set('oibung.odenring.legacy-save-reset.2026-11-10','done');data.set(EVENT_KEY+':'+ODEN_EVENT.eventId,JSON.stringify({id:'qa-owner',nickname:'QA',token:'a'.repeat(64),stage:-1}));data.set(EVENT_MODE_KEY,ODEN_EVENT.eventId);}
  const root=()=>({addEventListener(){},removeEventListener(){},getElementById:id=>id==='result'?{hidden:resultHidden}:id==='battle-preparation'?{style:{},hidden:true}:{focus(){}}});
- const dialog={...root(),open:true,html:'',set innerHTML(v){this.html=v;},querySelector:()=>({focus(){}}),showModal(){this.open=true;},close(){this.open=false;},addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)};
+ const dialog={...root(),open:true,html:'',set innerHTML(v){this.html=v;},querySelector:selector=>selector==='#j-forge-code-input'?{value:codeInputValue,focus(){}}:{focus(){}},showModal(){this.open=true;},close(){this.open=false;},addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)};
  let current,lastLaunch;
  const doc={...root(),hidden:false,getElementById:id=>id==='journey'?dialog:modals[id]||root().getElementById(id)};
  const win={localStorage:{getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)},setInterval:fn=>{timers.push(fn);return timers.length;},clearInterval(){},addEventListener:(type,fn)=>{const a=windowListeners.get(type)||[];a.push(fn);windowListeners.set(type,a);},removeEventListener:(type,fn)=>{windowListeners.set(type,(windowListeners.get(type)||[]).filter(f=>f!==fn));}};
@@ -23,8 +23,8 @@ function rig({holdClown=false,failScene=null,savedProfile=null,failLoadOnce=fals
  const loadBattle=async boss=>{if(failLoadOnce){failLoadOnce=false;throw Error('test load failure');}const launch=options=>{lastLaunch=options;current=makeGame();options.configure(current);const child=root();modals[boss+'-battle']={firstElementChild:{shadowRoot:child}};releases.push(bindBattleSession(child,()=>({game:current,active:true})));return {close(){delete modals[boss+'-battle'];options.onClose();}};};return {launchClownBattle:launch,launchDiceBattle:launch,launchBloodBattle:launch,launchGyuwonBattle:launch};};
  let releaseClown;const scenes=[];const api=installJourney(doc,win,{loadBattle,playPull:()=>{scenes.push('pull');return {finished:Promise.resolve(true),dispose(){}};},playTransition:boss=>{if(failScene===boss)throw Error('cinematic exploded');scenes.push(boss);return {finished:boss==='clown'&&holdClown?new Promise(r=>releaseClown=r):Promise.resolve(true),dispose(){releaseClown?.(false);}};},makeMusic:()=>({unlock(){},update:on=>states.push(on),dispose(){}})});
  const click=(action,extra={})=>listeners.get('click')({target:{closest:()=>({dataset:{j:action,...extra}})}});
- const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},...overrides};for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
- return {api,dialog,data,states,scenes,analytics,setResultHidden:v=>{resultHidden=v;},finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
+ const key=(code='Semicolon',overrides={})=>{const event={code,key:';',repeat:false,ctrlKey:false,altKey:false,metaKey:false,shiftKey:false,target:{closest:()=>null},preventDefault(){this.prevented=true;},stopPropagation(){this.stopped=true;},...overrides};if(dialog.open)listeners.get('keydown')?.(event);if(!event.stopped)for(const handler of windowListeners.get('keydown')||[])handler(event);return event;};
+ return {api,dialog,data,states,scenes,analytics,setCodeValue:v=>{codeInputValue=v;},setResultHidden:v=>{resultHidden=v;},finishScene:()=>releaseClown(true),click,key,poll:()=>timers[0](),game:()=>current,lastLaunch:()=>lastLaunch,release:()=>releases.forEach(fn=>fn())};
 }
 test('controller grants five repeatable flames, replaces relic choices, and records a full clear',async()=>{
  const f=rig();await f.click('new');await f.click('begin');
@@ -242,5 +242,38 @@ test('event analytics record each defeat once while the result screen is delayed
  assert.equal(f.analytics.filter(r=>r.outcome==='lost').length,1);
  f.setResultHidden(false);await f.poll();await f.click('restart');await flush();
  assert.equal(new Set(f.analytics.map(r=>r.attempt_id)).size,2);
+ await f.api.dispose();f.release();
+});
+
+test('only the registered event smithy reveals the ; code input and unlocks 200 bow damage',async()=>{
+ const normal=rig();
+ await normal.click('forge');
+ normal.key('Semicolon');
+ assert.doesNotMatch(normal.dialog.html,/id="j-forge-code-input"/);
+ await normal.api.dispose();normal.release();
+
+ const f=rig({registered:true});
+ f.key('Semicolon');
+ assert.doesNotMatch(f.dialog.html,/id="j-forge-code-input"/,'shortcut is inactive on the home screen');
+ await f.click('forge');
+ const open=f.key('Semicolon');
+ assert.equal(open.prevented,true);
+ assert.match(f.dialog.html,/id="j-forge-code-input"/);
+ f.setCodeValue('wrong');
+ await f.click('forge-code-apply');
+ assert.match(f.dialog.html,/코드가 일치하지 않습니다/);
+ f.setCodeValue('규원아사랑해');
+ await f.click('forge-code-apply');
+ assert.doesNotMatch(f.dialog.html,/id="j-forge-code-input"/);
+ assert.match(f.dialog.html,/이벤트 활 화살 피해량 200/);
+ await f.click('home');await f.click('new');await f.click('weapon',{weapon:'bow'});await f.click('begin');
+ assert.equal(f.game().odenPrizeEvent,true);
+ assert.equal(f.game().eventBowDamage200,true);
+ await f.click('home');await f.click('event');await f.click('event-normal');
+ await f.click('forge');f.key('Semicolon');
+ assert.doesNotMatch(f.dialog.html,/id="j-forge-code-input"/);
+ await f.click('home');await f.click('new');await f.click('weapon',{weapon:'bow'});await f.click('begin');
+ assert.equal(f.game().odenPrizeEvent,undefined);
+ assert.equal(f.game().eventBowDamage200,undefined);
  await f.api.dispose();f.release();
 });

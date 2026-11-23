@@ -44,7 +44,7 @@ jobs:
             node --check "$f"
           done
       - name: Verify event claim sequence and isolated profiles
-        run: node --test tests/oden-event.test.mjs tests/oden-event-anti-automation.test.mjs tests/legacy-save-reset.test.mjs tests/event-dev-shortcut.test.mjs
+        run: node --test tests/oden-event.test.mjs tests/oden-event-anti-automation.test.mjs tests/legacy-save-reset.test.mjs tests/event-dev-shortcut.test.mjs tests/event-forge-code.test.mjs tests/journey-controller.test.mjs
       - name: Verify Kwon counterattack windows and close-range pressure
         run: >
           node --test

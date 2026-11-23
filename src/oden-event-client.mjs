@@ -1,7 +1,8 @@
 import {ODEN_EVENT} from './oden-event-config.mjs';
+import {EVENT_BOW_KEY} from './event-forge-code.mjs';
 export const EVENT_KEY='oibung.oden-event.claim.v1';
 export const EVENT_MODE_KEY='oibung.oden-event.active.v1';
-const personalKeys=new Set(['oibung.journey.v1','oibung.gyuwon.ending-watched','oibung.gyuwon.ensemble-photo']);
+const personalKeys=new Set(['oibung.journey.v1','oibung.gyuwon.ending-watched','oibung.gyuwon.ensemble-photo',EVENT_BOW_KEY]);
 export function eventScopedStorage(storage,eventId,participantId){
  const prefix='oibung.event.'+eventId+'.'+participantId+'.';
  const key=k=>personalKeys.has(k)?prefix+k:k;

@@ -1,4 +1,5 @@
 import {playerIncapacitated} from './boss-hit-traits.mjs';
+import {eventBowProjectileDamage} from './event-forge-code.mjs';
 import {playerStaminaCost} from './balance.mjs';
 import {weaponStats} from './weapon-stats.mjs';
 import {evolutionCount} from './weapon-evolution.mjs';
@@ -33,7 +34,7 @@ export function spawnPlayerProjectiles(game,action,weapon,{basicLifetime=1.7}={}
    // Ranged weapon range is real collision reach, not only a menu statistic.
    // Non-ranged sword waves keep their separate authored lifetime.
    life:weapon.projectile?Math.min(basicLifetime,weapon.range/speed):basicLifetime,
-   damage:weapon.damage*action.mult*volleyScale,
+   damage:eventBowProjectileDamage(game,weapon.damage*action.mult*volleyScale),
    fireRank,poise:weapon.poise,kind:game.weapon,source:action,
    piercing:false,bossHit:false,hit:false,skill:false});
  }
