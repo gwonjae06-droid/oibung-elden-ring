@@ -164,3 +164,16 @@ body[data-motion="reduced"] #journey .j-forge,body[data-motion="reduced"] #journ
  #journey .j-forge-tabs{gap:6px}
  #journey button.j-forge-tab{padding:8px 5px}
 }
+
+/* Event-only secret engraving: a real, keyboard-accessible forge code dialog. */
+#journey .j-forge-code-shade{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:20px;background:#030405dc;backdrop-filter:blur(5px)}
+#journey .j-forge-code-panel{width:min(440px,100%);padding:30px 28px;border:1px solid #c7a46a80;border-radius:9px;background:linear-gradient(140deg,#201e1c,#101216 76%);box-shadow:0 30px 100px #000e,0 0 38px #b7863227;color:#e7d5b2}
+#journey .j-forge-code-panel h2{font:700 clamp(25px,6vw,34px)/1.3 'Noto Serif KR',serif;letter-spacing:.12em;margin:8px 0 25px;color:#f1dfbb}
+#journey .j-forge-code-panel label{display:block;margin:0 0 8px;font:12px system-ui;color:#c8b894}
+#journey .j-forge-code-panel input{display:block;box-sizing:border-box;width:100%;min-height:48px;border:1px solid #a68b61a6;border-radius:5px;background:#0b0e11;color:#fff0d1;padding:10px 12px;font:17px system-ui;outline-offset:3px}
+#journey .j-forge-code-panel input:focus-visible{outline:2px solid #e1ba75}
+#journey .j-forge-code-error{color:#f0a4a1;margin:12px 0 0;font:13px system-ui}
+#journey .j-forge-code-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}
+#journey .j-forge-code-actions button{min-width:90px;min-height:40px}
+#journey .j-forge-code-active{width:min(1120px,100%);padding:10px 14px;border:1px solid #bc985555;border-radius:5px;background:#1b1a17;color:#e8d0a0;font:13px system-ui}
+@media(max-width:520px){#journey .j-forge-code-panel{padding:22px 18px}#journey .j-forge-code-actions button{flex:1}}
