@@ -1,0 +1,86 @@
+name: Oden Ring 40-second highlights
+on:
+  push:
+    branches: ['capture/boss-montage']
+    paths: ['.github/workflows/oden-short-highlights.yml']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  edit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45152694672
+          pattern: capture-*
+          merge-multiple: true
+          path: takes
+      - name: Edit four ten-second chapters
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            python3 -m pip --disable-pip-version-check install --no-deps --only-binary=:all: --target "$RUNNER_TEMP/oden-encoder" imageio-ffmpeg==0.8.1
+            ODEN_FFMPEG="$(PYTHONPATH="$RUNNER_TEMP/oden-encoder" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+            export ODEN_FFMPEG
+          fi
+          sudo mkdir -p /usr/local/share/fonts
+          curl -fsSL --max-time 45 --retry 1 https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf -o /tmp/Oden-NotoSansKR.otf
+          sudo install -m644 /tmp/Oden-NotoSansKR.otf /usr/local/share/fonts/Oden-NotoSansKR.otf
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          ffmpeg = os.environ.get('ODEN_FFMPEG', 'ffmpeg')
+          frames_per_second = 24
+          snippets = {
+              'kwon': [('kwon-rift-release', 3.0, 1.48, 22.0), ('kwon-moon-slash', 4.0, 1.35, 24.0), ('kwon-meteor-impact', 3.0, 1.77, 30.0)],
+              'clown': [('clown-troupe-cast', 3.0, 1.28, 1.0), ('clown-ringmaster-attack', 3.5, .62, 11.0), ('clown-phase3', 3.5, -.95, 17.5)],
+              'dice': [('dice-stomp', 3.0, 2.35, 2.7), ('dice-giant-eight-ball-impact', 3.0, 2.0, 13.7), ('dice-giant-head-impact', 4.0, 1.0, 20.7)],
+              'blood': [('blood-impact', 3.0, 1.12, 1.6), ('blood-tsunami-approach', 4.0, .12, 17.0), ('blood-seraph-reveal', 3.0, 1.2, 29.5)]
+          }
+          segments = []
+          for boss, cuts in snippets.items():
+              meta = json.loads(Path(f'takes/{boss}-events.json').read_text())
+              events = meta['events']
+              print(boss, sorted({(round(e['t'], 2), e['type']) for e in events if any(e['type'] == cue for cue, _, _, _ in cuts)}), flush=True)
+              chapter = 0.0
+              for ix, (cue, span, preroll, guess) in enumerate(cuts):
+                  candidates = [e['t'] for e in events if e['type'] == cue]
+                  anchor = min(candidates, key=lambda t: abs(t - guess)) if candidates else guess
+                  start = round(max(0, min(meta['length'] - span, anchor - preroll)) * frames_per_second) / frames_per_second
+                  print(f'{boss} {ix+1} {cue}: {start:.3f}..{start+span:.3f}', flush=True)
+                  segments.append((boss, start, span, chapter, ix))
+                  chapter += span
+              if chapter != 10:
+                  raise ValueError(f'{boss} duration {chapter}')
+          parts = []
+          args = [ffmpeg, '-hide_banner', '-loglevel', 'error', '-y']
+          graph = []
+          for i, (boss, start, span, chapter, ix) in enumerate(segments):
+              args += ['-ss', str(start), '-t', str(span), '-threads', '1', '-i', f'takes/{boss}.mp4']
+              filters = ['fps=24', 'scale=1280:720:out_range=tv', 'format=yuv420p', 'setsar=1', f'trim=duration={span}', 'setpts=PTS-STARTPTS']
+              if ix == 0:
+                  name = {'kwon':'이권재','clown':'오슬우','dice':'박성원','blood':'배서준'}[boss]
+                  color = {'kwon':'d7c29c','clown':'ebac78','dice':'83d5b6','blood':'f1b0b5'}[boss]
+                  font = '/usr/local/share/fonts/Oden-NotoSansKR.otf'
+                  filters += ["drawbox=x=64:y=93:w=223:h=71:color=0x110e12@0.84:t=fill:enable='lt(t,1.7)'",
+                              f"drawbox=x=64:y=93:w=3:h=71:color=0x{color}:t=fill:enable='lt(t,1.7)'",
+                              f"drawtext=fontfile={font}:text={name}:x=83:y=109:fontsize=36:fontcolor=0xfdf1e7:enable='lt(t,1.7)'"]
+              graph.append(f'[{i}:v]' + ','.join(filters) + f'[v{i}]')
+              graph.append(f'[{i}:a]aresample=48000,apad=pad_dur=0.08,atrim=duration={span},asetpts=PTS-STARTPTS,afade=t=in:d=0.045,afade=t=out:st={span-.08}:d=0.08[a{i}]')
+              parts.append(f'[v{i}][a{i}]')
+          graph.append(''.join(parts) + f'concat=n={len(parts)}:v=1:a=1[v][a]')
+          args += ['-filter_complex_threads', '2', '-filter_complex', ';'.join(graph), '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-maxrate', '2800k', '-bufsize', '5600k', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', '-t', '40', 'Oden_Ring_Highlights_40s.mp4']
+          subprocess.run(args, check=True)
+          subprocess.run([ffmpeg, '-hide_banner', '-v', 'info', '-i', 'Oden_Ring_Highlights_40s.mp4', '-nostats', '-f', 'null', '-'], check=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Oden_Ring_Highlights_40s
+          path: Oden_Ring_Highlights_40s.mp4
+          if-no-files-found: error
+          retention-days: 14
