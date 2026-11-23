@@ -31,7 +31,9 @@ jobs:
             timeout 110s npx playwright install chromium --only-shell
           fi
           if ! command -v ffmpeg >/dev/null; then
-            timeout 110s sudo apt-get -o Acquire::Retries=0 install -y -qq ffmpeg
+            timeout 100s python3 -m pip --disable-pip-version-check install --no-deps --only-binary=:all: --target "$RUNNER_TEMP/oden-ffmpeg" imageio-ffmpeg==0.8.1
+            encoder="$(PYTHONPATH="$RUNNER_TEMP/oden-ffmpeg" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+            echo "ODEN_FFMPEG=$encoder" >> "$GITHUB_ENV"
           fi
           if ! fc-list :lang=ko | grep -q 'Noto Serif'; then
             mkdir -p "$HOME/.local/share/fonts"
@@ -65,12 +67,15 @@ jobs:
           path: takes
       - name: Assemble and verify montage
         run: |
-          if ! command -v ffmpeg >/dev/null; then timeout 110s sudo apt-get -o Acquire::Retries=0 install -y -qq ffmpeg; fi
+          encoder="$(command -v ffmpeg || true)"
+          if [ -z "$encoder" ]; then
+            timeout 100s python3 -m pip --disable-pip-version-check install --no-deps --only-binary=:all: --target "$RUNNER_TEMP/oden-ffmpeg" imageio-ffmpeg==0.8.1
+            encoder="$(PYTHONPATH="$RUNNER_TEMP/oden-ffmpeg" python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')"
+          fi
           cd takes
           printf "file '%s.mp4'\n" kwon clown dice blood > inputs.txt
-          ffmpeg -hide_banner -loglevel error -f concat -safe 1 -i inputs.txt -c copy -movflags +faststart ../Oden_Ring_Boss_Montage.mp4
-          ffprobe -hide_banner -v error -show_entries stream=codec_name,width,height -show_entries format=duration,size ../Oden_Ring_Boss_Montage.mp4
-          ffmpeg -hide_banner -v error -i ../Oden_Ring_Boss_Montage.mp4 -f null -
+          "$encoder" -hide_banner -loglevel error -f concat -safe 1 -i inputs.txt -c copy -movflags +faststart ../Oden_Ring_Boss_Montage.mp4
+          "$encoder" -hide_banner -v info -i ../Oden_Ring_Boss_Montage.mp4 -nostats -f null -
       - uses: actions/upload-artifact@v4
         with:
           name: Oden_Ring_Boss_Montage
