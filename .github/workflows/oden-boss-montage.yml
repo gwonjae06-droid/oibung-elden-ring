@@ -2,12 +2,15 @@ name: Oden Ring boss montage
 on:
   push:
     branches: ['capture/boss-montage']
-    paths: ['scripts/capture-oden.cjs']
+    paths: ['scripts/capture-oden.cjs', 'scripts/oden-montage/**', '.github/workflows/oden-boss-montage.yml']
+concurrency:
+  group: oden-boss-montage-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   capture:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 24
     strategy:
       fail-fast: false
@@ -40,7 +43,7 @@ jobs:
           retention-days: 7
   assemble:
     needs: capture
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - uses: actions/download-artifact@v4
