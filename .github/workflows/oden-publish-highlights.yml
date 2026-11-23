@@ -1,0 +1,34 @@
+name: Publish Oden Ring 40-second highlights
+on:
+  push:
+    branches: ['capture/boss-montage']
+    paths: ['.github/workflows/oden-publish-highlights.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: capture/boss-montage
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45156368060
+          name: Oden_Ring_Highlights_40s
+          path: ${{ runner.temp }}/oden-highlights
+      - name: Publish MP4 on the capture branch
+        run: |
+          input="$RUNNER_TEMP/oden-highlights/Oden_Ring_Highlights_40s.mp4"
+          output="highlights/Oden_Ring_Highlights_40s.mp4"
+          test -s "$input"
+          mkdir -p highlights
+          cp "$input" "$output"
+          git add -- "$output"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Publish the 40-second Oden Ring highlights"
+          git push origin HEAD:refs/heads/capture/boss-montage
+          sha256sum "$output"
+          echo "Published commit $(git rev-parse HEAD)"
