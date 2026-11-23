@@ -2,7 +2,7 @@ name: Oden Ring boss montage
 on:
   push:
     branches: ['capture/boss-montage']
-    paths: ['scripts/capture-oden.cjs', 'scripts/oden-montage/**']
+    paths: ['scripts/capture-oden.cjs']
 permissions:
   contents: read
 jobs:
