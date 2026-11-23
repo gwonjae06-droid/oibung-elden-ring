@@ -4,7 +4,7 @@ on:
     branches: ['capture/boss-montage']
     paths: ['scripts/capture-oden.cjs', 'scripts/oden-montage/**', '.github/workflows/oden-boss-montage.yml']
 concurrency:
-  group: oden-boss-montage-${{ github.ref }}
+  group: oden-boss-montage-hosted-renderer-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -24,9 +24,21 @@ jobs:
       - name: Install original renderer and local capture browser
         run: |
           npm install --no-save --no-audit --no-fund three@0.180.0 playwright@1.55.0
-          npx playwright install chromium
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+          chrome="$(command -v google-chrome || command -v chromium || true)"
+          if [ -n "$chrome" ]; then
+            echo "ODEN_CHROMIUM=$chrome" >> "$GITHUB_ENV"
+          else
+            timeout 110s npx playwright install chromium --only-shell
+          fi
+          if ! command -v ffmpeg >/dev/null; then
+            timeout 110s sudo apt-get -o Acquire::Retries=0 install -y -qq ffmpeg
+          fi
+          if ! fc-list :lang=ko | grep -q 'Noto Serif'; then
+            mkdir -p "$HOME/.local/share/fonts"
+            curl -fsSL --max-time 25 --retry 1 https://raw.githubusercontent.com/notofonts/noto-cjk/main/Serif/OTF/Korean/NotoSerifCJKkr-SemiBold.otf -o "$HOME/.local/share/fonts/NotoSerifCJKkr-SemiBold.otf"
+            fc-cache -f
+          fi
+          node -e 'const fs=require("fs");const p="scripts/capture-oden.cjs";const s=fs.readFileSync(p,"utf8");fs.writeFileSync(p,s.replace("chromium.launch({headless:true","chromium.launch({executablePath:process.env.ODEN_CHROMIUM||undefined,headless:true"));'
       - name: Render battle footage and mix original sound
         env:
           ODEN_ROOT: ${{ github.workspace }}
@@ -53,8 +65,7 @@ jobs:
           path: takes
       - name: Assemble and verify montage
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
+          if ! command -v ffmpeg >/dev/null; then timeout 110s sudo apt-get -o Acquire::Retries=0 install -y -qq ffmpeg; fi
           cd takes
           printf "file '%s.mp4'\n" kwon clown dice blood > inputs.txt
           ffmpeg -hide_banner -loglevel error -f concat -safe 1 -i inputs.txt -c copy -movflags +faststart ../Oden_Ring_Boss_Montage.mp4
