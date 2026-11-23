@@ -4,7 +4,7 @@ on:
     branches: ['capture/boss-montage']
     paths: ['scripts/capture-oden.cjs', 'scripts/oden-montage/**', '.github/workflows/oden-boss-montage.yml']
 concurrency:
-  group: oden-boss-montage-hosted-renderer-${{ github.ref }}
+  group: oden-boss-montage-cinematic-render-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -40,7 +40,25 @@ jobs:
             curl -fsSL --max-time 25 --retry 1 https://raw.githubusercontent.com/notofonts/noto-cjk/main/Serif/OTF/Korean/NotoSerifCJKkr-SemiBold.otf -o "$HOME/.local/share/fonts/NotoSerifCJKkr-SemiBold.otf"
             fc-cache -f
           fi
-          node -e 'const fs=require("fs");const p="scripts/capture-oden.cjs";const s=fs.readFileSync(p,"utf8");fs.writeFileSync(p,s.replace("chromium.launch({headless:true","chromium.launch({executablePath:process.env.ODEN_CHROMIUM||undefined,headless:true"));'
+          node <<'NODE'
+          const fs = require('node:fs');
+          const capture = 'scripts/capture-oden.cjs';
+          const stage = 'scripts/oden-montage/shoot.mjs';
+          const server = 'scripts/oden-montage/montage-server.cjs';
+          fs.writeFileSync(capture, fs.readFileSync(capture,'utf8')
+            .replace('chromium.launch({headless:true','chromium.launch({executablePath:process.env.ODEN_CHROMIUM||undefined,headless:true')
+            .replace('width:1152,height:648','width:960,height:540')
+            .replace("'30','-vcodec'","'24','-vcodec'")
+            .replaceAll('frames/30','frames/24')
+            .replace("'-an','-c:v'","'-an','-vf','eq=brightness=0.021:contrast=1.035:saturation=1.055','-c:v'"));
+          fs.writeFileSync(stage, fs.readFileSync(stage,'utf8')
+            .replace('height=720, fps=30','height=720, fps=24')
+            .replace("ctx.filter='contrast(1.035) saturate(1.055) brightness(1.065)';",""));
+          fs.writeFileSync(server, fs.readFileSync(server,'utf8')
+            .replace('const source=fs.readFileSync(file,\'utf8\').replace(/renderer','const source=fs.readFileSync(file,\'utf8\').replace(\'antialias:!coarse\',\'antialias:false\').replace(/renderer')
+            .replace('if(!window.__shoot?.skipRender)renderer.render(scene,camera);',
+              'if(!window.__shoot?.skipRender){if(window.__shoot?.manual){const s=window.__shoot;s.shadowFrame=(s.shadowFrame??-1)+1;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=s.shadowFrame%3===0;}renderer.render(scene,camera);}'));
+          NODE
       - name: Render battle footage and mix original sound
         env:
           ODEN_ROOT: ${{ github.workspace }}
